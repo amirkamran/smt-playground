@@ -1,0 +1,11 @@
+#!/bin/bash
+# load stdin and grep for all numbers
+
+tmp=/tmp/checkrunning.$$
+
+tr ' ' '\n' | grep '^[0-9][0-9]*$' > $tmp
+
+qstat | grep -w -F -f $tmp
+ps aux | grep -w -F -f $tmp
+
+rm $tmp

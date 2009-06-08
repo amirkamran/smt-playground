@@ -1,0 +1,7 @@
+Comments from WMT09:
+
+subtitles hurt
+
+suggested filtering:
+ - only sentences with < 5% non-czech words
+   "a czech word" is 1) reasonable punctuation, 2) confirmed czech words, 3) Capitalized (but not ALL-CAPS), or 4) numbers+punct

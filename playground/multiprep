@@ -1,0 +1,24 @@
+#!/bin/bash
+# Prepares many models at once, setting new variables.
+# usage: ./multiprep model|mert|lm... 'VAR1=newval VAR2=newval' 14.23+-13 15.23+-58
+# the final list is the list of bleu scores that are tracebacked to obtain source dirs
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+
+target=$1
+shift
+assignments="$1"
+shift
+
+[ ! -z "$assignments" ] || die "bad usage!"
+
+uctarget=`echo $target | tr a-z A-Z`
+
+for bleu in "$@"; do
+  for sd in `./traceback $bleu | sed -n 's/^==== '$uctarget': //p'`; do
+    echo `cat $sd/VARS` $assignments make exp.$target.prepare
+  done
+done

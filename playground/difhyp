@@ -1,0 +1,35 @@
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+
+a=$1
+b=$2
+
+for prefix in eval mert; do
+  if [ -e exp.$prefix.$a ]; then
+    a=exp.$prefix.$a
+  fi
+  if [ -e exp.$prefix.$b ]; then
+    b=exp.$prefix.$b
+  fi
+done
+
+[ -d "$a" ] || die "Missing $a"
+[ -d "$b" ] || die "Missing $b"
+
+echo Diffing $a and $b
+
+tmp=/tmp/difhyp.$$
+
+echo `cat $a/BLEU.opt` $a > $tmp.a
+echo `cat $b/BLEU.opt` $b > $tmp.b
+
+cat $a/evaluation.opt.txt >> $tmp.a
+cat $b/evaluation.opt.txt >> $tmp.b
+
+ziplines --delim $tmp.a $tmp.b | less -S
+
+rm $tmp.a $tmp.b

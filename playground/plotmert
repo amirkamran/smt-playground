@@ -1,0 +1,14 @@
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+
+mert=$1
+
+[ -d $mert ] || mert=exp.mert.$mert
+
+[ -d $mert ] || die "plotmert <experiment>"
+
+grep BEST $mert/log | cut -d'>' -f2 | cut -d" " -f2 | transpose | linechart --no-collabels | gpsandbox

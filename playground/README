@@ -1,0 +1,120 @@
+This is Ondrej's playground for experiments with Moses
+
+
+Very rough description (comments in Czech):
+
+
+# stahni si srilm, treba takto:
+cd moses_playground/src
+ln -s /a/merkur1/bojar/moses_wmt09/src/srilm.tgz ./
+
+
+# ostatni komponenty jsou bud v svn nebo se stahnou
+# zkompiluj vse
+cd moses_playground
+make workspace
+# vyrobi to podadresar workspace.DATUM-CAS,
+# nastav cesty k workspacu v playground/Makefile
+
+# priprav korpusy:
+
+cd playground/augmented_corpora
+
+# co (paralelni) korpus, to adresar
+# rucne je nutno vyrobit napr.:
+
+mujkorpus/cs.gz
+mujkorpus/en.gz
+mujkorpus/cs.info
+mujkorpus/en.info
+
+Priklad viz /home/bojar/diplomka/granty/euromatrix/moses_icon08/augmented_corpora/icon-eilmt
+
+Pak nechas vyrobit alignment, bud rucne, nebo napr.:
+
+cd augmented_corpora
+CORP=icon-eilmt \
+  SRCAUG=en+lcstem4 \
+  TGTAUG=hi+lcstem4 \
+  NAME=lcstem4-lcstem4 \
+  DIRSYM=gdf \
+  make align
+
+(Vystup viz napr. /a/merkur1/bojar/moses_icon08/augmented_corpora/icon-eilmt/lcstem4-lcstem4.gz)
+
+Princip je ten, ze pro kazdy korpus K maji vsechny soubory augmented_corpora/K/*.gz mit stejny pocet radek. Mohou mit ruzny pocet tokenu na radce.
+
+Pak je skript augment.pl, ktery podle navodu z daneho korpusu vyreze potrebne faktory, napr.:
+
+cd augmented_corpora
+./augment.pl icon-eilmt/hi+form+lcstem4
+
+Pozor: v soucasne dobe stale jeste nefunguji zamky v augment.pl a NFS je debilni. Muze se tedy stat, ze kdyz ma augment vyrobit nejakou novou kombinaci, ktera se sklada z take vyrabenych soucastek, tak se vyrobi neuplne gzipy!
+
+To byla priprava. :-)
+
+
+Samotne pokusy pak pripravuji a spoustim takto:
+
+cd playground
+SRCCORP=icon-eilmt \
+SRCAUG=enR+lc \
+TGTAUG=hi+form+wc10 \
+ALIAUG=enRlcstem4-lcstem4
+LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+wc10.10.20081130-1815 \
+DECODINGSTEPS=t0-0+g0-1 \
+REORDERING=orientation-bidirectional-fe \
+REORDFACTORS=0-1 \
+make exp.model.prepare
+
+Vyrobi timestampovany adresar na zaklade seeds/exp.model a nakonec ti napise, ze mas udelat
+
+make exp.model.TIMESTAMP.run
+
+Ten to spusti (na gridu).
+
+Ty LMEXPS se vyrabeji podobne:
+
+CORP=icon-eilmt \
+CORPAUG=hi+wc10 \
+ORDER=10 \
+RUN=yes \
+make exp.lm.prepare
+
+Kdyz das RUN=yes, tak to i rovnou submitne.
+
+Princip tech seeds je, ze seed je bashovy skript, ktery neco obratem pripravi, a zejmena pripravi bashovy skript 'command', no a make exp..run jen ten command spusti.
+
+
+Cili kdyz se nejaky experiment nedari spustit (nebo dokoncit) vlezes do jeho adresare exp.NAZEV.TIMESTAMP, prostudujes ./command, treba si ho spustis rucne atp.
+
+Snazim se o to, aby adresare experimentu obsahovaly uplne vsechny vstupy, proto hojne v priprave experimentu pouzivam /home/bojar/tools/shell/wiseln, ktery podle situace dela bud symlink, hardlink, nebo i kopii, a taky tam pripise md5 sumu, abych mohl i zpetne hlidat, ze jsem neco spoustel na tom, na cem jsem to spoustet chtel.
+
+
+Postup pres experimenty je tento:
+
+make exp.lm.prepare  (vyroba jayzkoveho modelu)
+make exp.model.prepare (vyroba prekladoveho modelu i mosesovy
+  konfigurace)
+make exp.mert.prepare (spusteni mertu nad mosesovou konfiguraci)
+make exp.eval.prepare (vyhodnoceni natrenovaneho mertu nad novymi daty;
+  zatim zastarale)
+
+Take byvalo make exp.align.prepare, ale to je ted zastarale.
+
+
+Nejspis se v tom ale nevyznas :-( 
+
+
+
+
+Wishlist of future experiments:
+
+- discover the impact of MBR for en->cs
+- explain the huge difference in gdf vs. gdfa for en->hi (and somewhat
+  significant difference for en->cs)
+- divergences between phrase vs. treelet translation
+
+
+
+

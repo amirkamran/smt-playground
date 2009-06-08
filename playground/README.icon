@@ -1,0 +1,144 @@
+we should rerun these experiments with tides test set:
+
+                                                	hi\.      	dzsuf     	wc10 1130 	wc50 1130
+ALIenPlcstem4-lcstem4 LM0-3                     	14.01±1.41	-         	-         	-
+ALIenPlcstem4-lcstem4 LM0-3 or-bi-fe.r0-0       	14.24±1.39	-         	-         	-
+ALIenRlcstem4-lcstem4 LM0-3                     	14.53±1.41	-         	-         	-
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10              	-         	14.09±1.50	-         	-
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r0-0	-         	14.42±1.43	-         	14.53±1.44
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r0-1	-         	14.41±1.47	-         	14.52±1.43
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r1-1	-         	14.97±1.46	13.69±1.37	14.65±1.41
+ALIenRlcstem4-lcstem4 LM0-3 or-bi-fe.r0-0       	14.45±1.41	-         	-         	-
+ALIlcstem4-lcstem4 LM0-3                        	13.82±1.46	-         	-         	-
+ALIlcstem4-lcstem4 LM0-3 LM1-10                 	-         	13.94±1.44	-         	13.80±1.45
+ALIlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r0-0   	-         	13.93±1.42	-         	14.04±1.44
+ALIlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r0-1   	-         	14.09±1.38	14.27±1.41	14.81±1.40
+ALIlcstem4-lcstem4 LM0-3 or-bi-fe.r0-0          	14.49±1.44	-         	-         	-
+
+
+These do not need enP or enR:
+
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+wc50.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.di.r0-0.20081130-1840
+exp.model.SRCicon-eilmt+en+lc.TGT+hi.ALIicon-eilmt.LM0-3-icon-eilmt.t0-0.20081128-0109
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+dzsuf.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.or-bi-fe.r0-0.20081128-1951
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+dzsuf.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.20081128-1843
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+wc50.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.or-bi-fe.r0-0.20081130-1840
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+dzsuf.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.or-bi-fe.r0-1.20081128-1433
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+wc10.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.or-bi-fe.r0-1.20081130-1840
+exp.model.SRCicon-eilmt+en+lc.TGT+hi.ALIicon-eilmt.LM0-3-icon-eilmt.t0-0.or-bi-fe.r0-0.20081128-0118
+exp.model.SRCicon-eilmt+en+lc.TGT+hi+form+wc50.ALIlcstem4-lcstem4.LM0-3-icon-eilmtLM1-10-icon-eilmt.t0-0+g0-1.or-bi-fe.r0-1.20081130-1840
+
+and their vars:
+
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+wc50 ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+wc50.10.20081130-1815 DECODINGSTEPS=t0-0+g0-1 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354 DECODINGSTEPS=t0-0 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+dzsuf ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+dzsuf.10.20081128-1432 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+dzsuf ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+dzsuf.10.20081128-1432 DECODINGSTEPS=t0-0+g0-1 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+wc50 ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+wc50.10.20081130-1815 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+dzsuf ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+dzsuf.10.20081128-1432 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-1 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+wc10 ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+wc10.10.20081130-1815 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-1 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354 DECODINGSTEPS=t0-0 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-eilmt TGTCORP=icon-eilmt ALICORP=icon-eilmt SRCAUG=en+lc TGTAUG=hi+form+wc50 ALIAUG=lcstem4-lcstem4 LMEXPS=0:exp.lm.icon-eilmt+hi+form.3.20081127-1354:::1:exp.lm.icon-eilmt+hi+wc50.10.20081130-1815 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-1 LMTYPE=
+
+replacements:
+
+| sed 's/exp.lm.icon-eilmt+hi+wc50.10.20081130-1815/exp.lm.icon-tides+hi+wc50.10.20081130-1836/g' \
+| sed 's/exp.lm.icon-eilmt+hi+dzsuf.10.20081128-1432/exp.lm.icon-tides+hi+dzsuf.10.20081130-1958/g' \
+| sed 's/exp.lm.icon-eilmt+hi+form.3.20081127-1354/exp.lm.icon-tides+hi+form.3.20081127-1004/g' \
+| sed 's/exp.lm.icon-eilmt+hi+wc10.10.20081130-1815/exp.lm.icon-tides+hi+wc10.10.20081130-1958/g' \
+| sed 's/=icon-eilmt/=icon-tides/g' \
+
+
+Cerstvy bug:
+- pro dev a test prece musim wcX pouzit ze znameho!
+- na to pouzij REFAUG=hi+form+TESTwcX
+=> pardon, tohle neni bug, protoze vystupni faktor wcX se generuje za letu,
+cili je to ok.
+
+
+2008-12-01
+
+Potrebuju dodelat:
+
+
+                                                       	dzsuf     	wc50 FIXED	baseline  	wc10 FIXED
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 or-bi-fe.r1-1       	14.97±1.46	14.65±1.41	-         	13.69±1.37
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 reord-using-hi-forms	14.42±1.43	14.53±1.44	-         	M
+ALIenRlcstem4-lcstem4 LM0-3                            	-         	-         	14.53±1.41	-
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10 reord-using-wcX/dz  	14.41±1.47	14.52±1.43	-         	M
+ALIenRlcstem4-lcstem4 LM0-3 reord-using-hi-forms       	-         	-         	14.45±1.41	-
+ALIenPlcstem4-lcstem4 LM0-3 reord-using-hi-forms       	-         	-         	14.24±1.39	-
+ALIenRlcstem4-lcstem4 LM0-3 LM1-10                     	14.09±1.50	-         	-         	-
+ALIenPlcstem4-lcstem4 LM0-3                            	-         	-         	14.01±1.41	-
+
+-> po nahradach vyse spoustim tyto:
+
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004 DECODINGSTEPS=t0-0 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004 DECODINGSTEPS=t0-0 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi+form+dzsuf ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+dzsuf.10.20081130-1958 DECODINGSTEPS=t0-0+g0-1 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi+form+dzsuf ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+dzsuf.10.20081130-1958 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi+form+dzsuf ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+dzsuf.10.20081130-1958 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-1 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi+form+wc50 ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+wc50.10.20081130-1836 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc TGTAUG=hi+form+wc50 ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+wc50.10.20081130-1836 DECODINGSTEPS=t0-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-1 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enP+lc TGTAUG=hi ALIAUG=enPlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004 DECODINGSTEPS=t0-0 REORDERING=distance REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enP+lc TGTAUG=hi ALIAUG=enPlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004 DECODINGSTEPS=t0-0 REORDERING=orientation-bidirectional-fe REORDFACTORS=0-0 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc+tag TGTAUG=hi+form+dzsuf ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+dzsuf.10.20081130-1958 DECODINGSTEPS=t0a1-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=1-1 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc+tag TGTAUG=hi+form+wc10 ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+wc10.10.20081130-1958 DECODINGSTEPS=t0a1-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=1-1 LMTYPE=
+SRCCORP=icon-tides TGTCORP=icon-tides ALICORP=icon-tides SRCAUG=enR+lc+tag TGTAUG=hi+form+wc50 ALIAUG=enRlcstem4-lcstem4 LMEXPS=0:exp.lm.icon-tides+hi+form.3.20081127-1004:::1:exp.lm.icon-tides+hi+wc50.10.20081130-1836 DECODINGSTEPS=t0a1-0+g0-1 REORDERING=orientation-bidirectional-fe REORDFACTORS=1-1 LMTYPE=
+
+
+
+
+2008-12-01
+
+Ondrejovy prispevky k clanku:
+
+This was done with a simple
+->
+The language classification is based on a model comparing frequences of
+three-word suffixes of word forms with known suffix frequences for each
+language. If no clearly-winning language is found, we back off to three simple
+models counting frequences of single letters, pairs of letters and triplets of
+letters, and comparing them to known samples. 
+
+
+Sekci Moses navrhuju dat pred sekci slovosled.
+
+We use a variation of Moses standard training and tuning pipeline. Word
+alignments are obtained using GIZA++ (grow-diag-final heuristic). To reduce
+data sparseness for word-alignment estimation, we consider only first four
+letters (lowercased) of each English and Hindi word form.
+
+The baseline setup is single-factored (i.e. plain phrase-based)
+wordform-to-wordform translation with distance-based reordering model. As a
+basic contrast experiment, we use the standard orientation-bidirectional
+reordering model based on both source and target side tokens.
+
+Table 2:
+
+our bleu with 95% bootstrapping confidence intervals (
+
+@inproceedings{koehn:bootstrap:2004,
+  author = {Philipp Koehn},
+  title = "{Statistical Significance Tests for Machine Translation Evaluation}",
+  booktitle = "Proceedings of EMNLP 2004",
+  address = {Barcelona, Spain},
+  mon = jul,
+  year = "2004",
+}
+
+
+evaluated on eilmti (i.e. 500 sentences with 1 reference translation), phrase-length limit 7 (the default for Moses training)
+
+parallel training corpus	reord-using-hi-forms	no-reord
+SRCicon-eilmt           	14.49±1.44          	13.82±1.46
+SRCicon-allFIX          	15.00±1.44          	14.49±1.35
+SRCicon-eiti            	15.06±1.46          	14.50±1.45
+
+              	reord-using-hi-forms	no-reord
+SRCicon-eilmt 	0.1463              	0.1399
+SRCicon-allFIX	0.1497              	0.1447
+SRCicon-eiti  	0.1504              	0.1448
+
+
+

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+
+for var in "$@"; do
+  eval '[ ! -z "$'$var'" ] || die "Specify '$var'!"'
+  echo -n $var=
+  eval 'echo $'$var
+done

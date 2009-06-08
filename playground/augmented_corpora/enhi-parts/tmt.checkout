@@ -1,0 +1,31 @@
+mkdir tmt || exit 1
+cd tmt
+svn --username bojar co https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk devel \
+|| exit 1
+
+if [ -e /net/projects/tectomt_shared/ ]; then
+  ln -s /net/projects/tectomt_shared/ shared
+else
+  wget http://ufal.mff.cuni.cz/~zabokrtsky/tectomt_shared.zip \
+  && unzip tectomt_shared.zip
+fi
+
+cat << KONEC
+5. Pokud pracujete mimo ufali sit, prejmenujte soubor 
+devel/config/my_paths.sh.template
+
+ mv  devel/config/my_paths.sh.template devel/config/my_paths.sh
+
+a ve vzniklem souboru nastavte absolutni cesty do adresare s vasi 
+instalaci tredu, k perlovym knihovnam a do neverzovane casti tectomt 
+(napr. export TMT_SHARED="/...../my_tecto/shared") na vasem systemu.
+
+
+6. Spustte demo pro tektogramatickou analyzu anglictiny
+(popripade blizko lezici demo pro alignment ceskych a anglickych
+vet na tektogramaticke rovine)
+
+source devel/config/init_devel_environ.sh
+cd devel/applications/demo_english_tecto_analysis/
+make
+KONEC

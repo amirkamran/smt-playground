@@ -1,0 +1,5 @@
+# modelusers 'modelname'
+
+lcat --glob='exp.mert*/info.modelexp' \
+| grep "$1" \
+| cut -d/ -f1

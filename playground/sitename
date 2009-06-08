@@ -1,0 +1,20 @@
+case `hostname` in
+*.mff.cuni.cz )
+  if pwd | grep _acl_large > /dev/null ; then
+    suff=large
+  fi
+  if pwd | grep _webmt > /dev/null ; then
+    suff=webmt
+  fi
+  if pwd | grep _mtmarathon > /dev/null ; then
+    suff=wmt
+  fi
+  echo UFAL$suff
+  ;;
+x[0-9][0-9] )
+  echo JHU
+  ;;
+* )
+  echo NO-SITENAME
+  exit 1
+esac
