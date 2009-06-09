@@ -157,22 +157,24 @@ workspace:
 workspace.%.giza: workspace.%
 	ws=$< \
 	&& cd $$ws \
-	&& tar xzf ../src/giza-pp-v1.0.2.tar.gz \
+	&& tar xzf ../../src/giza-pp-v1.0.3.tar.gz \
 	&& cd giza-pp \
 	&& cd GIZA++-v2 && make && make snt2cooc.out && cd ../ \
 	&& cd mkcls-v2 && make && cd ../ \
 	&& cd ../ \
+	&& mkdir -p bin \
 	&& ln -s giza-pp/GIZA++-v2/GIZA++ giza-pp/GIZA++-v2/snt2cooc.out \
 	      giza-pp/mkcls-v2/mkcls bin/
 
 workspace.%.randlm: workspace.%
 	ws=$< \
 	&& cd $$ws \
-	&& tar xzf ../src/randlm-v0.11.tar.gz \
+	&& tar xzf ../../src/randlm-v0.11.tar.gz \
 	&& cd randlm \
 	&& cd src && make all && cd .. \
 	&& pwd > ../randlm.path \
 	&& cd ../ \
+	&& mkdir -p bin \
 	&& ln -s randlm/bin/buildlm randlm/bin/querylm \
 	      bin/
 
@@ -184,7 +186,7 @@ workspace.%.srilm: workspace.%
 	&& echo "Extracting srilm" \
 	&& mkdir srilm \
 	&& cd srilm \
-	&& tar xzf ../../src/srilm.tgz \
+	&& tar xzf ../../../src/srilm.tgz \
 	&& export SRILM=`pwd` \
 	&& export NO_TCL=X \
 	&& make -j4 MACHINE_TYPE=$(SRILM_MACHTYPE) World \
