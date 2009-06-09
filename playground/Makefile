@@ -144,6 +144,11 @@ all.oficbleu:
 
 # create fresh workspace with all tools
 workspace:
+	## Making sure you accept sourceforge's SSL certificate.
+	## Please say (p)ermanently if you are asked anything:
+	svn cat https://irstlm.svn.sourceforge.net/svnroot/irstlm/readme \
+	  > /dev/null
+	## Setting up workspace $@.$$(TS)
 	ts=$(TS) \
 	&& ws=$@.$$ts \
 	&& mkdir -p $$ws \
@@ -151,8 +156,14 @@ workspace:
 	&& mkdir bin \
 	&& echo `pwd`/bin > bindir.path \
 	&& cd .. \
-	&& make -j4 $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm \
-	&& make $$ws.moses
+	&& if make -j4 $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm ; then\
+	     make $$ws.moses; \
+	   else \
+	     echo "Some prerequisites failed." ; \
+	     echo "Needed: giza srilm randlm irstlm. These succeeded: "; \
+	     ls $$ws.* | sed 's/$$ws\./  /'; \
+	     exit 1; \
+	   fi
 
 workspace.%.giza: workspace.%
 	ws=$< \
@@ -165,6 +176,7 @@ workspace.%.giza: workspace.%
 	&& mkdir -p bin \
 	&& ln -s giza-pp/GIZA++-v2/GIZA++ giza-pp/GIZA++-v2/snt2cooc.out \
 	      giza-pp/mkcls-v2/mkcls bin/
+	date > $@ # confirm our success
 
 workspace.%.randlm: workspace.%
 	ws=$< \
@@ -177,6 +189,7 @@ workspace.%.randlm: workspace.%
 	&& mkdir -p bin \
 	&& ln -s randlm/bin/buildlm randlm/bin/querylm \
 	      bin/
+	date > $@ # confirm our success
 
 SRILM_MACHTYPE=$(shell if [ `uname -m` == "x86_64" ]; then echo "i686-m64"; else echo "i686-gcc4"; fi)
 
@@ -193,6 +206,7 @@ workspace.%.srilm: workspace.%
 	&& if [ -e lib/i686-m64 ] ; then mv lib/i686-m64 lib/i686; fi \
 	&& if [ -e bin/i686-m64 ] ; then mv bin/i686-m64 bin/i686; fi\
 	&& pwd > ../srilm.path
+	date > $@ # confirm our success
 
 workspace.%.moses: workspace.%
 	ws=$< \
@@ -212,6 +226,7 @@ workspace.%.moses: workspace.%
 	     make release \
 	&& eval 'echo '`cat ../../bindir.path`'/scripts-*/' \
 	    > ../../scripts.rootdir
+	date > $@ # confirm our success
 
 workspace.%.irstlm: workspace.%
 	ws=$< \
@@ -228,6 +243,7 @@ workspace.%.irstlm: workspace.%
 	    > ../irstlm.path \
 	&& echo "Checking if libirstlm was successfully created" \
 	&& [ -e lib/`uname -m`/libirstlm.a ] \
+	date > $@ # confirm our success
 	
 
 exp.lm.%.binarize:
