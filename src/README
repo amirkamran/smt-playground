@@ -1,0 +1,2 @@
+This directory is to hold external tools in their source form.
+Use e.g. "cd playground; make workspace" to compile the tools.
