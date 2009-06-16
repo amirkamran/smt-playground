@@ -221,8 +221,11 @@ workspace.%.srilm: workspace.%
 	&& export SRILM=`pwd` \
 	&& export NO_TCL=X \
 	&& make -j4 MACHINE_TYPE=$(SRILM_MACHTYPE) World \
-	&& if [ -e lib/i686-m64 ] ; then mv lib/i686-m64 lib/i686; fi \
-	&& if [ -e bin/i686-m64 ] ; then mv bin/i686-m64 bin/i686; fi\
+	&& echo "Making symlinks so that Moses will find srilm" ; \
+	&& if [ -e lib/i686-m64 ] ; then ln -s i686-m64 lib/i686; fi \
+	&& if [ -e lib/i686-gcc4 ] ; then ln -s i686-gcc4 lib/i686; fi \
+	&& if [ -e bin/i686-m64 ] ; then ln -s i686-m64 bin/i686; fi \
+	&& if [ -e bin/i686-gcc4 ] ; then ln -s i686-gcc4 bin/i686; fi \
 	&& pwd > ../srilm.path
 	date > $@ # confirm our success
 
@@ -230,8 +233,13 @@ MOSES_START_REVISION=2300
 workspace.%.moses: workspace.%
 	ws=$< \
 	&& cd $$ws \
-	&& git svn clone -r $(MOSES_START_REVISION):HEAD \
-	  https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses \
+	&& if [ -e moses ]; then \
+	     echo "Just updating moses..." ; \
+	     cd moses && git svn rebase && cd .. ; \
+	   else \
+	     git svn clone -r $(MOSES_START_REVISION):HEAD \
+	       https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses ; \
+	   fi\
 	&& cd moses \
 	&& ./regenerate-makefiles.sh \
 	&& ./configure --with-irstlm=`cat ../irstlm.path` \
