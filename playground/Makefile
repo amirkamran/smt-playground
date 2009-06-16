@@ -226,11 +226,12 @@ workspace.%.srilm: workspace.%
 	&& pwd > ../srilm.path
 	date > $@ # confirm our success
 
+MOSES_START_REVISION=2300
 workspace.%.moses: workspace.%
 	ws=$< \
 	&& cd $$ws \
-	&& svn --non-interactive \
-	  co https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses \
+	&& git svn clone -r $(MOSES_START_REVISION):HEAD \
+	  https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses \
 	&& cd moses \
 	&& ./regenerate-makefiles.sh \
 	&& ./configure --with-irstlm=`cat ../irstlm.path` \
