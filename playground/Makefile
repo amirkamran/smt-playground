@@ -1,7 +1,7 @@
 TS?=$(shell date '+%Y%m%d-%H%M')
 
-PWD= /afs/ms/u/m/mtm01/BIG/moses_playground
-WS = workspace.20081205-1342
+PWD := $(shell pwd)
+WS := $(shell cat workspace)
 export SCRIPTS_ROOTDIR=$(shell cat $(WS)/scripts.rootdir 2>/dev/null)
 export MOSESCMD=$(PWD)/$(WS)/moses/moses-cmd/src/moses
 export SRILMDIR1=$(shell cat $(WS)/srilm.path 2>/dev/null)/bin
@@ -10,9 +10,24 @@ export IRSTLMDIR=$(shell cat $(WS)/irstlm.bindir 2>/dev/null)
 export RANDLMDIR=$(shell cat $(WS)/randlm.path 2>/dev/null)
 SHELL=/bin/bash
 
-test:
-	echo $(SCRIPTS_ROOTDIR)
-	echo $(MOSESCMD)
+all:
+	# This Makefile just captures common tasks you'd do in the playground:
+	#   make workspace  ... download, unpack and compile all external tools
+	#   VAR1=val VAR2=val make exp.SEEDNAME.prepare
+	#                       ... setup an experiment using seeds/exp.SEEDNAME
+	#   make exp.EXPNAME.run  ... run the experiment
+	#   make lsSEEDNAME   ... list all experiments, e.g. make lsmodel
+	#
+	#   Current dependencies of experiments:
+	#     exp.lm  ->   exp.model     ->    exp.mert -> exp.eval
+	#                   +--> exp.modelclone  --^
+	#
+	# Now checking if your workspace is ready: $(WS)
+	# Make sure enter your workspace name (e.g. workspace.20081205-1342) to
+	# the file 'workspace'
+	[ -d "$(WS)" ]
+	# Checking if moses executable exists:
+	[ -x "$(MOSESCMD)" ]
 
 # prepare a fresh run of an experiment
 exp.%.prepare:
@@ -143,6 +158,7 @@ all.oficbleu:
 	
 
 # create fresh workspace with all tools
+.PHONY: workspace
 workspace:
 	## Making sure you accept sourceforge's SSL certificate.
 	## Please say (p)ermanently if you are asked anything:
@@ -163,7 +179,9 @@ workspace:
 	     echo "Needed: giza srilm randlm irstlm. These succeeded: "; \
 	     ls $$ws.* | sed 's/$$ws\./  /'; \
 	     exit 1; \
-	   fi
+	   fi \
+	&& echo "Succeeded. To use this workspace run the following command: " \
+	&& echo "  echo $$ws > workspace"
 
 workspace.%.giza: workspace.%
 	ws=$< \
@@ -235,14 +253,14 @@ workspace.%.irstlm: workspace.%
 	    co https://irstlm.svn.sourceforge.net/svnroot/irstlm irstlm \
 	&& cd irstlm \
 	&& ./install \
-	&& cd lib && ln -s x86_64-redhat-linux-gnu x86_64 && cd .. \
-	&& cd bin && ln -s x86_64-redhat-linux-gnu x86_64 && cd .. \
-	&& echo `pwd`/bin/x86_64-redhat-linux-gnu/ \
+	&& cd lib && ln -s x86_64?* x86_64 && cd .. \
+	&& cd bin && ln -s x86_64?* x86_64 && cd .. \
+	&& eval echo `pwd`/bin/x86_64?*/ \
 	    > ../irstlm.bindir \
 	&& echo `pwd` \
 	    > ../irstlm.path \
-	&& echo "Checking if libirstlm was successfully created" \
-	&& [ -e lib/`uname -m`/libirstlm.a ] \
+	# Checking if libirstlm was successfully created
+	[ -e $</irstlm/lib/`uname -m`/libirstlm.a ]
 	date > $@ # confirm our success
 	
 
