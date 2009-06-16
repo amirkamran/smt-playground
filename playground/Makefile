@@ -158,6 +158,7 @@ all.oficbleu:
 	
 
 # create fresh workspace with all tools
+JOBS?=4
 .PHONY: workspace
 workspace:
 	## Making sure you accept sourceforge's SSL certificate.
@@ -172,7 +173,7 @@ workspace:
 	&& mkdir bin \
 	&& echo `pwd`/bin > bindir.path \
 	&& cd .. \
-	&& if make -j4 $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm ; then\
+	&& if make -j$(JOBS) $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm ; then\
 	     make $$ws.moses; \
 	   else \
 	     echo "Some prerequisites failed." ; \
@@ -221,7 +222,7 @@ workspace.%.srilm: workspace.%
 	&& export SRILM=`pwd` \
 	&& export NO_TCL=X \
 	&& make -j4 MACHINE_TYPE=$(SRILM_MACHTYPE) World \
-	&& echo "Making symlinks so that Moses will find srilm" ; \
+	&& echo "Making symlinks so that Moses will find srilm" \
 	&& if [ -e lib/i686-m64 ] ; then ln -s i686-m64 lib/i686; fi \
 	&& if [ -e lib/i686-gcc4 ] ; then ln -s i686-gcc4 lib/i686; fi \
 	&& if [ -e bin/i686-m64 ] ; then ln -s i686-m64 bin/i686; fi \
