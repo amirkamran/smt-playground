@@ -253,9 +253,9 @@ workspace.%.irstlm: workspace.%
 	    co https://irstlm.svn.sourceforge.net/svnroot/irstlm irstlm \
 	&& cd irstlm \
 	&& ./install \
-	&& cd lib && ln -s x86_64?* x86_64 && cd .. \
-	&& cd bin && ln -s x86_64?* x86_64 && cd .. \
-	&& eval echo `pwd`/bin/x86_64?*/ \
+	&& cd lib && ln -s x86_64?* x86_64 && ln -s i386?* i686 && cd .. \
+	&& cd bin && ln -s x86_64?* x86_64 && ln -s i386?* i686 && cd .. \
+	&& eval echo `pwd`/bin/`uname -m`/ \
 	    > ../irstlm.bindir \
 	&& echo `pwd` \
 	    > ../irstlm.path \
