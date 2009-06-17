@@ -258,21 +258,22 @@ workspace.%.moses: workspace.%
 
 workspace.%.irstlm: workspace.%
 	# workaround for a irstlm makefile error 
-	if [ 'Darwn' = `uname` ]; \
-	    then OSTYPE='darwin'; \
-	fi; \
-	ws=$< \
+	if [ 'Darwin' = `uname` ]; \
+	    then export OSTYPE='darwin'; \
+	fi \
+	&& ws=$< \
 	&& cd $$ws \
 	&& svn --non-interactive \
 	    co https://irstlm.svn.sourceforge.net/svnroot/irstlm irstlm \
 	&& cd irstlm \
 	&& ./install \
-	&& cd lib && ln -s x86_64?* x86_64 && ln -s i386?* i686 && cd .. \
-	&& cd bin && ln -s x86_64?* x86_64 && ln -s i386?* i686 && cd .. \
+	&& cd lib && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s i386?* i686 ; cd .. \
+	&& cd bin && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s i386?* i686 ; cd .. \
 	&& eval echo `pwd`/bin/`uname -m`/ \
 	    > ../irstlm.bindir \
 	&& echo `pwd` \
 	    > ../irstlm.path \
+	&& cd .. \
 	# Checking if libirstlm was successfully created
 	[ -e $</irstlm/lib/`uname -m`/libirstlm.a ]
 	date > $@ # confirm our success
