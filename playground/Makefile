@@ -257,6 +257,10 @@ workspace.%.moses: workspace.%
 	date > $@ # confirm our success
 
 workspace.%.irstlm: workspace.%
+	# workaround for a irstlm makefile error 
+	if [ 'Darwn' = `uname` ]; \
+	    then OSTYPE='darwin'; \
+	fi; \
 	ws=$< \
 	&& cd $$ws \
 	&& svn --non-interactive \
