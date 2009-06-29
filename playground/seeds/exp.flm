@@ -1,0 +1,126 @@
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+
+set -o pipefail
+
+
+if [ -z "$CORP" ] \
+|| [ -z "$CORPAUG" ] \
+|| [ -z "$FLMCONFIG" ] \
+|| [ -z "$ORDER" ]; then
+  echo "You must set: "
+  echo "  \$CORP to the shortname of corpus"
+  echo "  \$CORPAUG to the factors used for lm"
+  echo "  \$FLMCONFIG to the flm definition file"
+  echo "  \$ORDER to lm order"
+  echo "And optionally: "
+  exit 1
+fi
+
+if [[ ! -d "$SRILMDIR1" ]] || [[ ! -d "$SRILMDIR2" ]]; then
+  echo "   SRILMDIR1: $SRILMDIR1"
+  echo "or SRILMDIR2: $SRILMDIR2"
+  echo "not found."
+  exit 1
+fi
+
+lmtypetag=flm
+
+#LMFILE=`cat $FLMCONFIG | sed -r -n 's/^.* ([^ ]*\.lm)\.gz.*/\1/p'`
+#COUNTFILE=`cat $FLMCONFIG | sed -r -n 's/^.* ([^ ]*\.count)\.gz.*/\1/p'`
+
+# Remember the core settings
+
+FLMFILE=`echo $FLMCONFIG | sed -r 's/^.*\/([^\/]+)$/\1/'`
+
+echo $CORP+$CORPAUG.$ORDER.$FLMFILE > TAG
+
+cat << KONEC > VARS
+CORP=$CORP
+CORPAUG=$CORPAUG
+ORDER=$ORDER
+FLMCONFIG=$FLMCONFIG
+KONEC
+
+echo $DIR > var-DIR
+echo $ORDER > var-ORDER
+echo $CORP > var-CORP
+echo $FLMCONFIG > var-FLMCONFIG
+echo $CORPAUG > var-CORPAUG
+
+eval `makearg --delim=- $DIR srclan tgtlan`
+
+CurrentPath=`pwd`
+
+cat << KONEC > command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+renice 10 \$\$
+
+CurrentPath=$CurrentPath
+cd \$CurrentPath
+
+export TMP=/mnt/h/tmp
+
+export PATH=\$PATH:$BINDIR
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
+
+echo "Using this fngram-count:"
+which fngram-count
+
+CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
+
+CPE=\`echo \$CORPSOURCE | sed -r -n 's/^.*(\.[^\./]*)$/\1/p'\`
+FLMCORPSOURCE=\`echo \$CORPSOURCE | sed -r 's/^(.*)\.[^\.]*$/\1/'\`.flm-prepared\$CPE
+
+../augmented_corpora/prepare_for_flm.pl \$CORPSOURCE \$FLMCORPSOURCE
+
+cp $FLMCONFIG config.orig.flm
+
+
+CORPAUG=\`cat var-CORPAUG\`
+
+../prepare_flm_config.pl \$CORPAUG \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm
+
+
+
+echo "Got CORPSOURCE: \$FLMCORPSOURCE"
+
+[ -s "\$FLMCORPSOURCE" ] || die "Failed to prepare corpus";
+
+wiseln \$FLMCORPSOURCE corpus.text.gz || exit 1
+
+echo Generating model from corpus...
+
+  echo "making FLM..."
+  if zcat corpus.text.gz | fngram-count \\
+		-factor-file config.prepared.flm \\
+    -text - \\
+    -lm flm.lm \\
+		-write-counts flm.count \\
+    -unk; then
+    echo "Succeeded."
+  else
+    echo "FLM preparation failed"
+  fi
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
+if [ "$RUN" == "yes" ]; then
+  sh command
+fi
