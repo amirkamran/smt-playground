@@ -230,10 +230,12 @@ workspace.%.srilm: workspace.%
 	&& pwd > ../srilm.path
 	date > $@ # confirm our success
 
-MOSES_START_REVISION?=0
-# Use official moses SVN source by default:
-MOSES_GIT_CLONE_FROM?=svn clone -r $(MOSES_START_REVISION):HEAD \
-               https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk
+# Use UFAL Moses repository by default:
+MOSES_GIT_CLONE_FROM=clone /net/work/projects/moses-ufal-git-repo
+# Alternatively use official moses SVN source:
+#MOSES_START_REVISION?=0
+#MOSES_GIT_CLONE_FROM?=svn clone -r $(MOSES_START_REVISION):HEAD \
+#               https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk
 
 workspace.%.moses: workspace.%
 	ws=$< \
