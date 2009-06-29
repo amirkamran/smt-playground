@@ -230,7 +230,11 @@ workspace.%.srilm: workspace.%
 	&& pwd > ../srilm.path
 	date > $@ # confirm our success
 
-MOSES_START_REVISION=2300
+MOSES_START_REVISION?=0
+# Use official moses SVN source by default:
+MOSES_GIT_CLONE_FROM?=svn clone -r $(MOSES_START_REVISION):HEAD \
+               https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk
+
 workspace.%.moses: workspace.%
 	ws=$< \
 	&& cd $$ws \
@@ -238,8 +242,7 @@ workspace.%.moses: workspace.%
 	     echo "Just updating moses..." ; \
 	     cd moses && git svn rebase && cd .. ; \
 	   else \
-	     git svn clone -r $(MOSES_START_REVISION):HEAD \
-	       https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses ; \
+	     git $(MOSES_GIT_CLONE_FROM) moses ; \
 	   fi\
 	&& cd moses \
 	&& ./regenerate-makefiles.sh \
