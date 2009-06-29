@@ -193,8 +193,8 @@ workspace.%.giza: workspace.%
 	&& cd mkcls-v2 && make && cd ../ \
 	&& cd ../ \
 	&& mkdir -p bin \
-	&& ln -s giza-pp/GIZA++-v2/GIZA++ giza-pp/GIZA++-v2/snt2cooc.out \
-	      giza-pp/mkcls-v2/mkcls bin/
+	&& ln -s ../giza-pp/GIZA++-v2/GIZA++ ../giza-pp/GIZA++-v2/snt2cooc.out \
+	      ../giza-pp/mkcls-v2/mkcls bin/
 	date > $@ # confirm our success
 
 workspace.%.randlm: workspace.%
@@ -206,7 +206,7 @@ workspace.%.randlm: workspace.%
 	&& pwd > ../randlm.path \
 	&& cd ../ \
 	&& mkdir -p bin \
-	&& ln -s randlm/bin/buildlm randlm/bin/querylm \
+	&& ln -s ../randlm/bin/buildlm ../randlm/bin/querylm \
 	      bin/
 	date > $@ # confirm our success
 
@@ -231,8 +231,10 @@ workspace.%.srilm: workspace.%
 	date > $@ # confirm our success
 
 # Use UFAL Moses repository by default:
+MOSES_GIT_UPDATE_COMMAND=pull
 MOSES_GIT_CLONE_FROM=clone /net/work/projects/moses-ufal-git-repo
 # Alternatively use official moses SVN source:
+# MOSES_GIT_UPDATE_COMMAND=svn rebase
 #MOSES_START_REVISION?=0
 #MOSES_GIT_CLONE_FROM?=svn clone -r $(MOSES_START_REVISION):HEAD \
 #               https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk
@@ -242,7 +244,7 @@ workspace.%.moses: workspace.%
 	&& cd $$ws \
 	&& if [ -e moses ]; then \
 	     echo "Just updating moses..." ; \
-	     cd moses && git svn rebase && cd .. ; \
+	     cd moses && git $(MOSES_GIT_UPDATE_COMMAND) && cd .. ; \
 	   else \
 	     git $(MOSES_GIT_CLONE_FROM) moses ; \
 	   fi\
@@ -252,7 +254,8 @@ workspace.%.moses: workspace.%
 	               --with-srilm=`cat ../srilm.path` \
 	               --with-randlm=`cat ../randlm.path` \
 	&& make -j 4 \
-	&& ln -s moses-cmd/src/moses ../bin/ \
+	&& rm -f ../bin/moses \
+	&& ln -s ../moses/moses-cmd/src/moses ../bin/ \
 	&& cd scripts \
 	&& TARGETDIR=`cat ../../bindir.path` \
 	   BINDIR=`cat ../../bindir.path` \
