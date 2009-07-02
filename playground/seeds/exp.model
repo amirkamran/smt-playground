@@ -1,4 +1,5 @@
 ## Save our own copy of the training script
+
 if [ -z "$SCRIPTS_ROOTDIR" ]; then
   echo "Set \$SCRIPTS_ROOTDIR to the scripts release!"
   exit 1
@@ -75,16 +76,30 @@ for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
     numericlmtype=1
     lmsuffix=blm
     lmtypetag=blm
-  else
+  elif [ x$lmtype == xflm ]; then
+		numericlmtype=7
+		lmsuffix=flm
+		lmtypetag=flm
+	else		
     lmtypetag=sri
     numericlmtype=0
     lmsuffix=lm
   fi
-  wiseln ../$lmdir/corpus.$lmsuffix ./lm.$i.$lmsuffix || exit 1
+
+	
+	if [ $lmsuffix == flm ]; then
+		wiseln ../$lmdir/config.prepared.flm ./lm.$i.$lmsuffix || exit 1
+	else
+  	wiseln ../$lmdir/corpus.$lmsuffix ./lm.$i.$lmsuffix || exit 1
+	fi
+
   order=`cat ../$lmdir/var-ORDER` || exit 1
 
   lmopts="$lmopts --lm $factor:$order:$mydir/lm.$i.$lmsuffix:$numericlmtype"
   i=$(($i+1))
+
+  factor=`echo $factor | sed 'y/\,/+/'`
+
   lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/var-CORP`-$lmtypetag
 done
 i=$(($i-1))
