@@ -5,6 +5,10 @@ function die() {
   exit 1
 }
 
+PATH=.:`pwd`/..:$PATH
+
+echo "PATH="$PATH
+
 set -o pipefail
 
 
@@ -75,6 +79,10 @@ export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
 
+PATH=.:`pwd`/..:\$PATH
+
+echo "PATH="\$PATH
+
 echo "Using this fngram-count:"
 which fngram-count
 
@@ -90,7 +98,7 @@ cp $FLMCONFIG config.orig.flm
 
 CORPAUG=\`cat var-CORPAUG\`
 
-../prepare_flm_config.pl \$CORPAUG \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm
+../prepare_flm_config.pl \$CORPAUG \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm \$CurrentPath
 
 
 

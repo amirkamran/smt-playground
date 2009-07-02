@@ -3,6 +3,7 @@
 $CORPAUG = shift;
 $SourceFlm = shift;
 $TargetFlm = shift;
+$cesta = shift;
 
 $CORPAUG =~ s/^[^+]+\+(.*)$/$1/;
 
@@ -34,8 +35,10 @@ while ($radek = <SOURCE>)
 
   if ($j == 1)
   {
-		$radek =~ s/[^ ]+\.count\.gz/flm.count.gz/;
-    $radek =~ s/[^ ]+\.lm\.gz/flm.lm.gz/;
+		$nahrada = $cesta."/flm.count.gz";
+		$radek =~ s/[^ ]+\.count\.gz/$nahrada/;
+		$nahrada = $cesta."/flm.lm.gz";
+    $radek =~ s/[^ ]+\.lm\.gz/$nahrada/;
 	}
 
   for ($i = 0; $i <= $#Factors; $i++)
