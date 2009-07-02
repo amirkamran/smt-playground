@@ -1,4 +1,9 @@
+#!/bin/bash
 ## Save our own copy of moses
+
+function die() { echo "$@" >&2; exit 1 ; }
+set -o pipefail
+
 echo MOSESCMD: $MOSESCMD
 if [[ ! -x "$MOSESCMD" ]]; then
   echo "Set \$MOSESCMD to the binary of moses!"
@@ -12,10 +17,10 @@ if [ -z "$SCRIPTS_ROOTDIR" ]; then
   exit 1
 fi
 
-SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/src/scorenbest.asm
+SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
 wiseln $SCORENBEST ./scorenbest || exit 1
 
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/src/testbleu.asm
+TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 wiseln $TESTBLEU ./testbleu || exit 1
 
 if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
@@ -44,8 +49,8 @@ MODELEXP=$SAVEMODELEXP
 
 ## Clone the moses.ini and source files
 $SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  ../$MODELEXP/model/moses.ini || exit 1
-
+  ../$MODELEXP/model/moses.ini \
+  || die "Failed to clone ../$MODELEXP/model/moses.ini"
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
@@ -56,10 +61,10 @@ $SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
 ../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || exit 1
 
 echo Checking tune and eval corp sizes
-[ `wc -l < tuning.in` -gt 0 ] || exit 1
-[ `wc -l < evaluation.in` -gt 0 ] || exit 1
-[ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || exit 1
-[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || exit 1
+[ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
+[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
+[ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
+[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
 
