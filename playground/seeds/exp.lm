@@ -1,9 +1,6 @@
 #!/bin/bash
 
-function die() {
-  echo "$@" >&2
-  exit 1
-}
+function die() { echo "$@" >&2; exit 1 ; }
 
 set -o pipefail
 
@@ -72,6 +69,8 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 renice 10 \$\$
 
+function die() { echo "\$@" >&2; exit 1 ; }
+
 export TMP=/mnt/h/tmp
 
 export PATH=\$PATH:$BINDIR
@@ -89,7 +88,8 @@ echo "Got CORPSOURCE: \$CORPSOURCE"
 
 [ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
 
-wiseln \$CORPSOURCE corpus.text.gz || exit 1
+wiseln \$CORPSOURCE corpus.text.gz \
+  || die "Failed to make local backup of corpus \$CORPSOURCE"
 
 echo Generating model from corpus...
 if [ $PARTS == 1 ]; then
@@ -105,30 +105,31 @@ if [ $PARTS == 1 ]; then
       -text - \\
       -lm corpus.lm \\
       -interpolate $KNDISCOUNTSFROMTHREE \\
-    || ( echo "FAILED"; exit 1) || exit 1
+    || die "ngram-count FAILED even with bigrams not knsmoothed"
   fi
 else
   tempdir=\`mktemp -d /mnt/h/tmp/exp.lm.XXXXXX\`
   echo Counting in $PARTS parts, tempdir=\$tempdir
-  zcat corpus.text.gz | split_even $PARTS \$tempdir/part --gzip
+  zcat corpus.text.gz | split_even $PARTS \$tempdir/part --gzip \
+  || die "Splitting FAILED"
   ls \$tempdir/part*.gz > \$tempdir/filelist
 
   echo Making batch counts
   make-batch-counts \$tempdir/filelist 1 zcat \$tempdir \\
     -order $ORDER \\
     -interpolate -kndiscount \\
-    || ( echo "FAILED"; exit 1) || exit 1
+    || die "make-batch-counts FAILED"
 
   echo Merging batch counts
   merge-batch-counts \$tempdir \\
-    || ( echo "FAILED"; exit 1) || exit 1
+    || die "merge-batch-counts FAILED"
 
   make-big-lm -read \$tempdir/*.ngrams.gz \\
     -name \$tempdir/biglm \\
     -order $ORDER \\
     -interpolate -kndiscount \\
     -lm \`pwd\`/corpus.lm \\
-    || ( echo "FAILED"; exit 1) || exit 1
+    || die "make-big-lm FAILED"
 
   echo Removing \$tempdir
   rm -rf \$tempdir
@@ -136,7 +137,7 @@ fi
 
 if [ x$BINARIZE == xyes ]; then
   $IRSTLMDIR/compile-lm corpus.lm corpus.blm \\
-  || ( echo "FAILED"; exit 1) || exit 1
+  || die "Binarization FAILED"
 fi
 
 echo "=============================="

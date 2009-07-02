@@ -1,11 +1,18 @@
 #!/usr/bin/perl
+# Modify flm config file to use letters instead of factor names.
 
-$CORPAUG = shift;
-$SourceFlm = shift;
-$TargetFlm = shift;
-$cesta = shift;
+use strict;
 
-$CORPAUG =~ s/^[^+]+\+(.*)$/$1/;
+my $CORPAUG = shift;
+my $SourceFlm = shift;
+my $TargetFlm = shift;
+my $cesta = shift;
+
+die "usage!" if ! defined $cesta;
+
+die "Bad dir: $cesta" if ! -d $cesta;
+
+$CORPAUG =~ s/^[^+]+\+//;
 
 print STDERR "prepare_flm_config.pl ...\n";
 print STDERR "CORPAUG = $CORPAUG\n";
@@ -14,43 +21,41 @@ print STDERR "TargetFlm = $TargetFlm\n";
 
 
 
-@Factors = split(/\+/, $CORPAUG);
+my @Factors = split(/\+/, $CORPAUG);
 
-@NewFactors = ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p');
+my @NewFactors = ('a' .. 'z');
 
 if (! -e $SourceFlm )
 {
   die "file $SourceFlm does not exist!!!";
 }
 
-open(SOURCE, "<$SourceFlm");
-open(TARGET, ">$TargetFlm");
+open(SOURCE, "<$SourceFlm") or die "Can't find $SourceFlm";
+open(TARGET, ">$TargetFlm") or die "Can't write $TargetFlm";
 
 
-$j = 0;
+my $j = 0;
 
-while ($radek = <SOURCE>)
+while (<SOURCE>)
 {
-  chomp($radek);
+  chomp;
 
   if ($j == 1)
   {
-		$nahrada = $cesta."/flm.count.gz";
-		$radek =~ s/[^ ]+\.count\.gz/$nahrada/;
-		$nahrada = $cesta."/flm.lm.gz";
-    $radek =~ s/[^ ]+\.lm\.gz/$nahrada/;
-	}
-
-  for ($i = 0; $i <= $#Factors; $i++)
-  {
-    $f = $Factors[$i];
-    $nf = $NewFactors[$i];
-
-    $radek =~ s/^$f( *:.*)$/$nf$1/;
-    $radek =~ s/([\s,])$f([0-9\(])/$1$nf$2/g;
+    s/[^ ]+\.count\.gz/$cesta\/flm.count.gz/;
+    s/[^ ]+\.lm\.gz/$cesta\/flm.lm.gz/;
   }
 
-  print TARGET $radek."\n";
+  for (my $i = 0; $i <= $#Factors; $i++)
+  {
+    my $f = $Factors[$i];
+    my $nf = $NewFactors[$i];
+
+    s/^$f( *:.*)$/$nf$1/;
+    s/([\s,])$f([0-9\(])/$1$nf$2/g;
+  }
+
+  print TARGET $_."\n";
   $j++;
 }
 

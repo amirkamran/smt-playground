@@ -1,9 +1,6 @@
 #!/bin/bash
 
-function die() {
-  echo "$@" >&2
-  exit 1
-}
+function die() { echo "$@" >&2; exit 1 ; }
 
 PATH=.:`pwd`/..:$PATH
 
@@ -39,7 +36,14 @@ lmtypetag=flm
 
 # Remember the core settings
 
-FLMFILE=`echo $FLMCONFIG | sed -r 's/^.*\/([^\/]+)$/\1/'`
+if [ ! -e $FLMCONFIG ] && [ -e ../$FLMCONFIG ]; then
+  # the experiment is usually launched from /playground/ but the seed runs
+  # within a subdir
+  FLMCONFIG=../$FLMCONFIG
+fi
+[ -e $FLMCONFIG ] || die "Failed to find $FLMCONFIG"
+
+FLMFILE=`basename $FLMCONFIG | sed 's/\.flm$//'`
 
 echo $CORP+$CORPAUG.$ORDER.$FLMFILE > TAG
 
@@ -58,6 +62,9 @@ echo $CORPAUG > var-CORPAUG
 
 eval `makearg --delim=- $DIR srclan tgtlan`
 
+cp $FLMCONFIG config.orig.flm \
+  || die "Failed to create a local copy of the config file"
+
 CurrentPath=`pwd`
 
 cat << KONEC > command
@@ -69,12 +76,13 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 renice 10 \$\$
 
+function die() { echo "\$@" >&2; exit 1 ; }
+
 CurrentPath=$CurrentPath
 cd \$CurrentPath
 
 export TMP=/mnt/h/tmp
 
-export PATH=\$PATH:$BINDIR
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
@@ -86,41 +94,38 @@ echo "PATH="\$PATH
 echo "Using this fngram-count:"
 which fngram-count
 
+# Obtain the corpus in factored format
 CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
+[ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
+wiseln \$CORPSOURCE corpus.text.gz \
+  || die "Failed to make local backup of corpus \$CORPSOURCE"
 
-CPE=\`echo \$CORPSOURCE | sed -r -n 's/^.*(\.[^\./]*)$/\1/p'\`
-FLMCORPSOURCE=\`echo \$CORPSOURCE | sed -r 's/^(.*)\.[^\.]*$/\1/'\`.flm-prepared\$CPE
-
-../augmented_corpora/prepare_for_flm.pl \$CORPSOURCE \$FLMCORPSOURCE
-
-cp $FLMCONFIG config.orig.flm
-
+# Convert it to the format of fngram-count
+../augmented_corpora/prepare_for_flm.pl corpus.text.gz corpus.text-for-fngram.gz \
+  || die "Failed to create corpus.factored.gz"
 
 CORPAUG=\`cat var-CORPAUG\`
 
-../prepare_flm_config.pl \$CORPAUG \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm \$CurrentPath
-
-
-
-echo "Got CORPSOURCE: \$FLMCORPSOURCE"
-
-[ -s "\$FLMCORPSOURCE" ] || die "Failed to prepare corpus";
-
-wiseln \$FLMCORPSOURCE corpus.text.gz || exit 1
+../prepare_flm_config.pl \$CORPAUG \
+  \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm \
+  \$CurrentPath \
+  || die "Failed to prepare flm config"
 
 echo Generating model from corpus...
 
-  echo "making FLM..."
-  if zcat corpus.text.gz | fngram-count \\
-		-factor-file config.prepared.flm \\
-    -text - \\
-    -lm flm.lm \\
-		-write-counts flm.count \\
-    -unk; then
-    echo "Succeeded."
-  else
-    echo "FLM preparation failed"
-  fi
+echo "making FLM..."
+if zcat corpus.text-for-fngram.gz | fngram-count \\
+  	-factor-file config.prepared.flm \\
+  -text - \\
+  -lm flm.lm \\
+  	-write-counts flm.count \\
+  -unk; then
+  echo "Succeeded."
+else
+  die "FLM preparation failed"
+fi
+
+[ -e flm.lm.gz ] || die "FLM did not prepare any model file"
 
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
