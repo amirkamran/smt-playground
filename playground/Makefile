@@ -140,6 +140,7 @@ modelstat:
 	| list2tab 1 2 3 \
 	| tt \
 	> $@
+	rm -f modelstat.modeltmp* modelstat.merttmp* modelstat.sizetmp*
 	
 
 all.oficbleu:
@@ -260,7 +261,7 @@ workspace.%.moses: workspace.%
 	&& TARGETDIR=`cat ../../bindir.path` \
 	   BINDIR=`cat ../../bindir.path` \
 	     make release \
-	&& eval 'echo '`cat ../../bindir.path`'/scripts-*/' \
+	&& eval 'ls -dt '`cat ../../bindir.path`'/scripts-* | head -n1' \
 	    > ../../scripts.rootdir
 	date > $@ # confirm our success
 
