@@ -26,12 +26,14 @@ GetOptions(
 my $descr = shift;
 
 if (! defined $descr) {
-  print STDERR "usage: $0 corpname/lang+fact1+fact2+0
+  print STDERR "usage: $0 corpname/lang+fact1+fact2+0+3
   This will use the corpus 'corpname' in:
     $basedir
   in the language 'lang' and extend it with labelled (fact1, fact2) or
-  unlabelled factors (0).
-  Finally, it will emit the pathname to that corpus
+  unlabelled factors (0, 3).
+  Finally, it will emit the pathname to that corpus.
+Options:
+  --dump  ... to dump the corpus contents to stdout
 ";
   exit 1;
 }

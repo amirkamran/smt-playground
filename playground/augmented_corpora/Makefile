@@ -456,7 +456,7 @@ english_uppercased_tokens:
 
 ## Alignment
 
-export DIRSYM?=gdf
+export DIRSYM?=gdfa
 align:
 	# about to align corp $(CORP) srcaug $(SRCAUG) tgtaug $(TGTAUG)
 	# as $(NAME)
