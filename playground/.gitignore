@@ -1,1 +1,16 @@
-workspace.*
+augmented_corpora/hindi-web-mono
+augmented_corpora/icon-allFIX2
+augmented_corpora/icon-eilmt.dev
+augmented_corpora/icon-eilmt.test
+augmented_corpora/icon-eilmt
+augmented_corpora/icon-eiti
+augmented_corpora/icon-tides.dev
+augmented_corpora/icon-tides.test
+augmented_corpora/icon-tides
+bleu
+exp.*.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]
+exp.*.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].[0-9]*
+workspace.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]
+workspace.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].*
+modelstat
+workspace
