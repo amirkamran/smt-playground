@@ -1,3 +1,4 @@
+#!/bin/bash
 # given a dir name returns a short info describing the status of the logfile:
 
 if [ -z $1 ]; then
