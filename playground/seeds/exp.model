@@ -1,62 +1,40 @@
-## Save our own copy of the training script
+#!/bin/bash
+# Prepare a moses.ini file by combining:
+#   translation model
+#   (optional reordering model)
+#   language models
 
-if [ -z "$SCRIPTS_ROOTDIR" ]; then
-  echo "Set \$SCRIPTS_ROOTDIR to the scripts release!"
-  exit 1
-fi
+set -o pipefail
+function die() { echo "$@" >&2; exit 1 ; }
 
-if [ -z "$ALIAUG" ] || [ -z "$DECODINGSTEPS" ] || [ -z "$LMEXPS" ] \
-  || [ -z "$SRCCORP" ] \
-  || [ -z "$SRCAUG" ] \
-  || [ -z "$TGTAUG" ] \
+[ ! -z "$SCRIPTS_ROOTDIR" ] \
+  || die "Set \$SCRIPTS_ROOTDIR to the scripts release!"
+
+if [ -z "$TMEXP" ] || [ -z "$LMEXPS" ] \
   ; then
   echo "You must set: "
-  echo "  \$SRCCORP to source corpus name"
-  echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
-  echo "  \$SRCAUG to the string describing lang+factors of src corpus"
-  echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
-  echo "  \$ALICORP to target corpus name, can be omitted if equal to SRCCORP"
-  echo "  \$ALIAUG to the string describing the 'language', e.g. 'ali'"
+  echo "  \$TMEXP to the extracted phrases"
   echo "  \$LMEXPS to factor:lmdir:::factor:lmdir:::factor:lmdir"
-  echo "  \$DECODINGSTEPS to specification of decoding steps, e.g. 0a1-0+1-1"
   echo "And optionally:"
-  echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
-  echo "  and \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
+  echo "  \$RMEXP to reordering models"
   exit 1
 fi
 
-if [ -z "$TGTCORP" ]; then
-  TGTCORP=$SRCCORP
-fi
-if [ -z "$ALICORP" ]; then
-  ALICORP=$SRCCORP
-fi
+# Load variables from TMexp
+[ -e ../$TMEXP/VARS ] || die "Bad translation model: $TMEXP"
+. ../$TMEXP/VARS
 
-if echo "$DECODINGSTEPS" | grep , ; then
-  echo "\$DECODINGSTEPS ($DECODINGSTEPS) contains a comma! Use 'a' instead, e.g. 0a1-0+1-1"
-  exit 1
-fi
-
-if [ -z "$REORDERING" ]; then
-  REORDERING=distance
-  REORDFACTORS="0-0"
-  DOTREORDTAG=""
-else
-  if [ -z "$REORDFACTORS" ]; then
-    echo "Set \$REORDFACTORS to the factors to use!"
-    exit 1
-  fi
-  DOTREORDTAG=`echo ".$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
-fi
-
-cat << KONEC > VARS
+echo "Print and save used variables:"
+cat << KONEC | tee VARS
+TMEXP=$TMEXP
+RMEXP=$RMEXP
+LMEXPS=$LMEXPS
 SRCCORP=$SRCCORP
 TGTCORP=$TGTCORP
 ALICORP=$ALICORP
 SRCAUG=$SRCAUG
 TGTAUG=$TGTAUG
 ALIAUG=$ALIAUG
-LMEXPS=$LMEXPS
 DECODINGSTEPS=$DECODINGSTEPS
 REORDERING=$REORDERING
 REORDFACTORS=$REORDFACTORS
@@ -65,9 +43,46 @@ KONEC
 echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
 
+
+if [ -z "$RMEXP" ]; then
+  REORDERING=distance
+  REORDFACTORS="0-0"
+  DOTREORDTAG=""
+else
+  [ "$SRCAUG" == $(cat ../$RMEXP/var-SRCAUG) ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(cat ../$RMEXP/var-TGTAUG) ] || die "Incompatible TGTAUGs"
+  REORDERING=`cat ../$RMEXP/var-REORDERING` || die "Missed REORDERING"
+  REORDFACTORS=`cat ../$RMEXP/var-REORDFACTORS` || die "Missed REORDFACTORS"
+  REORDTAG=`cat ../$RMEXP/var-REORDTAG` || die "Missed REORDTAG"
+  [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] && [ ! -z "$REORDTAG" ] \
+    || die "Bad reordering model: $RMEXP"
+  DOTREORDTAG=".$REORDTAG"
+fi
+
 mydir=`pwd`
 
+mkdir -p model
+
+## Cloning translation model
+cd model || die "Chdir failed"
+for f in ../../$TMEXP/model/*-table*gz ; do
+  wiseln $f ./`basename $f` || die "Failed to clone $f"
+done
+cd $mydir || die "Chdir back failed"
+
+
+## Cloning reordering model
+if [ ! -z "$RMEXP" ]; then
+  cd model || die "Chdir failed"
+  for f in ../../$RMEXP/model/reordering-table*gz ; do
+    wiseln $f ./`basename $f` || die "Failed to clone $f"
+  done
+  cd $mydir || die "Chdir back failed"
+fi
+
+
 ## Clone the lms
+echo "Cloning LMs"
 i=1
 for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
   eval `makearg --delim=: $lm factor lmdir lmtype`
@@ -77,23 +92,25 @@ for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
     lmsuffix=blm
     lmtypetag=blm
   elif [ x$lmtype == xflm ]; then
-		numericlmtype=7
-		lmsuffix=flm
-		lmtypetag=flm
-	else		
+    numericlmtype=7
+    lmsuffix=flm
+    lmtypetag=flm
+  else    
     lmtypetag=sri
     numericlmtype=0
     lmsuffix=lm
   fi
 
-	
-	if [ $lmsuffix == flm ]; then
-		wiseln ../$lmdir/config.prepared.flm ./lm.$i.$lmsuffix || exit 1
-	else
-  	wiseln ../$lmdir/corpus.$lmsuffix ./lm.$i.$lmsuffix || exit 1
-	fi
+  
+  if [ $lmsuffix == flm ]; then
+    wiseln ../$lmdir/config.prepared.flm ./lm.$i.$lmsuffix \
+      || die "Failed to link flm: ../$lmdir/config.prepared.flm"
+  else
+    wiseln ../$lmdir/corpus.$lmsuffix ./lm.$i.$lmsuffix \
+      || die "Failed to link lm: ../$lmdir/corpus.$lmsuffix"
+  fi
 
-  order=`cat ../$lmdir/var-ORDER` || exit 1
+  order=`cat ../$lmdir/var-ORDER` || die "Missing: ../$lmdir/var-ORDER"
 
   lmopts="$lmopts --lm $factor:$order:$mydir/lm.$i.$lmsuffix:$numericlmtype"
   i=$(($i+1))
@@ -112,102 +129,34 @@ else
 fi
 
 DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
-
-if [ ! -x $DECRYPT ]; then
-  echo "Missing: $DECRYPT"
-  exit 1
-fi
+[ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
 DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
 
-
-
-cat << KONEC > command
-# This is the command to be run here
-echo "=============================="
-echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
-echo "== Hostname:  "\`hostname\`
-echo "== Directory: "\`pwd\`
-echo "=============================="
-renice 10 \$\$
-
-## Prepare the corpus from more factors
-export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-mkdir corpus
-
-cd corpus
-wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz || exit 1
-wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz || exit 1
-cd ..
-
-wiseln \`../augmented_corpora/augment.pl $ALICORP/$ALIAUG\` alignment.custom.gz || exit 1
-
-alilen=\`zcat alignment.custom.gz | wc -l\`
-srclen=\`zcat corpus/corpus.src.gz | wc -l\`
-tgtlen=\`zcat corpus/corpus.tgt.gz | wc -l\`
-if [[ \$alilen -ne \$srclen ]] \\
-   || [[ \$alilen -ne \$tgtlen ]] \\
-; then
-  echo "Incompatible corpus lengths:"
-  echo "\$alilen  alignment.custom.gz"
-  echo "\$srclen  corpus.src.gz"
-  echo "\$tgtlen  corpus.tgt.gz"
-  exit 1
-fi
-
-mkdir model
-
-tempdir=\`mktemp -d /mnt/h/tmp/exp.model.XXXXXX\`
-echo "COPYING SELF TO TEMPDIR: \$tempdir"
-rsync -avz * \$tempdir/ || exit 1
-echo "COPIED, used disk space:"
-
-df \$tempdir
-
-if \\
-  \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
-	    --first-step 4 --last-step 9 \\
-	    --root-dir \$tempdir \\
-	    --alignment-file=alignment \\
-	    --alignment=custom \\
-	    --corpus=corpus/corpus \\
-	    --f src --e tgt \\
-	    --reordering $REORDERING \\
-	    --reordering-factors $REORDFACTORS \\
-	    $lmopts \\
-	    $DECRYPTEDSTEPS; \\
-then
-  success=1
-  echo "COPYING TEMPDIR \$tempdir BACK"
-  rsync -uavz \$tempdir/* ./ || exit 1
-  echo "COPIED"
-
-  echo Deleting \$tempdir
-  rm -rf \$tempdir
-else
-  success=0
-  rsync -uavz \$tempdir/log* ./ || exit 1
-  echo "ONLY log copied back. Majority of files left here: \$tempdir"
-fi
+$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \
+    --force-factored-filenames \
+    --first-step 9 --last-step 9 \
+    --root-dir . \
+    --alignment-file=alignment \
+    --alignment=custom \
+    --corpus=corpus/corpus \
+    --f src --e tgt \
+    --reordering $REORDERING \
+    --reordering-factors $REORDFACTORS \
+    $lmopts \
+    $DECRYPTEDSTEPS \
+|| die "Failed to create moses.ini"
 
 
-if [ \$success == 0 ] ; then
-  echo THERE WERE ERRORS!! See above.
-  exit 1
-else
-  echo "Fixing paths in moses.ini"
-  perl -i~ -pne 's|'\$tempdir'|'\`pwd\`'|g' model/moses.ini || exit 1
-fi
 
-echo "=============================="
-echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
-echo "== Hostname:  "\`hostname\`
-echo "== Directory: "\`pwd\`
-echo "=============================="
-KONEC
+# for running this command, qsub it not allowed because it wouldn't bring
+# anything
+echo "no" > qsub-allowed
+
+echo "echo Finished" > command
 
 if [ "$RUN" == "yes" ]; then
-  sh command
+  echo "Model preparation finished."
 fi
