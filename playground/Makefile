@@ -86,6 +86,14 @@ exp.%.restart: exp.%
 ls%:
 	@ls -dt exp.$** | grep -v 'exp.$*[^.]*.[-.0-9]*$$' | tac
 
+# the most recent exp of a given type, eg. make lastlm
+last%:
+	@ls -dt exp.$** | grep -v 'exp.$*[^.]*.[-.0-9]*$$' | head -n1
+
+# redo the last model of a given type:
+redo%:
+	eval $$(cat $$(make -s last$*)/VARS) make exp.$*.prepare
+
 mertdetails:
 	head -n -0 exp.mert.S*/log \
 	| picklog \

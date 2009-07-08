@@ -47,6 +47,8 @@ SAVEMODELEXP=$MODELEXP
 eval `cat ../$MODELEXP/VARS` || exit 1
 MODELEXP=$SAVEMODELEXP
 
+echo $MODELEXP > deps
+
 ## Clone the moses.ini and source files
 $SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
   ../$MODELEXP/model/moses.ini \

@@ -56,6 +56,8 @@ echo $DIR > var-DIR
 echo $ORDER > var-ORDER
 echo $CORP > var-CORP
 
+touch deps # does not depend on anything
+
 eval `makearg --delim=- $DIR srclan tgtlan`
 
 KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`

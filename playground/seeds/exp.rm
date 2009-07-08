@@ -51,6 +51,8 @@ echo $REORDERING > var-REORDERING
 echo $REORDFACTORS > var-REORDFACTORS
 echo $REORDTAG > var-REORDTAG
 
+touch deps # does not depend on anything
+
 mydir=`pwd`
 
 if [ $SRCCORP == $TGTCORP ] ; then

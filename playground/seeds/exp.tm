@@ -62,6 +62,8 @@ KONEC
 echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
 
+touch deps # does not depend on anything
+
 mydir=`pwd`
 
 if [ $SRCCORP == $TGTCORP ] ; then
@@ -140,7 +142,7 @@ if \\
   && echo "Now will extract generation models" \\
   && \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
         --force-factored-filenames \\
-	    --first-step 8 --last-step 7 \\
+	    --first-step 8 --last-step 8 \\
 	    --root-dir \$tempdir \\
 	    --alignment-file=alignment \\
 	    --alignment=custom \\
