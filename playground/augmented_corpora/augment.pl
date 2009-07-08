@@ -21,6 +21,7 @@ my $basedir = dirname(File::Spec->rel2abs(__FILE__));
 my $dump = 0; # print the corpus contents, not the filename
 GetOptions(
   "dump"=>\$dump,
+  "dir=s" => \$basedir,
 ) or exit 1;
 
 my $descr = shift;
@@ -34,6 +35,7 @@ if (! defined $descr) {
   Finally, it will emit the pathname to that corpus.
 Options:
   --dump  ... to dump the corpus contents to stdout
+  --dir=PATH  ... specify a different base directory
 ";
   exit 1;
 }
