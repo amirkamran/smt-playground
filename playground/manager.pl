@@ -34,6 +34,11 @@ if ($reindex) {
 
 if (defined $derive) {
   # derive an experiment using a key (from arg)
+  foreach my $key (@ARGV) {
+    my $exp = guess_exp($key);
+    my %deps = ();
+    my $outexp = derive_exp($exp, \%deps);
+  }
 
 }
 
@@ -41,6 +46,18 @@ foreach my $key (@ARGV) {
   # traceback an experiment given a seed key
   my $exp = guess_exp($key);
   traceback("", $exp);
+}
+
+sub derive_exp {
+  my $exp = shift;
+  my $deps = shift;
+
+  # load vars and sources
+  my $oldv = load($exp."/VARS");
+  my $oldv = load($exp."/VARS");
+  # derive experiments for sources
+  # replace sources with new ones in vars
+  # check if we changed and possibly init us
 }
 
 sub traceback {
