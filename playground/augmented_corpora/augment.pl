@@ -7,6 +7,7 @@
 
 use strict;
 use File::Basename;
+use File::Path;
 use File::Spec;
 use File::NFSLock qw(uncache);
 use Fcntl qw(LOCK_EX LOCK_NB LOCK_SH);
@@ -61,6 +62,7 @@ print STDERR "Running augment.pl $descr\n";
 
 my $corpbasefile = "$basedir/$corp/$lang.gz";
 die "Corpus not found: $corpbasefile" if ! -e $corpbasefile;
+
 my $corp_stream = my_open($corpbasefile);
 
 # Load corpus header file:
@@ -111,8 +113,6 @@ my $corpfile = "$corp/combinations/$lang+$canofacts.gz";
 
 my $corppathname = "$basedir/$corpfile";
 
-ensure_dir_for_file($corppathname);
-
 if (-e $corppathname) {
   my $lock = blocking_verbose_lock($corppathname);
   print STDERR "Corpus '$descr' seems ready, checking.\n";
@@ -124,24 +124,37 @@ if (-e $corppathname) {
 }
 
 sub blocking_verbose_lock {
+  # in readonly mode, block until an existing lockfile vanishes and return undef
+  # in regular mode, block on creating lockfile..
   my $fn = shift;
   my $lock = undef;
   my $authfile = $fn.".lock";
   if (-e $authfile) {
     print STDERR "Waiting for ".`cat $authfile 2>/dev/null`;
   }
+  if (! -w dirname($authfile)) {
+    sleep(30) while -e $authfile;
+    die "Won't create lockfile in readonly mode for $fn"
+      if ! -e $fn;
+    return undef;
+  }
+  ensure_dir_for_file($fn);
+  my $msg = 0;
   while (! ($lock = File::NFSLock->new($fn, LOCK_EX, 10,30*60))) {
     # waiting
+    print STDERR "Waiting for lockfile for $fn..." if !$msg;
+    $msg = 1;
   }
   my $authstream = my_save($authfile);
   my $hostname = `hostname`; chomp($hostname);
-  print $authstream "$hostname:$$\n";
+  print $authstream "$ENV{USER}\@$hostname:$$\n";
   close $authstream;
   return {lock=>$lock, fn=>$fn};
 }
 
 sub unlock_verbose {
   my $lock = shift;
+  return if !defined $lock;
   unlink $lock->{fn}.".lock" if -e $lock->{fn}.".lock";
   $lock->{lock}->unlock();
 }
@@ -154,7 +167,6 @@ sub construct_projection {
   # this factor should be available in a file:
   my $factorfile = "$corp/$lang.factors/$fact.gz";
   my $factorpathname = $basedir."/".$factorfile;
-  ensure_dir_for_file($factorpathname);
   my $lock = blocking_verbose_lock($factorpathname);
   if (-e $factorpathname) {
     print STDERR "Using old $factorfile\n";
@@ -271,9 +283,7 @@ sub my_open {
 
 sub ensure_dir_for_file {
   my $f = shift;
-  my $dir = $f;
-  $dir =~ s/\/[^\/]*$//;
-  safesystem(qw(mkdir -p), $dir) or die "Can't create dir for $f";
+  mkpath(dirname($f));
 }
 
 sub my_save {
