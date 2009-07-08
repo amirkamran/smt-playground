@@ -60,6 +60,8 @@ echo $CORP > var-CORP
 echo $FLMCONFIG > var-FLMCONFIG
 echo $CORPAUG > var-CORPAUG
 
+touch deps # does not depend on anything
+
 eval `makearg --delim=- $DIR srclan tgtlan`
 
 cp $FLMCONFIG config.orig.flm \
