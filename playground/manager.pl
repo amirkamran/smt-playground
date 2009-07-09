@@ -19,6 +19,7 @@ GetOptions(
   "reindex" => \$reindex, # collect md5 sums of experiments
   "force" => \$force, # reindex everything
   "derive=s" => \$derive, # derive an experiment chain from existing ones
+                          # using a regex: --derive=/form/lc/g
 ) or exit 1;
 
 if ($reindex) {
@@ -38,6 +39,28 @@ if (defined $derive) {
     my $exp = guess_exp($key);
     my %deps = ();
     my $outexp = derive_exp($exp, \%deps);
+    if ($outexp eq $exp) {
+      print STDERR "No change in $exp\n";
+    } else {
+      # submit all the jobs as necessary, including dependencies
+      foreach my $e (@{$deps{"TOPOLOGICAL"}}) {
+        next if -e $e."/DONE";
+        die "Prerequisite $e failed." if -e $e."/FAIL";
+
+        # convert each prerequisite name to jobid
+        my @holds = ();
+        foreach my $prereq (@{$deps{$e}}) {
+          next if -e $prereq."/DONE"; # skip finished prereqs
+          my $prereqid = get_exp_jobid($prereq);
+          push @holds, $prereqid;
+        }
+        my $holds = @holds ? "-hold_jid ".join(",", @holds) : "";
+
+        # construct holds string of all prereq.jobs
+        die "XXX";
+        safesystem("HOLDS='$holds' make $e.prepare_inited_and_submit") or die;
+      }
+    }
   }
 
 }
@@ -53,11 +76,31 @@ sub derive_exp {
   my $deps = shift;
 
   # load vars and sources
-  my $oldv = load($exp."/VARS");
-  my $oldv = load($exp."/VARS");
-  # derive experiments for sources
-  # replace sources with new ones in vars
+  my @oldvars = split /\n/, load($exp."/VARS");
+  my @oldsources = split /\n/, load($exp."/deps");
+
+  # apply the regexp to vars
+  my @vars = map { eval "s$derive"; $_; } @oldvars;
+
+  # derive experiments for sources and replace sources with new ones in vars
+  my @sources = ();
+  foreach my $s (@oldsources) {
+    my $news = derive_exp($s, $deps);
+    if ($news ne $s) {
+      push @{$deps->{$exp}}, $news; # we rely on the new one
+      @vars = map { s/$s/$news/g; $_ } @vars; # use the new one in vars
+    }
+    push @sources, $news;
+  }
+
   # check if we changed and possibly init us
+  my $newexp = $exp;
+  if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources") {
+    print STDERR "@vars make exp.XXX.init";
+    $newexp = "XXX";
+  }
+  push @{$deps->{"TOPOLOGICAL"}}, $newexp; # sort right away
+  return $newexp;
 }
 
 sub traceback {
