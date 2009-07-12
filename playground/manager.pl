@@ -12,14 +12,14 @@ my $debug = 0;
 my $reindex = 0;
 my $force = 0;
 my $indexfile = "index.exps";
-my $derive = undef;
+my $substitute = undef;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "debug" => \$debug,
   "reindex" => \$reindex, # collect md5 sums of experiments
   "force" => \$force, # reindex everything
-  "derive=s" => \$derive, # derive an experiment chain from existing ones
-                          # using a regex: --derive=/form/lc/g
+  "s|substitute=s" => \$substitute, # derive an experiment chain from existing
+                          # ones using a regex: --s=/form/lc/g
 ) or exit 1;
 
 if ($reindex) {
@@ -33,7 +33,7 @@ if ($reindex) {
   saveidx($idx);
 }
 
-if (defined $derive) {
+if (defined $substitute) {
   # derive an experiment using a key (from arg)
   foreach my $key (@ARGV) {
     my $exp = guess_exp($key);
@@ -75,29 +75,51 @@ sub derive_exp {
   my $exp = shift;
   my $deps = shift;
 
+  # print STDERR "Deriving from $exp\n" if $debug;
+
   # load vars and sources
   my @oldvars = split /\n/, load($exp."/VARS");
   my @oldsources = split /\n/, load($exp."/deps");
-
-  # apply the regexp to vars
-  my @vars = map { eval "s$derive"; $_; } @oldvars;
+  my @vars = @oldvars;
 
   # derive experiments for sources and replace sources with new ones in vars
   my @sources = ();
   foreach my $s (@oldsources) {
     my $news = derive_exp($s, $deps);
     if ($news ne $s) {
+      # print STDERR "Need to replace $s with $news\n" if $debug;
       push @{$deps->{$exp}}, $news; # we rely on the new one
-      @vars = map { s/$s/$news/g; $_ } @vars; # use the new one in vars
+      @vars = map { s/\Q$s\E/$news/g; $_; } @vars; # use the new one in vars
+      # print STDERR "New vars: @vars\n" if $debug;
     }
     push @sources, $news;
   }
 
+  # apply the regexp to vars
+  @vars = map { eval "s$substitute"; $_; } @vars;
+
   # check if we changed and possibly init us
   my $newexp = $exp;
   if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources") {
-    print STDERR "@vars make exp.XXX.init";
+    # print vars and how they change
+    if ($debug) {
+      print STDERR "Modifying EXP $exp to:\n";
+      for(my $v=0; $v<@oldvars; $v++) {
+        print STDERR $vars[$v];
+        print STDERR "\t<--   $oldvars[$v]" if $oldvars[$v] ne $vars[$v];
+        print STDERR "\n";
+      }
+      print STDERR "\n";
+    }
+
+    # Init the modified experiment
+    print STDERR "@vars make exp.XXX.init\n";
     $newexp = "XXX";
+    print STDERR "Inited new experiment: $newexp\n";
+  } else {
+    if ($debug) {
+      print STDERR "No change in EXP $exp\n";
+    }
   }
   push @{$deps->{"TOPOLOGICAL"}}, $newexp; # sort right away
   return $newexp;
@@ -132,7 +154,7 @@ sub guess_exp {
     print STDERR scalar(@bleumatches)." matches in bleu file\n" if $debug;
     if (1==scalar @bleumatches) {
       my $f = field($bleumatches[0], 1);
-      $f =~ s/<.*//;
+      $f =~ s/\<.*//;
       $exp = confirm_exp($f);
     }
   }
@@ -148,6 +170,7 @@ sub guess_exp {
 
 sub confirm_exp {
   my $key = shift;
+  print STDERR "Confirming $key\n" if $debug;
   return $key if -d $key;
   foreach my $pref (qw/exp.eval. exp.mert. exp.model./) {
     if (-d $pref.$key) {

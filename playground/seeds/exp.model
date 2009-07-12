@@ -61,6 +61,32 @@ echo $TGTAUG > var-TGTAUG
 
 echo $TMEXP > deps
 
+## Create the tag based on LMs
+i=1
+for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
+  eval `makearg --delim=: $lm factor lmdir lmtype`
+  echo $lmdir >> deps
+  # default to sri
+  lmtypetag=${lmtype:-sri}
+  order=`cat ../$lmdir/var-ORDER` || die "Missing: ../$lmdir/var-ORDER"
+  i=$(($i+1))
+  factor=`echo $factor | sed 'y/\,/+/'`
+  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/var-CORP`-$lmtypetag
+done
+i=$(($i-1))
+
+
+if [ $SRCCORP == $TGTCORP ] ; then
+  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG > TAG
+else
+  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG > TAG
+fi
+
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+
 mydir=`pwd`
 
 mkdir -p model
@@ -89,23 +115,18 @@ echo "Cloning LMs"
 i=1
 for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
   eval `makearg --delim=: $lm factor lmdir lmtype`
-  echo $lmdir >> deps
   echo "Cloning lm from $lmdir, using lmtype $lmtype"
   if [ x$lmtype == xblm ]; then
     numericlmtype=1
     lmsuffix=blm
-    lmtypetag=blm
   elif [ x$lmtype == xflm ]; then
     numericlmtype=7
     lmsuffix=flm
-    lmtypetag=flm
   else    
-    lmtypetag=sri
     numericlmtype=0
     lmsuffix=lm
   fi
 
-  
   if [ $lmsuffix == flm ]; then
     wiseln ../$lmdir/config.prepared.flm ./lm.$i.$lmsuffix \
       || die "Failed to link flm: ../$lmdir/config.prepared.flm"
@@ -118,19 +139,8 @@ for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
 
   lmopts="$lmopts --lm $factor:$order:$mydir/lm.$i.$lmsuffix:$numericlmtype"
   i=$(($i+1))
-
-  factor=`echo $factor | sed 'y/\,/+/'`
-
-  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/var-CORP`-$lmtypetag
 done
 i=$(($i-1))
-
-
-if [ $SRCCORP == $TGTCORP ] ; then
-  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG > TAG
-else
-  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG > TAG
-fi
 
 DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"

@@ -1,0 +1,14 @@
+Seeds:
+------
+
+Seeds are tiny scripts to setup an experiment.
+Each experiment goes through three phases:
+
+1. Init (directory created, vars written, most notably TAG)
+(the directory gets renamed now)
+2. Prepare (sources checked and cloned, ./command created)
+3. Run (lengthy computation, usually on the cluster)
+
+
+Steps 1 and 2 are handled by (a local copy of) the seed. Step 3 is handled by
+./command as created by the seed.
