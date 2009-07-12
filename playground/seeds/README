@@ -12,3 +12,15 @@ Each experiment goes through three phases:
 
 Steps 1 and 2 are handled by (a local copy of) the seed. Step 3 is handled by
 ./command as created by the seed.
+
+Seeds are required to:
+* Within phase 1 (init):
+- create TAG and VARS
+- not store the full pathname anywhere yet, the directory will be renamed
+- stop if INIT_ONLY is set
+* Withing phase 2 (prepare):
+- use environment vars to check and clone any sources
+- prepare the script command
+
+Commands (created by seeds) are required to:
+- touch DONE once finished

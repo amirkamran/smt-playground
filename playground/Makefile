@@ -29,6 +29,51 @@ all:
 	# Checking if moses executable exists:
 	[ -x "$(MOSESCMD)" ]
 
+# create a new experiment directory and use the seed script just to construct
+# the TAG and set vars
+exp.%.init:
+	@seed="seeds/exp.$*" \
+	&& [ -e "$$seed" ] || (echo "Seed $$seed not found" >&2; exit 1) \
+	&& rundir=`mkdiruniq --delim=. exp.$*.$(TS)` \
+	&& [ -d "$$rundir" ] \
+	&& echo "Preparing in directory $$rundir" >&2 \
+	&& cp "$$seed" $$rundir/seed \
+	&& set > $$rundir/env \
+	&& cd $$rundir \
+	&& ( if INIT_ONLY=yes /bin/bash seed >&2; then \
+	       cd ../;\
+	       if [ -e $$rundir/TAG ]; then \
+	         echo "Renaming rundir to include the tag!" >&2; \
+		 tag=`cat $$rundir/TAG`; \
+		 newrundir=`mkdiruniq --delim=. exp.$*.$$tag.$(TS)`; \
+		 mv $$rundir/* $$newrundir/ || exit 1; \
+		 rmdir $$rundir || exit 1; \
+		 rundir="$$newrundir"; \
+	       fi; \
+	       echo "Now continue with: make $$rundir.prep_inited" >&2; \
+	       echo "$$rundir"; \
+	     else \
+	       echo "Failed to prepare the experiment." >&2; \
+	       cd ..; rm -rf $$rundir ; \
+	       exit 1 ;\
+	     fi )
+
+# prepare an inited experiment, using the vars as stored within the exp.
+exp.%.prep_inited:
+	rundir=exp.$* \
+	&& cd $$rundir \
+	&& ( if eval $$(cat VARS) RUN=no /bin/bash seed; then \
+	       echo "Check the script $$rundir/command   or"; \
+	       echo "  make $$rundir.run"; \
+	       if [ "$(RUN)" == "yes" ]; then \
+	         cd ../ \
+	         && make $$rundir.run; \
+	       fi; \
+	     else \
+	       echo "Failed to prepare the experiment."; \
+	       exit 1 ;\
+	     fi )
+
 # prepare a fresh run of an experiment
 exp.%.prepare:
 	seed="seeds/exp.$*" \
@@ -61,6 +106,10 @@ exp.%.prepare:
 	       exit 1 ;\
 	     fi )
 
+HOLDS?=
+# format: HOLDS=-hold 12345 -hold 12346
+# by default do not wait for any jobs
+
 # start a prepared run of an experiment
 exp.%.run:
 	[ -e "exp.$*" ] || ( echo "The experiment has not been prepared yet?"; exit 1 )
@@ -73,7 +122,7 @@ exp.%.run:
 	      || [ x`cat qsub-allowed 2>/dev/null` == "xno" ]; then \
 	     (nohup /bin/bash command > log 2>&1 & ); \
 	   else \
-	     (qsubmit --jobname=log '/bin/bash command' 2>&1)>log; \
+	     (qsubmit $(HOLDS) --jobname=log '/bin/bash command' 2>&1)>log; \
 	   fi \
 	&& echo "See exp.$*/log for progress."
 

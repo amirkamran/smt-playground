@@ -1,7 +1,7 @@
 #!/bin/bash
 ## Save our own copy of moses
 
-function die() { echo "$@" >&2; exit 1 ; }
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 set -o pipefail
 
 echo MOSESCMD: $MOSESCMD
@@ -10,18 +10,13 @@ if [[ ! -x "$MOSESCMD" ]]; then
   exit 1
 fi
 
-wiseln $MOSESCMD ./moses || exit 1
-
 if [ -z "$SCRIPTS_ROOTDIR" ]; then
   echo "Set \$SCRIPTS_ROOTDIR accordingly!"
   exit 1
 fi
 
 SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
-wiseln $SCORENBEST ./scorenbest || exit 1
-
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-wiseln $TESTBLEU ./testbleu || exit 1
 
 if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   || [ -z "$TESTCORP" ] \
@@ -49,27 +44,6 @@ MODELEXP=$SAVEMODELEXP
 
 echo $MODELEXP > deps
 
-## Clone the moses.ini and source files
-$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  ../$MODELEXP/model/moses.ini \
-  || die "Failed to clone ../$MODELEXP/model/moses.ini"
-
-## We're using irstlm, change the lmodel-file type:
-# ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
-
-../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || exit 1
-../augmented_corpora/augment.pl --dump $DEVCORP/$REFAUG > tuning.ref.0 || exit 1
-../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || exit 1
-../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || exit 1
-
-echo Checking tune and eval corp sizes
-[ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
-[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
-[ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
-[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
-
-TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
-
 echo $MODELEXP > info.modelexp
 
 cat << KONEC > VARS
@@ -83,8 +57,32 @@ MOSESFLAGS="$MOSESFLAGS"
 SERIAL=$SERIAL
 KONEC
 
-# for running this command, qsub it not allowed, because we're going to submit jobs ourselves
-echo "no" > qsub-allowed
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# clone some importnant executables
+wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
+wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+
+
+../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"
+../augmented_corpora/augment.pl --dump $DEVCORP/$REFAUG > tuning.ref.0 || die "tuning.ref"
+../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
+../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
+
+echo Checking tune and eval corp sizes
+[ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
+[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
+[ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
+[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
+
+TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
+if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
+       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+  echo "Defaulting to 'en' as the targetlang for detokenizer."
+  TARGETLAN_FOR_DETOKENIZER=en
+fi
 
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
@@ -107,6 +105,13 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+
+# init grid environment
+. /net/projects/SGE/user/sge_profile
+
+set -o pipefail
+function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+
 renice 10 \$\$
 
 # core files limited to 1 byte
@@ -115,7 +120,16 @@ ulimit -c 1
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || exit 1
+## Clone the moses.ini and source files
+\$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
+  ../$MODELEXP/model/moses.ini \
+  || die "Failed to clone ../$MODELEXP/model/moses.ini"
+
+## We're using irstlm, change the lmodel-file type:
+# ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
+
+
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
 
 $MERTMOSES \
   --obo-scorenbest=\`pwd\`/scorenbest \\
@@ -127,39 +141,46 @@ $MERTMOSES \
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="-dl 6 $MOSESFLAGS" \\
-  || (echo 'Exiting'; exit 1) || exit 1
+  || die "Mert failed"
 
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt ./mert-tuning/moses.ini evaluation.in || exit 1
+\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
+  ./mert-tuning/moses.ini evaluation.in \\
+  || die "Filter for eval failed"
 
 $MOSESPARALLELIZER \\
-  ./moses -input-file ./evaluation.in -config ./filtered-for-eval-opt/moses.ini \\
+  ./moses -input-file ./evaluation.in \\
+  -config ./filtered-for-eval-opt/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
   > evaluation.opt.out \\
-   || (echo 'Exiting'; exit 1) || exit 1
+   || die "Translation of eval failed"
 
 echo "Tuned BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt
+./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt \\
+  || die "BLEU of evaluation.opt.out set failed"
 
 echo "Detokenizing evaluation.opt.out"
 \$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
-< evaluation.opt.out > evaluation.opt.txt
+  < evaluation.opt.out > evaluation.opt.txt
 
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-std ./mert-tuning/run1.moses.ini evaluation.in || exit 1
+\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-std \\
+  ./mert-tuning/run1.moses.ini evaluation.in || die "Filter for std failed"
 
 $MOSESPARALLELIZER \\
-  ./moses -input-file ./evaluation.in -config ./filtered-for-eval-std/moses.ini \\
+  ./moses -input-file ./evaluation.in \\
+  -config ./filtered-for-eval-std/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
   > evaluation.std.out \\
-   || (echo 'Exiting'; exit 1) || exit 1
+   || die "Translation of std.eval failed"
 
 echo "Default BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.std.out | tee BLEU.std
-./testbleu evaluation.ref.0 < evaluation.std.out | tee BLEU.std
+./testbleu evaluation.ref.0 < evaluation.std.out | tee BLEU.std \\
+  || die "BLEU of evaluation.std.out set failed"
 
 echo "Detokenizing evaluation.std.out"
 \$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
@@ -172,6 +193,8 @@ echo "Preparing detailed output for manual inpection"
   | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
   | head -c 300k \\
   > evaluation.opt.verbose
+
+date > DONE
 
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`

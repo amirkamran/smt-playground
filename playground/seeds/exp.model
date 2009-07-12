@@ -5,7 +5,7 @@
 #   language models
 
 set -o pipefail
-function die() { echo "$@" >&2; exit 1 ; }
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 [ ! -z "$SCRIPTS_ROOTDIR" ] \
   || die "Set \$SCRIPTS_ROOTDIR to the scripts release!"
@@ -60,6 +60,7 @@ echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
 
 echo $TMEXP > deps
+[ -z "$RMEXP" ] || echo $RMEXP >> deps
 
 ## Create the tag based on LMs
 i=1
@@ -87,39 +88,59 @@ fi
 [ -z "$INIT_ONLY" ] || exit 0
 
 
-mydir=`pwd`
-
 mkdir -p model
+
+DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
+[ -x $DECRYPT ] || die "Missing: $DECRYPT"
+
+DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
+
+cat << KONEC > command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+
+set -o pipefail
+function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+
+renice 10 \$\$
+
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+mydir=\`pwd\`
 
 ## Cloning translation model
 cd model || die "Chdir failed"
 for f in ../../$TMEXP/model/*gz ; do
-  wiseln $f ./`basename $f` || die "Failed to clone $f"
+  wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
 done
-cd $mydir || die "Chdir back failed"
+cd \$mydir || die "Chdir back failed"
 
 
 ## Cloning reordering model
 if [ ! -z "$RMEXP" ]; then
-  echo $RMEXP >> deps
   cd model || die "Chdir failed"
   for f in ../../$RMEXP/model/reordering-table*gz ; do
-    wiseln $f ./`basename $f` || die "Failed to clone $f"
+    wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
   done
-  cd $mydir || die "Chdir back failed"
+  cd \$mydir || die "Chdir back failed"
 fi
 
 
 ## Clone the lms
 echo "Cloning LMs"
 i=1
-for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
-  eval `makearg --delim=: $lm factor lmdir lmtype`
-  echo "Cloning lm from $lmdir, using lmtype $lmtype"
-  if [ x$lmtype == xblm ]; then
+for lm in \`echo $LMEXPS | sed 's/:::/ /g'\`; do
+  eval `makearg --delim=: \$lm factor lmdir lmtype`
+  echo "Cloning lm from \$lmdir, using lmtype \$lmtype"
+  if [ x\$lmtype == xblm ]; then
     numericlmtype=1
     lmsuffix=blm
-  elif [ x$lmtype == xflm ]; then
+  elif [ x\$lmtype == xflm ]; then
     numericlmtype=7
     lmsuffix=flm
   else    
@@ -127,50 +148,48 @@ for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
     lmsuffix=lm
   fi
 
-  if [ $lmsuffix == flm ]; then
-    wiseln ../$lmdir/config.prepared.flm ./lm.$i.$lmsuffix \
-      || die "Failed to link flm: ../$lmdir/config.prepared.flm"
+  if [ \$lmsuffix == flm ]; then
+    wiseln ../\$lmdir/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link flm: ../\$lmdir/config.prepared.flm"
   else
-    wiseln ../$lmdir/corpus.$lmsuffix ./lm.$i.$lmsuffix \
-      || die "Failed to link lm: ../$lmdir/corpus.$lmsuffix"
+    wiseln ../\$lmdir/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link lm: ../\$lmdir/corpus.\$lmsuffix"
   fi
 
-  order=`cat ../$lmdir/var-ORDER` || die "Missing: ../$lmdir/var-ORDER"
+  order=\`cat ../\$lmdir/var-ORDER\` || die "Missing: ../\$lmdir/var-ORDER"
 
-  lmopts="$lmopts --lm $factor:$order:$mydir/lm.$i.$lmsuffix:$numericlmtype"
-  i=$(($i+1))
+  lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
+  i=\$((\$i+1))
 done
-i=$(($i-1))
+i=\$((\$i-1))
 
-DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
-[ -x $DECRYPT ] || die "Missing: $DECRYPT"
+echo lmopts: \$lmopts
 
-DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
-
-echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
-
-$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \
-    --force-factored-filenames \
-    --first-step 9 --last-step 9 \
-    --root-dir . \
-    --alignment-file=alignment \
-    --alignment=custom \
-    --corpus=corpus/corpus \
-    --f src --e tgt \
-    --reordering $REORDERING \
-    --reordering-factors $REORDFACTORS \
-    $lmopts \
-    $DECRYPTEDSTEPS \
+\$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+    --force-factored-filenames \\
+    --first-step 9 --last-step 9 \\
+    --root-dir . \\
+    --alignment-file=alignment \\
+    --alignment=custom \\
+    --corpus=corpus/corpus \\
+    --f src --e tgt \\
+    --reordering $REORDERING \\
+    --reordering-factors $REORDFACTORS \\
+    \$lmopts \\
+    $DECRYPTEDSTEPS \\
 || die "Failed to create moses.ini"
 
 
+date > DONE
 
-# for running this command, qsub it not allowed because it wouldn't bring
-# anything
-echo "no" > qsub-allowed
-
-echo "echo Finished" > command
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
 
 if [ "$RUN" == "yes" ]; then
-  echo "Model preparation finished."
+  sh command
 fi
+

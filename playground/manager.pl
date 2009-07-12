@@ -54,15 +54,16 @@ if (defined $substitute) {
           my $prereqid = get_exp_jobid($prereq);
           push @holds, $prereqid;
         }
-        my $holds = @holds ? "-hold_jid ".join(",", @holds) : "";
-
         # construct holds string of all prereq.jobs
-        die "XXX";
-        safesystem("HOLDS='$holds' make $e.prepare_inited_and_submit") or die;
+        my $holds = @holds ? join(" ", map {"-hold=$_"} @holds) : "";
+
+        safesystem("RUN=yes HOLDS='$holds' make $e.prep_inited") or die;
       }
     }
+    traceback("SRC ", $exp);
+    traceback("NEW ", $outexp);
   }
-
+  exit 0;
 }
 
 foreach my $key (@ARGV) {
@@ -71,9 +72,31 @@ foreach my $key (@ARGV) {
   traceback("", $exp);
 }
 
+sub get_exp_jobid {
+  my $exp = shift;
+  die "Not an experiment: $exp" if ! -d $exp;
+
+  my $hdl = my_open($exp."/log");
+  my $nl = 0;
+  my $jid = undef;
+  while(<$hdl>) {
+    $nl++;
+    last if $nl > 10;
+    if (/Your job ([0-9]+) .*has been submitted/) {
+      $jid = $1;
+      last;
+    }
+  }
+  close $hdl;
+  die "Failed to get jobid of $exp" if !defined $jid;
+  return $jid;
+}
+
 sub derive_exp {
   my $exp = shift;
   my $deps = shift;
+
+  my @mydeps = ();
 
   # print STDERR "Deriving from $exp\n" if $debug;
 
@@ -88,7 +111,7 @@ sub derive_exp {
     my $news = derive_exp($s, $deps);
     if ($news ne $s) {
       # print STDERR "Need to replace $s with $news\n" if $debug;
-      push @{$deps->{$exp}}, $news; # we rely on the new one
+      push @mydeps, $news;
       @vars = map { s/\Q$s\E/$news/g; $_; } @vars; # use the new one in vars
       # print STDERR "New vars: @vars\n" if $debug;
     }
@@ -113,8 +136,13 @@ sub derive_exp {
     }
 
     # Init the modified experiment
-    print STDERR "@vars make exp.XXX.init\n";
-    $newexp = "XXX";
+    $exp =~ /^exp\.([^.]+)/ || die "Failed to get exp type from $exp";
+    my $exptype = $1;
+    my $cmd = "@vars make exp.$exptype.init\n";
+    print STDERR "$cmd\n";
+    $newexp = `$cmd`;
+    chomp $newexp;
+    die "Failed to init a new exp, got: $newexp" if ! -d $newexp;
     print STDERR "Inited new experiment: $newexp\n";
   } else {
     if ($debug) {
@@ -122,6 +150,7 @@ sub derive_exp {
     }
   }
   push @{$deps->{"TOPOLOGICAL"}}, $newexp; # sort right away
+  push @{$deps->{$newexp}}, @mydeps;
   return $newexp;
 }
 
@@ -265,4 +294,24 @@ sub my_save {
   open $hdl, $opn or die "Can't write to '$opn': $!";
   binmode $hdl, ":utf8";
   return $hdl;
+}
+
+
+sub safesystem {
+  print STDERR "Executing: @_\n";
+  system(@_);
+  if ($? == -1) {
+      print STDERR "Failed to execute: @_\n  $!\n";
+      exit(1);
+  }
+  elsif ($? & 127) {
+      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+          ($? & 127),  ($? & 128) ? 'with' : 'without';
+      exit(1);
+  }
+  else {
+    my $exitcode = $? >> 8;
+    print STDERR "Exit code: $exitcode\n" if $exitcode;
+    return ! $exitcode;
+  }
 }

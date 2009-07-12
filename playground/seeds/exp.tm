@@ -2,7 +2,7 @@
 # Prepare moses translation model, i.e. extract phrases
 
 set -o pipefail
-function die() { echo "$@" >&2; exit 1 ; }
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 [ ! -z "$SCRIPTS_ROOTDIR" ] \
   || die "Set \$SCRIPTS_ROOTDIR to the scripts release!"
@@ -64,13 +64,16 @@ echo $TGTAUG > var-TGTAUG
 
 touch deps # does not depend on anything
 
-mydir=`pwd`
-
 if [ $SRCCORP == $TGTCORP ] ; then
   echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS$DOTREORDTAG > TAG
 else
   echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS$DOTREORDTAG > TAG
 fi
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+mydir=`pwd`
 
 DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
@@ -87,7 +90,7 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 
 set -o pipefail
-function die() { echo "\$@" >&2; exit 1 ; }
+function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
 
 renice 10 \$\$
 
@@ -164,6 +167,8 @@ else
 fi
 
 [ \$success == 1 ] || die "THERE WERE ERRORS!! See above."
+
+date > DONE
 
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
