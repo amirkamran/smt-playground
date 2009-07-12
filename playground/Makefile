@@ -82,7 +82,6 @@ exp.%.prepare:
 	&& [ -d "$$rundir" ] \
 	&& echo "Preparing in directory $$rundir" \
 	&& cp "$$seed" $$rundir/seed \
-	&& cp STATUS $$rundir/STATUS \
 	&& set > $$rundir/env \
 	&& cd $$rundir \
 	&& ( if RUN=no /bin/bash seed; then \

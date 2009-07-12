@@ -45,6 +45,7 @@ if (defined $substitute) {
       foreach my $e (@{$deps{"TOPOLOGICAL"}}) {
         next if -e $e."/DONE";
         die "Prerequisite $e failed." if -e $e."/FAIL";
+        next if -e $e."/log"; # assume the experiment has already started
 
         # convert each prerequisite name to jobid
         my @holds = ();

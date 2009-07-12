@@ -135,7 +135,7 @@ fi
 echo "Cloning LMs"
 i=1
 for lm in \`echo $LMEXPS | sed 's/:::/ /g'\`; do
-  eval `makearg --delim=: \$lm factor lmdir lmtype`
+  eval \`makearg --delim=: \$lm factor lmdir lmtype\`
   echo "Cloning lm from \$lmdir, using lmtype \$lmtype"
   if [ x\$lmtype == xblm ]; then
     numericlmtype=1
