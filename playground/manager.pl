@@ -10,28 +10,27 @@ use Digest::MD5 qw(md5_hex);
 my $vars = 0;
 my $debug = 0;
 my $reindex = 0;
-my $force = 0;
 my $indexfile = "index.exps";
 my $substitute = undef;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "debug" => \$debug,
-  "reindex" => \$reindex, # collect md5 sums of experiments
-  "force" => \$force, # reindex everything
+  "reindex" => \$reindex, # refresh md5 sums of all experiments
   "s|substitute=s" => \$substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
 ) or exit 1;
 
-if ($reindex) {
-  my $idx = loadidx() unless $force;
-  my @dirs = glob("exp.*.*.[0-9]*");
-  foreach my $d (@dirs) {
-    next if defined $idx->{$d};
-    $idx->{$d} = get_hash_from_dir($d);
-    print STDERR "$d: $idx->{$d}\n";
-  }
-  saveidx($idx);
+# update md5 indices
+my $idx = loadidx() unless $reindex; # ignore saved values
+my @dirs = glob("exp.*.*.[0-9]*");
+foreach my $d (@dirs) {
+  next if defined $idx->{$d};
+  my $hash = get_hash_from_dir($d);
+  $idx->{$d} = $hash;
+  $idx->{$hash} = $d;
+  print STDERR "$d: $idx->{$d}\n";
 }
+saveidx($idx);
 
 if (defined $substitute) {
   # derive an experiment using a key (from arg)
@@ -135,15 +134,22 @@ sub derive_exp {
       print STDERR "\n";
     }
 
-    # Init the modified experiment
-    $exp =~ /^exp\.([^.]+)/ || die "Failed to get exp type from $exp";
-    my $exptype = $1;
-    my $cmd = "@vars make exp.$exptype.init\n";
-    print STDERR "$cmd\n";
-    $newexp = `$cmd`;
-    chomp $newexp;
-    die "Failed to init a new exp, got: $newexp" if ! -d $newexp;
-    print STDERR "Inited new experiment: $newexp\n";
+    # check if there is such an experiment already
+    my $hash = get_hash_from_vars_deps(\@vars, \@sources);
+    if (defined $idx->{$hash}) {
+      $newexp = $idx->{$hash};
+      print STDERR "Reusing existing experiment: $newexp\n";
+    } else {
+      # Init the modified experiment
+      $exp =~ /^exp\.([^.]+)/ || die "Failed to get exp type from $exp";
+      my $exptype = $1;
+      my $cmd = "@vars make exp.$exptype.init\n";
+      print STDERR "$cmd\n";
+      $newexp = `$cmd`;
+      chomp $newexp;
+      die "Failed to init a new exp, got: $newexp" if ! -d $newexp;
+      print STDERR "Inited new experiment: $newexp\n";
+    }
   } else {
     if ($debug) {
       print STDERR "No change in EXP $exp\n";
@@ -220,9 +226,10 @@ sub load {
 }
 
 sub loadidx {
+  # load the index file and hash it there and back
   my %idx;
   if (-e $indexfile) {
-    %idx = map { my ($d, $md5) = split /\t/; ($d, $md5) }
+    %idx = map { my ($d, $md5) = split /\t/; ($d, $md5, $md5, $d) }
              split /\n/, load($indexfile);
   }
   return \%idx;
@@ -242,6 +249,11 @@ sub get_hash_from_dir {
   my @vars = split /\n/, load($exp."/VARS");
   my @deps = split /\n/, load($exp."/deps");
   return md5_hex(sort @vars, sort @deps);
+}
+sub get_hash_from_vars_deps {
+  my $vars = shift;
+  my $deps = shift;
+  return md5_hex(sort @$vars, sort @$deps);
 }
 
 sub field {
