@@ -465,9 +465,10 @@ align:
 	[ ! -z "$(TGTAUG)" ]
 	[ ! -z "$(DIRSYM)" ]
 	[ ! -z "$$NAME" ] \
-	  || export NAME=`echo $(SRCAUG)-$(TGTAUG)-$(DIRSYM) | tr '+' '-'` ; \
-	./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars ; \
-	qsubmit \
+	  || export NAME=`echo $(SRCAUG)-$(TGTAUG)-$(DIRSYM) | tr '+' '-'` \
+	&& mkdir -p $(CORP) \
+	&& ./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars \
+	&& qsubmit \
 	  --jobname align.$(CORP).$$NAME \
 	  '~/diplomka/kos/align/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
