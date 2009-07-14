@@ -478,5 +478,5 @@ align:
 	  --bindir=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/ \
 	  --dirsym=$(DIRSYM) \
 	  | cut -f2 \
-	  | gzip > $(CORP)/$$NAME.gz' \
+	  | gzip > $(CORP)/'"$$NAME"'.gz' \
 	&& echo "ali" > $(CORP)/$$NAME.info
