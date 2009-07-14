@@ -3,6 +3,10 @@
 # if necessary.
 # Allowed descriptions:
 #    corpname/lang+fact1+fact2+0
+#    corp1+corp2/lang+fact1+fact2
+#      ... will concatenate the common subset of base factors in corp1 and corp2
+#          into a new directory corp1+corp2 and derive any wished factors
+#          from this concatenated corpus
 #    corpname+fact1+fact2 --lang=lang  # not yet implemented
 
 use strict;
@@ -61,67 +65,191 @@ print STDERR "Running augment.pl $descr\n";
 # Check the corpus file and the header:
 
 my $corpbasefile = "$basedir/$corp/$lang.gz";
-die "Corpus not found: $corpbasefile" if ! -e $corpbasefile;
+if (! -e $corpbasefile) {
+  if ($corp =~ /\+/) {
+    my $lock = blocking_verbose_lock($corpbasefile);
+    print STDERR "Corpus $corp not found in $basedir...\n";
+    my @corppieces = split /\+/, $corp;
+    print STDERR "...trying to combine it from pieces: @corppieces\n";
+    # Collect the intersection of factors as available in all pieces
+    my %combfactors = ();
+    foreach my $piece (@corppieces) {
+      my $infoh = my_open("$basedir/$piece/$lang.info");
+      my $info = <$infoh>;
+      chomp $info;
+      close $infoh;
+      foreach my $f (split /\|/, $info) {
+        $combfactors{$f}++;
+      }
+    }
+    my @usefactors = ();
+    # get the intersection
+    foreach my $f (sort keys %combfactors) {
+      push @usefactors, $f if $combfactors{$f} == scalar(@corppieces);
+    }
+    die "There are no common base factors in corpora: @corppieces"
+      if 0 == scalar @usefactors;
+    print STDERR "Will use these base factors for the combination: @usefactors\n";
 
-my $corp_stream = my_open($corpbasefile);
+    # construct the corpus by concatenating parts
+    my $corph = my_save("$basedir/$corp/$lang.gz");
+    foreach my $piece (@corppieces) {
+      my $sourcefile = augment($piece, $lang, join("+", @usefactors));
+      my $inh = my_open($sourcefile);
+      print $corph $_ while <$inh>;
+      close $inh;
+    }
+    close $corph;
 
-# Load corpus header file:
-my $headerfile = "$basedir/$corp/$lang.info";
-open INF, $headerfile or die "Can't read $headerfile";
-my $defined_factors = <INF>;
-close INF;
-chomp $defined_factors;
-
-if (!defined $facts) {
-  print STDERR "No augment wished, returning whole $corp/$lang.gz\n";
-  my_nonempty($corpbasefile);
-  emit($corpbasefile);
-  exit 0;
+    # add the signature describing which factors are there
+    my $infoh = my_save("$basedir/$corp/$lang.info");
+    print $infoh join("|", @usefactors)."\n";
+    close $infoh;
+    unlock_verbose($lock); # let others know we're finished
+  } else {
+    die "Corpus not found: $corpbasefile";
+  }
+}
+my $corppathname = augment($corp, $lang, $facts);
+# report corpus location or dump the whole corpus
+if ($dump) {
+  my $hdl = my_open($corppathname);
+  print while <$hdl>;
+  close $hdl;
+} else {
+  print $corppathname."\n";
 }
 
-my $fid = 0;
-my %defined_factor;
-foreach my $defined_factor (split /\|/, $defined_factors) {
-  $defined_factor{$defined_factor} = $fid;
-  $fid++;
-}
 
-# Convert factors name to canonical:
-my @requested_factors = map {
-      defined $defined_factor{$_} ? $defined_factor{$_} : $_ 
-    } split /\+/, $facts;
 
-if ( scalar(@requested_factors) == keys(%defined_factor)
-  && join(" ", 0..($fid-1)) eq join(" ", @requested_factors) ) {
-  print STDERR "Wished exactly the full corpus, returning $corp/$lang.gz\n";
-  my_nonempty($corpbasefile);
-  emit($corpbasefile);
-  exit 0;
-}
 
-if (1 == scalar @requested_factors && $requested_factors[0] !~ /^[0-9]+$/) {
-  my $factorpathname = construct_projection($corp, $lang, $requested_factors[0]);
-  print STDERR "Just one factor wished, returning: $factorpathname\n";
-  my_nonempty($factorpathname);
-  emit($factorpathname);
-  exit 0;
-}
+sub augment {
+  my $corp = shift;
+  my $lang = shift;
+  my $facts = shift;
+  
+  my $corpbasefile = "$basedir/$corp/$lang.gz";
+  my $corp_stream = my_open($corpbasefile);
+  
+  # Load corpus header file:
+  my $headerfile = "$basedir/$corp/$lang.info";
+  open INF, $headerfile or die "Can't read $headerfile";
+  my $defined_factors = <INF>;
+  close INF;
+  chomp $defined_factors;
+  
+  if (!defined $facts) {
+    print STDERR "No augment wished, returning whole $corp/$lang.gz\n";
+    my_nonempty($corpbasefile);
+    return $corpbasefile;
+  }
+  
+  my $fid = 0;
+  my %defined_factor;
+  foreach my $defined_factor (split /\|/, $defined_factors) {
+    $defined_factor{$defined_factor} = $fid;
+    $fid++;
+  }
+  
+  # Convert factors name to canonical:
+  my @requested_factors = map {
+        defined $defined_factor{$_} ? $defined_factor{$_} : $_ 
+      } split /\+/, $facts;
+  
+  if ( scalar(@requested_factors) == keys(%defined_factor)
+    && join(" ", 0..($fid-1)) eq join(" ", @requested_factors) ) {
+    print STDERR "Wished exactly the full corpus, returning $corp/$lang.gz\n";
+    my_nonempty($corpbasefile);
+    return $corpbasefile;
+  }
+  
+  if (1 == scalar @requested_factors && $requested_factors[0] !~ /^[0-9]+$/) {
+    my $factorpathname = construct_projection($corp, $lang, $requested_factors[0]);
+    print STDERR "Just one factor wished, returning: $factorpathname\n";
+    my_nonempty($factorpathname);
+    return $factorpathname;
+  }
+  
+  my $canofacts = join("+", @requested_factors);
+  
+  my $corpfile = "$corp/combinations/$lang+$canofacts.gz";
+  
+  my $corppathname = "$basedir/$corpfile";
+  
+  if (-e $corppathname) {
+    my $lock = blocking_verbose_lock($corppathname);
+    print STDERR "Corpus '$corp/$lang+$canofacts' seems ready, checking.\n";
+    unlock_verbose($lock);
+    my_nonempty($corppathname);
+    # corpus seems ok, report corpus location
+     return $corppathname;
+  }
 
-my $canofacts = join("+", @requested_factors);
-
-my $corpfile = "$corp/combinations/$lang+$canofacts.gz";
-
-my $corppathname = "$basedir/$corpfile";
-
-if (-e $corppathname) {
+  my %added_factors = map {
+          my $factorpathname = construct_projection($corp, $lang, $_);
+          my $stream = my_open($factorpathname);
+          ( $_, $stream ); # remember the mapping factor name->stream
+      } grep { ! /^[0-9]+$/ } @requested_factors;
+  
+  print STDERR "Locking and writing $corppathname\n";
   my $lock = blocking_verbose_lock($corppathname);
-  print STDERR "Corpus '$descr' seems ready, checking.\n";
+  my $outstream = my_save($corppathname);
+  
+  my $nr=0;
+  while (<$corp_stream>) {
+    $nr++;
+    print STDERR "." if $nr % 10000 == 0;
+    print STDERR "($nr)" if $nr % 100000 == 0;
+    chomp;
+    my @intokens = split / /;
+    # load lines of corresponding streams and ensure equal number of words
+    my %lines_of_extratoks;
+    foreach my $factor (keys %added_factors) {
+      my $line = readline($added_factors{$factor});
+      die "Additional factor file for $factor contains too few sentences!"
+        if !defined $line;
+      chomp($line);
+      my @toks = split / /, $line;
+      die "Incompatible number of words in factor $factor on line $nr."
+        if $#toks != $#intokens;
+      $lines_of_extratoks{$factor} = \@toks;
+    }
+    
+    # for every token, print the factors in the order as user wished
+    for(my $i=0; $i<=$#intokens; $i++) {
+      my $token = $intokens[$i];
+      my @outtoken = ();
+      my @factors = split /\|/, $token;
+      # print STDERR "Token: $token\n";
+      foreach my $name (@requested_factors) {
+        my $f = undef;
+        if ($name =~ /^[0-9]+$/o) {
+          # numeric factors should be copied from original corpus
+          $f = $factors[$name];
+          die "Missed factor $name in $token on line $nr"
+            if !defined $f || $f eq "";
+        } else {
+          # named factors should be obtained from the streams
+  	$f = $lines_of_extratoks{$name}->[$i];
+          die "Missed factor $name on line $nr"
+            if !defined $f || $f eq "";
+        }
+        # print STDERR "  Factor $name: $f\n";
+        push @outtoken, $f;
+      }
+      print $outstream " " if $i != 0;
+      print $outstream join("|", @outtoken);
+    }
+    print $outstream "\n";
+  }
+  close $corp_stream;
+  close $outstream;
+  uncache $corppathname;
   unlock_verbose($lock);
-  my_nonempty($corppathname);
-  # corpus seems ok, report corpus location
-  emit($corppathname);
-  exit 0;
+  print STDERR "Done constructing $corp/$lang/$canofacts.\n";
+  return $corppathname;
 }
+
 
 sub blocking_verbose_lock {
   # in readonly mode, block until an existing lockfile vanishes and return undef
@@ -132,13 +260,13 @@ sub blocking_verbose_lock {
   if (-e $authfile) {
     print STDERR "Waiting for ".`cat $authfile 2>/dev/null`;
   }
+  ensure_dir_for_file($fn);
   if (! -w dirname($authfile)) {
     sleep(30) while -e $authfile;
     die "Won't create lockfile in readonly mode for $fn"
       if ! -e $fn;
     return undef;
   }
-  ensure_dir_for_file($fn);
   my $msg = 0;
   while (! ($lock = File::NFSLock->new($fn, LOCK_EX, 10,30*60))) {
     # waiting
@@ -181,84 +309,6 @@ sub construct_projection {
   return $factorpathname;
 }
 
-
-my %added_factors = map {
-        my $factorpathname = construct_projection($corp, $lang, $_);
-        my $stream = my_open($factorpathname);
-        ( $_, $stream ); # remember the mapping factor name->stream
-    } grep { ! /^[0-9]+$/ } @requested_factors;
-
-print STDERR "Locking and writing $corppathname\n";
-my $lock = blocking_verbose_lock($corppathname);
-my $outstream = my_save($corppathname);
-
-
-my $nr=0;
-while (<$corp_stream>) {
-  $nr++;
-  print STDERR "." if $nr % 10000 == 0;
-  print STDERR "($nr)" if $nr % 100000 == 0;
-  chomp;
-  my @intokens = split / /;
-  # load lines of corresponding streams and ensure equal number of words
-  my %lines_of_extratoks;
-  foreach my $factor (keys %added_factors) {
-    my $line = readline($added_factors{$factor});
-    die "Additional factor file for $factor contains too few sentences!"
-      if !defined $line;
-    chomp($line);
-    my @toks = split / /, $line;
-    die "Incompatible number of words in factor $factor on line $nr."
-      if $#toks != $#intokens;
-    $lines_of_extratoks{$factor} = \@toks;
-  }
-  
-  # for every token, print the factors in the order as user wished
-  for(my $i=0; $i<=$#intokens; $i++) {
-    my $token = $intokens[$i];
-    my @outtoken = ();
-    my @factors = split /\|/, $token;
-    # print STDERR "Token: $token\n";
-    foreach my $name (@requested_factors) {
-      my $f = undef;
-      if ($name =~ /^[0-9]+$/o) {
-        # numeric factors should be copied from original corpus
-        $f = $factors[$name];
-        die "Missed factor $name in $token on line $nr"
-          if !defined $f || $f eq "";
-      } else {
-        # named factors should be obtained from the streams
-	$f = $lines_of_extratoks{$name}->[$i];
-        die "Missed factor $name on line $nr"
-          if !defined $f || $f eq "";
-      }
-      # print STDERR "  Factor $name: $f\n";
-      push @outtoken, $f;
-    }
-    print $outstream " " if $i != 0;
-    print $outstream join("|", @outtoken);
-  }
-  print $outstream "\n";
-}
-close $corp_stream;
-close $outstream;
-uncache $corppathname;
-unlock_verbose($lock);
-print STDERR "Done.\n";
-
-# report corpus location
-emit($corppathname);
-
-sub emit {
-  my $filename = shift;
-  if ($dump) {
-    my $hdl = my_open($filename);
-    print while <$hdl>;
-    close $hdl;
-  } else {
-    print $filename."\n";
-  }
-}
 
 
 sub my_open {
