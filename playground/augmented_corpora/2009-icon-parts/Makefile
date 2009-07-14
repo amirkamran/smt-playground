@@ -104,7 +104,7 @@ EXPORTDIR?=/net/projects/hindi/data/augmented_corpora
 	# releasing an en-hi corpus to augmented corpora
 	if [ -e $(EXPORTDIR)/$* ]; then \
 	  echo "Target directory $(EXPORTDIR)/$* exists, delete yourself." >&2 ;\
-	  exit 1;
+	  exit 1; \
 	fi
 	mkdir $(EXPORTDIR)/$*
 	zcat $< | cut -f 1 | $(EXPORTDIR)/escape_pipe_lt_gt.pl \
