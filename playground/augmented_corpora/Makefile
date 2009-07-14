@@ -459,15 +459,16 @@ english_uppercased_tokens:
 export DIRSYM?=gdfa
 align:
 	# about to align corp $(CORP) srcaug $(SRCAUG) tgtaug $(TGTAUG)
-	# as $(NAME)
 	# using symmetrization $(DIRSYM)
-	[ ! -z "$(NAME)" ]
 	[ ! -z "$(CORP)" ]
 	[ ! -z "$(SRCAUG)" ]
 	[ ! -z "$(TGTAUG)" ]
-	./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$(NAME).vars
+	[ ! -z "$(DIRSYM)" ]
+	[ ! -z "$$NAME" ] \
+	  || export NAME=`echo $(SRCAUG)-$(TGTAUG)-$(DIRSYM) | tr '+' '-'` ; \
+	./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars ; \
 	qsubmit \
-	  --jobname align.$(CORP).$(NAME) \
+	  --jobname align.$(CORP).$$NAME \
 	  '~/diplomka/kos/align/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
 	  `./augment.pl $(CORP)/$(TGTAUG)` \
@@ -476,5 +477,5 @@ align:
 	  --bindir=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/ \
 	  --dirsym=$(DIRSYM) \
 	  | cut -f2 \
-	  | gzip > $(CORP)/$(NAME).gz'
-	echo "ali" > $(CORP)/$(NAME).info
+	  | gzip > $(CORP)/$$NAME.gz' \
+	&& echo "ali" > $(CORP)/$$NAME.info
