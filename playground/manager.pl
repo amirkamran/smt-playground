@@ -12,9 +12,11 @@ my $debug = 0;
 my $reindex = 0;
 my $indexfile = "index.exps";
 my @substitute = ();
+my $nosubmit = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "debug" => \$debug,
+  "n|nosubmit" => \$nosubmit,
   "reindex" => \$reindex, # refresh md5 sums of all experiments
   "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
@@ -40,6 +42,8 @@ if (0 < scalar @substitute) {
     my $outexp = derive_exp($exp, \%deps);
     if ($outexp eq $exp) {
       print STDERR "No change in $exp\n";
+    } elsif ($nosubmit) {
+      print STDERR "Not submitting any experiments, as you wished.\n";
     } else {
       # submit all the jobs as necessary, including dependencies
       foreach my $e (@{$deps{"TOPOLOGICAL"}}) {
