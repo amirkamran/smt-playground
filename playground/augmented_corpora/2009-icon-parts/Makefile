@@ -1,12 +1,15 @@
 # obtaining sources for 2009 ICON paper
 
+SHELL=/bin/bash
+
 # various fixes common to all corpora, e.g. drop the BOM char
 GENERAL_FIXES= perl -pne 's/\x{ef}\x{bb}\x{bf}//g; s/  +/ /g; s/\t +/\t/; s/ +\t/\t/; s/^ +//; s/ +$$//;'
 
 all:
 	# make sources   ... will collect data from various places to this dir
 	#                ... have a look at them
-	# make export    ... will put them as corpora to ../ (e.i. augmented_c)
+	# make export    ... will put them as corpora to $$EXPORTDIR
+	#                    i.e. $(EXPORTDIR)
 
 sources: acl2005.enhi.gz eilmt.enhi.gz tides.enhi.gz \
   wikiner2008.enhi.gz wikiner2009.enhi.gz \
@@ -84,6 +87,9 @@ wikiner2009.enhi.gz:
 %-11.enhi.gz: %.hun.gz
 	zcat $< \
 	| colgrep 1 --re='^1-1$$' \
+	| colgrep 3 --re='.' \
+	| colgrep 4 --re='.' \
+	| cut -f 3,4 \
 	| gzip > $@
 
 
@@ -92,16 +98,21 @@ ALL=eilmt tides emille-11 danielpipes-11 agrocorp-11 wikiner2008 wikiner2009 acl
 export: $(ALL:%=%.export)
 
 
+EXPORTDIR?=/net/projects/hindi/data/augmented_corpora
+
 %.export: %.enhi.gz
 	# releasing an en-hi corpus to augmented corpora
-	rm -rf ../$*
-	mkdir ../$*
-	zcat $< | cut -f 1 | ../escape_pipe_lt_gt.pl \
-	| gzip > ../$*/en.gz
-	echo form > ../$*/en.info
-	zcat $< | cut -f 2 | ../escape_pipe_lt_gt.pl \
-	| gzip > ../$*/hi.gz
-	echo form > ../$*/hi.info
+	if [ -e $(EXPORTDIR)/$* ]; then \
+	  echo "Target directory $(EXPORTDIR)/$* exists, delete yourself." >&2 ;\
+	  exit 1;
+	fi
+	mkdir $(EXPORTDIR)/$*
+	zcat $< | cut -f 1 | $(EXPORTDIR)/escape_pipe_lt_gt.pl \
+	| gzip > $(EXPORTDIR)/$*/en.gz
+	echo form > $(EXPORTDIR)/$*/en.info
+	zcat $< | cut -f 2 | $(EXPORTDIR)/escape_pipe_lt_gt.pl \
+	| gzip > $(EXPORTDIR)/$*/hi.gz
+	echo form > $(EXPORTDIR)/$*/hi.info
 
 
 ## exporting parsed (and retokenized) English
@@ -112,8 +123,8 @@ export: $(ALL:%=%.export)
 #	[ `zwc -l $< | cut -f1` == `zwc -l $*.enhi.gz | cut -f1` ]
 #	zcat $< \
 #	| cut -f 2 \
-#	| gzip > ../icon-$*/enP.gz
-#	echo 'form|lem|tag|ord|gov|valem|lemvalem' > ../icon-$*/enP.info
+#	| gzip > $(EXPORTDIR)/icon-$*/enP.gz
+#	echo 'form|lem|tag|ord|gov|valem|lemvalem' > $(EXPORTDIR)/icon-$*/enP.info
 #
 ## enR stands for en parsed and reordered
 #%.export-enR: %.enR.gz %.enhi.gz
@@ -121,8 +132,8 @@ export: $(ALL:%=%.export)
 #	[ `zwc -l $< | cut -f1` == `zwc -l $*.enhi.gz | cut -f1` ]
 #	zcat $< \
 #	| cut -f 2 \
-#	| gzip > ../icon-$*/enR.gz
-#	echo 'form|lem|tag|ord|gov|valem|lemvalem' > ../icon-$*/enR.info
+#	| gzip > $(EXPORTDIR)/icon-$*/enR.gz
+#	echo 'form|lem|tag|ord|gov|valem|lemvalem' > $(EXPORTDIR)/icon-$*/enR.info
 #
 ## use for eilmt, eilmt.dev, eilmt.test
 #%.enP.gz:
