@@ -11,12 +11,12 @@ my $vars = 0;
 my $debug = 0;
 my $reindex = 0;
 my $indexfile = "index.exps";
-my $substitute = undef;
+my @substitute = ();
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "debug" => \$debug,
   "reindex" => \$reindex, # refresh md5 sums of all experiments
-  "s|substitute=s" => \$substitute, # derive an experiment chain from existing
+  "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
 ) or exit 1;
 
@@ -32,7 +32,7 @@ foreach my $d (@dirs) {
 }
 saveidx($idx);
 
-if (defined $substitute) {
+if (0 < scalar @substitute) {
   # derive an experiment using a key (from arg)
   foreach my $key (@ARGV) {
     my $exp = guess_exp($key);
@@ -119,7 +119,9 @@ sub derive_exp {
   }
 
   # apply the regexp to vars
-  @vars = map { eval "s$substitute"; $_; } @vars;
+  foreach my $substitute (@substitute) {
+    @vars = map { eval "s$substitute"; $_; } @vars;
+  }
 
   # check if we changed and possibly init us
   my $newexp = $exp;
