@@ -6,21 +6,21 @@ based on the tools available at http://www.statmt.org/europarl
 
 Detokenizer
 ===========
-Usage ./detokenizer.perl -l [en|de|...] < tokenizedfile > detokenizedfile
+Usage ./detokenizer.pl -l [en|de|...] < tokenizedfile > detokenizedfile
 
 Used after decoding, removes most spaces inserted by tokenizer.perl.
 
 
 Lowercaser
 ==========
-Usage ./lowercase.perl < tokenizedfile > lowercasedfile
+Usage ./lowercase.pl < tokenizedfile > lowercasedfile
 
 Guess what this one does.
 
 
 Reuse Weights
 =============
-./reuse-weights.perl weights.ini < moses.ini > weighted.ini
+./reuse-weights.pl weights.ini < moses.ini > weighted.ini
 
 Combines feature weights in weights.ini with phrase-tables, LMs
 and reordering-tables specified in moses.ini to make weighted.ini
@@ -28,7 +28,7 @@ and reordering-tables specified in moses.ini to make weighted.ini
 
 Sentence Splitter
 =================
-Usage ./split-sentences.perl -l [en|de|...] < textfile > splitfile
+Usage ./split-sentences.pl -l [en|de|...] < textfile > splitfile
 
 Uses punctuation and Capitalization clues to split paragraphs of 
 sentences into files with one sentence per line. For example:
@@ -46,7 +46,7 @@ See more information in the Nonbreaking Prefixes section.
 
 Tokenizer
 =========
-Usage ./tokenizer.perl -l [en|de|...] < textfile > tokenizedfile
+Usage ./tokenizer.pl -l [en|de|...] < textfile > tokenizedfile
 
 Splits out most punctuation from words. Special cases where splits
 do not occur are documented in the code. 
@@ -62,7 +62,7 @@ See more information in the Nonbreaking Prefixes section.
 
 XML Wrapper
 ===========
-Usage ./wrap-xml.perl xml-frame language [system-name] < translatedfile > wrappedfile.sgm
+Usage ./wrap-xml.pl xml-frame language [system-name] < translatedfile > wrappedfile.sgm
 
 Using the doc, sent, and other tags specified in the xml-frame, 
 creates a NIST-compatile SGM file tagged with the specified 
