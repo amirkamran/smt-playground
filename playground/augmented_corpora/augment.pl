@@ -1,13 +1,7 @@
 #!/usr/bin/perl
 # Creates a corpus by combining the specified factors and creating the factors
 # if necessary.
-# Allowed descriptions:
-#    corpname/lang+fact1+fact2+0
-#    corp1+corp2/lang+fact1+fact2
-#      ... will concatenate the common subset of base factors in corp1 and corp2
-#          into a new directory corp1+corp2 and derive any wished factors
-#          from this concatenated corpus
-#    corpname+fact1+fact2 --lang=lang  # not yet implemented
+# Usage see below.
 
 use strict;
 use File::Basename;
@@ -15,32 +9,63 @@ use File::Path;
 use File::Spec;
 use File::NFSLock qw(uncache);
 use Fcntl qw(LOCK_EX LOCK_NB LOCK_SH);
-use Getopt::Long;
+use Getopt::Long qw(GetOptionsFromString);
 
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 binmode(STDIN, ":utf8");
 
-my $basedir = dirname(File::Spec->rel2abs(__FILE__));
-
+my $AUGMENTPATH = File::Spec->rel2abs(__FILE__);
+my $basedir = dirname($AUGMENTPATH);
+my $makefile = $basedir."/Makefile";
 my $dump = 0; # print the corpus contents, not the filename
-GetOptions(
+
+my @optionspecs = (
   "dump"=>\$dump,
-  "dir=s" => \$basedir,
-) or exit 1;
+  "d|dir=s" => \$basedir,
+  "m|makefile=s" => \$makefile,
+);
+
+# use default options from ./augment.pl.flags, if available
+my $default_opt_file = "$basedir/augment.pl.flags";
+if (-e $default_opt_file) {
+  print STDERR "Loading default options from $default_opt_file\n";
+  my $h = my_open($default_opt_file);
+  my $defaultoptstr = "";
+  $defaultoptstr .= $_ while <$h>;
+  close $h;
+  GetOptionsFromString($defaultoptstr, @optionspecs)
+    or die "Bad options in $default_opt_file";
+  $makefile = File::Spec->rel2abs($makefile, dirname($default_opt_file));
+}
+
+# overwrite the defaults with environment variables
+$makefile = $ENV{"AUGMENTMAKEFILE"} if defined $ENV{"AUGMENTMAKEFILE"};
+
+
+GetOptions(@optionspecs) or exit 1;
+
+my $MAKEFILEDIR = dirname($makefile);
 
 my $descr = shift;
 
 if (! defined $descr) {
   print STDERR "usage: $0 corpname/lang+fact1+fact2+0+3
-  This will use the corpus 'corpname' in:
-    $basedir
-  in the language 'lang' and extend it with labelled (fact1, fact2) or
-  unlabelled factors (0, 3).
-  Finally, it will emit the pathname to that corpus.
+Find or construct a factored corpus given a corpus description.
+Allowed corpus descriptions:
+   corpname/lang+fact1+fact2+0+3
+     ... use the corpus 'corpname' in:
+           $basedir
+         in the language 'lang' and extend it with labelled (fact1, fact2) or
+         unlabelled factors (0, 3).
+   corp1+corp2/lang+fact1+fact2
+     ... will concatenate the common subset of base factors in corp1 and corp2
+         into a new directory corp1+corp2 and derive any wished factors
+         from this concatenated corpus
 Options:
   --dump  ... to dump the corpus contents to stdout
-  --dir=PATH  ... specify a different base directory
+  --d|dir=PATH  ... specify a different base directory
+  --m|makefile=PATH  ... create factors using a specified Makefile
 ";
   exit 1;
 }
@@ -301,7 +326,7 @@ sub construct_projection {
   } else {
     print STDERR "Generating $factorfile in $basedir\n";
     chdir($basedir) or die "Can't chdir to $basedir";
-    safesystem("CORP=$corp LANG=$lang make $factorfile >&2") or die "Can't make $factorfile";
+    safesystem("CORP=$corp LANG=$lang AUGMENT=\"$AUGMENTPATH\" MAKEFILEDIR=\"$MAKEFILEDIR\" AUGMENTMAKEFILE=\"$makefile\" make -f \"$makefile\" $factorfile >&2") or die "Can't make $factorfile";
     print STDERR "Finished generating $factorfile in $basedir\n";
   }
   uncache($factorpathname);
