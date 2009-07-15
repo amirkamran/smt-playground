@@ -143,7 +143,7 @@ sub derive_exp {
 
     # check if there is such an experiment already
     my $hash = get_hash_from_vars_deps(\@vars, \@sources);
-    if (defined $idx->{$hash}) {
+    if (defined $idx->{$hash} && -d $idx->{$hash}) {
       $newexp = $idx->{$hash};
       print STDERR "Reusing existing experiment: $newexp\n";
     } else {
