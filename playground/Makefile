@@ -288,8 +288,8 @@ workspace.%.srilm: workspace.%
 	date > $@ # confirm our success
 
 # Use UFAL Moses repository by default:
-MOSES_GIT_UPDATE_COMMAND=pull
-MOSES_GIT_CLONE_FROM=clone /net/work/projects/moses-ufal-git-repo
+MOSES_GIT_UPDATE_COMMAND?=pull
+MOSES_GIT_CLONE_FROM?=clone /net/work/projects/moses-ufal-git-repo
 # Alternatively use official moses SVN source:
 # MOSES_GIT_UPDATE_COMMAND=svn rebase
 #MOSES_START_REVISION?=0
