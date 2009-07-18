@@ -127,10 +127,10 @@ sub derive_exp {
     @vars = map { eval "s$substitute"; $_; } @vars;
   }
 
-  # check if we changed (or the source failed) and possibly init us
+  # check if we changed (or the source failed or is outdated) and possibly init us
   my $newexp = $exp;
   if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources"
-    || -e "$exp/FAILED") {
+    || -e "$exp/FAILED" || -e "$exp/OUTDATED") {
     # print vars and how they change
     if ($debug) {
       print STDERR "Modifying EXP $exp to:\n";
@@ -144,7 +144,11 @@ sub derive_exp {
 
     # check if there is such an experiment already
     my $hash = get_hash_from_vars_deps(\@vars, \@sources);
-    if (defined $idx->{$hash} && -d $idx->{$hash}) {
+    if (defined $idx->{$hash}
+        && -d $idx->{$hash}
+        && ! -e $idx->{$hash}."/OUTDATED"
+        && ! -e $idx->{$hash}."/FAILED"
+        ) {
       $newexp = $idx->{$hash};
       print STDERR "Reusing existing experiment: $newexp\n";
     } else {
