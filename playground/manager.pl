@@ -127,9 +127,10 @@ sub derive_exp {
     @vars = map { eval "s$substitute"; $_; } @vars;
   }
 
-  # check if we changed and possibly init us
+  # check if we changed (or the source failed) and possibly init us
   my $newexp = $exp;
-  if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources") {
+  if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources"
+    || -e "$exp/FAILED") {
     # print vars and how they change
     if ($debug) {
       print STDERR "Modifying EXP $exp to:\n";
