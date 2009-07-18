@@ -186,13 +186,14 @@ echo "Detokenizing evaluation.std.out"
 \$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
 < evaluation.std.out > evaluation.std.txt
 
-echo "Preparing detailed output for manual inpection"
-./moses -input-file ./evaluation.in -config ./filtered-for-eval-opt/moses.ini \\
+echo "You could use the following to prepare detailed output for manual inpection"
+echo ./moses -input-file ./evaluation.in -config \
+  ./filtered-for-eval-opt/moses.ini \\
   -verbose 3 \\
-  2>&1 \\
-  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
-  | head -c 300k \\
-  > evaluation.opt.verbose
+  2>&1
+#  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
+#  | head -c 300k \\
+#  > evaluation.opt.verbose
 
 date > DONE
 
