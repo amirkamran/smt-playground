@@ -120,7 +120,7 @@ if [[ \$alilen -ne \$srclen ]] \\
   echo "\$alilen  alignment.custom.gz"
   echo "\$srclen  corpus.src.gz"
   echo "\$tgtlen  corpus.tgt.gz"
-  exit 1
+  die "Dying for incompatible corpus lengths"
 fi
 
 mkdir model
