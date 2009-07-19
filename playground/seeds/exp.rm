@@ -63,9 +63,6 @@ fi
 [ -z "$INIT_ONLY" ] || exit 0
 
 
-mydir=`pwd`
-
-
 cat << KONEC > command
 # This is the command to be run here
 echo "=============================="
@@ -74,8 +71,10 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 
+mydir=\`pwd\`
+
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
 
 renice 10 \$\$
 

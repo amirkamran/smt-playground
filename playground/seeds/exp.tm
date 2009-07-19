@@ -73,8 +73,6 @@ fi
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-mydir=`pwd`
-
 DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
@@ -89,8 +87,10 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 
+mydir=\`pwd\`
+
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
 
 renice 10 \$\$
 

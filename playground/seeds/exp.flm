@@ -129,6 +129,8 @@ fi
 
 [ -e flm.lm.gz ] || die "FLM did not prepare any model file"
 
+date > DONE
+
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`

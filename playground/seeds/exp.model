@@ -103,15 +103,15 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 
+mydir=\`pwd\`
+
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
 
 renice 10 \$\$
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
-
-mydir=\`pwd\`
 
 ## Cloning translation model
 cd model || die "Chdir failed"
