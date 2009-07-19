@@ -7,17 +7,21 @@ use File::Basename;
 use File::Path;
 use Digest::MD5 qw(md5_hex);
 
+my @keywordfile = qw/DONE FAILED OUTDATED/;
+
 my $vars = 0;
+my $log = 0;
 my $debug = 0;
-my $reindex = 0;
+my $reindex = 1;
 my $indexfile = "index.exps";
 my @substitute = ();
 my $nosubmit = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
+  "log" => \$log, # print experiment log in traceback mode
   "debug" => \$debug,
   "n|nosubmit" => \$nosubmit,
-  "reindex" => \$reindex, # refresh md5 sums of all experiments
+  "reindex!" => \$reindex, # refresh md5 sums of all experiments (defaults to 1, use --no-reindex)
   "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
 ) or exit 1;
@@ -27,10 +31,12 @@ my $idx = loadidx() unless $reindex; # ignore saved values
 my @dirs = glob("exp.*.*.[0-9]*");
 foreach my $d (@dirs) {
   next if defined $idx->{$d};
+  next if -e $d."/OUTDATED";
+  next if -e $d."/FAILED";
   my $hash = get_hash_from_dir($d);
   $idx->{$d} = $hash;
   $idx->{$hash} = $d;
-  print STDERR "$d: $idx->{$d}\n";
+  print STDERR "$d: $idx->{$d}\n" if $debug;
 }
 saveidx($idx);
 
@@ -146,8 +152,6 @@ sub derive_exp {
     my $hash = get_hash_from_vars_deps(\@vars, \@sources);
     if (defined $idx->{$hash}
         && -d $idx->{$hash}
-        && ! -e $idx->{$hash}."/OUTDATED"
-        && ! -e $idx->{$hash}."/FAILED"
         ) {
       $newexp = $idx->{$hash};
       print STDERR "Reusing existing experiment: $newexp\n";
@@ -176,9 +180,21 @@ sub traceback {
   my $prefix = shift;
   my $exp = shift;
   print "$prefix+- $exp\n";
+  my @kws = (get_exp_jobid($exp));
+  foreach my $kwfile (@keywordfile) {
+    push @kws, $kwfile if -e $exp."/$kwfile";
+  }
+  print "$prefix|  | Job: @kws\n";
   if ($vars) {
     my $v = load($exp."/VARS");
     foreach my $l (split /\n/, $v) {
+      print "$prefix|  | $l\n";
+    }
+  }
+  if ($log) {
+    my $logtext = `tail -n3 $exp/log.* 2> /dev/null`;
+    chomp $logtext;
+    foreach my $l (split /\n/, $logtext) {
       print "$prefix|  | $l\n";
     }
   }
