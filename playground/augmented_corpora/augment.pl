@@ -226,7 +226,7 @@ sub augment {
     print STDERR "." if $nr % 10000 == 0;
     print STDERR "($nr)" if $nr % 100000 == 0;
     chomp;
-    my @intokens = split / /;
+    my @intokens = split / +/;
     # load lines of corresponding streams and ensure equal number of words
     my %lines_of_extratoks;
     foreach my $factor (keys %added_factors) {
@@ -234,7 +234,7 @@ sub augment {
       die "Additional factor file for $factor contains too few sentences!"
         if !defined $line;
       chomp($line);
-      my @toks = split / /, $line;
+      my @toks = split / +/, $line;
       die "Incompatible number of words in factor $factor on line $nr."
         if $#toks != $#intokens;
       $lines_of_extratoks{$factor} = \@toks;
