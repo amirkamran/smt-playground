@@ -1,14 +1,15 @@
 Preprocessing Tools
 ===================
-written by Philipp Koehn, Josh Schroeder, and others...
+written by Philipp Koehn, Josh Schroeder, Dan Zeman, and others...
 based on the tools available at http://www.statmt.org/europarl
+also the StatMT SVN repository at http://svn.ms.mff.cuni.cz/projects/statmt/
 
 
 Detokenizer
 ===========
 Usage ./detokenizer.pl -l [en|de|...] < tokenizedfile > detokenizedfile
 
-Used after decoding, removes most spaces inserted by tokenizer.perl.
+Used after decoding, removes most spaces inserted by tokenizer.pl.
 
 
 Lowercaser
@@ -102,3 +103,39 @@ For example, "Article No. 24 states this." the No. is a nonbreaking
 prefix. However, in "No. It is not true." No functions as a word.
 
 See the example prefix files included here for more examples.
+
+
+Dan's Tokenizer
+===============
+Usage ./tok-dan.pl < text.txt > tokenized_text.tok.txt
+
+Language-independent low-level tokenizer by Dan Zeman.
+Unlike the tokenizer above, this one splits tokens on hyphens, too.
+
+
+Unicode Character Normalization
+===============================
+Usage $STATMT/scripts/charnormal.pl < input.txt > output.txt
+
+Normalizes UTF-8 text to canonical form. If a character can be encoded in more
+than one way, as e.g. "DEVANAGARI LETTER QA" (either as U+0958, or as (U+0915,
+"DEVANAGARI LETTER KA", and U+093C, "DEVANAGARI SIGN NUKTA")), this script
+guarantees that always the same way will be selected.
+
+The script was originally written just for Devanagari (and called devnormal.pl)
+but it now contains changes that affect all scripts. For Devanagari, it also
+removes some information that was deemed impeding in MT but is meaningful
+otherwise (example: converting "DEVANAGARI SIGN CANDRABINDU" to "DEVANAGARI
+SIGN ANUSVARA"). This aspect of the normalization can be compared to
+lowercasing of Latin script. People might want to "recase" the output.
+
+Beware: as a result of normalization, the number of tokens can change (usually
+decrease)! This can even result in an empty sentence, that should be removed
+but the script cannot remove it because it only operates on one side of the
+parallel corpus.
+
+Other changes the script does:
+* converts Devanagari digits to Arabic (European), i.e. ०१२३४५६७८९ to 0123456789
+* converts Devanagari danda ("।") and double danda ("॥") to period (".")
+* converts Devanagari abbreviation sign ("॰") to period (".")
+* removes the zero-width joiners ("\x{200D}")
