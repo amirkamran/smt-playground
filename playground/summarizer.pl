@@ -1,4 +1,4 @@
-#!/usr/bin/perl -I/home/ws06/obojar/diplomka/smt-quickrun/pbt_aachen -I/home/obo/diplomka/smt-quickrun/pbt_aachen/ -I/home/bojar/diplomka/smt-quickrun/pbt_aachen/
+#!/usr/bin/perl
 
 use strict;
 use Summarizer;
