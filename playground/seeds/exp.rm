@@ -104,7 +104,7 @@ if [[ \$alilen -ne \$srclen ]] \\
   echo "\$alilen  alignment.custom.gz"
   echo "\$srclen  corpus.src.gz"
   echo "\$tgtlen  corpus.tgt.gz"
-  exit 1
+  die "Incompatible corpus lengths."
 fi
 
 mkdir model
@@ -141,14 +141,14 @@ if \\
 ; then
   success=1
   echo "COPYING TEMPDIR \$tempdir BACK"
-  rsync -uavz \$tempdir/* ./ || exit 1
+  rsync -uavz \$tempdir/* ./ || die "Rsync back failed"
   echo "COPIED"
 
   echo Deleting \$tempdir
   rm -rf \$tempdir
 else
   success=0
-  rsync -uavz \$tempdir/log* ./ || exit 1
+  rsync -uavz \$tempdir/log* ./ || die "Rsync of log back failed"
   echo "ONLY log copied back. Majority of files left here: \$tempdir"
 fi
 
