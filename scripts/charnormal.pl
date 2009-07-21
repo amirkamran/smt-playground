@@ -56,6 +56,8 @@ while(<>)
     s/\x{201E}/"/g; # DOUBLE LOW-9 QUOTATION MARK
     s/\x{201F}/"/g; # DOUBLE HIGH-REVERSED-9 QUOTATION MARK
     s/\x{2020}/+/g; # DAGGER
+    s/[\[\{]/(/g; # OPENING BRACKETS
+    s/[\]\}]/)/g; # CLOSING BRACKETS
     s/\x{2021}/#/g; # DOUBLE DAGGER
     s/\x{2022}/*/g; # BULLET
     s/\x{2023}/*/g; # TRIANGULAR BULLET

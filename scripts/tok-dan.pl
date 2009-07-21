@@ -22,7 +22,7 @@ while(<>)
     s/\.(\d)/\x{1}period\x{0}$1/g;
     s/,(\d)/\x{1}comma\x{0}$1/g;
     # Surround punctuation by spaces. ###!!! Průšvih! Tohle nám rozloží i entity! (& comma ;)
-    s/(\pP)/ $1 /g;
+    s/([\pP\pS])/ $1 /g;
     # Remove redundant spaces.
     s/^\s+//;
     s/\s+$//;
