@@ -40,8 +40,7 @@ Options:
 
 my @ref;
 foreach my $reffile (@reffiles) {
-  open INF, $reffile or die "Can't read '$reffile'";
-  binmode(INF, ":utf8");
+  *INF = my_open($reffile);
   my $nr = 0;
   while (<INF>) {
     chomp;
@@ -55,8 +54,7 @@ foreach my $reffile (@reffiles) {
 }
 
 my @test;
-open INF, $testfile or die "Can't read '$testfile'";
-binmode(INF, ":utf8");
+*INF = my_open($testfile);
 while (<INF>) {
   chomp;
   my @words = split / /;
@@ -168,3 +166,28 @@ sub union {
   return $out;
 }
 
+
+sub my_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  die "Not found: $f" if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file $f`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat $f |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat $f |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or die "Can't open '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
