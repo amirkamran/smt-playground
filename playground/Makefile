@@ -45,7 +45,7 @@ exp.%.init:
 	       if [ -e $$rundir/TAG ]; then \
 	         echo "Renaming rundir to include the tag!" >&2; \
 		 tag=`cat $$rundir/TAG`; \
-		 newrundir=`mkdiruniq --delim=. exp.$*.$$tag.$(TS)`; \
+		 newrundir=`mkdiruniq --delim=. exp.$*.$$tag.$(TS)` || exit 1; \
 		 mv $$rundir/* $$newrundir/ || exit 1; \
 		 rmdir $$rundir || exit 1; \
 		 rundir="$$newrundir"; \

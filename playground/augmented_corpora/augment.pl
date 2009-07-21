@@ -207,7 +207,7 @@ sub augment {
     unlock_verbose($lock);
     my_nonempty($corppathname);
     # corpus seems ok, report corpus location
-     return $corppathname;
+    return $corppathname;
   }
 
   my %added_factors = map {
@@ -218,58 +218,63 @@ sub augment {
   
   print STDERR "Locking and writing $corppathname\n";
   my $lock = blocking_verbose_lock($corppathname);
-  my $outstream = my_save($corppathname);
+  if (-e $corppathname) {
+    print STDERR "Seems ready: $corppathname\n";
+  } else {
+    my $outstream = my_save($corppathname);
   
-  my $nr=0;
-  while (<$corp_stream>) {
-    $nr++;
-    print STDERR "." if $nr % 10000 == 0;
-    print STDERR "($nr)" if $nr % 100000 == 0;
-    chomp;
-    my @intokens = split / +/;
-    # load lines of corresponding streams and ensure equal number of words
-    my %lines_of_extratoks;
-    foreach my $factor (keys %added_factors) {
-      my $line = readline($added_factors{$factor});
-      die "Additional factor file for $factor contains too few sentences!"
-        if !defined $line;
-      chomp($line);
-      my @toks = split / +/, $line;
-      die "Incompatible number of words in factor $factor on line $nr."
-        if $#toks != $#intokens;
-      $lines_of_extratoks{$factor} = \@toks;
-    }
-    
-    # for every token, print the factors in the order as user wished
-    for(my $i=0; $i<=$#intokens; $i++) {
-      my $token = $intokens[$i];
-      my @outtoken = ();
-      my @factors = split /\|/, $token;
-      # print STDERR "Token: $token\n";
-      foreach my $name (@requested_factors) {
-        my $f = undef;
-        if ($name =~ /^[0-9]+$/o) {
-          # numeric factors should be copied from original corpus
-          $f = $factors[$name];
-          die "Missed factor $name in $token on line $nr"
-            if !defined $f || $f eq "";
-        } else {
-          # named factors should be obtained from the streams
-  	$f = $lines_of_extratoks{$name}->[$i];
-          die "Missed factor $name on line $nr"
-            if !defined $f || $f eq "";
-        }
-        # print STDERR "  Factor $name: $f\n";
-        push @outtoken, $f;
+    my $nr=0;
+    while (<$corp_stream>) {
+      $nr++;
+      print STDERR "." if $nr % 10000 == 0;
+      print STDERR "($nr)" if $nr % 100000 == 0;
+      chomp;
+      my @intokens = split / +/;
+      # load lines of corresponding streams and ensure equal number of words
+      my %lines_of_extratoks;
+      foreach my $factor (keys %added_factors) {
+        my $line = readline($added_factors{$factor});
+        die "Additional factor file for $factor contains too few sentences!"
+          if !defined $line;
+        chomp($line);
+        my @toks = split / +/, $line;
+        die "Incompatible number of words in factor $factor on line $nr."
+          if $#toks != $#intokens;
+        $lines_of_extratoks{$factor} = \@toks;
       }
-      print $outstream " " if $i != 0;
-      print $outstream join("|", @outtoken);
+      
+      # for every token, print the factors in the order as user wished
+      for(my $i=0; $i<=$#intokens; $i++) {
+        my $token = $intokens[$i];
+        my @outtoken = ();
+        my @factors = split /\|/, $token;
+        # print STDERR "Token: $token\n";
+        foreach my $name (@requested_factors) {
+          my $f = undef;
+          if ($name =~ /^[0-9]+$/o) {
+            # numeric factors should be copied from original corpus
+            $f = $factors[$name];
+            die "Missed factor $name in $token on line $nr"
+              if !defined $f || $f eq "";
+          } else {
+            # named factors should be obtained from the streams
+    	$f = $lines_of_extratoks{$name}->[$i];
+            die "Missed factor $name on line $nr"
+              if !defined $f || $f eq "";
+          }
+          # print STDERR "  Factor $name: $f\n";
+          push @outtoken, $f;
+        }
+        print $outstream " " if $i != 0;
+        print $outstream join("|", @outtoken);
+      }
+      print $outstream "\n";
     }
-    print $outstream "\n";
+    close $corp_stream;
+    close $outstream;
+    uncache $corppathname;
+    ensure_linecount($corppathname, $nr);
   }
-  close $corp_stream;
-  close $outstream;
-  uncache $corppathname;
   unlock_verbose($lock);
   print STDERR "Done constructing $corp/$lang/$canofacts.\n";
   return $corppathname;
@@ -404,4 +409,14 @@ sub my_nonempty {
   my $lineone = <$hdl>;
   die "$fn empty!" if !defined $lineone || $lineone eq "";
   close $hdl;
+}
+
+sub ensure_linecount {
+  my $fn = shift;
+  my $reqnr = shift;
+  my $hdl = my_open($fn);
+  my $nr = 0;
+  $nr ++ while <$hdl>;
+  close $hdl;
+  die "$fn:Expected $reqnr lines, got $nr." if $reqnr != $nr;
 }

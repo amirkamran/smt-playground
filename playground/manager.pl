@@ -16,6 +16,7 @@ my $reindex = 1;
 my $indexfile = "index.exps";
 my @substitute = ();
 my $nosubmit = 0;
+my $redo = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "log" => \$log, # print experiment log in traceback mode
@@ -24,6 +25,7 @@ GetOptions(
   "reindex!" => \$reindex, # refresh md5 sums of all experiments (defaults to 1, use --no-reindex)
   "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
+  "redo" => \$redo, # force experiment derivation with no change using --s
 ) or exit 1;
 
 # update md5 indices
@@ -40,7 +42,7 @@ foreach my $d (@dirs) {
 }
 saveidx($idx);
 
-if (0 < scalar @substitute) {
+if ($redo || 0 < scalar @substitute) {
   # derive an experiment using a key (from arg)
   foreach my $key (@ARGV) {
     my $exp = guess_exp($key);

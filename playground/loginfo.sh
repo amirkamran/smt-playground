@@ -7,7 +7,9 @@ if [ -z $1 ]; then
 fi
 
 function print_info () {
-  if [ -e "$1/FAILED" ]; then
+  if [ -e "$1/OUTDATED" ]; then
+    echo "=OUTDATED="
+  elif [ -e "$1/FAILED" ]; then
     echo "==FAILED=="
   else
     lf="$1/log"
