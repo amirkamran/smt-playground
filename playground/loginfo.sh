@@ -7,20 +7,24 @@ if [ -z $1 ]; then
 fi
 
 function print_info () {
-  lf="$1/log"
-  lastlog=`ls $lf.o* 2>/dev/null| tail -1`
-  if [ -e "$lastlog" ]; then
-    # ufal naming convention is different
-    lf="$lastlog"
-  fi
-  
-  if [ -e $lf ]; then
-    tail -1 $lf | cut -c1-10 | sed 's/==========/===FINI?==/' | sed 's/^ *$/running.../'
+  if [ -e "$1/FAILED" ]; then
+    echo "==FAILED=="
   else
-    if [ -d $1 ]; then
-      echo "-prepared-"
+    lf="$1/log"
+    lastlog=`ls $lf.o* 2>/dev/null| tail -1`
+    if [ -e "$lastlog" ]; then
+      # ufal naming convention is different
+      lf="$lastlog"
+    fi
+    
+    if [ -e $lf ]; then
+      tail -1 $lf | cut -c1-10 | sed 's/==========/===FINI?==/' | sed 's/^ *$/running.../'
     else
-      echo "-nonexist-"
+      if [ -d $1 ]; then
+        echo "-prepared-"
+      else
+        echo "-nonexist-"
+      fi
     fi
   fi
 }
