@@ -1,17 +1,8 @@
 # This is loaded by summarizer.pl to create beautiful tables of en->hi results
 
 my $beautify = {
-      "2051" => "out-of-domain-D",
-      "964" => "domain-D",
-      "LM.*LM" => "two-LMs",
-      "lc\\+2" => "tag",
-      "TGTlc[^.]*\\+2" => "tag",
-    };
-
-my $valembeautify = {
       "t0-0DEV" => "no-reord",
       "di.r0-0DEV" => "no-reord",
-      "1130" => "FIXED",
       "or-bi-fe.r0-0" => "reord-using-hi-forms",
       "or-bi-fe.r0-1" => "reord-using-wcX/dzsuf",
       "or-bi-fe.r1-1" => "reord-using-entags-hiwcX/dzsuf",
@@ -23,25 +14,60 @@ my $valembeautify = {
 
 my @scans = (
   [ "---------------------------------------",
-    "", "Just a delimiter line, below are tables for experimenting with valem",
-    "", 4, " ", " nic ", "nic", 0, $valembeautify, ],
+    "", "Just a delimiter line",
+    "", 4, " ", " nic ", "nic", 0, $beautify, ],
+
+  [
+    "Morphology",
+    "",
+    # required
+    "
+    SRCtides
+    en\\+lc
+    hi\\+form
+    ",
+    # forbidden
+    "
+    DEVeilmt
+    =OUTDATED=
+    flm
+    emille acl wiki dani
+    t0-0At1-0
+    ",
+    1,
+    # rows
+    "
+    or-bi-fe.r([01]-[01])
+    LM(.*?)\\.t0
+     ",
+    # cols
+    "
+    t0-0\\.
+    lcsuf([0-9]+)
+    wc([0-9]+)
+    tag
+    hindomorsuf
+    ",
+    # sort
+    "SRCicon-tides",
+    0, # verbose
+    $beautify,
+  ],
+
+  [ "---------------------------------------",
+    "", "Old unused tables",
+    "", 4, " ", " nic ", "nic", 0, $beautify, ],
   [
     "Alignment",
     "",
     # required
     "
+    icon-tides
     hi
     ALI
     ",
     # forbidden
     "
-    enR
-    tides web eiti allFIX
-    wc dzsuf
-    devnormal
-    DEVicon-tides
-    ALIicon-all
-    devnorm
     ",
     1,
     # rows
@@ -50,15 +76,13 @@ my @scans = (
      ",
     # cols
     "
-    web
-    tides
     SRCicon-([a-zA-Z]+)
     or-bi-fe.r([01]-[01])
     ",
     # sort
-    "SRCicon-eilmt",
+    "SRCicon-tides",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Parallel corpus size-simple-mtevalBLEU",
@@ -92,7 +116,7 @@ my @scans = (
     # sort
     "no-reord",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Parallel corpus size-simple",
@@ -126,7 +150,7 @@ my @scans = (
     # sort
     "no-reord",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "LM corpus size-simple-mteval",
@@ -160,7 +184,7 @@ my @scans = (
     # sort
     "reord-using-hi-forms",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "LM corpus size-simple",
@@ -194,7 +218,7 @@ my @scans = (
     # sort
     "reord-using-hi-forms",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Parallel corpus size",
@@ -227,7 +251,7 @@ my @scans = (
     # sort
     "SRCicon-eilmt",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Normalization",
@@ -260,7 +284,7 @@ my @scans = (
     # sort
     "hi.",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Reorderings",
@@ -294,7 +318,7 @@ my @scans = (
     # sort
     "SRCicon-eilmt",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Reorderings - for paper",
@@ -363,7 +387,7 @@ my @scans = (
     # sort
     "SRCicon-eilmt",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Reorderings - tides",
@@ -394,7 +418,7 @@ my @scans = (
     # sort
     "baseline",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
   [
     "Reorderings - tides, trained on eiti",
@@ -425,7 +449,7 @@ my @scans = (
     # sort
     "baseline",
     0, # verbose
-    $valembeautify,
+    $beautify,
   ],
 );
 
