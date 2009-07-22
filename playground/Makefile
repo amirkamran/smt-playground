@@ -156,7 +156,7 @@ mertdetails:
 
 bleu:
 	./collect_bleu.pl \
-	| list2tab 1 2 3 \
+	| list2tab 1 2 3 '?' \
 	| headline --prepend 'Mert or Eval' \
 	| tt --utf8 \
 	> $@.`./sitename`

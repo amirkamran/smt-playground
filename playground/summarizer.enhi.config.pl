@@ -49,7 +49,85 @@ my @scans = (
     hindomorsuf
     ",
     # sort
-    "SRCicon-tides",
+    "tag",
+    0, # verbose
+    $beautify,
+  ],
+
+  [
+    "Factored LMs",
+    "",
+    # required
+    "
+    SRCtides
+    en\\+lc
+    hi\\+form
+    ",
+    # forbidden
+    "
+    DEVeilmt
+    =OUTDATED=
+    emille acl wiki dani
+    t0-0At1-0
+    LM.-[57]
+    ",
+    1,
+    # rows
+    "
+    or-bi-fe.r([01]-[01])
+    t0-0\\.
+    t0-([^.]+)
+    lcsuf([0-9]+)
+    wc([0-9]+)
+    tag
+    hindomorsuf
+     ",
+    # cols
+    "
+    flm sri
+    ",
+    # sort
+    "flm sri",
+    0, # verbose
+    $beautify,
+  ],
+
+  [
+    "Source vocabulary reduction",
+    "",
+    # required
+    "
+    SRCtides
+    hi\\+form
+    ",
+    # forbidden
+    "
+    DEVeilmt
+    =OUTDATED=
+    emille acl wiki
+    flm
+    LM.-[57]
+    LM0-3-tides.train\\+danielpipes-11
+    ",
+    1,
+    # rows
+    "
+    or-bi-fe.r([01]-[01])
+    t0-0\\.
+    t0-([^.]+)
+    lcsuf([0-9]+)
+    wc([0-9]+)
+    tag
+    hindomorsuf
+    danielpipes
+     ",
+    # cols
+    "
+    en\\+lc
+    en\\+enredvoc([0-9]+)
+    ",
+    # sort
+    "en\\+lc",
     0, # verbose
     $beautify,
   ],
