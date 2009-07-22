@@ -1,27 +1,34 @@
 #!/usr/bin/perl
 # Read stdin and gloss every word using a probabilistic dictionary
+#
+# Ondrej Bojar
 
 use strict;
 use Getopt::Long;
 
-my $dict = "$0.dict";
+binmode(STDIN, ":utf8");
+binmode(STDOUT, ":utf8");
+binmode(STDERR, ":utf8");
+
+my $there = ">";
+my $reverse = "<";
+my $dictfile = "$0.dict.gz";
 my $srccorp = undef;
 my $tgtcorp = undef;
 my $alicorp = undef;
-my $reverse = 0;
 my $cutoff = 3;
 
 GetOptions(
   "src=s" => \$srccorp,
   "tgt=s" => \$tgtcorp,
   "ali=s" => \$alicorp,
-  "rev|reverse" => \$reverse, # reverse the alignment
   "c|cutoff=i" => \$cutoff,
 ) or exit 1;
 
 my $dict = undef;
 
-if (defined $srccorp || defined $tgtcorp || defined $alicorp || ! -e $dict) {
+if (defined $srccorp || defined $tgtcorp || defined $alicorp 
+    || ! -e $dictfile) {
   die "usage to collect dictionary: $0 --src=F --tgt=F --ali=F [--dict=F]"
     if !defined $srccorp || !defined $tgtcorp || !defined $alicorp;
   my $srch = my_open($srccorp);
@@ -43,11 +50,8 @@ if (defined $srccorp || defined $tgtcorp || defined $alicorp || ! -e $dict) {
       die "$srccorp:Bad alignment" if !defined $sw;
       my $tw = $twords[$t];
       die "$tgtcorp:Bad alignment" if !defined $tw;
-      if ($reverse) {
-        $dict->{$tw}->{$sw} ++;
-      } else {
-        $dict->{$sw}->{$tw} ++;
-      }
+      $dict->{$there}->{$tw}->{$sw} ++;
+      $dict->{$reverse}->{$sw}->{$tw} ++;
     }
   }
   my $sline = <$srch>;
@@ -56,9 +60,41 @@ if (defined $srccorp || defined $tgtcorp || defined $alicorp || ! -e $dict) {
   die "$tgtcorp:Too long!" if defined $tline;
 
   # now save the dictionary, applying cuttoff
-  XXX
+  my $dicth = my_save($dictfile);
+  foreach my $dir ($there, $reverse) {
+    foreach my $k (sort { $a cmp $b } keys %{$dict->{$dir}}) {
+      foreach my $v (keys %{$dict->{$dir}->{$k}}) {
+        delete $dict->{$dir}->{$k}->{$v} if $dict->{$dir}->{$k}->{$v} < $cutoff;
+      }
+      next if 0 == scalar keys %{$dict->{$dir}->{$k}};
+      my @sorted =
+        sort { $dict->{$dir}->{$k}->{$b} <=> $dict->{$dir}->{$k}->{$a} }
+        keys %{$dict->{$dir}->{$k}};
+      print $dicth $dir."\t".$k."\t".join(" ", @sorted)."\n"
+
+      # now remove original counts to make the in-memory dict hold the same
+      # info as the disk version does
+      delete $dict->{$dir}->{$k};
+      $dict->{$dir}->{$k} = \@sorted;
+    }
+  }
+  close $dicth;
 }
 
+# load the dictionary
+if (!defined $dict) {
+  my $dicth = my_open($dictfile);
+  while (<$dicth>) {
+    chomp;
+    my ($dir, $k, $vs) = split /\t/;
+    my @vs = split / /, $vs;
+    $dict->{$dir}->{$k} = \@vs;
+  }
+}
+
+# now gloss stdin
+while (<>) {
+}
 
 
 sub my_open {
