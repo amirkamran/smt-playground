@@ -39,6 +39,8 @@ while(<>)
     # Remove zero width joiner (v některých datech se objevuje za virámem).
     s/\x{200D}//g;
     # Replace typographic variants of punctuation by ASCII counterparts.
+    s/[\[\{]/(/g; # OPENING BRACKETS
+    s/[\]\}]/)/g; # CLOSING BRACKETS
     s/\x{2010}/-/g; # HYPHEN
     s/\x{2011}/-/g; # NON-BREAKING HYPHEN
     s/\x{2012}/-/g; # FIGURE DASH
@@ -56,8 +58,6 @@ while(<>)
     s/\x{201E}/"/g; # DOUBLE LOW-9 QUOTATION MARK
     s/\x{201F}/"/g; # DOUBLE HIGH-REVERSED-9 QUOTATION MARK
     s/\x{2020}/+/g; # DAGGER
-    s/[\[\{]/(/g; # OPENING BRACKETS
-    s/[\]\}]/)/g; # CLOSING BRACKETS
     s/\x{2021}/#/g; # DOUBLE DAGGER
     s/\x{2022}/*/g; # BULLET
     s/\x{2023}/*/g; # TRIANGULAR BULLET
