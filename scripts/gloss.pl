@@ -90,6 +90,7 @@ if (!defined $dict) {
     my @vs = split / /, $vs;
     $dict->{$dir}->{$k} = \@vs;
   }
+  close $dicth;
 }
 
 # now gloss stdin
