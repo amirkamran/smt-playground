@@ -47,9 +47,92 @@ my @scans = (
     wc([0-9]+)
     tag
     hindomorsuf
+    hitbsuf
     ",
     # sort
-    "tag",
+    "hitbsuf",
+    0, # verbose
+    $beautify,
+  ],
+
+  [
+    "Morphology with Daniel Pipes",
+    "",
+    # required
+    "
+    SRCtides
+    en\\+lc
+    hi\\+form
+    dani
+    or-bi-fe.r([01]-[01])
+    ",
+    # forbidden
+    "
+    dict
+    DEVeilmt
+    =OUTDATED=
+    flm
+    emille acl wiki
+    t0-0At1-0
+    0a272556
+    ",
+    1,
+    # rows
+    "
+    LM(.*?)\\.t0
+     ",
+    # cols
+    "
+    t0-0\\.
+    lcsuf([0-9]+)
+    wc([0-9]+)
+    tag
+    hindomorsuf
+    hitbsuf
+    ",
+    # sort
+    "hitbsuf",
+    0, # verbose
+    $beautify,
+  ],
+
+  [
+    "Morphology with Daniel Pipes and Filtered Dictionary",
+    "",
+    # required
+    "
+    SRCtides
+    en\\+lc
+    hi\\+form
+    dani
+    dict
+    or-bi-fe.r([01]-[01])
+    ",
+    # forbidden
+    "
+    DEVeilmt
+    =OUTDATED=
+    flm
+    emille acl wiki
+    t0-0At1-0
+    0a272556
+    ",
+    1,
+    # rows
+    "
+    LM(.*?)\\.t0
+     ",
+    # cols
+    "
+    t0-0\\.
+    lcsuf([0-9]+)
+    wc([0-9]+)
+    tag
+    hindomorsuf
+    hitbsuf
+    ",
+    # sort
+    "hitbsuf",
     0, # verbose
     $beautify,
   ],
