@@ -139,3 +139,12 @@ Other changes the script does:
 * converts Devanagari danda ("।") and double danda ("॥") to period (".")
 * converts Devanagari abbreviation sign ("॰") to period (".")
 * removes the zero-width joiners ("\x{200D}")
+
+
+Frequency dictionary
+====================
+Usage ./freqdict.pl < text.txt > freqdict.txt
+
+Reads tokenized text and writes a dictionary of tokens found in the text,
+in descending order of their frequency. Can be used to find possible
+stopwords.
