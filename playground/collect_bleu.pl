@@ -23,6 +23,12 @@ foreach my $path (bsd_glob("exp.*/BLEU.*")) {
   my $bleu = pickbleu($path);
   my $bleutype = $fn;
   print "$dirtag\t$bleutype\t$bleu\n";
+
+  # print also the tag
+  my $tag = firstline($dir."/TAG");
+  print "$dirtag\tTAG\t$tag\n" if defined $tag;
+
+  # remember to check status of this dir later
   $collect_info{$dir} = $dirtag;
 }
 foreach my $path (bsd_glob("exp.*/evaluation.in")) {
@@ -63,6 +69,15 @@ sub linecount {
   }
   close INF;
   return $nr;
+}
+
+sub firstline {
+  my $fn = shift;
+  open INF, $fn or return undef;
+  my $line = <INF>;
+  chomp $line;
+  close INF;
+  return $line;
 }
 
 sub pickbleu {

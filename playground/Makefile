@@ -167,6 +167,7 @@ bleu:
 
 nicebleu: bleu
 	cat $< \
+	| cut -f 1,3- \
 	| dett \
 	| ./summarizer.pl \
 	| tt --utf \
@@ -353,7 +354,7 @@ exp.lm.%.binarize:
 	   fi
 
 clean:
-	find -ctime +3 -name 'run*.feats.opt.gz' -exec rm {} \;
-	find -ctime +3 -name 'run*.feats' -exec rm {} \;
-	find -ctime +3 -name 'run*.best*.out.gz' -exec rm {} \;
-	find -ctime +3 -name filtered-for-eval-std -exec rm -rf {} \;
+	find -name 'run*.feats.opt.gz' -exec rm {} \;
+	find -name 'run*.feats' -exec rm {} \;
+	find -name 'run*.best*.out.gz' -exec rm {} \;
+	find -name filtered-for-eval-std -exec rm -rf {} \; || true

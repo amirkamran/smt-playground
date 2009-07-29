@@ -72,7 +72,7 @@ for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
   order=`cat ../$lmdir/var-ORDER` || die "Missing: ../$lmdir/var-ORDER"
   i=$(($i+1))
   factor=`echo $factor | sed 'y/\,/+/'`
-  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/var-CORP`-$lmtypetag
+  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/TAG`-$lmtypetag
 done
 i=$(($i-1))
 
