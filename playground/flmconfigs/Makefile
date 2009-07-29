@@ -1,5 +1,9 @@
 SHELL=/bin/bash
-export FLMCONFIG
 
 all:
+	# Use e.g.:
+	#  FLMCONFIG=linf-form+wc50 make generate
+
+.PHONY: generate
+generate:
 	perl ./generator.pl $(FLMCONFIG)
