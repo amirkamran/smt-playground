@@ -368,15 +368,34 @@ sub construct_projection {
   my $lock = blocking_verbose_lock($factorpathname);
   if (-e $factorpathname) {
     print STDERR "Using old $factorfile\n";
+    # If a previous run of augment.pl failed, the existing factor may be empty.
+    # If so, erase the empty factor and try to recreate it.
+    my $nl = count_lines($factorpathname);
+    if($nl) {
+      print STDERR "Old $factorfile has ", count_lines($factorpathname), " lines.\n";
+    } else {
+      print STDERR "Old $factorfile is empty, erasing and recreating.\n";
+      unlink($factorpathname) or die "Can't remove $factorpathname: $!\n";
+      generate_factor($factorfile, $basedir, $corp, $lang);
+    }
   } else {
-    print STDERR "Generating $factorfile in $basedir\n";
-    chdir($basedir) or die "Can't chdir to $basedir";
-    safesystem("CORP=$corp LANG=$lang AUGMENT=\"$AUGMENTPATH\" MAKEFILEDIR=\"$MAKEFILEDIR\" AUGMENTMAKEFILE=\"$makefile\" make -f \"$makefile\" $factorfile >&2") or die "Can't make $factorfile";
-    print STDERR "Finished generating $factorfile in $basedir\n";
+    generate_factor($factorfile, $basedir, $corp, $lang);
   }
   uncache($factorpathname);
   unlock_verbose($lock);
   return $factorpathname;
+}
+
+sub generate_factor {
+  my $factorfile = shift;
+  my $basedir = shift;
+  my $corp = shift;
+  my $lang = shift;
+
+  print STDERR "Generating $factorfile in $basedir\n";
+  chdir($basedir) or die "Can't chdir to $basedir";
+  safesystem("CORP=$corp LANG=$lang AUGMENT=\"$AUGMENTPATH\" MAKEFILEDIR=\"$MAKEFILEDIR\" AUGMENTMAKEFILE=\"$makefile\" make -f \"$makefile\" $factorfile >&2") or die "Can't make $factorfile";
+  print STDERR "Finished generating $factorfile in $basedir\n";
 }
 
 
@@ -454,9 +473,15 @@ sub my_nonempty {
 sub ensure_linecount {
   my $fn = shift;
   my $reqnr = shift;
+  my $nr = count_lines($fn);
+  die "$fn:Expected $reqnr lines, got $nr." if $reqnr != $nr;
+}
+
+sub count_lines {
+  my $fn = shift;
   my $hdl = my_open($fn);
   my $nr = 0;
-  $nr ++ while <$hdl>;
+  $nr++ while <$hdl>;
   close $hdl;
-  die "$fn:Expected $reqnr lines, got $nr." if $reqnr != $nr;
+  return $nr;
 }
