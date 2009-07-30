@@ -161,13 +161,14 @@ my @scans = (
     t0-0\\.
     t0-([^.]+)
     lcsuf([0-9]+)
-    wc([0-9]+)
+    u^wc([0-9]+)
     tag
     hindomorsuf
      ",
     # cols
     "
     flm sri
+    tmplin
     ",
     # sort
     "flm sri",
@@ -203,6 +204,7 @@ my @scans = (
     tag
     hindomorsuf
     danielpipes
+    dictfilt
      ",
     # cols
     "

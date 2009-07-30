@@ -38,14 +38,27 @@ sub new {
 }
 
 sub collect_tokens {
+  # given a regular expression, collect all occurrences of it
+  # special flags can be given using a few letters followed by ^ (not part of
+  # the regexp), e.g. u^mytoken to set 'uniq' flag
+  # Flags:
+  #   u ... uniq, ignore repetitive occurrences of the token
+  #   i ... insensitive, ignore case # not yet implemented
   my $self = shift;
   my $origtokenre = shift;
   my $line = shift;
   my @out = ();
 
+  # remove flags from origtokenre
+  $origtokenre =~ s/^([ui])\^//;
+  my $flags = $1;
+
   while ($line =~ /$origtokenre/) {
     my @matches = map {substr $line, $-[$_], $+[$_] - $-[$_]} (1..$#-);
-    $line =~ s/$origtokenre//; # delete this token occurrence
+    # delete this token occurrence
+    my $oldline = $line;
+    substr($line, $-[0], $+[0] - $-[0], "");
+    die "Avoiding loop with re $origtokenre and line: $line" if $line eq $oldline;
     my $tokenre = $origtokenre;
     if ($tokenre =~ /\(/) {
       print "Token $tokenre MATCHES: @matches\n" if $self->{verbose} >= 3;
@@ -55,7 +68,13 @@ sub collect_tokens {
     }
     push @out, (defined $self->{tokenmap}->{$tokenre} ? $self->{tokenmap}->{$tokenre} : $tokenre);
   }
-  return @out;
+
+  if ($flags =~ /u/) {
+    return () if 0 == scalar @out;
+    return $out[0];
+  } else {
+    return @out;
+  }
 }
 
 sub scan {
