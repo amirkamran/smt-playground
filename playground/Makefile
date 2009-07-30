@@ -34,7 +34,7 @@ all:
 exp.%.init:
 	@seed="seeds/exp.$*" \
 	&& [ -e "$$seed" ] || (echo "Seed $$seed not found" >&2; exit 1) \
-	&& rundir=`mkdiruniq --delim=. exp.$*.$(TS)` \
+	&& rundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$(TS)` \
 	&& [ -d "$$rundir" ] \
 	&& echo "Preparing in directory $$rundir" >&2 \
 	&& cp "$$seed" $$rundir/seed \
@@ -45,7 +45,7 @@ exp.%.init:
 	       if [ -e $$rundir/TAG ]; then \
 	         echo "Renaming rundir to include the tag!" >&2; \
 		 tag=`cat $$rundir/TAG`; \
-		 newrundir=`mkdiruniq --delim=. exp.$*.$$tag.$(TS)` || exit 1; \
+		 newrundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$$tag.$(TS)` || exit 1; \
 		 mv $$rundir/* $$newrundir/ || exit 1; \
 		 rmdir $$rundir || exit 1; \
 		 rundir="$$newrundir"; \
@@ -78,7 +78,7 @@ exp.%.prep_inited:
 exp.%.prepare:
 	seed="seeds/exp.$*" \
 	&& [ -e "$$seed" ] || (echo "Seed $$seed not found"; exit 1) \
-	&& rundir=`mkdiruniq --delim=. exp.$*.$(TS)` \
+	&& rundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$(TS)` \
 	&& [ -d "$$rundir" ] \
 	&& echo "Preparing in directory $$rundir" \
 	&& cp "$$seed" $$rundir/seed \
