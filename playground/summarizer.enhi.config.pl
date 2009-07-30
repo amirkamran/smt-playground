@@ -160,15 +160,16 @@ my @scans = (
     or-bi-fe.r([01]-[01])
     t0-0\\.
     t0-([^.]+)
-    lcsuf([0-9]+)
+    u^lcsuf([0-9]+)
     u^wc([0-9]+)
-    tag
-    hindomorsuf
+    u^tag
+    u^hindomorsuf
+    u^hitbsuf
      ",
     # cols
     "
     flm sri
-    tmplin
+    tmplin lin([ft]) crap fftt
     ",
     # sort
     "flm sri",

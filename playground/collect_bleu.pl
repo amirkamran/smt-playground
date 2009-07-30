@@ -24,10 +24,6 @@ foreach my $path (bsd_glob("exp.*/BLEU.*")) {
   my $bleutype = $fn;
   print "$dirtag\t$bleutype\t$bleu\n";
 
-  # print also the tag
-  my $tag = firstline($dir."/TAG");
-  print "$dirtag\tTAG\t$tag\n" if defined $tag;
-
   # remember to check status of this dir later
   $collect_info{$dir} = $dirtag;
 }
@@ -45,6 +41,12 @@ foreach my $path (bsd_glob("exp.*/evaluation.in")) {
 
 my @collect_info = sort keys %collect_info;
 if (0 < scalar @collect_info) {
+  # print the tags
+  foreach my $dir (@collect_info) {
+    my $tag = firstline($dir."/TAG");
+    print "$collect_info{$dir}\tTAG\t$tag\n" if defined $tag;
+  }
+
   my $cmd = "./loginfo.sh -";
   my $pid = open2(*Reader, *Writer, $cmd );
   foreach my $dir (@collect_info) {
