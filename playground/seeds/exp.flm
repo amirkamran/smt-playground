@@ -29,28 +29,7 @@ if [[ ! -d "$SRILMDIR1" ]] || [[ ! -d "$SRILMDIR2" ]]; then
   exit 1
 fi
 
-lmtypetag=flm
-
-#LMFILE=`cat $FLMCONFIG | sed -r -n 's/^.* ([^ ]*\.lm)\.gz.*/\1/p'`
-#COUNTFILE=`cat $FLMCONFIG | sed -r -n 's/^.* ([^ ]*\.count)\.gz.*/\1/p'`
-
-# Remember the core settings
-
-perl ../flmconfigs/generator.pl $FLMCONFIG \
-  || die "Failed to generate flm config"
-
-FLMCONFIG=./flmconfigs/configs/$FLMCONFIG.flm
-
-if [ ! -e $FLMCONFIG ] && [ -e ../$FLMCONFIG ]; then
-  # the experiment is usually launched from /playground/ but the seed runs
-  # within a subdir
-  FLMCONFIG=../$FLMCONFIG
-fi
-[ -e $FLMCONFIG ] || die "Failed to find $FLMCONFIG"
-
-FLMFILE=`basename $FLMCONFIG | sed 's/\.flm$//'`
-
-echo $CORP+$CORPAUG.$ORDER.$FLMFILE > TAG
+echo $CORP+$CORPAUG.$ORDER.$FLMCONFIG > TAG
 
 cat << KONEC > VARS
 CORP=$CORP
@@ -67,9 +46,22 @@ echo $CORPAUG > var-CORPAUG
 
 touch deps # does not depend on anything
 
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Remember the core settings
+
+../flmconfigs/generator.pl $FLMCONFIG \
+  || die "Failed to generate flm config for '$FLMCONFIG'"
+
+flmcfgfile=../flmconfigs/configs/$FLMCONFIG.flm
+
+[ -e $flmcfgfile ] || die "Failed to find $flmcfgfile"
+
 eval `makearg --delim=- $DIR srclan tgtlan`
 
-cp $FLMCONFIG config.orig.flm \
+cp $flmcfgfile config.orig.flm \
   || die "Failed to create a local copy of the config file"
 
 CurrentPath=`pwd`

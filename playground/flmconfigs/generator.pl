@@ -1,10 +1,18 @@
-#!/bin/perl
+#!/usr/bin/perl
+# generates a flmconfig based on a shape sample and factors to be used in the
+# given shape
 
 use strict;
+use FindBin qw($Bin); # locate myself
+my $MyDir = $Bin;
 
-my @pismena = ( 'a' .. 'z'	);
+my @pismena = ( 'a' .. 'z' );
 
-my @split1 = split(/\-/, $ARGV[0] );
+my $flmconfig = shift;
+die "usage: $0 configshape-factor1+factor2"
+  if ! defined $flmconfig;
+
+my @split1 = split(/\-/, $flmconfig );
 
 my $seedName = $split1[0];
 my $factors = $split1[1];
@@ -14,9 +22,12 @@ my $factors = $split1[1];
 
 my @facts = split(/\+/, $factors ); 
 
-open(SEED, "<./seeds/$seedName");
+my $infname = "$MyDir/seeds/$seedName";
+open(SEED, $infname) or die "Can't read $infname";
 
-open(OUTPUT, ">./configs/".$ARGV[0].".flm" );
+my $outfname = "$MyDir/configs/$flmconfig.flm";
+open(OUTPUT, ">$outfname")
+  or die "Can't write $outfname";
 
 my $radek;
 my $i;
@@ -38,3 +49,4 @@ while ($radek = <SEED>)
 }
 
 close OUTPUT;
+close SEED;
