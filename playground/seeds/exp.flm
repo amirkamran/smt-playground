@@ -16,7 +16,7 @@ if [ -z "$CORP" ] \
   echo "You must set: "
   echo "  \$CORP to the shortname of corpus"
   echo "  \$CORPAUG to the factors used for lm"
-  echo "  \$FLMCONFIG to the flm definition file"
+  echo "  \$FLMCONFIG to the flm definition"
   echo "  \$ORDER to lm order"
   echo "And optionally: "
   exit 1
@@ -35,6 +35,11 @@ lmtypetag=flm
 #COUNTFILE=`cat $FLMCONFIG | sed -r -n 's/^.* ([^ ]*\.count)\.gz.*/\1/p'`
 
 # Remember the core settings
+
+perl ../flmconfigs/generator.pl $FLMCONFIG \
+  || die "Failed to generate flm config"
+
+FLMCONFIG=./flmconfigs/configs/$FLMCONFIG.flm
 
 if [ ! -e $FLMCONFIG ] && [ -e ../$FLMCONFIG ]; then
   # the experiment is usually launched from /playground/ but the seed runs
