@@ -87,7 +87,7 @@ fi
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
 
-[ ! -z "$JOBS" ] || JOBS=10
+[ ! -z "$JOBS" ] || JOBS=15
 
 if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
