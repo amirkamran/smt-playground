@@ -250,13 +250,21 @@ sub augment {
     return $corppathname;
   }
 
+  # I had to introduce the additional variable @named_requested_factors because
+  # perl would modify (discard) them in place due to something I don't
+  # understand.
+  my @named_requested_factors = grep { ! /^[0-9]+$/ } @requested_factors;
   my %added_factors = map {
-          my $factorpathname = construct_projection($corp, $lang, $_);
+          my $f = $_;
+          my $factorpathname = construct_projection($corp, $lang, $f);
           my $stream = my_open($factorpathname);
-          ( $_, $stream ); # remember the mapping factor name->stream
-      } grep { ! /^[0-9]+$/ } @requested_factors;
+          # print STDERR "Opened $factorpathname:  $f  -->  $stream\n";
+          ( $f, $stream ); # remember the mapping factor name->stream
+      } @named_requested_factors;
 
   print STDERR "Locking and writing $corppathname\n";
+  # print STDERR "Requested factors: ".join(", ", @requested_factors)."\n";
+  # print STDERR "Adding factors: ".join(", ", keys %added_factors)."\n";
   my $lock = blocking_verbose_lock($corppathname);
   if (-e $corppathname) {
     print STDERR "Seems ready: $corppathname\n";
@@ -274,6 +282,7 @@ sub augment {
       my %lines_of_extratoks;
       foreach my $factor (keys %added_factors) {
         my $line = readline($added_factors{$factor});
+        # print STDERR "Got line from $factor ($added_factors{$factor}): $line";
         die "Additional factor file for $factor contains too few sentences!"
           if !defined $line;
         chomp($line);
@@ -298,7 +307,7 @@ sub augment {
               if !defined $f || $f eq "";
           } else {
             # named factors should be obtained from the streams
-    	$f = $lines_of_extratoks{$name}->[$i];
+            $f = $lines_of_extratoks{$name}->[$i];
             die "Missed factor $name on line $nr"
               if !defined $f || $f eq "";
           }
