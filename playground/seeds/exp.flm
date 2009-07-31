@@ -96,12 +96,22 @@ which fngram-count
 # Obtain the corpus in factored format
 CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
 [ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
+
+if [ -e "\$CORPSOURCE".text-for-fngram.gz ]; then
+   echo "We already have corpus prepared for fngram"
+else
+   ../augmented_corpora/prepare_for_flm.pl \$CORPSOURCE "\$CORPSOURCE".text-for-fngram.gz \
+   || die "Failed to create \$CORPSOURCE.text-for-fngram.gz"
+fi
+
 wiseln \$CORPSOURCE corpus.text.gz \
   || die "Failed to make local backup of corpus \$CORPSOURCE"
+wiseln "\$CORPSOURCE".text-for-fngram.gz corpus.text-for-fngram.gz \
+  || die "Failed to make local backup of \$CORPSOURCE".text-for-fngram.gz"
 
 # Convert it to the format of fngram-count
-../augmented_corpora/prepare_for_flm.pl corpus.text.gz corpus.text-for-fngram.gz \
-  || die "Failed to create corpus.factored.gz"
+#../augmented_corpora/prepare_for_flm.pl corpus.text.gz corpus.text-for-fngram.gz \
+#  || die "Failed to create corpus.factored.gz"
 
 CORPAUG=\`cat var-CORPAUG\`
 
