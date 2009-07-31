@@ -28,15 +28,18 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$TESTCORP to the corpus for evaluation"
   echo "  \$REFAUG to the target (reference) lang+factors"
   echo "and optionally"
+  echo "  \$SEARCH to beam or cube"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$MERTFLAGS to any further flags"
   echo "  \$SERIAL to yes to disable qsub"
   exit 1
 fi
 
-echo `cat ../$MODELEXP/TAG`"DEV"$DEVCORP > TAG
+[ ! -z "$SEARCH" ] || SEARCH=beam
 
-echo SETTING TAG: `cat ../$MODELEXP/TAG`"DEV"$DEVCORP
+echo `cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH > TAG
+
+echo SETTING TAG: `cat TAG`
 
 SAVEMODELEXP=$MODELEXP
 eval `cat ../$MODELEXP/VARS` || exit 1
@@ -52,6 +55,7 @@ DEVCORP=$DEVCORP
 TESTCORP=$TESTCORP
 SRCAUG=$SRCAUG
 REFAUG=$REFAUG
+SEARCH=$SEARCH
 MERTFLAGS="$MERTFLAGS"
 MOSESFLAGS="$MOSESFLAGS"
 SERIAL=$SERIAL
@@ -91,12 +95,24 @@ MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
 
 if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
-  MOSESPARALLELIZER=""
+  MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
 else
   MERTGRIDARGS="--jobs=$JOBS --queue-flags=' -p -200 -cwd -S /bin/bash ' "
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' -p -200 -cwd -S /bin/bash ' "
-  MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS \$MERTFLAGS -decoder "
+  MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' \$MERTFLAGS -decoder ./moses"
 fi
+
+case "$SEARCH" in
+beam)
+  SEARCHFLAG="-search-algorithm 0"
+  ;;
+cube)
+  SEARCHFLAG="-search-algorithm 1"
+  ;;
+*)
+  die "Bad search algorithm: $SEARCH"
+  ;;
+esac
 
 cat << KONEC > command
 # This is the command to be run here
@@ -140,7 +156,7 @@ $MERTMOSES \
   \`pwd\`/moses.abs.ini \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
-  --decoder-flags="-dl 6 $MOSESFLAGS" \\
+  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
   || die "Mert failed"
 
 
@@ -149,7 +165,7 @@ $MERTMOSES \
   || die "Filter for eval failed"
 
 $MOSESPARALLELIZER \\
-  ./moses -input-file ./evaluation.in \\
+  -input-file ./evaluation.in \\
   -config ./filtered-for-eval-opt/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
