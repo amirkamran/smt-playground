@@ -45,6 +45,7 @@ my @scans = (
     hitbsuf
     u^aff([bd]*)f
     cube
+    STACK([0-9]+)
     ",
     # cols
     "
@@ -155,6 +156,7 @@ my @scans = (
     emille acl wiki dani
     t0-0At1-0
     LM.-[57]
+    tmplin
     ",
     1,
     # rows
@@ -167,11 +169,16 @@ my @scans = (
     u^tag
     u^hindo([2s]*)morsuf
     u^hitbsuf
+    u^aff([bd]*)f
+    cube
+    STACK([0-9]+)
      ",
     # cols
     "
     flm sri
-    tmplin lin([ft]) crap fftt
+    tmplin
+    u^lin([ft][0-9]*)
+    u^fftt([0-9]*)
     ",
     # sort
     "flm sri",
@@ -205,9 +212,12 @@ my @scans = (
     lcsuf([0-9]+)
     wc([0-9]+)
     tag
+    aff([bd]*)
     u^hindo([2s]*)morsuf
     danielpipes
     dictfilt
+    cube
+    STACK([0-9]+)
      ",
     # cols
     "
