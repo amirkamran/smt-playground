@@ -33,8 +33,7 @@ my $idx = loadidx() unless $reindex; # ignore saved values
 my @dirs = glob("exp.*.*.[0-9]*");
 foreach my $d (@dirs) {
   next if defined $idx->{$d};
-  next if -e $d."/OUTDATED";
-  next if -e $d."/FAILED";
+  next if ! experiment_valid($d);
   my $hash = get_hash_from_dir($d);
   $idx->{$d} = $hash;
   $idx->{$hash} = $d;
@@ -138,7 +137,7 @@ sub derive_exp {
   # check if we changed (or the source failed or is outdated) and possibly init us
   my $newexp = $exp;
   if ("@vars" ne "@oldvars" || "@sources" ne "@oldsources"
-    || -e "$exp/FAILED" || -e "$exp/OUTDATED") {
+    || ! experiment_valid($exp)) {
     # print vars and how they change
     if ($debug) {
       print STDERR "Modifying EXP $exp to:\n";
@@ -154,6 +153,7 @@ sub derive_exp {
     my $hash = get_hash_from_vars_deps(\@vars, \@sources);
     if (defined $idx->{$hash}
         && -d $idx->{$hash}
+        && experiment_valid($idx->{$hash})
         ) {
       $newexp = $idx->{$hash};
       print STDERR "Reusing existing experiment: $newexp\n";
@@ -176,6 +176,13 @@ sub derive_exp {
   push @{$deps->{"TOPOLOGICAL"}}, $newexp; # sort right away
   push @{$deps->{$newexp}}, @mydeps;
   return $newexp;
+}
+
+sub experiment_valid {
+  my $exp = shift;
+  return -d $exp 
+    && ! -e "$exp/FAILED" 
+    && ! -e "$exp/OUTDATED";
 }
 
 sub traceback {
@@ -214,7 +221,11 @@ sub guess_exp {
     my $bleufile = load("bleu");
     
     my @bleumatches = grep { /$key/ } split /\n/, $bleufile;
-    die "Ambiguous in bleu file: $key" if 1<scalar(@bleumatches);
+    if (1<scalar(@bleumatches)) {
+      print STDERR "Ambiguous in bleu file: $key:\n";
+      print STDERR join("", map { "  $_\n" } @bleumatches);
+      exit 1;
+    }
     
     print STDERR scalar(@bleumatches)." matches in bleu file\n" if $debug;
     if (1==scalar @bleumatches) {
@@ -226,7 +237,11 @@ sub guess_exp {
   if (!defined $exp) {
     # guess from dir listing
     my @dirs = grep { /$key/ } glob("exp.*.*.[0-9]*");
-    die "Ambiguous in dir listing: $key" if 1<scalar(@dirs);
+    if (1<scalar(@dirs)) {
+      print STDERR "Ambiguous in dir listing: $key:\n";
+      print STDERR join("", map { "  $_\n" } @dirs);
+      exit 1;
+    }
     $exp = confirm_exp($dirs[0]) if 1==scalar @dirs;
   }
   die "Failed to guess exp from: $key" if !defined $exp;
