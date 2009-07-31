@@ -70,7 +70,7 @@ if (defined $srccorp || defined $tgtcorp || defined $alicorp
       my @sorted =
         sort { $dict->{$dir}->{$k}->{$b} <=> $dict->{$dir}->{$k}->{$a} }
         keys %{$dict->{$dir}->{$k}};
-      print $dicth $dir."\t".$k."\t".join(" ", @sorted)."\n"
+      print $dicth $dir."\t".$k."\t".join(" ", @sorted)."\n";
 
       # now remove original counts to make the in-memory dict hold the same
       # info as the disk version does
