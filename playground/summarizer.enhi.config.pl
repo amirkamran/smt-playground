@@ -37,17 +37,19 @@ my @scans = (
     1,
     # rows
     "
-    or-bi-fe.r([01]-[01])
-    LM(.*?)\\.t0
-     ",
-    # cols
-    "
     t0-0\\.
     lcsuf([0-9]+)
     wc([0-9]+)
     tag
-    hindomorsuf
+    u^hindo([2s]*)morsuf
     hitbsuf
+    u^aff([bd]*)f
+    cube
+    ",
+    # cols
+    "
+    or-bi-fe.r([01]-[01])
+    LM([-0-9]*)
     ",
     # sort
     "hitbsuf",
@@ -87,7 +89,7 @@ my @scans = (
     lcsuf([0-9]+)
     wc([0-9]+)
     tag
-    hindomorsuf
+    u^hindo([2s]*)morsuf
     hitbsuf
     ",
     # sort
@@ -128,7 +130,7 @@ my @scans = (
     lcsuf([0-9]+)
     wc([0-9]+)
     tag
-    hindomorsuf
+    u^hindo([2s]*)morsuf
     hitbsuf
     ",
     # sort
@@ -163,7 +165,7 @@ my @scans = (
     u^lcsuf([0-9]+)
     u^wc([0-9]+)
     u^tag
-    u^hindomorsuf
+    u^hindo([2s]*)morsuf
     u^hitbsuf
      ",
     # cols
@@ -203,7 +205,7 @@ my @scans = (
     lcsuf([0-9]+)
     wc([0-9]+)
     tag
-    hindomorsuf
+    u^hindo([2s]*)morsuf
     danielpipes
     dictfilt
      ",
