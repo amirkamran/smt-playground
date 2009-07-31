@@ -1,0 +1,8 @@
+1
+form : 4 form(-1) form(-2) wc50(-1) wc50(-2) anything.count.gz anything.lm.gz 6
+        form1,form2,wc501,wc502     form2            kndiscount interpolate
+	form1,wc501,wc502		wc502,form1	kndiscount interpolate combine wmean form1,wc501 85 wc501,wc502 15
+	form1,wc501		form1		kndiscount interpolate
+	wc501,wc502		wc502		kndiscount interpolate
+	wc501			wc501		kndiscount
+	0			0

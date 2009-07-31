@@ -1,0 +1,7 @@
+1
+form : 4 form(-1) form(-2) wc50(-1) wc50(-2) anything.count.gz anything.lm.gz 5
+        form1,form2,wc501,wc502     form2            kndiscount
+	form1,wc501,wc502		wc502		kndiscount
+	form1,wc501		form1		kndiscount
+	wc501			wc501		kndiscount
+	0			0

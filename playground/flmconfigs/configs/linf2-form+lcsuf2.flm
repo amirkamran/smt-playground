@@ -1,0 +1,7 @@
+1
+form : 4 form(-1) form(-2) lcsuf2(-1) lcsuf2(-2) anything.count.gz anything.lm.gz 5
+        form1,form2,lcsuf21,lcsuf22     form2            kndiscount interpolate
+	form1,lcsuf21,lcsuf22		lcsuf22		kndiscount interpolate
+	form1,lcsuf21		form1		kndiscount interpolate
+	lcsuf21			lcsuf21		kndiscount
+	0			0

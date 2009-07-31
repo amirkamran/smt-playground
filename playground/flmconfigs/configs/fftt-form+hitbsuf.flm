@@ -1,0 +1,8 @@
+1
+form : 4 form(-1) form(-2) hitbsuf(-1) hitbsuf(-2) anything.count.gz anything.lm.gz 6
+        form1,form2,hitbsuf1,hitbsuf2     form2            kndiscount gtmin 3 interpolate
+	form1,hitbsuf1,hitbsuf2		hitbsuf2,form1	kndiscount gtmin 3 interpolate combine mean
+	form1,hitbsuf1		form1		kndiscount gtmin 1 interpolate
+	hitbsuf1,hitbsuf2		hitbsuf2		kndiscount gtmin 2 interpolate
+	hitbsuf1			hitbsuf1		kndiscount gtmin 1 interpolate
+	0			0
