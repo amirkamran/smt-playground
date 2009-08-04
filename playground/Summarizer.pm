@@ -43,6 +43,7 @@ sub collect_tokens {
   # the regexp), e.g. u^mytoken to set 'uniq' flag
   # Flags:
   #   u ... uniq, ignore repetitive occurrences of the token
+  #   c ... uniq -c, count repetitive occurrences of the token
   #   i ... insensitive, ignore case # not yet implemented
   my $self = shift;
   my $origtokenre = shift;
@@ -50,7 +51,7 @@ sub collect_tokens {
   my @out = ();
 
   # remove flags from origtokenre
-  $origtokenre =~ s/^([ui])\^//;
+  $origtokenre =~ s/^([uic])\^//;
   my $flags = $1;
 
   while ($line =~ /$origtokenre/) {
@@ -72,6 +73,9 @@ sub collect_tokens {
   if ($flags =~ /u/) {
     return () if 0 == scalar @out;
     return $out[0];
+  } elsif ($flags =~ /c/) {
+    return () if 0 == scalar @out;
+    return ( scalar(@out)."*".$out[0] );
   } else {
     return @out;
   }

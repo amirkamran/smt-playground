@@ -187,6 +187,46 @@ my @scans = (
   ],
 
   [
+    "More Data",
+    "",
+    # required
+    "
+    en\\+lc
+    hi\\+form
+    t0-0\\.
+    ",
+    # forbidden
+    "
+    DEVeilmt
+    =OUTDATED=
+    flm lcsuf wc tag hinto hitb aff
+    t0-0At1-0
+    ",
+    1,
+    # rows
+    "
+    c^LM
+    c^tides.train
+    c^dani
+    c^emille-(..)
+    c^agro
+    c^acl
+    c^wikiner
+    c^dictf(...)
+    ",
+    # cols
+    "
+    u^.
+    cube
+    STACK([0-9]+)
+    ",
+    # sort
+    ".",
+    0, # verbose
+    $beautify,
+  ],
+
+  [
     "Source vocabulary reduction",
     "",
     # required
