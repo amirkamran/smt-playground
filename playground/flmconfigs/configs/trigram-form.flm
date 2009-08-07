@@ -1,5 +1,0 @@
-1
-form : 2 form(-1) form(-2) anything.count.gz anything.lm.gz 3
-        form1,form2               form2            kndiscount interpolate
-	form1			form1		kndiscount
-	0			0

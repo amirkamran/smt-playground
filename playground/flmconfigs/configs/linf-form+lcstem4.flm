@@ -1,7 +1,0 @@
-1
-form : 4 form(-1) form(-2) lcstem4(-1) lcstem4(-2) anything.count.gz anything.lm.gz 5
-        form1,form2,lcstem41,lcstem42     form2            kndiscount gtmin 3 interpolate
-	form1,lcstem41,lcstem42		lcstem42		kndiscount gtmin 3 interpolate
-	form1,lcstem41		form1		kndiscount gtmin 1 interpolate
-	lcstem41			lcstem41		kndiscount gtmin 1 interpolate
-	0			0

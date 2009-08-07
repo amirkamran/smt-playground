@@ -1,7 +1,0 @@
-1
-form : 4 form(-1) form(-2) hindomorsuf(-1) hindomorsuf(-2) anything.count.gz anything.lm.gz 5
-        form1,form2,hindomorsuf1,hindomorsuf2     form2            kndiscount interpolate
-	form1,hindomorsuf1,hindomorsuf2		hindomorsuf2		kndiscount interpolate
-	form1,hindomorsuf1		form1		kndiscount interpolate
-	hindomorsuf1			hindomorsuf1		kndiscount
-	0			0

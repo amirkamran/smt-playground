@@ -1,8 +1,0 @@
-1
-form : 4 form(-1) form(-2) tag(-1) tag(-2) anything.count.gz anything.lm.gz 6
-        form1,form2,tag1,tag2     form2            kndiscount gtmin 3 interpolate
-	form1,tag1,tag2		tag2,form1	kndiscount gtmin 3 interpolate combine mean
-	form1,tag1		form1		kndiscount gtmin 1 interpolate
-	tag1,tag2		tag2		kndiscount gtmin 2 interpolate
-	tag1			tag1		kndiscount gtmin 1 interpolate
-	0			0

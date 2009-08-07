@@ -1,7 +1,0 @@
-1
-form : 4 form(-1) form(-2) wc10(-1) wc10(-2) anything.count.gz anything.lm.gz 5
-        form1,form2,wc101,wc102     form2            kndiscount interpolate
-	form1,wc101,wc102		wc102		kndiscount interpolate
-	form1,wc101		form1		kndiscount interpolate
-	wc101			wc101		kndiscount
-	0			0
