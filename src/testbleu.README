@@ -1,0 +1,28 @@
+testbleu je 64bitova binarka pro pocitani BLEU skore vcetne intervalu spolehlivosti.
+Nemeni tokenizaci.
+Usage:
+
+  testbleu reference.txt < hypoteza.txt
+
+(Tady to mame ulozeno zagzipovane, pred pouzitim protrepat, pardon, rozbalit.)
+Tree Decoder (viz Ondruv komentar nize) mame v SVN v http://svn.ms.mff.cuni.cz/projects/treedecode.
+
+Ondrej Bojar napsal(a):
+> Ahoj.
+>
+> Mame. Psal jsem to ja v Mercury, cili je to soucasti TreeDecodu (musel bych overit, ze jsem to fakt releasnul i s tim mainem, ne jen tu knihovnu, kterou jsem pouzival ve sve implementaci pro skorovani zaverecnych vystupu a mert; http://ufal.mff.cuni.cz/euromatrix/)
+>
+> Citovat by se teoreticky dal prave ten balik treedecode nebo deliverable o implementaci tree transferu, tusim D3.3.
+>
+> O.
+>
+> Daniel Zeman <zeman@ufal.mff.cuni.cz> wrote:
+>
+>> Co je to za nástroj, ten testbleu?
+>> Kdo ho napsal? Dá se případně nějak citovat? Jak?
+>> Máme od něj zdrojáky?
+>> Máme ho v repozitáři StatMT? Z toho, kam jsi mě odkázal, soudím, že 
+>> nikoli. Rád bych ho tam přidal, a to nejspíš i jako binárku, aby měl 
+>> člověk jistotu, co pustil a kde se to vzalo, OK?
+>>
+>> Dan
