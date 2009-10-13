@@ -10,6 +10,8 @@ my $beautify = {
       "\\+en\\+" => "baseline",
       "\\+enP\\+" => "penntok",
       "\\+enR\\+" => "penntok+dzReord",
+      "LM0[^L]*sri" => "LM0sri",
+      "LM1[^L]*sri" => "LM1sri",
     };
 
 my @scans = (
@@ -175,13 +177,13 @@ my @scans = (
      ",
     # cols
     "
-    flm sri
+    LM(.)[^L]*sri
     tmplin
     u^lin([ft][0-9]*)
     u^fftt([0-9]*)
     ",
     # sort
-    "flm sri",
+    "LM0sri",
     0, # verbose
     $beautify,
   ],
