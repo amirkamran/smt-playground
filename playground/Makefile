@@ -221,7 +221,7 @@ JOBS?=4
 workspace:
 	## Making sure you accept sourceforge's SSL certificate.
 	## Please say (p)ermanently if you are asked anything:
-	svn cat https://irstlm.svn.sourceforge.net/svnroot/irstlm/readme \
+	svn cat https://irstlm.svn.sourceforge.net/svnroot/irstlm/README \
 	  > /dev/null
 	## Setting up workspace $@.$$(TS)
 	ts=$(TS) \
@@ -332,9 +332,12 @@ workspace.%.irstlm: workspace.%
 	&& svn --non-interactive \
 	    co https://irstlm.svn.sourceforge.net/svnroot/irstlm irstlm \
 	&& cd irstlm \
-	&& ./install \
-	&& cd lib && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s i386?* i686 ; cd .. \
-	&& cd bin && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s i386?* i686 ; cd .. \
+	&& ./regenerate-makefiles.sh \
+	&& ./configure --prefix=`pwd`\
+	&& make -j 4 \
+	&& make install \
+	&& cd lib && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s x86_64?* i686 ; cd .. \
+	&& cd bin && ln -s x86_64?* x86_64 ; ln -s i386?* i386 ; ln -s x86_64?* i686 ; cd .. \
 	&& eval echo `pwd`/bin/`uname -m`/ \
 	    > ../irstlm.bindir \
 	&& echo `pwd` \

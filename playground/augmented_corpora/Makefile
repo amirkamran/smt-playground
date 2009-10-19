@@ -470,7 +470,7 @@ align:
 	&& ./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars \
 	&& qsubmit \
 	  --jobname align.$(CORP).$$NAME \
-	  '~/diplomka/kos/align/gizawrapper.pl \
+	  '/home/bojar/diplomka/kos/align/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
 	  `./augment.pl $(CORP)/$(TGTAUG)` \
 	  --lfactors=0 --rfactors=0 \
