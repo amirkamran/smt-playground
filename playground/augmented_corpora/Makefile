@@ -1,5 +1,7 @@
 SHELL=/bin/bash
 
+QSUB = /home/bojar/tools/shell/qsubmit
+
 # Use this just for debugging.
 SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
 
@@ -468,7 +470,7 @@ align:
 	  || export NAME=`echo $(SRCAUG)-$(TGTAUG)-$(DIRSYM) | tr '+' '-'` \
 	&& mkdir -p $(CORP) \
 	&& ./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars \
-	&& qsubmit \
+	&& $(QSUB) \
 	  --jobname align.$(CORP).$$NAME \
 	  '/home/bojar/diplomka/kos/align/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
