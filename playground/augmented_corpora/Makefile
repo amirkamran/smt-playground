@@ -1,6 +1,7 @@
-SHELL=/bin/bash
+SHELL = /bin/bash
 
 QSUB = /home/bojar/tools/shell/qsubmit
+STATMT ?= ../..
 
 # Use this just for debugging.
 SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
@@ -34,7 +35,7 @@ factors/%.lc.gz:
 	[ -x $(REDUCECOMBINE) ]
 	zcat $*.gz \
 	| $(REDUCECOMBINE) - 0 \
-	| lowercase.pl \
+	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
 CSSIMPLIFY=./cs_simplify_tag.pl
@@ -267,7 +268,7 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 %.factors/lc.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+form \
-	| lowercase.pl \
+	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
 %.factors/lcstem4.gz:
@@ -281,7 +282,7 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
 	| ./devnormal3.pl \
 	| ./stem_factor.pl --stem=4 \
-	| lowercase.pl \
+	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
 
