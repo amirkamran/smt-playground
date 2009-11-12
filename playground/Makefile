@@ -315,11 +315,13 @@ workspace.%.moses: workspace.%
 	&& rm -f ../bin/moses \
 	&& ln -s ../moses/moses-cmd/src/moses ../bin/ \
 	&& cd scripts \
-	&& TARGETDIR=`cat ../../bindir.path` \
-	   BINDIR=`cat ../../bindir.path` \
-	     make release \
-	&& eval 'ls -dt '`cat ../../bindir.path`'/scripts-* | head -n1' \
-	    > ../../scripts.rootdir
+	  && TARGETDIR=`cat ../../bindir.path` \
+	     BINDIR=`cat ../../bindir.path` \
+	       make release \
+	  && eval 'ls -dt '`cat ../../bindir.path`'/scripts-* | head -n1' \
+	      > ../../scripts.rootdir \
+	&& cd .. \
+	&& ln -s ../moses/scripts/training/symal/symal ../bin/ \
 	date > $@ # confirm our success
 
 workspace.%.irstlm: workspace.%

@@ -8,6 +8,10 @@ SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.2
 
 REDUCECOMBINE=$(SCRIPTS_ROOTDIR)/training/reduce_combine.pl
 
+# We assume that ../ is the moses_playground directory that contains
+# a correctly compiled workspace
+WORKSPACE?=../$(shell cat ../workspace)
+
 combine.%.gz:
 	[ -x $(REDUCECOMBINE) ]
 	while [ -e running.$*.gz ]; do \
@@ -461,6 +465,8 @@ english_uppercased_tokens:
 
 export DIRSYM?=gdfa
 align:
+	# usage: CORP=tides SRCAUG=en+lcstem4 TGTAUG=hi+lc make align
+	#   optional settings: DIRSYM=int NAME=outname
 	# about to align corp $(CORP) srcaug $(SRCAUG) tgtaug $(TGTAUG)
 	# using symmetrization $(DIRSYM)
 	[ ! -z "$(CORP)" ]
@@ -478,7 +484,7 @@ align:
 	  `./augment.pl $(CORP)/$(TGTAUG)` \
 	  --lfactors=0 --rfactors=0 \
 	  --tempdir /mnt/h/tmp \
-	  --bindir=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/ \
+	  --bindir=$(WORKSPACE)/bin \
 	  --dirsym=$(DIRSYM) \
 	  | cut -f2 \
 	  | gzip > $(CORP)/'"$$NAME"'.gz' \
