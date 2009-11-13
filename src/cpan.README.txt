@@ -1,0 +1,98 @@
+Some of the utilities (e.g. playground/augmented_corpora/Makefile) require
+that you have installed additional Perl libraries from CPAN (e.g.
+File::NFSLock). Here is Ondřej's comment on it (in Czech):
+
+No ja mam vlastni CPANi konfiguraci, takze proste napisu:
+
+perl -MCPAN -e shell
+
+a pak
+
+install File::NFSLock
+
+(Jo obcas nutno tu instalaci udelat na 64bitech i na 32bitech. A obecne lepsi napred ji provest na 64bitech, aby mely zarucene vlastni verzi a nefallbackovaly.)
+
+Podstatne je mit konfiguraci CPANu v souladu s PERL5LIB:
+
+v CPANim shellu se konfigurace dela nejak divne, uz si pamatuju jen, jak se vypisuje:
+
+(Pred podstatny radek pridavam *)
+
+23:14 tauri4 czeng$perl -MCPAN -e shell
+CPAN: File::HomeDir loaded ok (v0.86)
+
+cpan shell -- CPAN exploration and modules installation (v1.9101)
+ReadLine support enabled
+
+cpan[1]> o conf
+$CPAN::Config options from '/home/bojar/.cpan/CPAN/MyConfig.pm':
+    commit             [Commit changes to disk]
+    defaults           [Reload defaults from disk]
+    help               [Short help about 'o conf' usage]
+    init               [Interactive setting of all options]
+
+    auto_commit        [1]
+    build_cache        [10]
+    build_dir          [/home/bojar/.cpan/build]
+    bzip2              [/bin/bzip2]
+    cache_metadata     [1]
+    commandnumber_in_prompt [1]
+    cpan_home          [/home/bojar/.cpan]
+    curl               [/usr/bin/curl]
+    ftp                [/usr/bin/ftp]
+    ftp_passive        [1]
+    ftp_proxy          []
+    getcwd             [cwd]
+    gpg                [/usr/bin/gpg]
+    gzip               [/bin/gzip]
+    histfile           [/home/bojar/.cpan/histfile]
+    histsize           [1000]
+    http_proxy         []
+    inactivity_timeout [0]
+    index_expire       [1]
+    inhibit_startup_message [0]
+    keep_source_where  [/home/bojar/.cpan/sources]
+    lynx               [/usr/bin/lynx]
+    make               [/usr/bin/make]
+    make_arg           [-j2]
+    make_install_arg   [-j2]
+    make_install_make_command [/usr/bin/make]
+*   makepl_arg         [LIB=~/myperl/lib INSTALLSITEMAN1DIR=~/myperl/man/man1 IN
+STALLSITEMAN3DIR=~/myperl/man/man3 INSTALLVENDORMAN1DIR=~/myperl/man/man1 INSTAL
+LVENDORMAN3DIR=~/myperl/man/man3 INSTALLMAN1DIR=~/myperl/man/man1 INSTALLMAN3DIR
+=~/myperl/man/man3 INSTALLINFODIR=~/myperl/info]
+    mbuild_arg         []
+    mbuild_install_arg []
+    mbuild_install_build_command [./Build]
+    mbuildpl_arg       []
+    ncftp              [/usr/bin/ftp]
+    ncftpget           []
+    no_proxy           []
+    pager              [/usr/bin/less]
+    prefer_installer   [EUMM]
+    prerequisites_policy [ask]
+    scan_cache         [atstart]
+    shell              [/bin/bash]
+    show_upload_date   [1]
+    tar                [/bin/tar]
+    term_is_latin      [0]
+    term_ornaments     [1]
+    unzip              [/usr/bin/unzip]
+    urllist
+        0 [ftp://ftp.mendelu.cz/perl]
+        1 [ftp://cpan.noris.de/pub/CPAN/]
+        2 [ftp://ftp.fi.muni.cz/pub/CPAN/]
+        3 [ftp://ftp-stud.fht-esslingen.de/pub/Mirrors/CPAN]
+        4 [ftp://ftp.cs.tu-berlin.de/pub/lang/perl/CPAN/]
+        5 [ftp://ftp.freenet.de/pub/ftp.cpan.org/pub/CPAN/]
+        6 [ftp://ftp.gmd.de/mirrors/CPAN/]
+        7 [ftp://ftp.gwdg.de/pub/languages/perl/CPAN/]
+        8 [ftp://ftp.leo.org/pub/CPAN/]
+    use_sqlite         [0]
+    wget               [/usr/bin/wget]
+
+
+cpan[2]>
+
+
+Pro uplnost: moje PERL5LIB zacina takto: /home/bojar/myperl/lib
