@@ -479,7 +479,7 @@ align:
 	&& ./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars \
 	&& $(QSUB) \
 	  --jobname align.$(CORP).$$NAME \
-	  '/home/bojar/diplomka/kos/align/gizawrapper.pl \
+	  '$(STATMT)/scripts/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
 	  `./augment.pl $(CORP)/$(TGTAUG)` \
 	  --lfactors=0 --rfactors=0 \
