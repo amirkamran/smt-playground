@@ -434,7 +434,7 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 # hardwired rule just to keep track how the lexicon was collected
 .PRECIOUS: english_uppercased_tokens
 english_uppercased_tokens:
-	./augment.pl --dump czeng-all/en+form \
+	./augment.pl --dump wmt09czeng-all/en+form \
 	| $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	    0 --collect-names-file=$@
 
