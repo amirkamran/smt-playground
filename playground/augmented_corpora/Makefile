@@ -278,14 +278,14 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 %.factors/lcstem4.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
-	| ./stem_factor.pl --stem=4 \
+	| $(STATMT)/scripts/stem_factor.pl --stem=4 \
 	| gzip -c > $@
 
 %.factors/devnorm3lcstem4.gz:
 	# augment.pl asks us to create corp $(CORP) lang $(LANG): $@
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
 	| ./devnormal3.pl \
-	| ./stem_factor.pl --stem=4 \
+	| $(STATMT)/scripts/stem_factor.pl --stem=4 \
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 

@@ -182,8 +182,10 @@ if ($dump) {
   print $corppathname."\n";
 }
 # Ensure that other members of the group are allowed to add factors to directories we may have just created.
+# If there are files that the other members created and failed to grant us access, we will get lots of error messages -
+# so we are redirecting them to /dev/null.
 chdir($basedir);
-system('chmod -R g+w .');
+system('chmod -R g+w . 2>/dev/null');
 
 
 
