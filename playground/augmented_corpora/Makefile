@@ -1,16 +1,20 @@
 SHELL = /bin/bash
 
 QSUB = /home/bojar/tools/shell/qsubmit
+# STATMT should refer to the root of the working copy of the StatMT
+# repository. Definitely redefine this in the outside environment if
+# your augmented_corpora folder exists outside of the working copy.
 STATMT ?= ../..
+# We assume that the moses_playground directory is under the current working
+# copy of the StatMT repository and that it contains a correctly compiled
+# workspace. If not, go there and call 'make workspace'.
+PLAYGROUND ?= $(STATMT)/playground
+WORKSPACE ?= $(PLAYGROUND)/$(shell cat $(PLAYGROUND)/workspace)
 
 # Use this just for debugging.
 SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
 
 REDUCECOMBINE=$(SCRIPTS_ROOTDIR)/training/reduce_combine.pl
-
-# We assume that ../ is the moses_playground directory that contains
-# a correctly compiled workspace
-WORKSPACE?=../$(shell cat ../workspace)
 
 combine.%.gz:
 	[ -x $(REDUCECOMBINE) ]
