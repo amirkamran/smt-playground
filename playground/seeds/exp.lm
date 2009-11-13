@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function die() { echo "$@" >&2; exit 1 ; }
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 set -o pipefail
 
@@ -71,7 +71,7 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 renice 10 \$\$
 
-function die() { echo "\$@" >&2; exit 1 ; }
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
 
 export TMP=/mnt/h/tmp
 
