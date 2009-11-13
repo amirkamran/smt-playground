@@ -321,7 +321,7 @@ workspace.%.moses: workspace.%
 	  && eval 'ls -dt '`cat ../../bindir.path`'/scripts-* | head -n1' \
 	      > ../../scripts.rootdir \
 	&& cd .. \
-	&& ln -s ../moses/scripts/training/symal/symal ../bin/ \
+	&& ln -s ../moses/scripts/training/symal/symal ../bin/
 	date > $@ # confirm our success
 
 workspace.%.irstlm: workspace.%
