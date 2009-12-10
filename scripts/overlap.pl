@@ -12,7 +12,7 @@ binmode(STDERR, ":utf8");
 
 sub usage
 {
-    print STDERR ("Užití: overlap.pl corpus1 corpus2\n");
+    print STDERR ("Užití: overlap.pl corpus1 corpus2 > overlap\n");
 }
 
 unless(scalar(@ARGV)==2)
