@@ -42,7 +42,7 @@ test:
 analyze:
 	# avoid overwriting old
 	[ ! -e ../$(OUTCORPNAME)/$(ANOTLANG).gz ]
-	mkdir ../$(OUTCORPNAME)
+	mkdir -p ../$(OUTCORPNAME)
 	# report tmt version
 	echo srunblocks: $(SRUNBLOCKS) > ../$(OUTCORPNAME)/$(ANOTLANG).versions
 	svnversion $$(dirname $$(dirname $$(dirname $(SRUNBLOCKS)))) \
