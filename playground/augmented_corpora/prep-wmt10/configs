@@ -1,0 +1,2 @@
+#czeng09-all	cs,en	a	[0-79][0-9]	.	# all allowed
+czeng09-ne	cs,en	a	[0-79][0-9]	^ne	# news section
