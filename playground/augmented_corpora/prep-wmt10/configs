@@ -1,2 +1,4 @@
-#czeng09-all	cs,en	a	[0-79][0-9]	.	# all allowed
+czeng09-norm-s00	en	norma	00	^ne	# section 00, normalized
+czeng09-norm-ne	en	norma	[0-79][0-9]	^ne	# news section, normalized
 czeng09-ne	cs,en	a	[0-79][0-9]	^ne	# news section
+czeng09-all	cs,en	a	[0-79][0-9]	.	# all allowed
