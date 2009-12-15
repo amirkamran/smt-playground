@@ -348,7 +348,21 @@ workspace.%.irstlm: workspace.%
 	# Checking if libirstlm was successfully created
 	[ -e $</irstlm/lib/`uname -m`/libirstlm.a ]
 	date > $@ # confirm our success
-	
+
+workspace.%.salm: workspace.%
+	ws=$< \
+	&& cd $$ws \
+	&& wget http://projectile.sv.cmu.edu/research/public/tools/salm/src/salm-src.tar.gz \
+	&& tar xzf salm-src.tar.gz \
+	&& mv SALM salm-src \
+	&& cd salm-src/Distribution/Linux \
+	&& make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ] \
+	&& cd ../../../bin \
+	&& ln -s ../salm-src/Bin/Linux/Index/IndexSA.O64 ./ \
+	&& ln -s ../salm-src/Bin/Linux/Search/FrequencyOfNgrams.O64 ./ \
+	&& cd .. \
+	&& echo `pwd`/salm-src > salm.path
+	date > $@ # confirm our success
 
 exp.lm.%.binarize:
 	[[ -x $(IRSTLMDIR)/compile-lm ]]
