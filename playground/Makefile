@@ -34,7 +34,7 @@ all:
 exp.%.init:
 	@seed="seeds/exp.$*" \
 	&& [ -e "$$seed" ] || (echo "Seed $$seed not found" >&2; exit 1) \
-	&& rundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$(TS)` \
+	&& rundir=`mkdirhash exp.$*. .$(TS)` \
 	&& [ -d "$$rundir" ] \
 	&& echo "Preparing in directory $$rundir" >&2 \
 	&& cp "$$seed" $$rundir/seed \
@@ -43,12 +43,8 @@ exp.%.init:
 	&& ( if INIT_ONLY=yes /bin/bash seed >&2; then \
 	       cd ../;\
 	       if [ -e $$rundir/TAG ]; then \
-	         echo "Renaming rundir to include the tag!" >&2; \
 		 tag=`cat $$rundir/TAG`; \
-		 newrundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$$tag.$(TS)` || exit 1; \
-		 mv $$rundir/* $$newrundir/ || exit 1; \
-		 rmdir $$rundir || exit 1; \
-		 rundir="$$newrundir"; \
+	         echo "Got tag: $$tag" >&2; \
 	       fi; \
 	       echo "Now continue with: make $$rundir.prep_inited" >&2; \
 	       echo "$$rundir"; \
@@ -78,7 +74,7 @@ exp.%.prep_inited:
 exp.%.prepare:
 	seed="seeds/exp.$*" \
 	&& [ -e "$$seed" ] || (echo "Seed $$seed not found"; exit 1) \
-	&& rundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$(TS)` \
+	&& rundir=`mkdirhash exp.$*. .$(TS)` \
 	&& [ -d "$$rundir" ] \
 	&& echo "Preparing in directory $$rundir" \
 	&& cp "$$seed" $$rundir/seed \
@@ -87,12 +83,8 @@ exp.%.prepare:
 	&& ( if RUN=no /bin/bash seed; then \
 	       cd ../;\
 	       if [ -e $$rundir/TAG ]; then \
-	         echo "Renaming rundir to include the tag!"; \
 		 tag=`cat $$rundir/TAG`; \
-		 newrundir=`mkdiruniq --maxlen=80 --delim=. exp.$*.$$tag.$(TS)`; \
-		 mv $$rundir/* $$newrundir/ || exit 1; \
-		 rmdir $$rundir || exit 1; ln -s $$newrundir $$rundir; \
-		 rundir="$$newrundir"; \
+	         echo "Got tag: $$tag" >&2; \
 	       fi; \
 	       echo "Check the script $$rundir/command   or"; \
 	       echo "  make $$rundir.run"; \
@@ -363,6 +355,22 @@ workspace.%.salm: workspace.%
 	&& cd .. \
 	&& echo `pwd`/salm-src > salm.path
 	date > $@ # confirm our success
+
+workspace.%.tmt: workspace.%
+	ws=$< \
+	&& cd $$ws \
+	&& mkdir tmt || exit 1 \
+	&& cd tmt \
+	&& svn co https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk . \
+	    || exit 1  \
+	&& if [ -e /net/projects/tectomt_shared/ ]; then \
+	     ln -s /net/projects/tectomt_shared/ share ; \
+	   else \
+	     wget http://ufal.mff.cuni.cz/~zabokrtsky/tectomt_shared.zip \
+	      && unzip tectomt_shared.zip ; \
+	   fi \
+	&& ln -s /mnt/h/tmp ./tmp
+
 
 exp.lm.%.binarize:
 	[[ -x $(IRSTLMDIR)/compile-lm ]]
