@@ -408,7 +408,8 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 
 # truecasing factors
-%.factors/tc.gz:
+%.factors/utc.gz:
+	# unsupervised truecasing
 	# augment.pl asks us to create automatic truecasing for corp $(CORP) lang $(LANG)
 	# Ensure we have $(REDUCECOMBINE)
 	[ -x $(REDUCECOMBINE) ]
@@ -430,6 +431,17 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 	    --names-file=$$dict \
 	| gzip -c > $@
 
+%.factors/stc.gz:
+	# supervised truecasing
+	[ -x $(REDUCECOMBINE) ]
+	./augment.pl --dump $(CORP)/$(LANG)+form+lemma \
+	| $(TRDCTOOLS)/add_truecased_form.pl 0:1:0:1 \
+	    --replace-form \
+	    --no-info \
+	| $(REDUCECOMBINE) - 0 \
+	| gzip -c > $@
+
+
 TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 # hardwired rule just to keep track how the lexicon was collected
 .PRECIOUS: english_uppercased_tokens
@@ -438,7 +450,7 @@ english_uppercased_tokens:
 	| $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	    0 --collect-names-file=$@
 
-%.factors/entc.gz: english_uppercased_tokens
+%.factors/enutc.gz: english_uppercased_tokens
 	# English truecased
 	[ -x $(REDUCECOMBINE) ]
 	./augment.pl --dump $(CORP)/$(LANG)+form \
