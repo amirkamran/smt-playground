@@ -33,6 +33,7 @@ czeng09-s00:
 
 OUTCORPNAME?=czeng09-s00
 ANOTLANG?=cs
+OUTLANG?=$(ANOTLANG)
 SCENTYPE?=a
 SECTIONRE?=00
 #SECTIONRE?=[0-79][0-9]
@@ -49,14 +50,14 @@ test:
 .PHONY: analyze
 analyze: wmt10dev
 	# avoid overwriting old
-	[ ! -e ../$(OUTCORPNAME)/$(ANOTLANG).gz ]
+	[ ! -e ../$(OUTCORPNAME)/$(OUTLANG).gz ]
 	mkdir -p ../$(OUTCORPNAME)
 	# report tmt version
 	echo srunblocks: $(SRUNBLOCKS) > ../$(OUTCORPNAME)/$(ANOTLANG).versions
 	svnversion $$(dirname $$(dirname $$(dirname $(SRUNBLOCKS)))) \
 	  >> ../$(OUTCORPNAME)/$(ANOTLANG).versions
 	echo scenario: ../prep-wmt10/$(ANOTLANG)_$(SCENTYPE).scen \
-	  >> ../$(OUTCORPNAME)/$(ANOTLANG).versions
+	  >> ../$(OUTCORPNAME)/$(OUTLANG).versions
 	# construct the corpus
 	set -o pipefail \
 	; ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz\
@@ -67,8 +68,17 @@ analyze: wmt10dev
 	| qruncmd --jobs=$(JOBS) --join \
 	    "$(SRUNBLOCKS) $(ANOTLANG)_$(SCENTYPE).scen \
 	        $(LANGNAME-$(ANOTLANG))_source_sentence factored_output" \
-	| gzip -c > ../$(OUTCORPNAME)/$(ANOTLANG).gz
-	cp $(ANOTLANG)_$(SCENTYPE).info ../$(OUTCORPNAME)/$(ANOTLANG).info
+	| gzip -c > ../$(OUTCORPNAME)/$(OUTLANG).gz
+	cp $(ANOTLANG)_$(SCENTYPE).info ../$(OUTCORPNAME)/$(OUTLANG).info
+
+dump:
+	# dump what the regexes select from the corpora
+	set -o pipefail \
+	; ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz\
+	| grep '$(SECTIONRE)' \
+	| autocat --filelist=- \
+	| grep '$(DOMAINRE)'
+
 
 dev.tgz:
 	wget http://www.statmt.org/wmt10/dev.tgz

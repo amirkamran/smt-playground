@@ -1,4 +1,28 @@
-czeng09-norm-s00ne	en,cs	norma	/00	^ne	# section 00, normalized
-czeng09-norm-ne	en,cs	norma	/[0-8][0-9]	^ne	# news section, normalized
+czeng09-s00ne	en,cs	a	/00	^ne	# section 00
+czeng09-s00ne	en:enN,cs:csN	norma	/00	^ne	# section 00, normalized
+#czeng09-norm-ne	en,cs	norma	/[0-8][0-9]	^ne	# news section, normalized
+czeng09-ne	en:enN,cs:csN	norma	/[0-8][0-9]	^ne	# news section, normalized
 czeng09-ne	cs,en	a	/[0-8][0-9]	^ne	# news section
-czeng09-all	cs,en	a	/[0-8][0-9]	.	# all allowed
+
+czeng09-eu	en:enN,cs:csN	norma	/[0-8][0-9]	^eu	# news, eu, fiction
+czeng09-eu	en,cs	a	/[0-8][0-9]	^eu	# news, eu, fiction
+
+czeng09-fi	en:enN,cs:csN	norma	/[0-8][0-9]	^fiction	# news, eu, fiction
+czeng09-fi	en,cs	a	/[0-8][0-9]	^fiction	# news, eu, fiction
+
+czeng09-su	en:enN,cs:csN	norma	/[0-8][0-9]	^subtitles	# news, eu, fiction
+czeng09-su	en,cs	a	/[0-8][0-9]	^subtitles	# news, eu, fiction
+
+czeng09-te	en:enN,cs:csN	norma	/[0-8][0-9]	^techdoc	# news, eu, fiction
+czeng09-te	en,cs	a	/[0-8][0-9]	^techdoc	# news, eu, fiction
+
+czeng09-we	en:enN,cs:csN	norma	/[0-8][0-9]	^paraweb	# news, eu, fiction
+czeng09-we	en,cs	a	/[0-8][0-9]	^paraweb	# news, eu, fiction
+
+czeng09-na	en:enN,cs:csN	norma	/[0-8][0-9]	^navajo	# news, eu, fiction
+czeng09-na	en,cs	a	/[0-8][0-9]	^navajo	# news, eu, fiction
+
+#czeng09-neeufi2	en:enN,cs:csN	norma	/[0-8][0-9]	^\(news\|^eu\|^fiction\)	# news, eu, fiction
+#czeng09-neeufi2	en,cs	a	/[0-8][0-9]	^\(news\|^eu\|^fiction\)	# news, eu, fiction
+
+#czeng09-all	cs,en	a	/[0-8][0-9]	.	# all allowed

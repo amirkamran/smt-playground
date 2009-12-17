@@ -1,4 +1,4 @@
-wmt10.test08	en	norma	wmt10dev/test2008	.	# wmt10 test2008 English normalized
-wmt10.test08	cs	a    	wmt10dev/test2008	.	# wmt10 test2008
-wmt10.test09	en	norma	wmt10dev/test2009	.	# wmt10 test2008 English normalized
-wmt10.test09	cs	a    	wmt10dev/test2009	.	# wmt10 test2008
+wmt10.test08	en:enN,cs:csN	norma	wmt10dev/test2008	.	# wmt10 test2008 English normalized
+wmt10.test08	en,cs	a    	wmt10dev/test2008	.	# wmt10 test2008
+wmt10.test09	en:enN,cs:csN	norma	wmt10dev/test2009	.	# wmt10 test2009 English normalized
+wmt10.test09	en,cs	a    	wmt10dev/test2009	.	# wmt10 test2009
