@@ -1,0 +1,43 @@
+- zkusit SRI LM -interpolate!
+
+
+
+Proposed normalization:
+
+- pred analyzou:
+    shouldn't  --> should not  ap.
+    ain't  --> is not
+    "[ ,.?][^"]  --> '' utf zaviraci
+    ``...''  --> utf uvozovky
+
+  ...> normalizace je celkem naprd
+
+- opravit tokenizaci aj: “well , it 's pretty close
+
+- po analyze: vyrobit Engech
+
+  he saw  --->   he he-saw
+  can not --->   can-not
+
+  negovany subject -> neguj sloveso
+    noone, no body, no one, ...
+
+  pouzit anaphora resolution, aby to dobre delalo svuj
+
+  Jak udela shodu??
+  the bailout action is uncertain -> nacasovani zachranne akce je nejist*a*
+  ...prece jen ten morfologicky model na 10gramech
+
+  it had been made very clear to him by his superiors  --> t-normalizace cleft
+
+
+- lepsi integrace mosese a tectomt
+  jak pohodlne vyrabet (alignovane) korpusy?
+    - vstupni filelist
+    - scenar pro doanotaci a export
+      ...na gridu vyrobi vystup a rovnou ho exportuje
+    - cilovy augmented-corpora: rovnou tam nafrka exportovane korpusy+info
+    - i z pripravy aug-corp bych mel udelat job
+    - z alignmentu bych mel udelat zase job
+      TMT=../tmt SCEN=xy INFL=filelist OUTNAME=czeng-fnorm make tmtaug.run
+

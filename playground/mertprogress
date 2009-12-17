@@ -1,7 +1,0 @@
-#!/bin/bash
-
-mert=$1
-if [ ! -d $mert ]; then
-  mert=exp.mert.$mert
-fi
-grep BEST $mert/log

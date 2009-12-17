@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl -CSAD
 # Manages existing experiments, etc.
 
 use strict;
@@ -17,6 +17,7 @@ my $indexfile = "index.exps";
 my @substitute = ();
 my $nosubmit = 0;
 my $redo = 0;
+my $guess = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "log" => \$log, # print experiment log in traceback mode
@@ -26,6 +27,7 @@ GetOptions(
   "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
   "redo" => \$redo, # force experiment derivation with no change using --s
+  "guess" => \$guess, # just guess experiment directory
 ) or exit 1;
 
 # update md5 indices
@@ -40,6 +42,15 @@ foreach my $d (@dirs) {
   print STDERR "$d: $idx->{$d}\n" if $debug;
 }
 saveidx($idx);
+
+if ($guess) {
+  # just guessing experiment directories
+  foreach my $key (@ARGV) {
+    my $exp = guess_exp($key);
+    print $exp."\n";
+  }
+  exit 0;
+}
 
 if ($redo || 0 < scalar @substitute) {
   # derive an experiment using a key (from arg)
@@ -67,6 +78,8 @@ if ($redo || 0 < scalar @substitute) {
         }
         # construct holds string of all prereq.jobs
         my $holds = @holds ? join(" ", map {"-hold=$_"} @holds) : "";
+
+        print STDERR "HOLDs: $holds\n";
 
         safesystem("RUN=yes HOLDS='$holds' make $e.prep_inited") or die;
       }
@@ -122,11 +135,11 @@ sub derive_exp {
     my $news = derive_exp($s, $deps);
     if ($news ne $s) {
       # print STDERR "Need to replace $s with $news\n" if $debug;
-      push @mydeps, $news;
       @vars = map { s/\Q$s\E/$news/g; $_; } @vars; # use the new one in vars
       # print STDERR "New vars: @vars\n" if $debug;
     }
     push @sources, $news;
+    push @mydeps, $news; # our newly created experiment can be launched only after the source
   }
 
   # apply the regexp to vars
@@ -167,6 +180,7 @@ sub derive_exp {
       chomp $newexp;
       die "Failed to init a new exp, got: $newexp" if ! -d $newexp;
       print STDERR "Inited new experiment: $newexp\n";
+      print STDERR "  with deps: @mydeps\n";
     }
   } else {
     if ($debug) {
