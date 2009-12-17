@@ -5,6 +5,9 @@ use strict;
 while (<>) {
   next if /^\s*#/ || /^\s*$/;
   chomp;
+  my $line = $_;
+  s/ *\t */\t/g;
+  s/^ *| *$//g;
   my ($outcorpname, $langs, $scentype, $sectionre, $domainre, $comment)
     = split /\t/;
   foreach my $lang (split /,/, $langs) {
@@ -17,7 +20,10 @@ while (<>) {
     $ENV{"SCENTYPE"} = $scentype;
     $ENV{"SECTIONRE"} = $sectionre;
     $ENV{"DOMAINRE"} = $domainre;
-    safesystem("make analyze");
+    foreach my $varname(qw(OUTCORPNAME ANOTLANG SCENTYPE SECTIONRE DOMAINRE)) {
+      print STDERR "$varname: $ENV{$varname}\n";
+    }
+    safesystem("make analyze") or die "Failed at: $line\n";
   }
 }
 

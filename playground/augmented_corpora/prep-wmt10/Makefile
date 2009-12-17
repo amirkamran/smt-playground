@@ -1,10 +1,17 @@
 # rules to create training and evaluation corpora for WMT10
 
-all: configs make_all_configs.pl
+SHELL=/bin/bash
+
+all: analyze.czeng
+
+analyze.%: configs.% make_all_configs.pl
 	./make_all_configs.pl < $<
+	touch $@
 
 CZENG09PLAINTEXTSDIR=/net/data/czeng09-public-release/data-plaintext/
+
 SRUNBLOCKS=~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt/devel/tools/srunblocks_streaming/srunblocks
+
 
 JOBS?=40
 
@@ -23,6 +30,7 @@ czeng09-s00:
 	echo "form|lemma|tag|ord|gov|afun" > ../$@/cs.info
 
 # Generic analyzer
+
 OUTCORPNAME?=czeng09-s00
 ANOTLANG?=cs
 SCENTYPE?=a
@@ -39,7 +47,7 @@ test:
 	echo $(LANGNAME-$(ANOTLANG))
 
 .PHONY: analyze
-analyze:
+analyze: wmt10dev
 	# avoid overwriting old
 	[ ! -e ../$(OUTCORPNAME)/$(ANOTLANG).gz ]
 	mkdir -p ../$(OUTCORPNAME)
@@ -50,7 +58,8 @@ analyze:
 	echo scenario: ../prep-wmt10/$(ANOTLANG)_$(SCENTYPE).scen \
 	  >> ../$(OUTCORPNAME)/$(ANOTLANG).versions
 	# construct the corpus
-	ls $(CZENG09PLAINTEXTSDIR)/*.gz \
+	set -o pipefail \
+	; ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz\
 	| grep '$(SECTIONRE)' \
 	| autocat --filelist=- \
 	| grep '$(DOMAINRE)' \
@@ -60,3 +69,32 @@ analyze:
 	        $(LANGNAME-$(ANOTLANG))_source_sentence factored_output" \
 	| gzip -c > ../$(OUTCORPNAME)/$(ANOTLANG).gz
 	cp $(ANOTLANG)_$(SCENTYPE).info ../$(OUTCORPNAME)/$(ANOTLANG).info
+
+dev.tgz:
+	wget http://www.statmt.org/wmt10/dev.tgz
+dev: dev.tgz
+	tar xzfv dev.tgz
+	oldrename news news- dev/news[^-]*
+
+dev.plaintext: dev
+	mkdir -p $@
+	for f in dev/*-src.{cz,en}.sgm; do \
+	  bn=`basename $$f | sed 's/cz/cs/; s/-src//;'`; \
+	  pickre --pick --re='<seg.*?>\s*(.*?)\s*</seg>' \
+	    < $$f \
+	  | cut -f 1 \
+	  | gzip -c > $@/$${bn//.sgm/.gz} ; \
+	  echo "Saved $@/$${bn//.sgm/.gz}"; \
+	done
+
+wmt10dev: dev.plaintext
+	mkdir -p $@
+	for s in test2008 test2009 syscomb2009; do \
+	  paste <(zcat $</news-$$s.en.gz)  <(zcat $</news-$$s.cs.gz) \
+	  | prefix --tab $$s \
+	  | gzip -c \
+	  > $@/$$s.gz; \
+	done
+
+
+
