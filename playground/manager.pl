@@ -74,6 +74,7 @@ if ($redo || 0 < scalar @substitute) {
         foreach my $prereq (@{$deps{$e}}) {
           next if -e $prereq."/DONE"; # skip finished prereqs
           my $prereqid = get_exp_jobid($prereq);
+          die "Failed to get jobid of $prereq" if !defined $prereqid;
           push @holds, $prereqid;
         }
         # construct holds string of all prereq.jobs
@@ -112,8 +113,7 @@ sub get_exp_jobid {
     }
   }
   close $hdl;
-  die "Failed to get jobid of $exp" if !defined $jid;
-  return $jid;
+  return $jid; # possibly undef
 }
 
 sub derive_exp {
@@ -203,7 +203,9 @@ sub traceback {
   my $prefix = shift;
   my $exp = shift;
   print "$prefix+- $exp\n";
-  my @kws = (get_exp_jobid($exp));
+  my @kws;
+  my $jid = get_exp_jobid($exp);
+  push @kws, $jid if defined $jid;
   foreach my $kwfile (@keywordfile) {
     push @kws, $kwfile if -e $exp."/$kwfile";
   }
