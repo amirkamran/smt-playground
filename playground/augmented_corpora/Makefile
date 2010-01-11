@@ -480,6 +480,7 @@ english_uppercased_tokens:
 ## Alignment
 
 export DIRSYM?=gdfa
+QSUBMITFLAGS?=
 align:
 	# usage: CORP=tides SRCAUG=en+lcstem4 TGTAUG=hi+lc make align
 	#   optional settings: DIRSYM=int NAME=outname
@@ -494,6 +495,7 @@ align:
 	&& mkdir -p $(CORP) \
 	&& ./check_and_print_vars CORP SRCAUG TGTAUG NAME DIRSYM > $(CORP)/$$NAME.vars \
 	&& $(QSUB) \
+	  $(QSUBMITFLAGS) \
 	  --jobname align.$(CORP).$$NAME \
 	  '$(STATMT)/scripts/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
