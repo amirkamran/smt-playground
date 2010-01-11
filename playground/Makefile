@@ -126,6 +126,11 @@ exp.%.restart: exp.%
 ls%:
 	@ls -dt exp.$** | grep -v 'exp.$*[^.]*.[-.0-9]*$$' | tac
 
+# listing various types of experiments, incl tags, eg. make taglm
+tag%:
+	@ls -dt exp.$** | grep -v 'exp.$*[^.]*.[-.0-9]*$$' | tac \
+	| while read l; do echo "$$l	"`cat $$l/TAG 2>/dev/null`; done
+
 # the most recent exp of a given type, eg. make lastlm
 last%:
 	@ls -dt exp.$** | grep -v 'exp.$*[^.]*.[-.0-9]*$$' | head -n1
