@@ -17,6 +17,7 @@ my $indexfile = "index.exps";
 my @substitute = ();
 my $nosubmit = 0;
 my $redo = 0;
+my $cleanup = 0;
 my $guess = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
@@ -28,6 +29,7 @@ GetOptions(
                           # ones using a regex: --s=/form/lc/g
   "redo" => \$redo, # force experiment derivation with no change using --s
   "guess" => \$guess, # just guess experiment directory
+  "cleanup" => \$cleanup, # just print unused experiments
 ) or exit 1;
 
 # update md5 indices
@@ -48,6 +50,28 @@ if ($guess) {
   foreach my $key (@ARGV) {
     my $exp = guess_exp($key);
     print $exp."\n";
+  }
+  exit 0;
+}
+
+if ($cleanup) {
+  # just cleaning up
+  # construct a queue of needed experiments, starting from merts
+  my %needed = map { ($_, 1) } grep { /^exp\.mert\./ } @dirs;
+  my @q = keys %needed;
+  while (my $e = shift @q) {
+    next if ! -d $e; # ignore deps of nonexisting experiments
+    my @deps = split /\n/, load($e."/deps");
+    push @q, @deps;
+    foreach my $d (@deps) {
+      $needed{$d} = 1;
+    }
+  }
+  # print all but needed exps
+  print STDERR "Listing unused experiments.\n";
+  foreach my $e (@dirs) {
+    next if $needed{$e};
+    print $e."\n";
   }
   exit 0;
 }
