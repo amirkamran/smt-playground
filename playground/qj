@@ -85,7 +85,10 @@ save_file("$dir/SRC", $srctxt); # temporary, for quickjudge
 save_file("$dir/$evalname.REF.txt", $reftxt);
 save_file("$dir/REF", $reftxt); # temporary, for quickjudge
 
-safesystem("cd $dir; $quickjudge $evalname --refs=SRC,REF @hypfiles");
+safesystem("cd $dir; $quickjudge $evalname --refs=SRC,REF @hypfiles") or die;
+
+print "Now edit:\n";
+print "  vim $dir/$evalname.anot\n";
 
 
 sub saferun3 {
