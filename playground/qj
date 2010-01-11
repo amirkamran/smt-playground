@@ -14,7 +14,7 @@ my @tags = @ARGV;
 my $dir = "qj.data";
 my $quickjudge = "/home/bojar/bin//quickjudge";
 
-die "usage: $0 evaluation-name tag1 tag2 ..."
+die "usage: $0 evaluation-name tag1 tag2/RUN-NR ..."
   if !defined $evalname;
 
 if (-e "$dir/$evalname.info") {
@@ -55,26 +55,38 @@ my $lastdirname = undef;
 my $infohdl = my_save("$dir/$evalname.info");
 my $ns = 0;
 my @hypfiles = ();
-foreach my $tag (@tags) {
+foreach my $tagrun (@tags) {
   $ns++;
-  my ($dirname, $errmsg, $exitcode) = saferun3("./manager.pl --guess $tag");
-  chomp $dirname;
-  die "Failed to guess exp from tag $tag: $errmsg"
-    if $exitcode;
-  print $infohdl "sys$ns\t$tag\t$dirname\n";
-  my $thisreftxt = load_file("$dirname/evaluation.ref.0");
-  my $thissrctxt = load_file("$dirname/evaluation.in");
-  my $thisouttxt = load_file("$dirname/evaluation.opt.txt");
-  if (defined $reftxt) {
-    die "Incompatible references translations: $lastdirname vs. $dirname"
+  my $thisouttxt;
+  my $thisreftxt;
+  my $thissrctxt;
+  my $info;
+  if (-e "$dir/$tagrun.txt.gz") {
+    # special name, constant test set
+    $thisouttxt = load_file("$dir/$tagrun.txt.gz");
+  } else {
+    my ($tag, $run) = split /\//, $tagrun;
+    my ($dirname, $errmsg, $exitcode) = saferun3("./manager.pl --guess $tag");
+    chomp $dirname;
+    $info = $dirname;
+    die "Failed to guess exp from tag $tag: $errmsg"
+      if $exitcode;
+    $thisreftxt = load_file("$dirname/evaluation.ref.0");
+    $thissrctxt = load_file("$dirname/evaluation.in");
+    my $thisoutfncode = defined $run ? "run$run" : "opt";
+    $thisouttxt = load_file("$dirname/evaluation.$thisoutfncode.txt");
+  }
+  print $infohdl "sys$ns\t$tagrun\t$info\n";
+  if (defined $reftxt && defined $thisreftxt) {
+    die "Incompatible references translations: $lastdirname vs. $info"
       # if $thisreftxt ne $reftxt; # allow different texts
       # require equal number of lines
       if ($thisreftxt =~ tr/\n/\n/) != ($reftxt =~ tr/\n/\n/);
   } else {
     $reftxt = $thisreftxt;
   }
-  $lastdirname = $dirname;
-  $srctxt = $thissrctxt if !defined $srctxt;
+  $lastdirname = $info if defined $info;
+  $srctxt = $thissrctxt if !defined $srctxt && defined $thissrctxt;
   push @hypfiles, "$evalname.sys$ns.txt";
   my $hypfile = "$dir/$evalname.sys$ns.txt";
   save_file($hypfile, $thisouttxt);
