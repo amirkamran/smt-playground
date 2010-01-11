@@ -1,4 +1,5 @@
-- zkusit SRI LM -interpolate!
+- zkusit ceske googli gramy => na pohled vypadaji tak hnusne, ze na to kaslu
+- zkusit wmt10 LM
 
 
 
@@ -32,6 +33,9 @@ Proposed normalization:
 
 
 - lepsi integrace mosese a tectomt
+  ... viz augmented_corpora/prep-wmt10/
+    jsou tam configs a make_all
+
   jak pohodlne vyrabet (alignovane) korpusy?
     - vstupni filelist
     - scenar pro doanotaci a export
@@ -40,4 +44,43 @@ Proposed normalization:
     - i z pripravy aug-corp bych mel udelat job
     - z alignmentu bych mel udelat zase job
       TMT=../tmt SCEN=xy INFL=filelist OUTNAME=czeng-fnorm make tmtaug.run
+
+
+
+
+2010-01-04:
+
+Mikroexperimenty:
+
+19:08 tauri4 playground$./qj gen_vs_direct
+The evaluation called gen_vs_direct already exists, interpreting:
+Mark    Count   Tag
+*       9       sys3, 11.05±0.45
+*       8       sys1, 13.42±0.47
+*       7       sys2, 12.92±0.41
+**      4       sys3, 11.05±0.45
+**      2       sys1, 13.42±0.47
+
+sys2, ktery dopadl nejhur, je:
+  5-gram cs+stc czeng09-ne
+  4-gram cs+stc wmt09synwmt
+  7-gram cs+tag czeng09-ne
+
+K tomuto hodnoceni bych mel pridat i 10.79±0.41:
+  5-gram cs+stc czeng09-ne
+  7-gram cs+tag czeng09-ne
+  7-gram cs+tag wmt09synwmt
+
+a nove delam i exp.mert.3c95cd8c.20100105-1113, ktery kombinuje vse:
+  5-gram cs+stc czeng09-ne
+  4-gram cs+stc wmt09synwmt
+  7-gram cs+tag czeng09-ne
+  7-gram cs+tag wmt09synwmt
+
+
+TODO:
+
+restartovat exp.mert.879a26a8.20100105-1154 (nesmyslny lm) -> exp.mert.f3dbe75b.20100105-1631
+porovnat exp.mert.879a26a8.20100105-1154 a exp.mert.621d4b9f.20100105-1200 a 13.06 (lepsi LM)
+
 
