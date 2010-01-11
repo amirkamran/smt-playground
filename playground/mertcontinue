@@ -7,7 +7,9 @@ function die() {
 }
 set -o pipefail
 
-e=$1
+[ ! -z "$1" ] || die "usage: $0 exp-identifier"
+
+e=`./manager.pl --guess $1`
 
 [ -d $e ] || die "Not an experiment: $e";
 
