@@ -120,7 +120,8 @@ exp.%.run:
 exp.%.restart: exp.%
 	# restarting an experiment
 	eval `makearg --delim='\.' $* exptype ignore ` ;\
-	  eval `cat $</VARS` make exp.$$exptype.prepare
+	  eval `cat $</VARS | sed 's/^\([^=]*\)=\(.*\)$$/export \1=$${\1:=\2}/'`; \
+	  make exp.$$exptype.prepare
 
 # listing various types of experiments, eg. make lslm
 ls%:
