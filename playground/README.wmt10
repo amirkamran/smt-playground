@@ -2,6 +2,39 @@
 - zkusit wmt10 LM
 
 
+Pozorovani: 2010-01-06
+- normalizace je naprd
+- jazykovy model news je uzitecnejsi nez ne+eu+fi+su+we, a to i kdyz je 4gr vs. 5gr (13.28 vs. 13.26)
+- nejuzitecnejsi je news LM 5gr (13.43) v kombinaci se synwmt09; rucni hodnoceni to ale potvrzuje mene
+00:19 tauri4 playground$./qj 5gr-4gr 13.43 13.28
+The evaluation called 5gr-4gr already exists, interpreting:
+Mark    Count   Tag
+*       8       sys1, 13.43
+*       7       sys2, 13.28
+**      1       sys1, 13.43
+- samotny vliv synwmt09 je podle nekolika malo vet uplne zanedbatelny:
+00:31 tauri4 playground$./qj plus-synwmt09 13.06 13.28
+The evaluation called plus-synwmt09 already exists, interpreting:
+Mark    Count   Tag
+*       5       sys2, 13.28
+*       4       sys1, 13.06
+i kdyz na jinych vetach (omylem) mi to vyslo vyrazneji
+00:35 tauri4 playground$./qj plus-synwmt09-news5gr 13.06 13.28
+The evaluation called plus-synwmt09-news5gr already exists, interpreting:
+Mark    Count   Tag
+*       10      sys2, 13.28
+*       3       sys1, 13.06
+- obecne ty lepsi LM k citelne lepsimu lidskemu skore spis nevedou:
+00:40 tauri4 playground$./qj plus-synwmt09-news5gr-fix 13.06 13.43
+The evaluation called plus-synwmt09-news5gr-fix already exists, interpreting:
+Mark    Count   Tag
+*       3       sys1, 13.06
+*       3       sys2, 13.43
+**      2       sys2, 13.43
+
+
+
+
 
 Proposed normalization:
 
@@ -15,6 +48,8 @@ Proposed normalization:
 
 - opravit tokenizaci aj: “well , it 's pretty close
 
+- sekat pomlckova slova (polka-dot ap.)
+
 - po analyze: vyrobit Engech
 
   he saw  --->   he he-saw
@@ -22,6 +57,7 @@ Proposed normalization:
 
   negovany subject -> neguj sloveso
     noone, no body, no one, ...
+    no contemporary machine is as universal as the telephone
 
   pouzit anaphora resolution, aby to dobre delalo svuj
 
@@ -80,7 +116,168 @@ a nove delam i exp.mert.3c95cd8c.20100105-1113, ktery kombinuje vse:
 
 TODO:
 
-restartovat exp.mert.879a26a8.20100105-1154 (nesmyslny lm) -> exp.mert.f3dbe75b.20100105-1631
-porovnat exp.mert.879a26a8.20100105-1154 a exp.mert.621d4b9f.20100105-1200 a 13.06 (lepsi LM)
+? proc filtered-for-std a filtered-for-opt jsou jine?
+- exp.zmert (podle new-mertu!)
+- porovnat 15.59 a 15.36 rucne
+    ./qj biglms-plus-newslm 15.36 15.59
+      -> BLEU zatim ve shode se mnou: pridat navic LM jen podle news je horsi
+18:44 tauri4 playground$./qj biglms-plus-newslm 15.36 15.59
+The evaluation called biglms-plus-newslm already exists, interpreting:
+Mark    Count   Tag
+*       5       sys2, 15.59
+*       2       sys1, 15.36
+**      1       sys1, 15.36
 
 
+
+
+2010-01-06:
+
+Podarilo se natrenovat velka data a podle BLEU pomahaji hodne, podle lidskeho
+ne tak vyrazne.
+- nektere vety zvladnou na jednicku
+- *kazi cisla*
+- obcas LM zpusobi spatny vyznam:
+
+17:28 tauri4 playground$./qj bigbest 15.59 13.43
+The evaluation called bigbest already exists, interpreting:
+Mark    Count   Tag
+*       15      sys1, 15.59
+*       12      sys2, 13.43
+**      7       sys1, 15.59
+badnum  3       sys1, 15.59
+lmmisled        2       sys1, 15.59
+badneg  1       sys1, 15.59
+badneg  1       sys2, 13.43
+**      1       sys2, 13.43
+
+
+-> zkusim:
+   - pridat navic news LM: exp.mert.bbd03f9e.20100106-1738 => 15.36
+   - zamenit 4gr synwmt09 za 6gr synwmt: 9a1eb7bc.20100106-1743
+   - rucne oznacit spatna cisla: exp.model.rulebasedpen.20100106-1820
+                       a k nemu  exp.mert.c8f318f6.20100106-2232
+     bude treba rucne porovnat: ./qj rulebasedpen 15.59 15.40
+       Vysledky nevalne:  cisla zustala spatna, trochu se zhorsilo zachovani vyznamu (lmmisled)
+18:40 tauri4 playground$./qj rulebasedpen
+The evaluation called rulebasedpen already exists, interpreting:
+Mark    Count   Tag
+*       8       sys2, 15.40
+badnum  7       sys2, 15.40
+badnum  7       sys1, 15.59
+*       5       sys1, 15.59
+roundnum        3       sys2, 15.40
+roundnum        3       sys1, 15.59
+lmmisled        2       sys2, 15.40
+badlex  2       sys2, 15.40
+**      1       sys2, 15.40
+neg     1       sys1, 15.59
+**      1       sys1, 15.59
+neg     1       sys2, 15.40
+lmmisled        1       sys1, 15.59
+
+
+-> synwmt 6gr trval v 10 castech vic nez den (exp.lm.ada76fb9.20100104-1849)
+   konkurencni na cosmosu: exp.lm.42ae85a6.20100106-1739 (1 cast) jen 3 hodiny!
+
+Generovani:
+zatim stavim zakladni model, po vzoru lonskeho:
+  /home/bojar/diplomka/granty/euromatrix/moses_wmt09/exp.model.SRCczeng-nosub+en+entc+lemma+tag.TGT+cs+cstc+lemma+tag.ALIczengaligdf.LM0-4-synwmt-blmLM2-7-synwmt-blm.t0-0+g0-1a2At1-1+t2-2+g1a2-0.or-bi-fe.r2-2.20081209-2205
+
+Takto vznika tm: (po vzoru exp.tm.ddbcd7ca.20091216-0207)
+  exp.tm.9cd2f69e.20100106-1834/log.o694022
+Reordmodel mohu asi pouzit normalni: exp.rm.d2ac42a8.20091216-0207
+  ...nelze, nekompatibilni srcaugs
+ale preventivne delam i vlastni:
+  exp.rm.24bfd374.20100106-1836/log
+
+Uz mam nastrel mertu: exp.mert.80616a9a.20100106-2357
+Kontrastivni experimenty jsou:
+!! pozor, uzivaji jiny alignment !!
+  -> zkousim novy exp.mert.593af801.20100107-0103 = dobehl: 13.04
+12.92  exp.mert.1cb3469d.20091221-1045, ktery pouziva jen taglm bez generovani
+13.42  exp.mert.8de2ae44.20091219-2353, ktery neuziva ani taglm
+11.05  exp.mert.e4aff429.20091221-0155, ktery uziva taglm, ale ne synwmt
+viz ./qj gen_vs_direct o tom, jak malo koreluje bleu s mikrohodnocenim
+==> Rucne: ./qj lingv_vs_direct 13.04 13.42 12.92 11.05
+Mark    Count   Tag
+*       10      sys4, 11.05
+*       10      sys1, 13.04
+*       8       sys2, 13.42
+-       5       sys3, 12.92
+-       4       sys2, 13.42
+-       4       sys1, 13.04
+**      4       sys1, 13.04
+**      3       sys4, 11.05
+*       3       sys3, 12.92
+-       2       sys4, 11.05
+**      1       sys3, 12.92
+Rozdily nejsou moc patrne, ale 11.05 a 13.04 vypadaji kapinku lepe. Cili bud
+generovat plne lingvisticky, nebo aspon generovat, ale velky LM na tagach spis
+mate.
+
+Zkousim lingvisticky model (13.04) nafouknout na vetsi data:
+  exp.mert.014b28bc.20100108-1041
+
+Rucni vyhodnoceni vetsich dat vs. chytrejsiho modelu nahrava vetsim datum:
+12:49 tauri4 playground$./qj bigdata_vs_lingv 15.59 13.04
+The evaluation called bigdata_vs_lingv already exists, interpreting:
+Mark    Count   Tag
+*       12      sys1, 15.59
+*       7       sys2, 13.04
+-       5       sys1, 15.59
+-       3       sys2, 13.04
+**      2       sys1, 15.59
+**-     1       sys1, 15.59
+**      1       sys2, 13.04
+
+
+Taky zkousim vetsi data v alignmentu lcstem4 misto lemma.
+
+
+
+
+
+Velikost troptu:
+srovnej: 13.04±0.46 593af801.20100107-0103 vs. exp.mert.8d725a8c.20100108-0130
+podle casu, bleu i rucne
+
+
+
+Problemy:
+6 milionu vet neobsahuje ani jednou 'music player', jen 'audio player'
+  ? dalo by se proti tomu bojovat slovnima tridama, resp. redukci zdrojoveho slovniku (enredvoc, viz ~bojar/diplomka/granty/hindi/statmt/projects/enhi/tools/more-factors-for-augmented-corpora/Makefile)
+
+
+nezvladam natrenovat generovaci model na velkych datech (dosel disk)
+vetsi data jsou asi lepsi nez generovaci model na malych datech:
+  ./qj lingvrun19-vs-best 8d725a8c.20100108-0130/19 15.59
+  The evaluation called lingvrun19-vs-best already exists, interpreting:
+  Mark    Count   Tag
+  *       6       sys2, 15.59
+  -       2       sys1, 8d725a8c.20100108-0130/19
+  -       2       sys2, 15.59
+  *       2       sys1, 8d725a8c.20100108-0130/19
+  **      1       sys1, 8d725a8c.20100108-0130/19
+
+Srovnej s Googlem!
+...prohravam:14:21 tauri4 playground$./qj goog_vs_best GOOG 15.59
+The evaluation called goog_vs_best already exists, interpreting:
+Mark    Count   Tag
+**      3       sys1, GOOG
+*       2       sys1, GOOG
+-*      1       sys2, 15.59
+*       1       sys2, 15.59
+-       1       sys2, 15.59
+Ale rada vet je opravdu spornych...
+
+
+
+Rucne sestav model s generovanim podle synu!
+  Zakladam na exp.mert.80616a9a.20100106-2357
+  Generovaci model pouziju ze synu: exp.gm.64a344bf.20100106-1527
+  Bohuzel musim jeste dodatecne spustit analyzovaci model pro pripady primeho prekladu:
+    exp.gm.9857c86f.20100111-1345
+  Vysledny model: exp.model.syngen1.20100111-1348
+    a k nemu mert: exp.mert.2ca3afb8.20100111-1356
+Zkombinuj s googlem a s tectomt.
