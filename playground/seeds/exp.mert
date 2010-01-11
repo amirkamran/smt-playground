@@ -32,12 +32,14 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$MERTFLAGS to any further flags"
   echo "  \$SERIAL to yes to disable qsub"
+  echo "  \$STACK to stacksize"
+  echo "  \$TAGPREF to tag prefix"
   exit 1
 fi
 
 [ ! -z "$SEARCH" ] || SEARCH=beam
 
-echo `cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH > TAG
+echo $TAGPREF`cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH$STACK > TAG
 
 echo SETTING TAG: `cat TAG`
 
@@ -59,6 +61,7 @@ SEARCH=$SEARCH
 MERTFLAGS="$MERTFLAGS"
 MOSESFLAGS="$MOSESFLAGS"
 SERIAL=$SERIAL
+STACK=$STACK
 KONEC
 
 # Stop here if we are just initing ourselves
@@ -90,6 +93,10 @@ fi
 
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
+
+if [ ! -z "$STACK" ]; then
+  MOSESFLAGS="$MOSESFLAGS -s $STACK"
+fi
 
 [ ! -z "$JOBS" ] || JOBS=15
 
