@@ -1,0 +1,32 @@
+#!/bin/bash
+# simple script to show mert progress
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+set -o pipefail
+
+[ ! -z "$1" ] || die "usage: $0 exp-identifier"
+
+e=`manager.pl --guess $1`
+
+[ -d $e ] || die "Not an experiment: $e"
+
+cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
+
+[ -e run1.out.gz ] || die "Failed to find run1.out.gz"
+
+n=`zcat run1.out.gz | wc -l`
+
+grep BEST ../log* | cut -d'>' -f2 | cut -d ' ' -f2 > bleus
+
+(
+grep BEST ../log* ; \
+echo "" ; \
+paste <( for i in `seq 1 $n`; do echo "SRC"; echo "REF"; cat bleus; echo ""; done ) \
+      <( reduce_factors.pl 0 < ../tuning.in | ziplines --delim - ../tuning.ref.0 run?.out.gz run??.out.gz ) \
+| sed 's/^\t*//' \
+| numerize_blocks | tt --rmtab \
+) \
+| less -S
