@@ -1,0 +1,23 @@
+#!/bin/bash
+# simple script to restart a mert experiment that failed
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+set -o pipefail
+
+e=$1
+
+[ -d $e ] || die "Not an experiment: $e";
+
+perl -i~ -pe 's/^(.*(clone_moses|absolutize_moses))/# $1/; s/(mert-moses.pl)/$1 --continue/;' $e/command \
+|| die "Failed to modify command"
+
+rm -rf $e/FAILED $e/mert-tuning/filtered
+
+echo "Now run:"
+cd $e
+echo "  cd $e; nohup nice bash command >> " log.* "&"
+
+
