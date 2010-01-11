@@ -1,5 +1,11 @@
 # rules to create training and evaluation corpora for WMT10
 
+# BUGS:
+#   Empty line:
+#   czeng09-te/cs.gz         101262
+#   ...a to proto, ze ceska veta obsahuje jeden znak: 0
+#   techdoc-b167886-08train-f012678-s13     Nil     0
+
 SHELL=/bin/bash
 
 all: analyze.czeng
@@ -72,8 +78,8 @@ analyze: wmt10dev
 	cp $(ANOTLANG)_$(SCENTYPE).info ../$(OUTCORPNAME)/$(OUTLANG).info
 
 dump:
-	# dump what the regexes select from the corpora
-	set -o pipefail \
+	@# dump what the regexes select from the corpora
+	@set -o pipefail \
 	; ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz\
 	| grep '$(SECTIONRE)' \
 	| autocat --filelist=- \
