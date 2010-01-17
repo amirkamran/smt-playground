@@ -14,7 +14,7 @@ if [ -z "$SCRIPTS_ROOTDIR" ]; then
   exit 1
 fi
 
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/src/testbleu.asm
+TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 wiseln $TESTBLEU ./testbleu || exit 1
 
 
