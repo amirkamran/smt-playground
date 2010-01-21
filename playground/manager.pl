@@ -15,6 +15,7 @@ my $debug = 0;
 my $reindex = 0;
 my $indexfile = "index.exps";
 my @substitute = ();
+my @avoid = ();
 my $nosubmit = 0;
 my $redo = 0;
 my $cleanup = 0;
@@ -30,7 +31,10 @@ GetOptions(
   "redo" => \$redo, # force experiment derivation with no change using --s
   "guess" => \$guess, # just guess experiment directory
   "cleanup" => \$cleanup, # just print unused experiments
+  "a|avoid=s@" => \@avoid, # avoid these subexperiments
 ) or exit 1;
+
+my %avoid = map { ( $_, 1 ) } @avoid;
 
 # update md5 indices
 my $idx = loadidx() unless $reindex; # ignore saved values
@@ -104,9 +108,12 @@ if ($redo || 0 < scalar @substitute) {
         # construct holds string of all prereq.jobs
         my $holds = @holds ? join(" ", map {"-hold=$_"} @holds) : "";
 
+        my $oldholds = $ENV{"HOLDS"};
+        $oldholds ||= "";
+        print STDERR "OLD HOLDs: $oldholds\n";
         print STDERR "HOLDs: $holds\n";
 
-        safesystem("RUN=yes HOLDS='$holds' make $e.prep_inited") or die;
+        safesystem("RUN=yes HOLDS='$oldholds $holds' make $e.prep_inited") or die;
       }
     }
     traceback("SRC ", $exp);
@@ -170,6 +177,10 @@ sub derive_exp {
   foreach my $substitute (@substitute) {
     @vars = map { eval "s$substitute"; $_; } @vars;
   }
+  @vars = sort @vars;
+  @oldvars = sort @oldvars;
+  @sources = sort @sources;
+  @oldsources = sort @oldsources;
 
   # check if we changed (or the source failed or is outdated) and possibly init us
   my $newexp = $exp;
@@ -220,7 +231,8 @@ sub experiment_valid {
   my $exp = shift;
   return -d $exp 
     && ! -e "$exp/FAILED" 
-    && ! -e "$exp/OUTDATED";
+    && ! -e "$exp/OUTDATED"
+    && ! $avoid{$exp}; # forbidden on commandline
 }
 
 sub traceback {
