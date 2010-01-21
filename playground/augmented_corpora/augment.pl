@@ -246,7 +246,7 @@ sub ensure_salm_index {
   my $tmp = tempdir(DIR=>$tmpdir, CLEANUP=>1);
   safesystem("zcat < $corpfile > $tmp/$indexbasename")
     or die "Can't gunzip $corpfile";
-  safesystem("cd $tmp && $salm_indexer $indexbasename")
+  safesystem("cd $tmp && $salm_indexer $indexbasename >&2")
     or die "SALM indexer failed for $indexbasename in $tmp";
   safesystem("cp $tmp/$indexbasename.* $indexdirname")
     or die "Failed to copy the finished index back";
@@ -256,6 +256,7 @@ sub ensure_salm_index {
   close $h;
   unlock_verbose($lock);
 
+  return $indexpath;
 }
 
 

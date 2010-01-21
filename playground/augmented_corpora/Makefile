@@ -504,6 +504,7 @@ align:
 	  --tempdir /mnt/h/tmp \
 	  --bindir=$(WORKSPACE)/bin \
 	  --dirsym=$(DIRSYM) \
+	  --drop-bad-lines \
 	  | cut -f2 \
 	  | gzip > $(CORP)/'"$$NAME"'.gz' \
 	&& echo "ali" > $(CORP)/$$NAME.info
