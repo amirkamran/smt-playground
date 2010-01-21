@@ -140,6 +140,7 @@ if \\
 	    --reordering-factors $REORDFACTORS \\
 ; then
   success=1
+  rm -f \$tempdir/model/extract*
   echo "COPYING TEMPDIR \$tempdir BACK"
   rsync -uavz \$tempdir/* ./ || die "Rsync back failed"
   echo "COPIED"
