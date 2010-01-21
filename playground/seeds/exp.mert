@@ -152,7 +152,7 @@ $ZMERTMOSES \
   \`pwd\`/moses.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
   $MERTDIR \\
-  --metric=$ZMERTMOSES --extract-sempos=$ZMERTSEMPOSSOURCE \\
+  --metric=$ZMERTMETRIC --extract-sempos=$ZMERTSEMPOSSOURCE \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
