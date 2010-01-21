@@ -5,6 +5,7 @@
 
 use strict;
 use File::Basename;
+use File::Temp qw/tempdir/;
 use File::Path;
 use File::Spec;
 use File::NFSLock qw(uncache);
@@ -19,11 +20,17 @@ my $AUGMENTPATH = File::Spec->rel2abs(__FILE__);
 my $basedir = dirname($AUGMENTPATH);
 my $makefile = $basedir."/Makefile";
 my $dump = 0; # print the corpus contents, not the filename
+my $sa_index = 0;
+my $salm_indexer = undef;
+my $tmpdir = "/mnt/h/tmp";
 
 my @optionspecs = (
   "dump"=>\$dump,
   "d|dir=s" => \$basedir,
   "m|makefile=s" => \$makefile,
+  "suffix-array-index" => \$sa_index,
+  "salm-indexer=s" => \$salm_indexer,
+  "tmpdir=s" => \$tmpdir,
 );
 
 # use default options from ./augment.pl.flags, if available
@@ -71,9 +78,17 @@ Options:
   --dump  ... to dump the corpus contents to stdout
   --d|dir=PATH  ... specify a different base directory
   --m|makefile=PATH  ... create factors using a specified Makefile
+  --suffix-array-index  ... use SALM to index the corpus and return path to the
+                            index
+  --salm-indexer=PATH  ... path to salm indexer, e.g.
+                            salm-src/./Bin/Linux/Index/IndexSA.O64
+  --tmpdir=PATH  ... path to tempdir (used by salm indexer)
 ";
   exit 1;
 }
+
+die "Provide --salm-indexer if you want to construct --suffix-array-index"
+  if $sa_index && ! defined $salm_indexer;
 
 my $corp;
 my $lang;
@@ -97,6 +112,7 @@ print STDERR "Running augment.pl $descr\n";
 my $corpbasefile = "$basedir/$corp/$lang.gz";
 if (! -e $corpbasefile) {
   if ($corp =~ /\+/) {
+    # combining corpus from various source corpora
     my $lock = blocking_verbose_lock($corpbasefile);
     print STDERR "Corpus $corp not found in $basedir...\n";
     my @corppieces = split /\+/, $corp;
@@ -178,7 +194,12 @@ if ($dump) {
   my $hdl = my_open($corppathname);
   print while <$hdl>;
   close $hdl;
+} elsif ($sa_index) {
+  # construct salm index an return the path to it
+  my $index_pathname = ensure_salm_index($corppathname);
+  print $index_pathname."\n";
 } else {
+  # default, just print corpus pathname
   print $corppathname."\n";
 }
 # Ensure that other members of the group are allowed to add factors to directories we may have just created.
@@ -188,6 +209,54 @@ chdir($basedir);
 system('chmod -R g+w . 2>/dev/null');
 
 
+sub ensure_salm_index {
+  my $corpfile = shift;
+
+  my $indexpath = $corpfile;
+  $indexpath =~ s/\.gz$/.salm/;
+  die "Corpus not gzipped?" if $indexpath eq $corpfile;
+
+  if (-e $indexpath) {
+    my $lock = blocking_verbose_lock($indexpath);
+    print STDERR "Index '$indexpath' seems ready, checking.\n";
+    unlock_verbose($lock);
+    my_nonempty($indexpath.".sa_corpus");
+    my_nonempty($indexpath.".sa_offset");
+    my_nonempty($indexpath.".sa_suffix");
+    # corpus seems ok, report corpus location
+    return $indexpath;
+  }
+
+  print STDERR "Locking and creating $indexpath\n";
+  my $lock = blocking_verbose_lock($indexpath);
+
+  if (-e $indexpath) {
+    print STDERR "Index '$indexpath' seems ready, checking.\n";
+    unlock_verbose($lock);
+    my_nonempty($indexpath.".sa_corpus");
+    my_nonempty($indexpath.".sa_offset");
+    my_nonempty($indexpath.".sa_suffix");
+    # corpus seems ok, report corpus location
+    return $indexpath;
+  }
+
+  my $indexbasename = basename($indexpath);
+  my $indexdirname = dirname($indexpath);
+
+  my $tmp = tempdir(DIR=>$tmpdir, CLEANUP=>1);
+  safesystem("zcat < $corpfile > $tmp/$indexbasename")
+    or die "Can't gunzip $corpfile";
+  safesystem("cd $tmp && $salm_indexer $indexbasename")
+    or die "SALM indexer failed for $indexbasename in $tmp";
+  safesystem("cp $tmp/$indexbasename.* $indexdirname")
+    or die "Failed to copy the finished index back";
+
+  my $h = my_save($indexpath);
+  print $h "Created by $salm_indexer via augment.pl";
+  close $h;
+  unlock_verbose($lock);
+
+}
 
 
 sub augment {
