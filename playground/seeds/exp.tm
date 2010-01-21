@@ -7,6 +7,9 @@ function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 [ ! -z "$SCRIPTS_ROOTDIR" ] \
   || die "Set \$SCRIPTS_ROOTDIR to the scripts release!"
 
+[ ! -z "$WORKSPACE" ] \
+  || die "Set \$WORKSPACE to the workspace directory!"
+
 if [ -z "$ALIAUG" ] || [ -z "$DECODINGSTEPS" ] \
   || [ -z "$SRCCORP" ] \
   || [ -z "$SRCAUG" ] \
@@ -23,12 +26,17 @@ if [ -z "$ALIAUG" ] || [ -z "$DECODINGSTEPS" ] \
   echo "And optionally:"
   echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
   echo "  \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
+  echo "And optionally for sigfiltering:"
+  echo "  \$THRESHOLD to a+e, a-e of a number (see moses/sigtest-filter)"
+  echo "  \$CUTOFF to phrase-table cutoff"
   exit 1
 fi
 
 # TGT and ALI corp default to srccorp
 [ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
 [ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
+
+[ ! -z "$CUTOFF" ] || CUTOFF=0
 
 if echo "$DECODINGSTEPS" | grep , ; then
   echo "\$DECODINGSTEPS ($DECODINGSTEPS) contains a comma! Use 'a' instead, e.g. 0a1-0+1-1"
@@ -57,6 +65,8 @@ ALIAUG=$ALIAUG
 DECODINGSTEPS=$DECODINGSTEPS
 REORDERING=$REORDERING
 REORDFACTORS=$REORDFACTORS
+CUTOFF=$CUTOFF
+THRESHOLD=$THRESHOLD
 KONEC
 
 echo $SRCAUG > var-SRCAUG
@@ -73,7 +83,7 @@ fi
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
+DECRYPT=$WORKSPACE/../tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
 DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
@@ -127,7 +137,7 @@ mkdir model
 
 tempdir=\`mktemp -d /mnt/h/tmp/exp.model.XXXXXX\`
 echo "COPYING SELF TO TEMPDIR: \$tempdir"
-rsync -avz * \$tempdir/ || die "Failed to rsync ourselves"
+rsync -avz --exclude '*.hardlink' * \$tempdir/ || die "Failed to rsync"
 echo "COPIED, used disk space:"
 
 df \$tempdir
@@ -142,6 +152,13 @@ if \\
 	    --corpus=corpus/corpus \\
 	    --f src --e tgt \\
 	    $DECRYPTEDSTEPS \\
+  && echo "Now will filter translation models" \\
+  && $WORKSPACE/../tools/filter-several-phrasetables.pl \\
+        --srccorp=$SRCCORP --srcaug=$SRCAUG \\
+        --tgtcorp=$TGTCORP --tgtaug=$TGTAUG \\
+        --cutoff=$CUTOFF --threshold=$THRESHOLD \\
+        --workspace=$WORKSPACE \\
+        \$tempdir/model/phrase-table.* \\
   && echo "Now will extract generation models" \\
   && \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
         --force-factored-filenames \\
@@ -154,6 +171,7 @@ if \\
 	    $DECRYPTEDSTEPS \\
 ; then
   success=1
+  rm -f \$tempdir/model/extract* # delete temporary files of extracted phrases
   echo "COPYING TEMPDIR \$tempdir BACK"
   rsync -uavz \$tempdir/* ./ || exit 1
   echo "COPIED"
