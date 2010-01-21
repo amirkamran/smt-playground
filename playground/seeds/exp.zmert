@@ -34,7 +34,7 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$SERIAL to yes to disable qsub"
   echo "  \$STACK to stacksize"
   echo "  \$TAGPREF to tag prefix"
-  echo "  \$SEMPOSTYPE to select SemPOS factor extraction (none, moses:<fact_index>, tmt)"
+  echo "  \$SEMPOSTYPE to select SemPOS factor extraction ('none', 'moses:<fact_index>', 'tmt')"
   exit 1
 fi
 
@@ -127,6 +127,8 @@ esac
 
 METRICARGS="--metric=SemPOS --extract-sempos=$SEMPOSTYPE"
 
+MERTDIR="--mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/"
+
 cat << KONEC > command
 # This is the command to be run here
 echo "=============================="
@@ -166,6 +168,7 @@ $ZMERTMOSES \
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
+  $MERTDIR \\
   $METRICARGS \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
