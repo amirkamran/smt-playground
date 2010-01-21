@@ -161,7 +161,9 @@ sub scan {
     $tableinfo{$pos} = $line->[0];
     $used{"@rowid\t@colid\t$line->[0]"} = 1;
   }
-  print "\n".join("", map {"Using: ".$_."\n"} sort keys %used) if $self->{verbose} || defined $rowdef{""} || defined $coldef{""};
+  print "\n".join("", map {"Using: ".$_."\n"} sort keys %used)
+    if ($self->{verbose} || defined $rowdef{""} || defined $coldef{""})
+      && ($self->{verbose} >= 0);
   print "\n";
   # Print column headers
   foreach my $col (@coldef) {
