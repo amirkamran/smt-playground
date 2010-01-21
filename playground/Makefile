@@ -2,6 +2,7 @@ TS?=$(shell date '+%Y%m%d-%H%M')
 
 PWD := $(shell pwd)
 WS := $(shell cat workspace)
+export WORKSPACE=$(PWD)/$(WS)
 export SCRIPTS_ROOTDIR=$(shell cat $(WS)/scripts.rootdir 2>/dev/null)
 export MOSESCMD=$(PWD)/$(WS)/moses/moses-cmd/src/moses
 export SRILMDIR1=$(shell cat $(WS)/srilm.path 2>/dev/null)/bin
@@ -100,6 +101,7 @@ exp.%.prepare:
 HOLDS?=
 # format: HOLDS=-hold 12345 -hold 12346
 # by default do not wait for any jobs
+# or HOLDS="--queue cosmos"
 
 # start a prepared run of an experiment
 exp.%.run:
@@ -154,13 +156,16 @@ mertdetails:
 
 bleu:
 	./collect_bleu.pl \
+	| sed 's/BLEU.run\([0-9]*\)	/BLEU.run	\1:/' \
+	| grp --keys=1,2 --items=COLLECT3 \
 	| list2tab 1 2 3 '?' \
 	| headline --prepend 'Mert or Eval' \
 	| tt --utf8 \
 	> $@.`./sitename`
 	cat $@.* \
-	| recut 2,1,3- \
+	| recut 2,1,3,6,4,5 \
 	| numsort --skip=1 n1 \
+	| tt --utf8 \
 	> $@
 
 nicebleu: bleu
@@ -387,7 +392,7 @@ exp.lm.%.binarize:
 	   fi
 
 clean:
-	find -name 'run*.feats.opt.gz' -exec rm {} \;
-	find -name 'run*.feats' -exec rm {} \;
-	find -name 'run*.best*.out.gz' -exec rm {} \;
-	find -name filtered-for-eval-std -exec rm -rf {} \; || true
+	find -ctime +3 -name 'run*.feats.opt.gz' -exec rm {} \;
+	find -ctime +3 -name 'run*.feats' -exec rm {} \;
+	find -ctime +3 -name 'run*.best*.out.gz' -exec rm {} \;
+	find -ctime +3 -name filtered-for-eval-std -exec rm -rf {} \; || true
