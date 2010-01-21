@@ -34,12 +34,28 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$SERIAL to yes to disable qsub"
   echo "  \$STACK to stacksize"
   echo "  \$TAGPREF to tag prefix"
+  echo "  \$MERTPRG to mert, zmert (and hopefully new-mert later)"
+  echo "  \$ZMERTMETRIC for zmert, to SemPOS, BLEU, TER, BLEU-TER"
+  echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 or tmt"
   exit 1
 fi
 
 [ ! -z "$SEARCH" ] || SEARCH=beam
+[ ! -z "$MERTPRG" ] || MERTPRG=mert
 
-echo $TAGPREF`cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH$STACK > TAG
+
+if [ "$MERTPRG" == zmert ]; then
+  [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS 
+  ZMERTMETRICTAG=$ZMERTMETRIC
+  if [ "$ZMERTMETRIC" == SemPOS ]; then
+    [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
+    ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
+  fi
+  MERTTAG=ZMERT$ZMERTMETRICTAG
+fi
+
+
+echo $TAGPREF`cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > TAG
 
 echo SETTING TAG: `cat TAG`
 
@@ -62,6 +78,9 @@ MERTFLAGS="$MERTFLAGS"
 MOSESFLAGS="$MOSESFLAGS"
 SERIAL=$SERIAL
 STACK=$STACK
+MERTPRG=$MERTPRG
+ZMERTMETRIC=$ZMERTMETRIC
+ZMERTSEMPOSSOURCE=$ZMERTSEMPOSSOURCE
 KONEC
 
 # Stop here if we are just initing ourselves
@@ -93,6 +112,7 @@ fi
 
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
+ZMERTMOSES="\$SCRIPTS_ROOTDIR/training/zmert-moses.pl"
 
 if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
@@ -116,6 +136,44 @@ beam)
 cube)
   SEARCHFLAG="-search-algorithm 1"
   ;;
+*)
+  die "Bad search algorithm: $SEARCH"
+  ;;
+esac
+
+case "$MERTPRG" in
+zmert)
+  cat << KONEC > command.mert
+$ZMERTMOSES \
+  --working-dir=mert-tuning \\
+  \`pwd\`/tuning.in \\
+  \`pwd\`/tuning.ref. \\
+  \`pwd\`/moses \\
+  \`pwd\`/moses.abs.ini \\
+  --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
+  $MERTDIR \\
+  --metric=$ZMERTMOSES --extract-sempos=$ZMERTSEMPOSSOURCE \\
+  $MERTGRIDARGS \\
+  \$MERTFLAGS \\
+  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
+  || die "Mert failed"
+KONEC
+;;
+mert)
+  cat << KONEC > command.mert
+$MERTMOSES \
+  --obo-scorenbest=\`pwd\`/scorenbest \\
+  --working-dir=mert-tuning \\
+  \`pwd\`/tuning.in \\
+  \`pwd\`/tuning.ref. \\
+  \`pwd\`/moses \\
+  \`pwd\`/moses.abs.ini \\
+  $MERTGRIDARGS \\
+  \$MERTFLAGS \\
+  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
+  || die "Mert failed"
+KONEC
+;;
 *)
   die "Bad search algorithm: $SEARCH"
   ;;
@@ -154,17 +212,7 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
 
-$MERTMOSES \
-  --obo-scorenbest=\`pwd\`/scorenbest \\
-  --working-dir=mert-tuning \\
-  \`pwd\`/tuning.in \\
-  \`pwd\`/tuning.ref. \\
-  \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
-  $MERTGRIDARGS \\
-  \$MERTFLAGS \\
-  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
-  || die "Mert failed"
+`cat command.mert`
 
 
 \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
