@@ -126,7 +126,7 @@ if [ "$SERIAL" = yes ]; then
 else
   MERTGRIDARGS="--jobs=$JOBS --queue-flags=' -p -200 -cwd -S /bin/bash ' "
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' -p -200 -cwd -S /bin/bash ' "
-  MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' \$MERTFLAGS -decoder ./moses"
+  MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -decoder ./moses"
 fi
 
 case "$SEARCH" in
@@ -151,7 +151,6 @@ $ZMERTMOSES \
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
-  $MERTDIR \\
   --metric=$ZMERTMETRIC --extract-sempos=$ZMERTSEMPOSSOURCE \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
