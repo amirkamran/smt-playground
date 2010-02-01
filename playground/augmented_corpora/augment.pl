@@ -562,7 +562,10 @@ sub count_lines {
   my $fn = shift;
   my $hdl = my_open($fn);
   my $nr = 0;
-  $nr++ while <$hdl>;
+  while (<$hdl>) {
+    $nr++;
+    die "$fn:$nr:Blank line." if /^\s*$/;
+  }
   close $hdl;
   return $nr;
 }
