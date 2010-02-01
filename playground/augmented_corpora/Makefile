@@ -279,6 +279,12 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
+%.factors/striplemma.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+lemma \
+	| $(STATMT)/scripts/strip_czech_lemma.pl \
+	| gzip -c > $@
+
 %.factors/lcstem4.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
