@@ -1,6 +1,12 @@
-- zkusit ceske googli gramy => na pohled vypadaji tak hnusne, ze na to kaslu
+****************
+
+zkusit ceske googli gramy => na pohled vypadaji tak hnusne, ze na to kaslu
+
+****************
+
 - zkusit wmt10 LM
 
+****************
 
 Pozorovani: 2010-01-06
 - normalizace je naprd
@@ -34,9 +40,7 @@ Mark    Count   Tag
 
 
 
-
-
-Proposed normalization:
+****************
 
 - pred analyzou:
     shouldn't  --> should not  ap.
@@ -46,9 +50,17 @@ Proposed normalization:
 
   ...> normalizace je celkem naprd
 
+****************
+
 - opravit tokenizaci aj: “well , it 's pretty close
+  --> pry opraveno
 
 - sekat pomlckova slova (polka-dot ap.)
+  --> v ramci enN4
+
+****************
+
+~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt/devel/libs/blocks/SEnglishA_to_SEnglishA/AugmentForCzech.pm
 
 - po analyze: vyrobit Engech
 
@@ -67,6 +79,7 @@ Proposed normalization:
 
   it had been made very clear to him by his superiors  --> t-normalizace cleft
 
+****************
 
 - lepsi integrace mosese a tectomt
   ... viz augmented_corpora/prep-wmt10/
@@ -84,6 +97,7 @@ Proposed normalization:
 
 
 
+****************
 2010-01-04:
 
 Mikroexperimenty:
@@ -113,11 +127,15 @@ a nove delam i exp.mert.3c95cd8c.20100105-1113, ktery kombinuje vse:
   7-gram cs+tag czeng09-ne
   7-gram cs+tag wmt09synwmt
 
+****************
 
 TODO:
 
 ? proc filtered-for-std a filtered-for-opt jsou jine?
 - exp.zmert (podle new-mertu!)
+
+****************
+
 - porovnat 15.59 a 15.36 rucne
     ./qj biglms-plus-newslm 15.36 15.59
       -> BLEU zatim ve shode se mnou: pridat navic LM jen podle news je horsi
@@ -155,6 +173,7 @@ badneg  1       sys2, 13.43
 -> zkusim:
    - pridat navic news LM: exp.mert.bbd03f9e.20100106-1738 => 15.36
    - zamenit 4gr synwmt09 za 6gr synwmt: 9a1eb7bc.20100106-1743
+       ... porad pada, casto konflikti a chybi pamet...
    - rucne oznacit spatna cisla: exp.model.rulebasedpen.20100106-1820
                        a k nemu  exp.mert.c8f318f6.20100106-2232
      bude treba rucne porovnat: ./qj rulebasedpen 15.59 15.40
@@ -192,6 +211,8 @@ ale preventivne delam i vlastni:
   exp.rm.24bfd374.20100106-1836/log
 
 Uz mam nastrel mertu: exp.mert.80616a9a.20100106-2357
+  Vysel 13.31±0.49
+
 Kontrastivni experimenty jsou:
 !! pozor, uzivaji jiny alignment !!
   -> zkousim novy exp.mert.593af801.20100107-0103 = dobehl: 13.04
@@ -216,8 +237,8 @@ Rozdily nejsou moc patrne, ale 11.05 a 13.04 vypadaji kapinku lepe. Cili bud
 generovat plne lingvisticky, nebo aspon generovat, ale velky LM na tagach spis
 mate.
 
-Zkousim lingvisticky model (13.04) nafouknout na vetsi data:
-  exp.mert.014b28bc.20100108-1041
+****************
+
 
 Rucni vyhodnoceni vetsich dat vs. chytrejsiho modelu nahrava vetsim datum:
 12:49 tauri4 playground$./qj bigdata_vs_lingv 15.59 13.04
@@ -232,15 +253,58 @@ Mark    Count   Tag
 **      1       sys2, 13.04
 
 
-Taky zkousim vetsi data v alignmentu lcstem4 misto lemma.
+****************
 
+
+Taky zkousim vetsi data v alignmentu lcstem4 misto lemma.
+...dle bleu nepatrne horsi: 15.31 misto 15.59
+
+
+
+****************
 
 
 
 
 Velikost troptu:
-srovnej: 13.04±0.46 593af801.20100107-0103 vs. exp.mert.8d725a8c.20100108-0130
+srovnej:
+bleu      	tag                   	tropts	iteraci	lastdevbleu
+13.04±0.46	593af801.20100107-0103	dflt  	     26	   0.139578
+12.93±0.45	8d725a8c.20100108-0130	    50	     21	   0.139422
+13.11±0.46	233a5697.20100110-0017	   100	     17	   0.138894
+13.13±0.46	73391742.20100112-0034	   200	     11	   0.137738
+          	e9c0b9f8.20100114-0110	   400	       	
+
 podle casu, bleu i rucne
+00:32 tauri4 playground$./qj troptsize 13.04 12.93 13.11
+The evaluation called troptsize already exists, interpreting:
+Mark    Count   Tag
+*       4       sys3, 13.11
+*       3       sys1, 13.04
+-       1       sys1, 13.04
+-       1       sys3, 13.11
+-       1       sys2, 12.93
+
+****************
+
+Srovnavam ruzna generovani zase rucne:
+01:23 tauri6 playground$./qj tropt200-vs-dflt-vs-phrasebased  13.04 13.13 13.42
+The evaluation called tropt200-vs-dflt-vs-phrasebased already exists, interpreting:
+Mark    Count   Tag
+*       4       sys2, 13.13
+**      3       sys1, 13.04
+-       2       sys1, 13.04
+*       2       sys1, 13.04
+**      2       sys3, 13.42
+**      1       sys2, 13.13
+*       1       sys3, 13.42
+-       1       sys2, 13.13
+-       1       sys3, 13.42
+Zase trochu loterie, ale rekl bych, ze generovani je malilinko lepsi.
+
+
+
+****************
 
 
 
@@ -249,7 +313,19 @@ Problemy:
   ? dalo by se proti tomu bojovat slovnima tridama, resp. redukci zdrojoveho slovniku (enredvoc, viz ~bojar/diplomka/granty/hindi/statmt/projects/enhi/tools/more-factors-for-augmented-corpora/Makefile)
 
 
-nezvladam natrenovat generovaci model na velkych datech (dosel disk)
+****************
+
+Zkousim lingvisticky model (13.04) nafouknout na vetsi data:
+  exp.mert.950c2036.20100114-1110
+  (tm se povedlo natrenovat az na cosmosu a dost volnym diskem)
+
+ted ten tm rucne profiltrovavam, viz exp.tm.e6cb4fa1.20100114-1124/test*
+
+****************
+
+ruzna vyhodnoceni lingv. modelu
+
+
 vetsi data jsou asi lepsi nez generovaci model na malych datech:
   ./qj lingvrun19-vs-best 8d725a8c.20100108-0130/19 15.59
   The evaluation called lingvrun19-vs-best already exists, interpreting:
@@ -259,6 +335,56 @@ vetsi data jsou asi lepsi nez generovaci model na malych datech:
   -       2       sys2, 15.59
   *       2       sys1, 8d725a8c.20100108-0130/19
   **      1       sys1, 8d725a8c.20100108-0130/19
+
+
+Dalsi evaluace, tentokrat proti (jeste nedotrenovanemu) modelu s generovanim
+podle synu. Vypada to nadejne, i kdyz to jeste neni jiste:
+
+11:05 tauri4 playground$./qj lingv_small_vs_big_gen_run9 2ca3afb8.20100111-1356/9 13.31.0.49
+The evaluation called lingv_small_vs_big_gen_run9 already exists, interpreting:
+Mark    Count   Tag
+*       5       sys2, 13.31.0.49
+**      3       sys1, 2ca3afb8.20100111-1356/9
+*       2       sys1, 2ca3afb8.20100111-1356/9
+**      1       sys2, 13.31.0.49
+
+
+Ted do te evaluace pridam jeste konfiguraci o 4 iterace dal, bohuzel se ukazuje silena citlivost, a asi i riziko pretrenovani:
+
+experiment: 2ca3afb8.20100111-1356
+iterace	devbleu 	evalbleu
+      9	0.136109	12.83±0.45
+     13	0.137266	11.75±0.39
+
+a rucne:
+
+16:34 tauri8 playground$./qj lingv_small_vs_big_gen_run9_and_13 13.31.0.49 2ca3afb8.20100111-1356/9 2ca3afb8.20100111-1356/13
+The evaluation called lingv_small_vs_big_gen_run9_and_13 already exists, interpreting:
+Mark    Count   Tag
+*       4       sys2, 2ca3afb8.20100111-1356/9
+*       2       sys1, 13.31.0.49
+neg     1       sys3, 2ca3afb8.20100111-1356/13
+-       1       sys3, 2ca3afb8.20100111-1356/13
+**      1       sys2, 2ca3afb8.20100111-1356/9
+neg     1       sys1, 13.31.0.49
+**      1       sys1, 13.31.0.49
+
+ano, koreluje to s evalbleu. Ale evalbleu nekoreluje s devbleu :-(((
+
+****************
+
+Spatna stabilita mertu:
+
+A jeste navic i to generovani podle synu ma mert nestabilni:
+Toto jsou dva konfiguraci identicke experimenty:
+13.00±0.43  exp.mert.bfb55836.20100114-0130
+13.31±0.49  exp.mert.80616a9a.20100106-2357
+
+Zkousim spustit experiment zalozeny na rucne profiltrovanych ttablech:
+  exp.mert.449998c5.20100118-1302, zalozen na 13.31+-0.49
+
+
+****************
 
 Srovnej s Googlem!
 ...prohravam:14:21 tauri4 playground$./qj goog_vs_best GOOG 15.59
@@ -271,6 +397,24 @@ Mark    Count   Tag
 -       1       sys2, 15.59
 Ale rada vet je opravdu spornych...
 
+Srovnej s Googlem a TectoMT
+(tectomt spoustim zde: /home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt/devel/evaluation/en2cs
+
+23:49 tauri4 playground$./qj goog_tectomt_vs_best GOOG  TMT0112-test-with-resplitting 15.59
+The evaluation called goog_tectomt_vs_best already exists, interpreting:
+Mark    Count   Tag
+*       5       sys1, GOOG
+*       4       sys3, 15.59
+blank   3       sys2, TMT0112-test-with-resplitting
+-       3       sys3, 15.59
+-       2       sys2, TMT0112-test-with-resplitting
+*       1       sys2, TMT0112-test-with-resplitting
+**      1       sys2, TMT0112-test-with-resplitting
+
+
+
+
+****************
 
 
 Rucne sestav model s generovanim podle synu!
@@ -280,4 +424,554 @@ Rucne sestav model s generovanim podle synu!
     exp.gm.9857c86f.20100111-1345
   Vysledny model: exp.model.syngen1.20100111-1348
     a k nemu mert: exp.mert.2ca3afb8.20100111-1356
+
+
+****************
+
+
 Zkombinuj s googlem a s tectomt.
+
+Zdenek v mailu z 12.1. pise, ze ukazkovy soubor je:
+/net/os/h/zabokrtsky/tectomt/devel/training/mt_combination/lattice/lattice.tmp.frozen
+
+
+****************
+
+
+filtrace ttablu:
+- hodne pomuze v rychlosti
+- moc nezkazi bleu
+
+srovnej
+bleu      	model                 	iteraci	mert wallclock
+15.59±0.49	230bbc39.20100105-1815	     11	7h01m37s
+15.32±0.48	1c83954d.20100114-1745	      7	3h27m27s
+
+rucni srovnani:
+01:35 tauri4 playground$./qj filtrace_velkeho 15.59 15.32.0.48
+The evaluation called filtrace_velkeho already exists, interpreting:
+Mark    Count   Tag
+*       11      sys1, 15.59
+*       8       sys2, 15.32.0.48
+badnum  3       sys1, 15.59
+-       3       sys1, 15.59
+**      2       sys1, 15.59
+neg     2       sys2, 15.32.0.48
+**      2       sys2, 15.32.0.48
+-       2       sys2, 15.32.0.48
+numok   1       sys2, 15.32.0.48
+neg     1       sys1, 15.59
+badnum  1       sys2, 15.32.0.48
+lostnum 1       sys2, 15.32.0.48
+
+- vychazi to hodne stejne, nelze rozhodnout.
+- implmentuj primo do exp.tm s pouzitim augmented corpora, protoze uspora casu
+  za to stoji TODO
+
+
+****************
+
+
+t-atributy na a-rovine
+
+zakladni kontrastivni experiment bude proste pridat tag:
+exp.mert.3a62b547.20100113-0020  na malych datech (vybudovan podle 13.43)
+   ---> srovnej s 13.22
+   13:07 tauri4 playground$./qj double_neg_small_data 13.43 13.22
+   The evaluation called double_neg_small_data already exists, interpreting:
+   Mark    Count   Tag
+   *       5       sys2, 13.22
+   negbad  2       sys1, 13.43
+   *       2       sys1, 13.43
+   negok   2       sys2, 13.22
+   negok   1       sys1, 13.43
+   negbad  1       sys2, 13.22
+   ...videl jsem ale asi 10 vet s 'no', kde uz ted to ten model delal
+   dobre, a zadnou vetu, kde by vubec ta negace mohla pomoct
+   --- ovsem zda se, ze nepatrne lepe si vede system, ktery preklada s ohledem
+       na vstupni tag
+
+Prvni varianta vylepseneho tagu: viz exp.mert.2d752fe9.20100113-1555: 13.30±0.43
+  Kazdpadne ted zkousim exp.mert.278b5066.20100114-0931/log, protoze minuly
+  pokus v 1 z 10 vlaken lehl.
+
+Porovnam je ted rucne:
+./qj enN4_prvni_test 13.30 13.22 13.42
+TODO - a take posud, jake dalsi jevy pridat, napr. there is a shodu vztazne vety
+
+
+A take to rovnou zkusim s velkym generovacim modelem, ale neco jsem zprasil:
+  viz mert exp.mert.bfb55836.20100114-0130, ktery je nejak vytuhly
+  (on se totiz velky generovaci model sam nepostavi...)
+
+na velkych datech (vybudovan podle 15.59 resp exp.mert.950c2036.20100114-1110):
+  exp.mert.92724b68.20100114-1127 (restartuj, az to dobehne)
+  !! nutno binarizovat phrasetably
+
+zkusim nasledujici modely filtrovat:
+13.30±0.43 2d752fe9.20100113-1555 (mala data)
+            --> novy tm bude exp.tm.20de8944.20100118-1800..hotovo
+	    --> mert: exp.mert.0ebe940f.20100118-1913
+FAILED     92724b68.20100114-1127 (velka data)
+            --> novy mert: exp.mert.f5bbc1be.20100118-1815 z rucne postaveneho
+	        nestaci mu pamet, likviduju
+	        ---> zkousim exp.mert.9a977292.20100119-1442 s binlm
+
+jeste nejaky zahadny tm: velka data pro enN4
+            --> novy tm bude exp.tm.3f815693.20100118-1802, ktery se generuje asi z ciste vody
+
+****************
+
+taky je moznost prekladat nouzove do ceskeho lemmatu!
+
+
+****************
+
+Missing and extra ngrams v 15.59:
+
+Top 30 extra 2-grams are:
+182     , že
+110     , které
+99      , a
+98      , který
+97      , aby
+72      , která
+71      je to
+66      , ale
+59      , v
+56      , je
+54      , "
+52      to je
+44      , když
+37      . "
+37      , jako
+36      , jak
+34      , co
+32      to ,
+31      může být
+31      aby se
+31      , protože
+30      a to
+29      že se
+29      , se
+29      , s
+28      . .
+28      , kteří
+28      " ,
+26      " řekl
+26      " .
+
+Top 30 missing 2-grams are:
+114     , že
+80      , který
+76      , které
+76      , a
+76      , aby
+66      , která
+50      to ,
+46      , v
+45      , co
+40      , je
+37      se v
+34      , jak
+33      že se
+31      , se
+31      " .
+31      , "
+29      by se
+28      , než
+28      , na
+27      tím ,
+26      , kterou
+24      . "
+24      " ,
+23      , což
+23      co se
+23      , kdy
+22      se na
+22      k tomu
+22      , když
+22      , ale
+
+...cili problemy:
+- s resolvovanim vztazne vety
+- there is
+
+
+*************
+
+zkousim filtraci lingtm, zatim rucne:
+mala data: exp.tm.rucnelingv.20100118-1251
+
+velka data: /home/bojar/diplomka/granty/emplus/wmt10/playground/exp.tm.e6cb4fa1.20100114-1124/test
+  dofiltrovano. vyrobim exp.tm.rucnelingvbig.20100118-1744
+  a pak pouziju exp.mert.92724b68.20100114-1127 jako zaklad
+  --> exp.mert.e0d893a1.20100118-1753
+
+*************
+
+plan paralelizace filtrovani ttablu:
+- havaroval na tom, ze zwc --estimate je extremne nespolehlivy na
+  zkomprimovanych souborech, specialne ttablech (ktere obcas kompresi vyrostou)
+
+*************
+
+zkus v 13.43 nahradit gdfa prostym gdf, alignment prave bezi
+---> exp.mert.b30a0a54.20100120-1516
+a podobne v 15.59
+---> exp.mert.e4f2f65b.20100120-1518
+
+*************
+
+zkousim taky novy mert exp.mert.0f282a20.20100119-1741
+  podle 15.59, ale i techdoc, a na cosmosu
+  ovsem problem, alignment neni spravne :-(
+
+
+*************
+
+Nove tectomt:
+czeng092 misto czeng09 a wmt102 misto wmt10
+exp.mert.08356f85.20100120-1520
+a jeste tri dalsi
+
+****************
+
+zkousim constraint decoding:
+~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/moses-constraint/moses-cmd/src/moses -f filtered-for-eval-opt/moses.ini -i evaluation.in -search-algorithm 0  -constraint evaluation.ref.0
+
+z celkoveho poctu 2525 vet:
+
+BLEU 	exp 	distortion-limit,trans-opt-per-coverage[default:50]	nonreachable
+ 9.94	9014	                                                  3	        2489
+ 9.94	9014	                                                  6	        2477
+ 9.94	9014	                                                 10	        2470
+ 9.94	9014	                                                 30	        2464
+ 9.94	9014	                                                 40	        2464
+ 9.94	9014	10,500                                             	        2470
+ 9.94	9014	30,500                                             	        2464	0.1 sec/sent
+15.59	230b	                                                  3	        2437
+15.59	230b	                                                  6	        2403
+15.59	230b	                                                 10	        2389
+15.59	230b	10,500                                             	        2389
+15.59	230b	                                                 20	        2375
+15.59	230b	                                                 30	        2375
+15.59	230b	                                                 40	        2375
+
+
+Tzn. dosazitelnost vet je cca 2% s malym a necelych 5% s velkym modelem.
+Proti anglicke dosazitelnosti ~10% tedy dost bida.
+
+Zkousim to na lemata:
+/home/bojar/diplomka/granty/emplus/wmt10/playground/exp.mert.c1d10cda.20100129-2244/constr*
+
+dl	BEST	NO
+ 3	  68	2457
+ 6	  99	2426
+10	 117	2408
+30	 129	2396
+40	 129	2396
+
+A i do anglictiny:
+exp.mert.d7b040f5.20100126-1845/constr*
+
+  	BEST	NO
+ 3	  44	2481
+ 6	  56	2469
+10	  59	2466
+30	  61	2464
+40	  61	2464
+
+Souhrn:
+
+Distortion    	->cs	->cs 	->csLEM	->en
+             3	2489	 2437	   2457	 2481
+             6	2477	 2403	   2426	 2469
+            10	2470	 2389	   2408	 2466
+            30	2464	 2375	   2396	 2464
+            40	2464	 2375	   2396	 2464
+Parallel sents	126k	6M   	126k   	126k
+BLEU          	9.94	15.59	(16.94)	15.38
+
+Distortion    	->cs	->cs 	->csLEM	->en
+             3	 1.4	  3.5	    2.7	  1.7
+             6	 1.9	  4.8	    3.9	  2.2
+            10	 2.2	  5.4	    4.6	  2.3
+            30	 2.4	  5.9	    5.1	  2.4
+            40	 2.4	  5.9	    5.1	  2.4
+Parallel sents	126k	6M   	126k   	126k
+BLEU          	9.94	15.59	(16.94)	15.38
+
+Jeste proverim constraint na trenovacich datech:
+exp.mert.90144185.20100121-1256
+
+03:18 tauri4 exp.mert.90144185.20100121-1256$lcat constr* | grep 'BEST TRA' | cut -d' ' -f1 | grp --keys=1,2 --items=ALL | list2tab 1 2 3 | tt | tabrecalc 'COL1-\tEVAL COL2+COL3LAVE\tEVAL COL2/(COL2+COL3)*100 LAVE' | sed 's/^.*-dl//; s/\.[^     ]*//' | tt | numsort 1 --skip=1
+.
+Hodnoty: BEST,NO
+   	BEST	NO 	0   	
+3  	1301	699	2000	65.05
+6  	1329	671	2000	66.45
+10 	1508	492	2000	75.4
+30 	1699	301	2000	84.95
+40 	1704	296	2000	85.2
+60 	1704	296	2000	85.2
+100	1704	296	2000	85.2
+
+
+03:38 tauri4 exp.mert.90144185.20100121-1256$lcat constr* | grep 'BEST TRA' | cut -d' ' -f1 | grp --keys=1,2 --items=ALL | list2tab 1 2 3 | tt | tabrecalc 'COL1-\tEVAL COL2+COL3LAVE\tEVAL COL2/(COL2+COL3)*100 LAVE' | sed 's/^.*-dl//; s/\.[^     ]*//' | tt | numsort 1 --skip=1 | grep 2000| cut -f 1,5 | pickre --re='-ttl([0-9]+)'
+......
+Hodnoty: BEST,NO
+10      3-ttl10         64.2
+100     3-ttl100        65.7
+20      3-ttl20         65.05
+50      3-ttl50         65.7
+500     3-ttl500        65.7
+        3               65.05
+10      6-ttl10         65.2
+100     6-ttl100        67.55
+20      6-ttl20         66.45
+50      6-ttl50         67.55
+500     6-ttl500        67.55
+        6               66.45
+10      10-ttl10        73.55
+100     10-ttl100       77.2
+20      10-ttl20        75.4
+50      10-ttl50        77.2
+500     10-ttl500       77.2
+        10              75.4
+10      30-ttl10        82.65
+20      30-ttl20        84.95
+        30              84.95
+10      40-ttl10        82.9
+20      40-ttl20        85.2
+        40              85.2
+10      60-ttl10        82.9
+20      60-ttl20        85.2
+        60              85.2
+        100             85.2
+
+
+
+
+Generovani pokusu:
+for i in 6 10 30 40; do qsubmit --jobname constr-train-dl$i "~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/moses-constraint/moses-cmd/src/moses -f filtered-for-training/moses.ini -i training.in -search-algorithm 0  -constraint training.ref -dl $i"; done
+
+Souhrn pokusu:
+lcat constr* | grep 'BEST TRA' | cut -d' ' -f1 | grp --keys=1,2 --items=ALL | list2tab 1 2 3 | tt
+
+Souhrn casu:
+lcat constr* | grep 'Search took'   | tr ' ' '\t' | grp --keys=1 --items=AVG4 | tt
+
+
+
+Zkousim totez i na slozity generovaci model:
+13.31±0.49	exp.mert.80616a9a.20100106-2357
+12.07±0.45	exp.mert.2ca3afb8.20100111-1356	...ma navic generovaci model SYNu
+
+  ~bojar/diplomka/granty/emplus/wmt10/playground/exp.mert.2ca3afb8.20100111-1356/qsubmit.o736979
+  ~bojar/diplomka/granty/emplus/wmt10/playground/exp.mert.2ca3afb8.20100111-1356/qsubmit.o737013
+
+Ten generovaci:
+factored, default trans-opt-per-span   31/524   (7 minutes/sentence)
+...tgt OOV of the generation table alone is: 1.1\%
+    Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+    Training set: 5102007 sents, 3265695 unique 1-grams, 5102007 total 1-grams
+    OOV 1-gram types	439	2.8 %
+    OOV 1-gram tokens	601	1.1 %
+    13	Hypo
+    12	Héma
+    11	Eatonville
+    7	Eatonvillu
+    6	Járóková
+    6	Décaryová
+    5	Kubatov
+    5	2,5
+    5	Illhaeusern
+    4	Mercandelli
+    4	0,1
+    4	Trerise
+    4	Jövőért
+    4	Jobb
+
+...tgt OOV of the direct translation table (not the tgt corpus) is: 9.1
+    Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+    Training set: 794212 sents, 62900 unique 1-grams, 1827334 total 1-grams
+    OOV 1-gram types        4067    26.4 %
+    OOV 1-gram tokens       5080    9.1 %
+
+
+
+The parameters that constrain translation option collection search:
+  
+-translation-option-threshold                                0.0f
+-max-partial-trans-opt      DEFAULT_MAX_PART_TRANS_OPT_SIZE  10000
+-persistent-cache-size      DEFAULT_MAX_TRANS_OPT_CACHE_SIZE 10000
+-max-trans-opt-per-coverage DEFAULT_MAX_TRANS_OPT_SIZE       50   
+
+
+
+
+****************
+
+Prave jsem implementoval OOV test:
+
+Takto ho spustis na zdrojovou stranu korpusu:
+zcat ../exp.tm.ddbcd7ca.20091216-0207/corpus/corpus.src.gz | ../tools/oov.pl evaluation.in
+Test set: 2525 sents, 9402 unique 1-grams, 65811 total 1-grams
+Training set: 126144 sents, 64771 unique 1-grams, 2883175 total 1-grams
+OOV 1-gram types        1586    16.9 %
+OOV 1-gram tokens       2350    3.6 %
+
+...cili pouze 3.6% vstupnich anglickych slov je neznamych
+
+Takto ho spustis na cilovou stranu korpusu:
+zcat ../exp.tm.ddbcd7ca.20091216-0207/corpus/corpus.tgt.gz | ../tools/oov.pl evaluation.ref.0
+Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+Training set: 126144 sents, 138690 unique 1-grams, 2649830 total 1-grams
+OOV 1-gram types        2977    19.3 %
+OOV 1-gram tokens       3720    6.7 %
+
+
+Takto ho spustis na cilovou stranu ttablu:
+cat filtered-for-eval-opt/phrase-table.0-0.1  | sed 's/|||/        /g' | cut -f2  | tr ' ' '\n' | sort -u | ../tools/oov.pl evaluation.ref.0
+Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+Training set: 62897 sents, 62896 unique 1-grams, 62896 total 1-grams
+OOV 1-gram types        4067    26.4 %
+OOV 1-gram tokens       5080    9.1 %
+
+... prechodem od korpusu k ttablu se problem celkem citelne zhorsi.
+
+Totez zkousim na velky model: exp.mert.230bbc39.20100105-1815, viz bigsrc.* (ten druhy ovsem pocita tgt!)
+
+zdrojova strana:
+Test set: 2525 sents, 9402 unique 1-grams, 65811 total 1-grams
+Training set: 6103175 sents, 594619 unique 1-grams, 75219924 total 1-grams
+OOV 1-gram types        645     6.9 %
+OOV 1-gram tokens       981     1.5 %
+21      Eatonville
+13      Gebrselassie
+12      Barrick
+8       BSkyB
+8       ITV
+8       Héma-Québec
+7       bed-space
+7       Garci
+7       Charest
+7       Zuschlag
+6       Randle
+6       Kubatov
+6       Hasina
+6       Brunetta
+
+
+cilova strana:
+Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+Training set: 6103175 sents, 855743 unique 1-grams, 66091100 total 1-grams
+OOV 1-gram types        942     6.1 %
+OOV 1-gram tokens       1252    2.2 %
+15      Québeku
+12      Héma
+12      Barrick
+11      Eatonville
+10      Hurstonové
+10      Gebreselassie
+9       ČTÚ
+9       Hurstonová
+8       BSkyB
+8       ITV
+
+
+Bigramy na zdrojove strane (mala data):
+Test set: 2525 sents, 39094 unique 2-grams, 63286 total 2-grams
+............Done.
+Training set: 126144 sents, 751072 unique 2-grams, 2757031 total 2-grams
+OOV 2-gram types        16297   41.7 %
+OOV 2-gram tokens       17710   28.0 %
+
+
+Divam se take na cilovou stranu a bigramy:
+...to je citelne horsi nez anglictina
+
+mala data:
+Test set: 2525 sents, 41860 unique 2-grams, 53290 total 2-grams
+Training set: 126144 sents, 1174759 unique 2-grams, 2523686 total 2-grams
+OOV 2-gram types        24661   58.9 %
+OOV 2-gram tokens       25760   48.3 %
+12      Héma -
+10      Barrick Gold
+10      - Québec
+10      extra place
+10      Hypo real
+8       deka -
+8       virtuálního operátora
+7       Open office
+6       Paul Newman
+6       Avalon Bay
+6       čase 2
+6       v Québeku
+6       virtuální operátor
+5       mobilní operátoři
+5       muset vzdát
+5       mobilní trh
+5       milionů forintů
+5       » .
+5       - bank
+5       Noir Canada
+5       virtuálních operátorů
+5       Québeku .
+5       za jednolůžkový
+5       jednolůžkový pokoj
+4       přenosných hudebních
+4       v Bavorsku
+4       odvětvích zpracovatelského
+4       " flamenco
+
+
+
+big dataset:
+en	1	Test set: 2525 sents, 9402 unique 1-grams, 65811 total 1-grams
+en	1	Training set: 6103175 sents, 594619 unique 1-grams, 75219924 total 1-grams
+en	1	OOV 1-gram types	645	6.9 %
+en	1	OOV 1-gram tokens	981	1.5 %
+en	2	Test set: 2525 sents, 39094 unique 2-grams, 63286 total 2-grams
+en	2	Training set: 6103175 sents, 6374544 unique 2-grams, 69116749 total 2-grams
+en	2	OOV 2-gram types	8206	21.0 %
+en	2	OOV 2-gram tokens	8791	13.9 %
+en	3	Test set: 2525 sents, 54850 unique 3-grams, 60762 total 3-grams
+en	3	Training set: 6103175 sents, 19947146 unique 3-grams, 63085230 total 3-grams
+en	3	OOV 3-gram types	28435	51.8 %
+en	3	OOV 3-gram tokens	29047	47.8 %
+en	4	Test set: 2525 sents, 56788 unique 4-grams, 58242 total 4-grams
+en	4	Training set: 6103175 sents, 31564115 unique 4-grams, 57459238 total 4-grams
+en	4	OOV 4-gram types	45672	80.4 %
+en	4	OOV 4-gram tokens	46093	79.1 %
+cs	1	Test set: 2525 sents, 15409 unique 1-grams, 55815 total 1-grams
+cs	1	Training set: 6103175 sents, 855743 unique 1-grams, 66091100 total 1-grams
+cs	1	OOV 1-gram types	942	6.1 %
+cs	1	OOV 1-gram tokens	1252	2.2 %
+cs	2	Test set: 2525 sents, 41860 unique 2-grams, 53290 total 2-grams
+cs	2	Training set: 6103175 sents, 11067630 unique 2-grams, 59987925 total 2-grams
+cs	2	OOV 2-gram types	15291	36.5 %
+cs	2	OOV 2-gram tokens	15841	29.7 %
+cs	3	Test set: 2525 sents, 48117 unique 3-grams, 50766 total 3-grams
+cs	3	Training set: 6103175 sents, 25830941 unique 3-grams, 53962392 total 3-grams
+cs	3	OOV 3-gram types	34734	72.2 %
+cs	3	OOV 3-gram tokens	35155	69.2 %
+cs	4	Test set: 2525 sents, 47673 unique 4-grams, 48246 total 4-grams
+cs	4	Training set: 6103175 sents, 32507525 unique 4-grams, 48443035 total 4-grams
+cs	4	OOV 4-gram types	43198	90.6 %
+cs	4	OOV 4-gram tokens	43432	90.0 %
+
+Training sentences: 6103175
+Test sentences: 2525
+
+  	Training	      	Test 	     	$n$-grams Out of Vocabulary	      	      	      	
+  	Toks    	Voc   	Toks 	Voc  	                          1	     2	     3	     4	
+en	75219924	594619	65811	 9402	1.5\%                      	13.9\%	47.8\%	79.1\%	
+cs	66091100	855743	55815	15409	2.2\%                      	29.7\%	69.2\%	90.0\%	
+
+;Training;;Test;;$n$-grams Out of Vocabulary;;;;
+;Toks;Voc;Toks;Voc;1;2;3;4;
+en;75219924;594619;65811;9402;1.5%;13.9%;47.8%;79.1%;
+cs;66091100;855743;55815;15409;2.2%;29.7%;69.2%;90.0%;
+
