@@ -245,7 +245,8 @@ sub traceback {
   foreach my $kwfile (@keywordfile) {
     push @kws, $kwfile if -e $exp."/$kwfile";
   }
-  print "$prefix|  | Job: @kws\n";
+  my $tag = `cat $exp/TAG 2>/dev/null`; chomp $tag;
+  print "$prefix|  | Job: @kws $tag\n";
   if ($vars) {
     my $v = load($exp."/VARS");
     foreach my $l (split /\n/, $v) {
