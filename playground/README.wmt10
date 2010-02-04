@@ -975,3 +975,12 @@ cs	66091100	855743	55815	15409	2.2\%                      	29.7\%	69.2\%	90.0\%
 en;75219924;594619;65811;9402;1.5%;13.9%;47.8%;79.1%;
 cs;66091100;855743;55815;15409;2.2%;29.7%;69.2%;90.0%;
 
+**************
+
+Chyba v tokenizaci cisel:
+
+jde o pripady z PCEDT-WSJ, kde uz v originale bylo 6, 5 milionu ap.;
+viz napr.
+
+cd /home/bojar/diplomka/czeng/devel/collected-data/PCEDT_1.0/data/PTB_corpus/raw
+grep 'Bally' C*/*
