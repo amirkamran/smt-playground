@@ -1,4 +1,8 @@
-wmt10.test08	en:enN,cs:csN	norma	wmt10dev/test2008	.	# wmt10 test2008 English normalized
-wmt10.test08	en,cs	a    	wmt10dev/test2008	.	# wmt10 test2008
-wmt10.test09	en:enN,cs:csN	norma	wmt10dev/test2009	.	# wmt10 test2009 English normalized
-wmt10.test09	en,cs	a    	wmt10dev/test2009	.	# wmt10 test2009
+# 102: using a newer version of tectomt
+wmt102.test08	en:enNm	normm	wmt10dev/test2008	.	# wmt10 test2008 English normalized
+wmt102.test08	en:enN,cs:csN	norma	wmt10dev/test2008	.	# wmt10 test2008 English normalized
+wmt102.test08	en,cs:cs	a    	wmt10dev/test2008	.	# wmt10 test2008
+wmt102.test09	en:enN,cs:csN	norma	wmt10dev/test2009	.	# wmt10 test2009 English normalized
+wmt102.test09	en,cs:cs	a    	wmt10dev/test2009	.	# wmt10 test2009
+wmt102.test08	en:enN4	normaforcs	wmt10dev/test2008	.	# wmt10 test2008 English normalized and augmented for Czech
+wmt102.test09	en:enN4	normaforcs	wmt10dev/test2009	.	# wmt10 test2009 English normalized and augmented for Czech

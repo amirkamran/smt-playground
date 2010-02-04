@@ -1,0 +1,5 @@
+Normalize_plaintext::English
+SEnglishW_to_SEnglishM::Tokenization # David's better than SEnglishW_to_SEnglishM::Penn_style_tokenization
+SEnglishW_to_SEnglishM::TagMorce
+SEnglishW_to_SEnglishM::Fix_mtags
+SEnglishW_to_SEnglishM::Lemmatize_mtree

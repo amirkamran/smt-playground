@@ -1,0 +1,37 @@
+SEnglishM_to_SEnglishA::McD_parser TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2.model
+SEnglishM_to_SEnglishA::Fill_is_member_from_deprel
+SEnglishM_to_SEnglishA::Fix_tags_after_parse
+SEnglishM_to_SEnglishA::McD_parser TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2.model REPARSE=1
+SEnglishM_to_SEnglishA::Fill_is_member_from_deprel
+SEnglishM_to_SEnglishA::Fix_McD_topology
+SEnglishM_to_SEnglishA::Fix_is_member
+SEnglishM_to_SEnglishA::Fix_atree
+SEnglishM_to_SEnglishA::Fix_multiword_prep_and_conj
+SEnglishM_to_SEnglishA::Fill_afun_AuxCP_Coord
+SEnglishM_to_SEnglishA::Fill_afun
+SEnglishM_to_SEnglishA::Check_afun
+
+# further up to T-layer
+SEnglishA_to_SEnglishT::Mark_edges_to_collapse
+SEnglishA_to_SEnglishT::Mark_edges_to_collapse_neg
+SxxA_to_SxxT::Build_ttree                    LANGUAGE=English
+SxxA_to_SxxT::Fill_is_member                 LANGUAGE=English
+SxxA_to_SxxT::Move_aux_from_coord_to_members LANGUAGE=English
+#SEnglishA_to_SEnglishT::Mark_named_entities TMT_PARAM_NER_EN_MODEL=ner-eng-ie.crf-3-all2008.ser.gz # This block is superceded by SEnglishM_to_SEnglishN::Stanford_named_entities
+SEnglishA_to_SEnglishT::Fix_tlemmas
+SEnglishA_to_SEnglishT::Assign_coap_functors
+SEnglishA_to_SEnglishT::Fix_is_member
+SEnglishA_to_SEnglishT::Mark_clause_heads
+SEnglishA_to_SEnglishT::Mark_passives
+SEnglishA_to_SEnglishT::TBLa2t_phaseFx
+SEnglishA_to_SEnglishT::Mark_infin
+SEnglishA_to_SEnglishT::Mark_relclause_heads
+SEnglishA_to_SEnglishT::Mark_relclause_coref
+SEnglishA_to_SEnglishT::Mark_dsp_root
+SEnglishA_to_SEnglishT::Mark_parentheses
+SEnglishA_to_SEnglishT::Recompute_deepord
+SEnglishA_to_SEnglishT::Assign_nodetype
+SEnglishA_to_SEnglishT::Assign_grammatemes
+SEnglishA_to_SEnglishT::Detect_formeme
+SEnglishA_to_SEnglishT::Detect_voice
+SEnglishA_to_SEnglishT::Mark_person_names

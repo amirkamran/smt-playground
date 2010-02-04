@@ -11,6 +11,10 @@ STATMT ?= ../..
 PLAYGROUND ?= $(STATMT)/playground
 WORKSPACE ?= $(PLAYGROUND)/$(shell cat $(PLAYGROUND)/workspace)
 
+AUGMENT ?= ./augment.pl
+AUGMENTMAKEFILE ?= Makefile
+MAKEFILEDIR ?= ./
+
 # Use this just for debugging.
 SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
 
@@ -409,6 +413,58 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 	zcat $(CORP)/hindomor.out.gz \
 	| $(REDUCECOMBINE) - 1 \
 	| gzip -c > $@
+
+# Language generation rules:
+
+SRUNBLOCKS=~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
+JOBS?=40
+SCENDIR=./prep-wmt10/
+
+%.gz.generate_language:
+	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+	[ -e $(SCENDIR)/$(LANG).vars ]
+	set -o pipefail ; \
+	. $(SCENDIR)/$(LANG).vars ; \
+	$(AUGMENT) --dump $(CORP)/$$inlang \
+	| qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
+	    "$(SRUNBLOCKS) --errorlevel=FATAL \
+	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
+	| gzip > $*.gz \
+	&& echo "$$outinfo" > $*.info
+
+# %/enNm.gz.generate_language:
+# 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+# 	set -o pipefail ; \
+# 	inlang=en_txt ; \
+# 	scenname=en_normm ; \
+# 	outlang=enNm ; \
+# 	inattr=english_source_sentence ; \
+# 	outattr=factored_output ; \
+# 	$(AUGMENT) --dump $(CORP)/$$inlang \
+# 	| qruncmd --jobs=$(JOBS) --join --jobname=$*/$$outlang.gz \
+# 	    "$(SRUNBLOCKS) --errorlevel=FATAL \
+# 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
+# 	| gzip > $*/$$outlang.gz \
+# 	&& cp $(SCENDIR)/$$scenname.info $*/$$outlang.info
+# %/csNm.gz.generate_language:
+# 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+# 	set -o pipefail ; \
+# 	inlang=cs_txt ; \
+# 	scenname=cs_normm ; \
+# 	outlang=csNm ; \
+# 	inattr=czech_source_sentence ; \
+# 	outattr=factored_output ; \
+# 	$(AUGMENT) --dump $(CORP)/$$inlang \
+# 	| qruncmd --jobs=$(JOBS) --join --jobname=$*/$$outlang.gz \
+# 	    "$(SRUNBLOCKS) --errorlevel=FATAL \
+# 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
+# 	| gzip > $*/$$outlang.gz \
+# 	&& cp $(SCENDIR)/$$scenname.info $*/$$outlang.info
+
+%.generate_language:
+	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+	echo CALLED MAKEFILE $@; NO RULE AVAILABLE
+	exit 1
 
 # unsupervised truecasing
 TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
