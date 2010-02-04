@@ -1,0 +1,23 @@
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+set -o pipefail
+
+[ ! -z "$1" ] || die "usage: $0 exp-identifier"
+
+suffix="$2"
+
+[ ! -z "$suffix" ] || suffix=opt.txt
+
+e=`manager.pl --guess $1`
+
+[ -d $e ] || die "Not an experiment: $e"
+
+out=$e/evaluation.$suffix
+
+[ -e $e ] || die "No output available"
+
+echo $out

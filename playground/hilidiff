@@ -1,0 +1,14 @@
+#!/bin/bash
+
+e1="$1"
+e2="$2"
+
+tools/compare_translations/merge_src_ref_tst.pl \
+  `./output "$e1" in` \
+  `./output "$e1" ref.0` \
+  `./output "$e1"` \
+  `./output "$e2"` \
+| tools/compare_translations/sentence_compute.pl \
+| tools/compare_translations/sentence_sort.pl \
+| tools/compare_translations/sentence_ansi.pl \
+| less --RAW-CONTROL-CHARS
