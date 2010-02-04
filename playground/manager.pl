@@ -20,6 +20,7 @@ my $nosubmit = 0;
 my $redo = 0;
 my $cleanup = 0;
 my $guess = 0;
+my $showtag = 0;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "log" => \$log, # print experiment log in traceback mode
@@ -31,6 +32,7 @@ GetOptions(
   "redo" => \$redo, # force experiment derivation with no change using --s
   "guess" => \$guess, # just guess experiment directory
   "cleanup" => \$cleanup, # just print unused experiments
+  "showtag" => \$showtag, # show tag in traceback
   "a|avoid=s@" => \@avoid, # avoid these subexperiments
 ) or exit 1;
 
@@ -245,8 +247,11 @@ sub traceback {
   foreach my $kwfile (@keywordfile) {
     push @kws, $kwfile if -e $exp."/$kwfile";
   }
-  my $tag = `cat $exp/TAG 2>/dev/null`; chomp $tag;
-  print "$prefix|  | Job: @kws $tag\n";
+  if ($showtag) {
+    my $tag = `cat $exp/TAG 2>/dev/null`; chomp $tag;
+    push @kws, $tag if defined $tag && $tag ne "";
+  }
+  print "$prefix|  | Job: @kws\n";
   if ($vars) {
     my $v = load($exp."/VARS");
     foreach my $l (split /\n/, $v) {
