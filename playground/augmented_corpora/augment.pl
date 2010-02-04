@@ -20,11 +20,13 @@ my $AUGMENTPATH = File::Spec->rel2abs(__FILE__);
 my $basedir = dirname($AUGMENTPATH);
 my $makefile = $basedir."/Makefile";
 my $dump = 0; # print the corpus contents, not the filename
+my $lazy = 0;
 my $sa_index = 0;
 my $salm_indexer = undef;
 my $tmpdir = "/mnt/h/tmp";
 
 my @optionspecs = (
+  "lazy"=>\$lazy, # don't check number of lines, just non-emptiness
   "dump"=>\$dump,
   "d|dir=s" => \$basedir,
   "m|makefile=s" => \$makefile,
@@ -139,16 +141,35 @@ if (! -e $corpbasefile) {
 
     # construct the corpus by concatenating parts
     my $corph = my_save("$basedir/$corp/$lang.gz");
+    my $linecount = 0;
     foreach my $piece (@corppieces) {
+      print STDERR "Constructing $piece/$lang+".join("+", @usefactors)."\n";
       my $sourcefile = augment($piece, $lang, join("+", @usefactors));
       my $inh = my_open($sourcefile);
-      print $corph $_ while <$inh>;
+      while (<$inh>) {
+        $linecount++;
+        print $corph $_;
+      }
       close $inh;
     }
     close $corph;
 
+    # check or create linecount file
+    if (-e "$basedir/$corp/LINECOUNT") {
+      my $h = my_open("$basedir/$corp/LINECOUNT");
+      my $expected_linecount = <$h>;
+      chomp $expected_linecount;
+      die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+    } else {
+      my $infoh = my_save("$basedir/$corp/LINECOUNT");
+      print $infoh "$linecount\n";
+      close $infoh;
+    }
     # add the signature describing which factors are there
     my $infoh = my_save("$basedir/$corp/$lang.info");
+    print $infoh join("|", @usefactors)."\n";
+    close $infoh;
+    $infoh = my_save("$basedir/$corp/$lang.info");
     print $infoh join("|", @usefactors)."\n";
     close $infoh;
     unlock_verbose($lock); # let others know we're finished
@@ -171,21 +192,37 @@ if (! -e $corpbasefile) {
     # construct the corpus by concatenating copies
     my $corph = my_save("$basedir/$corp/$lang.gz");
     my $sourcefile = augment($corppiece, $lang, join("+", @usefactors));
+    my $linecount = 0;
     for(my $i = 0; $i<$n_copies; $i++)
     {
-        my $inh = my_open($sourcefile);
-        print $corph $_ while <$inh>;
-        close $inh;
+      my $inh = my_open($sourcefile);
+      while (<$inh>) {
+        $linecount++;
+        print $corph $_;
+      }
+      close $inh;
     }
     close $corph;
 
+    # check or create linecount file
+    if (-e "$basedir/$corp/LINECOUNT") {
+      my $h = my_open("$basedir/$corp/LINECOUNT");
+      my $expected_linecount = <$h>;
+      chomp $expected_linecount;
+      die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+    } else {
+      my $infoh = my_save("$basedir/$corp/LINECOUNT");
+      print $infoh "$linecount\n";
+      close $infoh;
+    }
     # add the signature describing which factors are there
     my $infoh = my_save("$basedir/$corp/$lang.info");
     print $infoh join("|", @usefactors)."\n";
     close $infoh;
     unlock_verbose($lock); # let others know we're finished
   } else {
-    die "Corpus not found: $corpbasefile";
+    print STDERR "Corpus not found: $corpbasefile, will try to construct.\n";
+    generate_language("$corp/$lang.gz", $basedir, $corp, $lang);
   }
 }
 my $corppathname = augment($corp, $lang, $facts);
@@ -268,6 +305,13 @@ sub augment {
   my $corpbasefile = "$basedir/$corp/$lang.gz";
   my $corp_stream = my_open($corpbasefile);
 
+  # Read expected line count
+  my $h = my_open("$basedir/$corp/LINECOUNT");
+  my $corplinecount = <$h>;
+  chomp $corplinecount;
+  close $h;
+  print STDERR "The corpus $corp/* needs to contain $corplinecount lines.\n";
+
   # Load corpus header file:
   my $headerfile = "$basedir/$corp/$lang.info";
   open INF, $headerfile or die "Can't read $headerfile";
@@ -277,7 +321,7 @@ sub augment {
 
   if (!defined $facts) {
     print STDERR "No augment wished, returning whole $corp/$lang.gz\n";
-    my_nonempty($corpbasefile);
+    validate($corpbasefile, $corplinecount);
     return $corpbasefile;
   }
 
@@ -296,14 +340,14 @@ sub augment {
   if ( scalar(@requested_factors) == keys(%defined_factor)
     && join(" ", 0..($fid-1)) eq join(" ", @requested_factors) ) {
     print STDERR "Wished exactly the full corpus, returning $corp/$lang.gz\n";
-    my_nonempty($corpbasefile);
+    validate($corpbasefile, $corplinecount);
     return $corpbasefile;
   }
 
   if (1 == scalar @requested_factors && $requested_factors[0] !~ /^[0-9]+$/) {
     my $factorpathname = construct_projection($corp, $lang, $requested_factors[0]);
     print STDERR "Just one factor wished, returning: $factorpathname\n";
-    my_nonempty($factorpathname);
+    validate($factorpathname, $corplinecount);
     return $factorpathname;
   }
 
@@ -316,9 +360,9 @@ sub augment {
   if (-e $corppathname) {
     my $lock = blocking_verbose_lock($corppathname);
     print STDERR "Corpus '$corp/$lang+$canofacts' seems ready, checking.\n";
-    unlock_verbose($lock);
-    my_nonempty($corppathname);
+    validate($corppathname, $corplinecount);
     # corpus seems ok, report corpus location
+    unlock_verbose($lock);
     return $corppathname;
   }
 
@@ -473,12 +517,23 @@ sub generate_factor {
   my $corp = shift;
   my $lang = shift;
 
-  print STDERR "Generating $factorfile in $basedir\n";
+  print STDERR "Generating factor $factorfile in $basedir\n";
   chdir($basedir) or die "Can't chdir to $basedir";
   safesystem("CORP=$corp LANG=$lang AUGMENT=\"$AUGMENTPATH\" MAKEFILEDIR=\"$MAKEFILEDIR\" AUGMENTMAKEFILE=\"$makefile\" make -f \"$makefile\" $factorfile >&2") or die "Can't make $factorfile";
   print STDERR "Finished generating $factorfile in $basedir\n";
 }
 
+sub generate_language {
+  my $corpusfile = shift;
+  my $basedir = shift;
+  my $corp = shift;
+  my $lang = shift;
+
+  print STDERR "Generating language $corpusfile in $basedir\n";
+  chdir($basedir) or die "Can't chdir to $basedir";
+  safesystem("CORP=$corp LANG=$lang AUGMENT=\"$AUGMENTPATH\" MAKEFILEDIR=\"$MAKEFILEDIR\" AUGMENTMAKEFILE=\"$makefile\" make -f \"$makefile\" $corpusfile.generate_language >&2") or die "Can't make $corpusfile";
+  print STDERR "Finished generating language $corpusfile in $basedir\n";
+}
 
 
 sub my_open {
@@ -541,6 +596,17 @@ sub safesystem {
         print STDERR "Exit code: $exitcode\n" if $exitcode;
         return ! $exitcode;
     }
+}
+
+sub validate {
+  my $corpbasefile = shift;
+  my $needlinescount = shift;
+  
+  if ($lazy) {
+    my_nonempty($corpbasefile);
+  } else {
+    ensure_linecount($corpbasefile, $needlinescount);
+  }
 }
 
 sub my_nonempty {
