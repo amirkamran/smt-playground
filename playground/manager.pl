@@ -21,11 +21,13 @@ my $redo = 0;
 my $cleanup = 0;
 my $guess = 0;
 my $showtag = 0;
+my $do_run = 1;
 GetOptions(
   "vars" => \$vars, # print experiment vars in traceback mode
   "log" => \$log, # print experiment log in traceback mode
   "debug" => \$debug,
   "n|nosubmit" => \$nosubmit,
+  "run!" => \$do_run, # do start the experiment
   "reindex!" => \$reindex, # refresh md5 sums of all experiments (defaults to 1, use --no-reindex)
   "s|substitute=s@" => \@substitute, # derive an experiment chain from existing
                           # ones using a regex: --s=/form/lc/g
@@ -115,7 +117,8 @@ if ($redo || 0 < scalar @substitute) {
         print STDERR "OLD HOLDs: $oldholds\n";
         print STDERR "HOLDs: $holds\n";
 
-        safesystem("RUN=yes HOLDS='$oldholds $holds' make $e.prep_inited") or die;
+        my $runval = $do_run ? "yes" : "no";
+        safesystem("RUN=$runval HOLDS='$oldholds $holds' make $e.prep_inited") or die;
       }
     }
     traceback("SRC ", $exp);
