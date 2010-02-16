@@ -26,6 +26,7 @@ if [ -z "$ALIAUG" ] || [ -z "$DECODINGSTEPS" ] \
   echo "And optionally:"
   echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
   echo "  \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
+  echo "  \$TRAININGFLAGS to flags for train-factored-phrase-model.perl"
   echo "And optionally for sigfiltering:"
   echo "  \$THRESHOLD to a+e, a-e of a number (see moses/sigtest-filter)"
   echo "  \$CUTOFF to phrase-table cutoff"
@@ -65,6 +66,7 @@ ALIAUG=$ALIAUG
 DECODINGSTEPS=$DECODINGSTEPS
 REORDERING=$REORDERING
 REORDFACTORS=$REORDFACTORS
+TRAININGFLAGS="$TRAININGFLAGS"
 CUTOFF=$CUTOFF
 THRESHOLD=$THRESHOLD
 KONEC
@@ -151,6 +153,7 @@ if \\
 	    --alignment=custom \\
 	    --corpus=corpus/corpus \\
 	    --f src --e tgt \\
+        $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
   && echo "Now will filter translation models" \\
   && $WORKSPACE/../tools/filter-several-phrasetables.pl \\
@@ -168,6 +171,7 @@ if \\
 	    --alignment=custom \\
 	    --corpus=corpus/corpus \\
 	    --f src --e tgt \\
+        $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
 ; then
   success=1
