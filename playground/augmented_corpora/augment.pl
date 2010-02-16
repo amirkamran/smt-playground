@@ -177,6 +177,7 @@ if (! -e $corpbasefile) {
     # add the signature describing which factors are there
     my $infoh = my_save("$basedir/$corp/$lang.info");
     my $usedfactors = $usefactors;
+    $usedfactors = $default_factors if ! defined $usedfactors;
     $usedfactors =~ s/\+/|/g; # use pipe instead of + in info files
     print $infoh "$usedfactors\n";
     close $infoh;
