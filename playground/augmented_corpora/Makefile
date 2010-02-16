@@ -425,10 +425,11 @@ SCENDIR=./prep-wmt10/
 	[ -e $(SCENDIR)/$(LANG).vars ]
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
-	$(AUGMENT) --dump $(CORP)/$$inlang \
-	| qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
+	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
 	    "$(SRUNBLOCKS) --errorlevel=FATAL \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
+	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
+	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
 	| gzip > $*.gz \
 	&& echo "$$outinfo" > $*.info
 

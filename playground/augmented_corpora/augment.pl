@@ -626,6 +626,7 @@ sub ensure_linecount {
 
 sub count_lines {
   my $fn = shift;
+  print STDERR "Counting lines of $fn.\n";
   my $hdl = my_open($fn);
   my $nr = 0;
   while (<$hdl>) {
