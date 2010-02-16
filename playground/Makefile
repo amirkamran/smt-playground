@@ -234,11 +234,11 @@ workspace:
 	&& mkdir bin \
 	&& echo `pwd`/bin > bindir.path \
 	&& cd .. \
-	&& if make -j$(JOBS) $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm ; then\
-	     make $$ws.moses; \
+	&& if make -j$(JOBS) $$ws.giza $$ws.srilm $$ws.irstlm $$ws.randlm $$ws.salm; then\
+	     make $$ws.moses && make $$ws.filterpt; \
 	   else \
 	     echo "Some prerequisites failed." ; \
-	     echo "Needed: giza srilm randlm irstlm. These succeeded: "; \
+	     echo "Needed: giza srilm randlm irstlm salm. These succeeded: "; \
 	     ls $$ws.* | sed 's/$$ws\./  /'; \
 	     exit 1; \
 	   fi \
@@ -366,6 +366,17 @@ workspace.%.salm: workspace.%
 	&& cd .. \
 	&& echo `pwd`/salm-src > salm.path
 	date > $@ # confirm our success
+
+workspace.%.filterpt: workspace.%.salm workspace.%.moses
+	ws=workspace.$* \
+	&& cd $$ws/moses/sigtest-filter \
+	&& make SALMDIR=`pwd`/../../salm-src FLAVOR=o64 \
+	&& cd ../../bin \
+	&& ln -s ../moses/sigtest-filter/filter-pt ./ \
+	&& cd .. \
+	&& echo `pwd`/moses/sigtest-filter > filterpt.path
+	date > $@ # confirm our success
+
 
 workspace.%.tmt: workspace.%
 	ws=$< \
