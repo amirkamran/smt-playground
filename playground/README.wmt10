@@ -984,3 +984,31 @@ viz napr.
 
 cd /home/bojar/diplomka/czeng/devel/collected-data/PCEDT_1.0/data/PTB_corpus/raw
 grep 'Bally' C*/*
+
+
+**************
+
+zkousim nove nasegmentovat syn*, ovsem syn2006pub ma spatne tokenizovane
+uvozovky na vstupu...
+
+**************
+
+zkusim LM, ktery bude ignorovat cisla. Spravne bych ale potreboval, aby to i
+pro neznama cisla (resp. vsechna ze vstupu) umelo vygenerovat prislusny tvar
+
+9.79±0.39	5f83a210.20100121-1257 jako zaklad
+9.95±0.42	exp.mert.e564b7e9.20100216-0005
+
+(klonuju podle 1cb3469d.20091221-1045)
+...ano, pomaha; i kdyz podle hilidiffu to tedy nijak nevidim
+
+a zkousim to i s velkym pokusem:
+
+15.25±0.47 ca7ab651.20100201-1127 zaklad
+	exp.mert.37483351.20100216-1743 novy
+
+**************
+**************
+**************
+
+

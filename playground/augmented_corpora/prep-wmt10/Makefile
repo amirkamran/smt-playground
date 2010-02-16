@@ -17,6 +17,37 @@ plaintext.%: configs.% make_all_configs.pl
 	./make_all_configs.pl --target=plaintext < $<
 	touch $@
 
+../wmt09mono:
+	# create plaintext of wmt09 monolingual czech texts
+	mkdir $@
+	ln -s /export/data/WMT-2009/training/news-train08.cz.gz $@/cs_txt.gz
+	echo untokenized > $@/cs_txt.info
+	zcat $@/cs_txt.gz | wc -l > $@/LINECOUNT
+
+TRTOK=/home/bojar/diplomka/umc/devel/tools/tokenizer/trainable_tokenizer
+../syn200x:
+	# create plaintext of syn2000, 2005 and 2006pub monolingual czech texts
+	mkdir $@
+	# first the 2006, which is in utf-8
+	ls /home/bojar/NEZALOHOVANE/SYN2006pub/hajic/*.gz \
+	| qruncmd --jobname=syn2006 --jobs=$(JOBS) \
+	    'autocat --filelist=- | csts_stream_to_plaintext_stream.pl | remove_blank_lines' \
+	| gzip -c > $@/cs_unseg.gz
+	# now the 200[05], in windows-1250
+	ls /net/data/CNK-SYN/syn2000/in/*.gz \
+	   /net/data/CNK-SYN/syn2005/in/*.gz \
+	| qruncmd --jobname=syn2000_5 --jobs=$(JOBS) \
+	    "autocat --filelist=- | iconv -f windows-1250 -t utf-8 | perl -pne 's/\r//g; s/&doc;/\n/g; s/$$/\n/g;' | remove_blank_lines" \
+	| gzip -c >> $@/cs_unseg.gz
+	# now tokenize
+	qruncmd --jobname=synsegment --jobs=$(JOBS) \
+	    '$(TRTOK) data-cs --detokenize --group=line | remove_blank_lines' \
+	    $@/cs_unseg.gz \
+	| gzip -c > $@/cs_txt.gz
+	echo untokenized > $@/cs_txt.info
+	zcat $@/cs_txt.gz | wc -l > $@/LINECOUNT
+
+
 analyze.%: configs.% make_all_configs.pl
 	./make_all_configs.pl < $<
 	touch $@

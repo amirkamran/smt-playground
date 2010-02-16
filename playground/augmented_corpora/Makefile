@@ -416,6 +416,18 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 
 # Language generation rules:
 
+%_idali.gz.generate_language:
+	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+	inlang=`echo $(LANG) | sed 's/_idali//'` ; \
+	set -o pipefail ; \
+	qruncmd --jobs=$(JOBS) --join --jobname=$*_idali.gz \
+	    "./make_identity_ali.pl " \
+	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
+	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
+	| gzip > $*_idali.gz \
+	&& echo "ali" > $*_idali.info
+
+
 SRUNBLOCKS=~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
 JOBS?=40
 SCENDIR=./prep-wmt10/
@@ -504,6 +516,12 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 	| $(REDUCECOMBINE) - 0 \
 	| gzip -c > $@
 
+%.factors/stcnums.gz:
+	# simplify numbers of supervised truecased
+	[ -x $(REDUCECOMBINE) ]
+	./augment.pl --dump $(CORP)/$(LANG)+stc \
+	| ./simplify_numbers.pl \
+	| gzip -c > $@
 
 TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 # hardwired rule just to keep track how the lexicon was collected
