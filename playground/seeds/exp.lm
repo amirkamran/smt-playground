@@ -69,9 +69,12 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
-renice 10 \$\$
 
+mydir=\`pwd\`
+
+renice 10 \$\$
 function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+set -o pipefail
 
 export TMP=/mnt/h/tmp
 
