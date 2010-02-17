@@ -47,9 +47,10 @@ fi
 if [ "$MERTPRG" == zmert ]; then
   [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS 
   ZMERTMETRICTAG=$ZMERTMETRIC
-  if [ "$ZMERTMETRIC" == SemPOS ]; then
+  if [ "$ZMERTMETRIC" == SemPOS ] || [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
     [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
     ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
+    ZMERTSEMPOSSOURCEFLAG="--extract-sempos=$ZMERTSEMPOSSOURCE"
   fi
   MERTTAG=ZMERT$ZMERTMETRICTAG
 fi
@@ -151,7 +152,7 @@ $ZMERTMOSES \
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
-  --metric=$ZMERTMETRIC --extract-sempos=$ZMERTSEMPOSSOURCE \\
+  --metric=$ZMERTMETRIC $ZMERTSEMPOSSOURCEFLAG \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
