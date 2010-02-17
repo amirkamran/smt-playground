@@ -119,7 +119,7 @@ wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
   || die "Failed to clone target corpus"
 cd ..
 
-wiseln \`../augmented_corpora/augment.pl $ALICORP/$ALIAUG\` alignment.custom.gz \
+wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
   || die "Failed to clone alignment file"
 
 alilen=\`zcat alignment.custom.gz | wc -l\`

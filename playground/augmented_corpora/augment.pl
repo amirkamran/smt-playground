@@ -21,12 +21,14 @@ my $basedir = dirname($AUGMENTPATH);
 my $makefile = $basedir."/Makefile";
 my $dump = 0; # print the corpus contents, not the filename
 my $lazy = 0;
+my $ignore_blank_lines = 0;
 my $sa_index = 0;
 my $salm_indexer = undef;
 my $tmpdir = "/mnt/h/tmp";
 
 my @optionspecs = (
   "lazy"=>\$lazy, # don't check number of lines, just non-emptiness
+  "ignore-blank-lines"=>\$ignore_blank_lines, # don't check for blank lines
   "dump"=>\$dump,
   "d|dir=s" => \$basedir,
   "m|makefile=s" => \$makefile,
@@ -640,7 +642,7 @@ sub count_lines {
   my $nr = 0;
   while (<$hdl>) {
     $nr++;
-    die "$fn:$nr:Blank line." if /^\s*$/;
+    die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
   }
   close $hdl;
   return $nr;
