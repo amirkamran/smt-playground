@@ -1005,16 +1005,22 @@ pro neznama cisla (resp. vsechna ze vstupu) umelo vygenerovat prislusny tvar
 a zkousim to i s velkym pokusem:
 
 15.25±0.47 ca7ab651.20100201-1127 zaklad
-	exp.mert.37483351.20100216-1743 novy
+	exp.mert.c0836279.20100217-1540 novy
 
 **************
 
 preklad pres lemmata:
 - zakladni experiment: 16.94±0.55 c1d10cda.20100129-2244
-- k nemu ted pripravuju expanzi lemat: exp.mert.d7a97e09.20100217-0050
-   ... mam tam ale blbe LM
+- k nemu ted pripravuju expanzi lemat: exp.mert.05714f90.20100217-1357
 
 **************
+
+takto zkousim sempos:
+
+RUN=yes MERTPRG=zmert ZMERTMETRIC=SemPOS TMT_ROOT=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2 make exp.mert.90144185.20100121-1256.restart
+...prvni bezi: exp.mert.dc2bc7ad.20100217-1428
+...zkousim paralelizovat srunblocks exp.mert.36e82062.20100217-1534
+
 **************
 **************
 **************
