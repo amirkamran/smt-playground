@@ -355,8 +355,9 @@ workspace.%.irstlm: workspace.%
 workspace.%.salm: workspace.%
 	ws=$< \
 	&& cd $$ws \
-	&& wget http://projectile.sv.cmu.edu/research/public/tools/salm/src/salm-src.tar.gz \
-	&& tar xzf salm-src.tar.gz \
+	&& echo AVOIDING wget http://projectile.sv.cmu.edu/research/public/tools/salm/src/salm-src.tar.gz \
+	&& echo AVOIDING tar xzf salm-src.tar.gz \
+	&& tar xzf ../../src/salm-src.tar.gz \
 	&& mv SALM salm-src \
 	&& cd salm-src/Distribution/Linux \
 	&& make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ] \
@@ -367,7 +368,7 @@ workspace.%.salm: workspace.%
 	&& echo `pwd`/salm-src > salm.path
 	date > $@ # confirm our success
 
-workspace.%.filterpt: workspace.%.salm workspace.%.moses
+workspace.%.filterpt:
 	ws=workspace.$* \
 	&& cd $$ws/moses/sigtest-filter \
 	&& make SALMDIR=`pwd`/../../salm-src FLAVOR=o64 \
