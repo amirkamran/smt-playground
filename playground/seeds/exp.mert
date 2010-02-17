@@ -37,6 +37,7 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$MERTPRG to mert, zmert (and hopefully new-mert later)"
   echo "  \$ZMERTMETRIC for zmert, to SemPOS, SemPOS_BLEU, BLEU, TER, BLEU-TER"
   echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 or tmt"
+  echo "  \$TMT_ROOT for zmert SemPOS TMT_ROOT"
   exit 1
 fi
 
@@ -82,6 +83,7 @@ STACK=$STACK
 MERTPRG=$MERTPRG
 ZMERTMETRIC=$ZMERTMETRIC
 ZMERTSEMPOSSOURCE=$ZMERTSEMPOSSOURCE
+TMT_ROOT=$TMT_ROOT
 KONEC
 
 # Stop here if we are just initing ourselves
@@ -197,6 +199,14 @@ renice 10 \$\$
 
 # core files limited to 1 byte
 ulimit -c 1
+
+if [ -d "$TMT_ROOT" ]; then
+  # ensuring tectomt is actually inited!
+  pushd $TMT_ROOT ||  die "Can't chdir to TMT_ROOT $TMT_ROOT"
+  . ./config/init_devel_environ.sh
+  [ "\$TMT_OK" == 1 ] || die "Failed to init TectoMT"
+  popd
+fi
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
