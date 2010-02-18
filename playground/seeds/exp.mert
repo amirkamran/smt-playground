@@ -154,7 +154,7 @@ $ZMERTMOSES \
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
-  --metric=$ZMERTMETRIC $ZMERTSEMPOSSOURCEFLAG \\
+  --metric="$ZMERTMETRIC" $ZMERTSEMPOSSOURCEFLAG \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
