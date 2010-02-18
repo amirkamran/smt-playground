@@ -209,10 +209,10 @@ if [ -d "$TMT_ROOT" ]; then
 fi
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
-echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
-export MERTFLAGS=$MERTFLAGS
-echo export MERTFLAGS=$MERTFLAGS
+export MERTFLAGS="$MERTFLAGS"
+echo export MERTFLAGS="$MERTFLAGS"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
