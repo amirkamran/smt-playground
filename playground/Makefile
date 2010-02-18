@@ -158,12 +158,14 @@ bleu:
 	./collect_bleu.pl \
 	| sed 's/BLEU.run\([0-9]*\)	/BLEU.run	\1:/' \
 	| grp --keys=1,2 --items=COLLECT3 \
+	| numsort a1 \
 	| list2tab 1 2 3 '?' \
 	| headline --prepend 'Mert or Eval' \
+	| transpose | numsort a1 | transpose \
 	| tt --utf8 \
 	> $@.`./sitename`
 	cat $@.* \
-	| recut 2,1,3,6,4,5 \
+	| recut 1,4,6,2,5,3 \
 	| numsort --skip=1 n1 \
 	| tt --utf8 \
 	> $@
@@ -408,3 +410,5 @@ clean:
 	find -ctime +3 -name 'run*.feats' -exec rm {} \;
 	find -ctime +3 -name 'run*.best*.out.gz' -exec rm {} \;
 	find -ctime +3 -name filtered-for-eval-std -exec rm -rf {} \; || true
+	find -maxdepth 2 -ctime +3 -name 'alignment.?.src' -exec rm {} \;
+	find -maxdepth 2 -ctime +3 -name 'alignment.?.tgt' -exec rm {} \;
