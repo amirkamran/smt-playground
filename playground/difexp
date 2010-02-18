@@ -4,8 +4,8 @@ tmpa=/tmp/difexp.$$.tmpa
 tmpb=/tmp/difexp.$$.tmpb
 echo "-- EXPERIMENT: $1" > $tmpa
 echo "++ EXPERIMENT: $2" > $tmpb
-if ./manager.pl "$1" --vars >> $tmpa \
-  && ./manager.pl "$2" --vars >> $tmpb; then
+if ./manager.pl "$1" --showtag --vars >> $tmpa \
+  && ./manager.pl "$2" --showtag --vars >> $tmpb; then
   diff --unified=500 $tmpa $tmpb | less -S
 fi
 rm -f $tmpa $tmpb
