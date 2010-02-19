@@ -283,6 +283,12 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
+%.factors/pluslemma.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+form+lemma+tag \
+	| $(STATMT)/scripts/construct_improved_czech_lemma.pl \
+	| gzip -c > $@
+
 %.factors/striplemma.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+lemma \
@@ -438,7 +444,7 @@ SCENDIR=./prep-wmt10/
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
 	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
-	    "$(SRUNBLOCKS) --errorlevel=FATAL \
+	    "export PML_COMPILE=2; $(SRUNBLOCKS) --errorlevel=FATAL \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
 	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
 	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
@@ -578,7 +584,8 @@ align:
 	&& $(QSUB) \
 	  $(QSUBMITFLAGS) \
 	  --jobname align.$(CORP).$$NAME \
-	  '$(STATMT)/scripts/gizawrapper.pl \
+	  '. /net/projects/SGE/user/sge_profile ; \
+	  $(STATMT)/scripts/gizawrapper.pl \
 	  `./augment.pl $(CORP)/$(SRCAUG)` \
 	  `./augment.pl $(CORP)/$(TGTAUG)` \
 	  --lfactors=0 --rfactors=0 \
