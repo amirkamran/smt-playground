@@ -46,7 +46,7 @@ TRTOK=/home/bojar/diplomka/umc/devel/tools/tokenizer/trainable_tokenizer
 	#    $@/cs_unseg.gz \
 	#| gzip -c > $@/cs_txt.gz
 	qruncmd --jobname=synsegment --jobs=$(JOBS) \
-	    '$(SRUNBLOCKS) SCzechW_to_SCzechM::TextSeg_tokenizer_and_segmenter --store-input-to=document czech_source_text czech_source_sentence --allow-many-output-bundles ' \
+	    '$(SRUNBLOCKS) SCzechW_to_SCzechM::TextSeg_tokenizer_and_segmenter --store-input-to=document czech_source_text czech_source_sentence --allow-many-output-bundles --errorlevel FATAL' \
 	    $@/cs_unseg.gz \
 	| gzip -c > $@/cs_txt.gz
 	echo untokenized > $@/cs_txt.info
