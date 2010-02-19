@@ -1,0 +1,4 @@
+Artificial_languages::CzechAT_for_ENCS
+Print::Factored
+  TMT_PARAM_PRINT_FACTORED=SCzechA
+  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output
