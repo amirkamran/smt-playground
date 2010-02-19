@@ -637,6 +637,15 @@ sub ensure_linecount {
 
 sub count_lines {
   my $fn = shift;
+  my $linecounttimestamp = $fn.".linecount_ok";
+  if (-e $linecounttimestamp && -C $fn < -C $linecounttimestamp) {
+    my $h = my_open($linecounttimestamp);
+    my $cnt = <$h>;
+    chomp $cnt;
+    die "Bad linecount in $linecounttimestamp" if $cnt !~ /^[0-9]+$/;
+    close $h;
+    return $cnt;
+  }
   print STDERR "Counting lines of $fn.\n";
   my $hdl = my_open($fn);
   my $nr = 0;
@@ -645,5 +654,8 @@ sub count_lines {
     die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
   }
   close $hdl;
+  my $outh = my_save($linecounttimestamp);
+  print $outh "$nr\n";
+  close $outh;
   return $nr;
 }
