@@ -1059,7 +1059,53 @@ MOSESFLAGS="-mbr" make exp.mert.36b04a27.20100205-1112.restart
 ...> exp.mert.b3352e64.20100218-1009/log
 
 **************
+
+preklad pres vylepsena lemata:
+ na experimentu exp.mert.a48464d9.20100219-0232 zjisti, co v generovani chybi
+ -- a ty rysy pridej, cili mezijazyk vylad podle rekonstruovatelnosti
+
 **************
+
+9.89±0.39  929165ec.20100219-1805 je preklad pres a-lemata (velky LM)
+11.04±0.40 fbbf74dd.20100219-1822 je preklad pres a-lemata s useklymi koncovkami
+                     (velky LM)
+13.43±0.45 30404fed.20100105-1204 je ~srovnatelny pokus s velkym LM
+9.79±0.39  5f83a210.20100121-1257 je ~srovnatelny pokus s malym LM
+
+**************
+
+chci zkusit preklad pres:
+czeng092-ne
+
+enNa-lemma-csX1-form-gdfa
+  ... zalozeno na exp.mert.36b04a27.20100205-1112
+  ... exp.mert.6a5bdb1c.20100219-2316
+csX1-form-csNa-lemma-gdfa
+  ... zalozeno na exp.mert.a48464d9.20100219-0232
+  ... exp.mert.41914de1.20100219-2311
+
+a taky: pres t-rovinu (zatim delam alignmenty)
+enNa-lemma-csNt-tlemma-gdfa
+... problem, jsou prazdne vety ...
+
+
+**************
+
+chcipla analyza wmt102, zde je cast vystupu:
+/a/merkur3/TMP/bojar/wmt10/playground/augmented_corpora/.qruncmd-temp-PYgpu3m9
+
+**************
+
+napadlo mne zjednoduseni generovaciho modelu.
+
+Zatim uplne male pokusy:
+form->form nebo form->lemma->form
+
+na malinkych datech:
+pres lemma:     	415d106d.20100219-2301
+pres striplemma:	336a292a.20100219-2303
+pres pluslemma: 	89073237.20100219-235
+
 **************
 **************
 **************
