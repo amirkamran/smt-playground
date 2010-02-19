@@ -40,8 +40,13 @@ TRTOK=/home/bojar/diplomka/umc/devel/tools/tokenizer/trainable_tokenizer
 	    "autocat --filelist=- | iconv -f windows-1250 -t utf-8 | perl -pne 's/\r//g; s/&doc;/\n/g; s/$$/\n/g;' | remove_blank_lines" \
 	| gzip -c >> $@/cs_unseg.gz
 	# now tokenize
+	### horribly slow and segfaults
+	#qruncmd --jobname=synsegment --jobs=$(JOBS) \
+	#    '$(TRTOK) data-cs --detokenize --group=line | remove_blank_lines' \
+	#    $@/cs_unseg.gz \
+	#| gzip -c > $@/cs_txt.gz
 	qruncmd --jobname=synsegment --jobs=$(JOBS) \
-	    '$(TRTOK) data-cs --detokenize --group=line | remove_blank_lines' \
+	    '$(SRUNBLOCKS) SCzechW_to_SCzechM::TextSeg_tokenizer_and_segmenter --store-input-to=document czech_source_text czech_source_sentence --allow-many-output-bundles ' \
 	    $@/cs_unseg.gz \
 	| gzip -c > $@/cs_txt.gz
 	echo untokenized > $@/cs_txt.info
