@@ -1023,8 +1023,7 @@ RUN=yes MERTPRG=zmert ZMERTMETRIC=SemPOS TMT_ROOT=/home/bojar/diplomka/granty/em
    ...ukecanejsi: exp.mert.0633efc2.20100218-0010
 
 A zakladni experiment se ZMERTEM na BLEU:
-  exp.mert.2d015e47.20100218-1119
-    ... segfault
+  exp.mert.34010a42.20100218-1837/log
 
 **************
 
@@ -1057,6 +1056,8 @@ MOSESFLAGS="-monotone-at-punctuation" make exp.mert.ca7ab651.20100201-1127.resta
 -mbr:
 MOSESFLAGS="-mbr" make exp.mert.36b04a27.20100205-1112.restart
 ...> exp.mert.b3352e64.20100218-1009/log
+Po zacuchani disku rucne dobehlo: 10.25±0.37
+...identicke, jako bez -mbr
 
 **************
 
