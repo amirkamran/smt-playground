@@ -644,6 +644,7 @@ sub count_lines {
     chomp $cnt;
     die "Bad linecount in $linecounttimestamp" if $cnt !~ /^[0-9]+$/;
     close $h;
+    # print STDERR "Trusting existing count $cnt for $fn.\n";
     return $cnt;
   }
   print STDERR "Counting lines of $fn.\n";
