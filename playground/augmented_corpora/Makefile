@@ -444,7 +444,8 @@ SCENDIR=./prep-wmt10/
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
 	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
-	    "export PML_COMPILE=2; $(SRUNBLOCKS) --errorlevel=FATAL \
+	    "export PML_COMPILE=2; \
+	       $(SRUNBLOCKS) --errorlevel=FATAL $$srunblocksflags \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
 	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
 	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
