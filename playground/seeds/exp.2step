@@ -39,10 +39,6 @@ fi
 
 [ ! -z "$TESTCORP" ] || eval `cat ../$PHASE1MERT/VARS | grep TESTCORP`
 
-echo $TAGPREF`cat ../$MODELEXP/TAG`"DEV"$DEVCORP".S"$SEARCH$STACK > TAG
-
-echo SETTING TAG: `cat TAG`
-
 echo $PHASE1MERT > deps
 echo $PHASE2MERT >> deps
 
@@ -50,6 +46,13 @@ eval `cat ../$PHASE1MERT/VARS | grep SRCAUG`
 [ ! -z "$SRCAUG" ] || die "Missed SRCAUG"
 eval `cat ../$PHASE2MERT/VARS | grep REFAUG`
 [ ! -z "$REFAUG" ] || die "Missed REFAUG"
+MIDAUG=`cat ../$PHASE2MERT/VARS | grep SRCAUG | cut -d= -f2`
+[ ! -z "$MIDAUG" ] || die "Missed MIDAUG"
+
+echo "$TAGPREF"SRC"$SRCAUG".MID"$MIDAUG".TGT"$REFAUG".$SEARCH$STACK > TAG
+
+echo SETTING TAG: `cat TAG`
+
 
 cat << KONEC > VARS
 PHASE1MERT=$PHASE1MERT
@@ -148,8 +151,22 @@ if [ $PHASE1TESTCORP == $TESTCORP ]; then
 else
   echo "Will translate evaluation.in with $PHASE1MERT"
 
+  ## Clone the moses.ini and source files
+  mkdir phase1model || die "mkdir failed"
+  cd phase1model || die "mkdir failed"
+  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
+    ../\$phase1dir/moses.abs.ini || die "clone failed"
+  # Absolutize
+  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini \\
+    > moses.abs.ini || die "Absolutize failed"
+  # Apply weights
+  ../../tools/apply_weights_from_moses_ini.pl \\
+    ../\$phase1dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
+    || die "Apply failed"
+  cd ..
+  # Filter for our input
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-phase1 \\
-    \$phase1dir/mert-tuning/moses.ini evaluation.in \\
+    ./phase1model/moses.opt.ini evaluation.in \\
     || die "Filter for phase 1 failed"
 
   $MOSESPARALLELIZER \\
@@ -161,8 +178,22 @@ else
      || die "Translation of phase 1 failed"
 fi
 
+## Clone the moses.ini and source files
+mkdir phase2model || die "mkdir failed"
+cd phase2model || die "mkdir failed"
+\$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
+  ../\$phase2dir/moses.abs.ini || die "clone failed"
+# Absolutize
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini \\
+  > moses.abs.ini || die "Absolutize failed"
+# Apply weights
+../../tools/apply_weights_from_moses_ini.pl \\
+  ../\$phase2dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
+  || die "Apply failed"
+cd ..
+# Filter for our input
 \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-phase2 \\
-  \$phase2dir/mert-tuning/moses.ini evaluation.in \\
+  ./phase2model/moses.opt.ini evaluation.mid \\
   || die "Filter for phase 2 failed"
 
 $MOSESPARALLELIZER \\

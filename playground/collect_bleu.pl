@@ -20,6 +20,7 @@ foreach my $path (bsd_glob("exp.*/BLEU.*")) {
 
   $dirtag =~ s/^exp\.mert\.//;
   $dirtag =~ s/^exp\.eval\.//;
+  $dirtag =~ s/^exp\.2step\.//;
   my $bleu = pickbleu($path);
   my $bleutype = $fn;
   print "$dirtag\t$bleutype\t$bleu\n";
@@ -36,6 +37,7 @@ foreach my $path (bsd_glob("exp.*/evaluation.in")) {
 
   $dirtag =~ s/^exp\.mert\.//;
   $dirtag =~ s/^exp\.eval\.//;
+  $dirtag =~ s/^exp\.2step\.//;
   $collect_info{$dir} = $dirtag;
 }
 
