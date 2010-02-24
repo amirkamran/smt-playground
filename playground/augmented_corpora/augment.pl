@@ -324,6 +324,7 @@ sub augment {
     print STDERR ("Upon creating new folder with corpus you must also call:\n");
     print STDERR ("\tzcat corpus.gz | wc -l > LINECOUNT\n");
     print STDERR ("augment.pl checks the invariant that all languages and factors have this number of lines.\n");
+    safesystem("zcat $basedir/$corp/$lang.gz | wc -l $basedir/$corp/LINECOUNT") or die;
   }
   my $h = my_open("$basedir/$corp/LINECOUNT");
   my $corplinecount = <$h>;
