@@ -257,6 +257,7 @@ chdir($basedir);
 system('chmod -R g+w . 2>/dev/null');
 
 
+#------------------------------------------------------------------------------
 sub ensure_salm_index {
   my $corpfile = shift;
 
@@ -308,6 +309,8 @@ sub ensure_salm_index {
 }
 
 
+
+#------------------------------------------------------------------------------
 sub augment {
   my $corp = shift;
   my $lang = shift;
@@ -317,6 +320,11 @@ sub augment {
   my $corp_stream = my_open($corpbasefile);
 
   # Read expected line count
+  if (! -e "$basedir/$corp/LINECOUNT") {
+    print STDERR ("Upon creating new folder with corpus you must also call:\n");
+    print STDERR ("\tzcat corpus.gz | wc -l > LINECOUNT\n");
+    print STDERR ("augment.pl checks the invariant that all languages and factors have this number of lines.\n");
+  }
   my $h = my_open("$basedir/$corp/LINECOUNT");
   my $corplinecount = <$h>;
   chomp $corplinecount;
@@ -457,6 +465,7 @@ sub augment {
 }
 
 
+#------------------------------------------------------------------------------
 sub blocking_verbose_lock {
   # in readonly mode, block until an existing lockfile vanishes and return undef
   # in regular mode, block on creating lockfile..
@@ -493,6 +502,8 @@ sub unlock_verbose {
   $lock->{lock}->unlock();
 }
 
+
+#------------------------------------------------------------------------------
 sub construct_projection {
   my $corp = shift;
   my $lang = shift;
@@ -522,6 +533,8 @@ sub construct_projection {
   return $factorpathname;
 }
 
+
+#------------------------------------------------------------------------------
 sub generate_factor {
   my $factorfile = shift;
   my $basedir = shift;
@@ -534,6 +547,8 @@ sub generate_factor {
   print STDERR "Finished generating $factorfile in $basedir\n";
 }
 
+
+#------------------------------------------------------------------------------
 sub generate_language {
   my $corpusfile = shift;
   my $basedir = shift;
@@ -547,6 +562,7 @@ sub generate_language {
 }
 
 
+#------------------------------------------------------------------------------
 sub my_open {
   my $f = shift;
   die "Not found: $f" if ! -e $f;
@@ -567,11 +583,15 @@ sub my_open {
   return $hdl;
 }
 
+
+#------------------------------------------------------------------------------
 sub ensure_dir_for_file {
   my $f = shift;
   mkpath(dirname($f));
 }
 
+
+#------------------------------------------------------------------------------
 sub my_save {
   my $f = shift;
 
@@ -590,6 +610,8 @@ sub my_save {
   return $hdl;
 }
 
+
+#------------------------------------------------------------------------------
 # Run a command very safely.
 # Synopsis: safesystem(qw(echo hello)) or die;
 sub safesystem {
@@ -609,6 +631,8 @@ sub safesystem {
     }
 }
 
+
+#------------------------------------------------------------------------------
 sub validate {
   my $corpbasefile = shift;
   my $needlinescount = shift;
@@ -620,6 +644,8 @@ sub validate {
   }
 }
 
+
+#------------------------------------------------------------------------------
 sub my_nonempty {
   my $fn = shift;
   my $hdl = my_open($fn);
@@ -628,6 +654,8 @@ sub my_nonempty {
   close $hdl;
 }
 
+
+#------------------------------------------------------------------------------
 sub ensure_linecount {
   my $fn = shift;
   my $reqnr = shift;
@@ -635,6 +663,8 @@ sub ensure_linecount {
   die "$fn:Expected $reqnr lines, got $nr." if $reqnr != $nr;
 }
 
+
+#------------------------------------------------------------------------------
 sub count_lines {
   my $fn = shift;
   my $linecounttimestamp = $fn.".linecount_ok";
