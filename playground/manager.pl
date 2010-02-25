@@ -313,7 +313,7 @@ sub confirm_exp {
   my $key = shift;
   print STDERR "Confirming $key\n" if $debug;
   return $key if -d $key;
-  foreach my $pref (qw/exp.eval. exp.mert. exp.model./) {
+  foreach my $pref (qw/exp.eval. exp.mert. exp.model. exp.2step./) {
     if (-d $pref.$key) {
       return $pref.$key;
     }

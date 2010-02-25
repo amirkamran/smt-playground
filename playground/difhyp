@@ -8,7 +8,7 @@ function die() {
 a=$1
 b=$2
 
-for prefix in eval mert; do
+for prefix in eval mert 2step; do
   if [ -e exp.$prefix.$a ]; then
     a=exp.$prefix.$a
   fi
