@@ -296,8 +296,22 @@ sub ensure_salm_index {
   my $indexdirname = dirname($indexpath);
 
   my $tmp = tempdir(DIR=>$tmpdir, CLEANUP=>1);
-  safesystem("zcat < $corpfile > $tmp/$indexbasename")
-    or die "Can't gunzip $corpfile";
+  
+  # unzip *and* truncate to 255 words at most
+  my $inh = my_open($corpfile);
+  my $outh = my_save("$tmp/$indexbasename");
+  my $nl = 0;
+  while (<$inh>) {
+    $nl++;
+    # dropping any words beyond 255
+    s/^((\S+\s){0,254})(.*)$/$1/;
+    print $outh $_;
+    print STDERR "$nl:Beyond 254 words! Chopping.\n" if defined $3 && $3 ne "";
+  }
+  close $outh;
+  close $inh;
+  # safesystem("zcat < $corpfile > $tmp/$indexbasename")
+    # or die "Can't gunzip $corpfile";
   safesystem("cd $tmp && $salm_indexer $indexbasename >&2")
     or die "SALM indexer failed for $indexbasename in $tmp";
   safesystem("cp $tmp/$indexbasename.* $indexdirname")
