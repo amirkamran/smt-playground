@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
 Normalize_plaintext::Czech
 SCzechW_to_SCzechM::Tokenize_joining_numbers
 SCzechW_to_SCzechM::TagMorce

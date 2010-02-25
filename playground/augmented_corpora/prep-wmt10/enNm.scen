@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
 Print::Factored
   TMT_PARAM_PRINT_FACTORED=SEnglishM
   TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output

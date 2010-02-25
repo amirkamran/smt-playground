@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
 #SEnglishW_to_SEnglishM::Sentence_segmentation_simple -- Czeng resources are already segmented to sentences (bundles)
 Normalize_plaintext::English
 SEnglishW_to_SEnglishM::Penn_style_tokenization

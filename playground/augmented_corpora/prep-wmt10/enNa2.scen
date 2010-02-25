@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
 SEnglishA_to_SEnglishA::AugmentForCzech
   TMT_PARAM_AUGMENT_FOR_CZECH=verbneg:simpquotes
 Print::Factored

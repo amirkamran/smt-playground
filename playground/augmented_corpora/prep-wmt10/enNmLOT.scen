@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
 Normalize_plaintext::English
 SEnglishW_to_SEnglishM::Tokenization # David's better than SEnglishW_to_SEnglishM::Penn_style_tokenization
 SEnglishW_to_SEnglishM::TagMorce

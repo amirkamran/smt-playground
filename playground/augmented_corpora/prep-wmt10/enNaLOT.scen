@@ -1,3 +1,4 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
 SEnglishM_to_SEnglishA::McD_parser TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2.model
 SEnglishM_to_SEnglishA::Fill_is_member_from_deprel
 SEnglishM_to_SEnglishA::Fix_tags_after_parse
