@@ -1075,15 +1075,57 @@ preklad pres vylepsena lemata:
 
 **************
 
-chci zkusit preklad pres:
-czeng092-ne
+chci zkusit preklad pres mezijazyk, zatim vse s *malym* prekladovym krokem:
 
-enNa-lemma-csX1-form-gdfa
-  ... zalozeno na exp.mert.36b04a27.20100205-1112
-  ... exp.mert.6a5bdb1c.20100219-2316
-csX1-form-csNa-lemma-gdfa
-  ... zalozeno na exp.mert.a48464d9.20100219-0232
-  ... exp.mert.41914de1.20100219-2311
+10.41±0.40	0936b956.20100220-1706     	baseline   	notagLM,6gr
+10.28±0.40	e1198397.20100220-1707     	baseline   	notagLM,5gr
+12.50±0.44	aee1e448.20100220-1710     	baseline   	notagLM, bigLM
+11.35±0.42	b65cba00.20100220-1119     	pluslemma2 	tagLM
+10.72±0.40	ae8f6618.20100220-1637     	pluslemma2 	notagLM, bigLM
+          	2/2: 4853631e.20100220-1657	pluslemma2 	tagLM, bigLM
+10.38±0.38	99ba61bc.20100220-1143     	pluslemma2 	notagLM
+10.12±0.39	f4351239.20100220-0116     	csX1       	notagLM
+9.63±0.36 	5e6da176.20100220-1144     	striplemma2	notagLM
+          	a8b3b75d.20100220-1336     	baseline   	tagLM
+
+10.12±0.39 f4351239.20100220-0116
+...s takhle malym generovanim horsi nez baseline:
+    a pak s velkym lepe vyhlazenym; pro nej uz se pripravuje:
+      exp.lm.c85e9a01.20100220-1345 a exp.lm.e320fdc5.20100220-0201
+
+
+Konecne vysledek, kde pluslemma2 pomohlo: Musim mit velky jazykovy model nejne
+v celem druhem modelu, ale na cilove strane prvniho modelu.
+
+
+10:12 tauri4 playground$./qj biglm_vs_2step
+The evaluation called biglm_vs_2step already exists, interpreting:
+Mark    Count   Tag
+*       9       sys2, 12.29±0.47
+equally-wrong   8       sys1, 12.50±0.44
+equally-wrong   8       sys2, 12.29±0.47
+equally-fine    6       sys1, 12.50±0.44
+equally-fine    6       sys2, 12.29±0.47
+*       3       sys1, 12.50±0.44
+
+
+
+zkousim novy experiment exp.2step.67edd5a3.20100223-1748
+--vetsi tm, s velkymi lm, pres pluslemma2
+...ani to nebude optimalni, jeste step2 by mel mit +g0-1 a tagLM
+...a rucne to spis nepomaha:
+
+10:04 tauri4 playground$./qj twostep_vs_bsln_bigTM 14.17±0.51 14.06±0.49
+The evaluation called twostep_vs_bsln_bigTM already exists, interpreting:
+Mark    Count   Tag
+*       4       sys1, 14.17±0.51
+equally-fine    4       sys1, 14.17±0.51
+equally-fine    4       sys2, 14.06±0.49
+equally-wrong   3       sys1, 14.17±0.51
+equally-wrong   3       sys2, 14.06±0.49
+*       3       sys2, 14.06±0.49
+
+
 
 a taky: pres t-rovinu (zatim delam alignmenty)
 enNa-lemma-csNt-tlemma-gdfa
@@ -1103,10 +1145,72 @@ Zatim uplne male pokusy:
 form->form nebo form->lemma->form
 
 na malinkych datech:
-pres lemma:     	415d106d.20100219-2301
-pres striplemma:	336a292a.20100219-2303
-pres pluslemma: 	89073237.20100219-235
+          	415d106d.20100219-2301	pres lemma
+          	81a096b2.20100220-0119	pres striplemma2
+10.49±0.39	89073237.20100219-235 	pres pluslemma
+10.44±0.38	6e72989c.20100220-0119	pres pluslemma2
 
+**************
+
+Par zmertu konecne dobehlo, nektere opet ne.
+
+10.42±0.38  zmert na BLEU
+10.25±0.37  stary mert na BLEU, identicka konfigurace
+
+
+8.20±0.37 a 6.96±0.33 jsou dva vysledky *identicke* konfigurace a optimalizace na SemPOS (factors:2,1)
+
+Je videt, ze SemPOS je hodne nestabilni a to BLEU4 k nemu potrebujeme. Trochu jsem to videl i okem, ty dve varianty se lisi v pomocnych slovech, ktera pro sempos nic neznamenaji.
+12:35 tauri4 playground$./qj sempos_unstable 8.20±0.37 6.96±0.33 NEWbsln
+The evaluation called sempos_unstable already exists, interpreting:
+Mark    Count   Tag
+*       4       sys3, NEWbsln
+*       3       sys1, 8.20±0.37
+-       2       sys2, 6.96±0.33
+*       1       sys2, 6.96±0.33
+
+
+Napis prosim, jakmile budes mit SemPOS_BLEU funkcni i pro factors:1,2,3
+
+
+Prvni vyhodnoceni SemPOS_BLEU:
+
+16:34 tauri4 playground$./qj sempos_bleu_vs_bsln 9.42±0.37 10.25±0.37.*NEWbsln
+The evaluation called sempos_bleu_vs_bsln already exists, interpreting:
+Mark    Count   Tag
+equal   7       sys2, 10.25±0.37.*NEWbsln
+equal   7       sys1, 9.42±0.37
+*       6       sys1, 9.42±0.37
+*       1       sys2, 10.25±0.37.*NEWbsln
+
+jeste provedu ten pokus s enNa2: exp.mert.af19ade0.20100224-1637 (zalozeno na exp.mert.9176797d.20100224-0050)
+
+
+Smutne je, ze s vetsim paralelnim korpusem (a vetsim monolingv) uz optimalizace na SemPOS nepomaha:
+
+09:30 tauri4 playground$./qj bigTM_semposbleu_vs_bleu 14.17±0.51 13.79±0.55
+The evaluation called bigTM_semposbleu_vs_bleu already exists, interpreting:
+Mark    Count   Tag
+equal   12      sys1, 14.17±0.51
+equal   12      sys2, 13.79±0.55
+*       11      sys2, 13.79±0.55
+*       5       sys1, 14.17±0.51
+-       1       sys2, 13.79±0.55
+-       1       sys1, 14.17±0.51
+
+
+zkousim jeste zlepsit morfologii se semposem:
+exp.mert.e8afa977.20100224-1627
+
+**************
+
+interpolace LM
+
+zkusim pouzit  exp.comblm.manual misto LM v a5783ffb.20100221-2156
+  ---> 8d222ff4.20100225-1536
+
+**************
+**************
 **************
 **************
 **************
