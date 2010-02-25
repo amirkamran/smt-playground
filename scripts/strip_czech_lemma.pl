@@ -10,7 +10,7 @@ while (<>) {
   chomp;
   my @lems = split / /;
   map {
-      s/(.)[-,;`_].*/$1/;
+      s/(.)[-;`_].*/$1/;
       $_;
     } @lems;
   my $out = join(" ", @lems);
