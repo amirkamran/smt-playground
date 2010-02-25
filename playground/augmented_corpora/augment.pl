@@ -114,7 +114,10 @@ print STDERR "Running augment.pl $descr\n";
 # Check the corpus file and the header:
 
 my $corpbasefile = "$basedir/$corp/$lang.gz";
-if (! -e $corpbasefile) {
+my $corpinfofile = "$basedir/$corp/$lang.info";
+if (! -e $corpbasefile
+  || (-e $corpbasefile && ! -e $corpinfofile && -s $corpbasefile < 10000)) {
+  # create if nonexistent or malformed (small, no info file)
   if ($corp =~ /\+/) {
     # combining corpus from various source corpora
     my $lock = blocking_verbose_lock($corpbasefile);
