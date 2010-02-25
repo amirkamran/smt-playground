@@ -52,13 +52,10 @@ BINARIZE=$BINARIZE
 PARTS=$PARTS
 KONEC
 
-echo $DIR > var-DIR
 echo $ORDER > var-ORDER
 echo $CORP > var-CORP
 
 touch deps # does not depend on anything
-
-eval `makearg --delim=- $DIR srclan tgtlan`
 
 KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`
 
@@ -69,6 +66,9 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+
+# init grid environment; sometimes needed for ./augment.pl
+. /net/projects/SGE/user/sge_profile
 
 mydir=\`pwd\`
 
