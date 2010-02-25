@@ -24,6 +24,19 @@ plaintext.%: configs.% make_all_configs.pl
 	echo untokenized > $@/cs_txt.info
 	zcat $@/cs_txt.gz | wc -l > $@/LINECOUNT
 
+../webcoll:
+	# create plaintext of webcoll monolingual czech texts
+	mkdir $@
+	set -o pipefail ; \
+	for f in /net/data/webcoll/tok/*.tar.gz ; do \
+	  tar xzfO $$f; \
+	done \
+	| qruncmd --jobname=webcoll --jobs=$(JOBS) \
+	    'iu | csts_stream_to_plaintext_stream.pl | remove_blank_lines' \
+	| gzip -c > $@/cs_txt.gz
+	echo untokenized > $@/cs_txt.info
+	zcat $@/cs_txt.gz | wc -l > $@/LINECOUNT
+
 TRTOK=/home/bojar/diplomka/umc/devel/tools/tokenizer/trainable_tokenizer
 ../syn200x:
 	# create plaintext of syn2000, 2005 and 2006pub monolingual czech texts
