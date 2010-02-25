@@ -27,12 +27,12 @@ while (<>) {
       $out = substr($tag, 1, 1).".".lc($form);
     } elsif ($tag =~ /^R...(.)/) {
       my $case = $1;
-      $lemma =~ s/(.)[-,;`_].*/$1/;
+      $lemma =~ s/(.)[-;`_].*/$1/;
       $out = $lemma."+$case";
     } else {
       my $subposneggradnum = substr($tag, 1, 1).substr($tag, 3, 1)
                       .substr($tag, 10, 1).substr($tag, 9, 1);
-      $lemma =~ s/(.)[-,;`_].*/$1/;
+      $lemma =~ s/(.)[-;`_].*/$1/;
       $out = $subposneggradnum.".".$lemma;
     }
     push @out, $out;
