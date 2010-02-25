@@ -283,13 +283,13 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
-%.factors/pluslemma.gz:
+%.factors/pluslemma2.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+form+lemma+tag \
 	| $(STATMT)/scripts/construct_improved_czech_lemma.pl \
 	| gzip -c > $@
 
-%.factors/striplemma.gz:
+%.factors/striplemma2.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+lemma \
 	| $(STATMT)/scripts/strip_czech_lemma.pl \
@@ -444,7 +444,7 @@ SCENDIR=./prep-wmt10/
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
 	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
-	    "export PML_COMPILE=2; \
+	    "export PML_COMPILE=1; \
 	       $(SRUNBLOCKS) --errorlevel=FATAL $$srunblocksflags \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
 	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
