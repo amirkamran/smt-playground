@@ -14,14 +14,26 @@ e=`./manager.pl --guess $1`
 cd $e || die "Not an experiment: $e";
 
 run=$2
+[ ! -z "$run" ] || run=best
+
+if [ $run == best ]; then
+  run=`pickre --pick --re='BEST at ([0-9]+)' log.o* \
+  | pickre --re=' => ([0-9.]+)' \
+  | numsort n1 \
+  | head -n1 \
+  | cut -f2`
+  echo "Best run so far: $run"
+fi
 
 inif=mert-tuning/run$run.moses.ini
+newinif=moses.abs.run$run.ini
 [ -e $inif ] || die "Can't find $inif"
+[ ! -e $newinif ] || die "Won't replace $newinif"
 
 ../tools/apply_weights_from_moses_ini.pl $inif < moses.abs.ini \
-  > moses.abs.run$run.ini \
+  > $newinif \
   || die "Failed to apply weights from $inif to moses.abs.ini"
-inif=moses.abs.run$run.ini
+inif=$newinif
 
 eval `grep '^export SCRIPTS_ROOTDIR' command`
 eval `cat VARS` # to set e.g. REFAUG
