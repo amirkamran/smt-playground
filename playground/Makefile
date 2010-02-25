@@ -405,10 +405,11 @@ exp.lm.%.binarize:
 	     $(IRSTLMDIR)/compile-lm corpus.lm corpus.blm || exit 1; \
 	   fi
 
+AGE?=3
 clean:
-	find -ctime +3 -name 'run*.feats.opt.gz' -exec rm {} \;
-	find -ctime +3 -name 'run*.feats' -exec rm {} \;
-	find -ctime +3 -name 'run*.best*.out.gz' -exec rm {} \;
-	find -ctime +3 -name filtered-for-eval-std -exec rm -rf {} \; || true
-	find -maxdepth 2 -ctime +3 -name 'alignment.?.src' -exec rm {} \;
-	find -maxdepth 2 -ctime +3 -name 'alignment.?.tgt' -exec rm {} \;
+	find -ctime +$(AGE) -name 'run*.feats.opt.gz' -exec rm {} \;
+	find -ctime +$(AGE) -name 'run*.feats' -exec rm {} \;
+	find -ctime +$(AGE) -name 'run*.best*.out.gz' -exec rm {} \;
+	find -ctime +$(AGE) -name filtered-for-eval-std -exec rm -rf {} \; || true
+	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.src' -exec rm {} \;
+	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.tgt' -exec rm {} \;
