@@ -669,7 +669,8 @@ sub ensure_linecount {
 sub count_lines {
   my $fn = shift;
   my $linecounttimestamp = $fn.".linecount_ok";
-  if (-e $linecounttimestamp && -C $fn < -C $linecounttimestamp) {
+  if (-e $linecounttimestamp
+    && (stat($linecounttimestamp))[9] > (stat($fn))[9] ) {
     my $h = my_open($linecounttimestamp);
     my $cnt = <$h>;
     chomp $cnt;
