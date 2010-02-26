@@ -1206,11 +1206,44 @@ exp.mert.e8afa977.20100224-1627
 
 interpolace LM
 
-zkusim pouzit  exp.comblm.manual misto LM v a5783ffb.20100221-2156
-  ---> 8d222ff4.20100225-1536
+zkusim pouzit  exp.comblm.manual misto obyc. LM:
+
+12.26±0.47	a5783ffb.20100221-2156	baseline
+12.08±0.43	8d222ff4.20100225-1536	interpolated
+  ... chtelo by to vysetrit rucne, jestli je fakt horsi
 
 **************
+
+chyba v detokenizeru, ale jen nekdy
+
+„Já jsem navrhoval, aby se dohodly na mír se Sýrií výhradně na základě stažení z golanských výšin,“ varoval.
+„Vím dobře, co Syřané budou muset vzdát, aby získal golanských výšin.
+Budou muset vzdát svůj současný vztah s Íránem, budou muset vzdát svůj vztah k (shi-ite hnutí Hizballáh); budou muset vzdát pokračující podporu poskytují k terorismu (shi-ite hnutí Hamas), (teroristické sítě Al - Káida) a džihádu (svaté válce) v Iráku, “řekl premiér.
+
+
 **************
+
+vylepsena anglictina pomaha, zkousim ted zkombinovat vylepsenou anglictinu a ceskou morfologii:
+
+na malych datech:
+
+exp.mert.a8b3b75d.20100220-1336
+exp.mert.f9c6071a.20100225-0057
+
+odvozeno takto:
+./manager.pl f9c6071a.20100225-0057 -s '/TGTAUG.*/TGTAUG=csNa+stc+tag/' -s '/DECODINGS.*/DECODINGSTEPS=t0a1-0At0-0+g0-1/' -s '/(LMEX.*)/$1:::1:exp.lm.5239988a.20100220-0154/'
+
+
 **************
+
+!!! nasekej pomckova slova v anglictine !!!
+
 **************
+
+Tyhle dva spustily zaverecne vyhodnoceni soubezne na orionu5 (joby 843054 a 843079), ackoli oba mely 
+hard resource_list:         mem_free=20g
+
+67c95223.20100226-1455<dev2051><eval2525>
+fcb29d2e.20100226-1239<dev2051><eval2525>
+
 **************
