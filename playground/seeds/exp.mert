@@ -36,7 +36,7 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$TAGPREF to tag prefix"
   echo "  \$MERTPRG to mert, zmert (and hopefully new-mert later)"
   echo "  \$ZMERTMETRIC for zmert, to SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU"
-  echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 or tmt"
+  echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt"
   echo "  \$TMT_ROOT for zmert SemPOS TMT_ROOT"
   exit 1
 fi
