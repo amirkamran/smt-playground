@@ -108,7 +108,7 @@ echo Checking tune and eval corp sizes
 [ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
-TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
+TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
 if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
        -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
   echo "Defaulting to 'en' as the targetlang for detokenizer."
