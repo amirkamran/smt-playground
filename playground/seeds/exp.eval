@@ -25,6 +25,7 @@ if [ -z "$MERTEXP" ] || [ -z "$TESTCORP" ]; then
   echo "and optionally"
   echo "  \$REFAUG to override reference annotation used during mert"
   echo "  \$MOSESFLAGS to any further flags"
+  echo "  \$GRIDFLAGS to any further flags"
   echo "  \$JOBS to number of jobs or 0 for serial"
   echo "  \$ITER to the ITER-th BEST at... (will use run(ITER+1).moses.ini)"
   exit 1
@@ -59,12 +60,15 @@ cat << KONEC > VARS
 MERTEXP=$MERTEXP
 TESTCORP=$TESTCORP
 REFAUG=$REFAUG
-MOSESFLAGS=$MOSESFLAGS
+MOSESFLAGS="$MOSESFLAGS"
+GRIDFLAGS="$GRIDFLAGS"
 JOBS=$JOBS
 ITER=$ITER
 KONEC
 echo $MODELEXP > ./info.modelexp
 echo $MERTEXP > info.mertexp
+
+echo $MODELEXP > ./deps
 
 ## Clone the moses.ini and source files
 $SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
@@ -80,7 +84,12 @@ echo Checking eval corp size
 [ `wc -l < evaluation.in` -gt 0 ] || exit 1
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || exit 1
 
-TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
+TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
+if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
+       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+  echo "Defaulting to 'en' as the targetlang for detokenizer."
+  TARGETLAN_FOR_DETOKENIZER=en
+fi
 
 
 # for running this command, qsub it not allowed, because we're going to submit jobs ourselves
@@ -92,7 +101,7 @@ if [ $JOBS == 0 ]; then
   GRIDARGS=""
   MOSESPARALLELIZER=""
 else
-  GRIDARGS="--jobs=$JOBS --queue-parameters=' -p -200 -cwd -S /bin/bash ' -feed-decoder-via-stdin "
+  GRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' -feed-decoder-via-stdin "
   MOSESPARALLELIZER="$MOSESPARALLEL $GRIDARGS -decoder "
 fi
 
@@ -106,12 +115,18 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 renice 10 \$\$
 
+# init grid environment
+. /net/projects/SGE/user/sge_profile
+
+set -o pipefail
+function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || exit 1
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval ./moses.abs.ini evaluation.in || exit 1
+\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval ./moses.abs.ini evaluation.in || die "Failed to filter"
 
 $MOSESPARALLELIZER \\
   ./moses \\
@@ -119,23 +134,25 @@ $MOSESPARALLELIZER \\
   -input-file ./evaluation.in \\
   -config ./filtered-for-eval/moses.ini \\
   > evaluation.opt.out \\
-   || (echo 'Exiting'; exit 1) || exit 1
+   || die "Failed to translate"
 
 echo "Detokenizing evaluation.opt.out"
 \$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
-< evaluation.opt.out > evaluation.opt.txt
+< evaluation.opt.out > evaluation.opt.txt \\
+  || die "Failed to detokenize"
 
 echo "Tuned BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt
+./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt \\
+  || die "Failed to eval BLEU"
 
-echo "Preparing detailed output for manual inpection"
-./moses -input-file ./evaluation.in -config ./filtered-for-eval-opt/moses.ini \\
+echo "You could prepare detailed output for manual inpection:"
+echo ./moses -input-file ./evaluation.in -config ./filtered-for-eval-opt/moses.ini \\
   -verbose 3 \\
-  2>&1 \\
-  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
-  | head -c 300k \\
-  > evaluation.opt.verbose
+  2>&1
+#  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
+#  | head -c 300k \\
+#  > evaluation.opt.verbose
 
 
 echo "=============================="
