@@ -72,7 +72,10 @@ foreach my $tagrun (@tags) {
     die "Failed to guess exp from tag $tag: $errmsg"
       if $exitcode;
     $thisreftxt = load_file("$dirname/evaluation.ref.0");
-    $thissrctxt = load_file("$dirname/evaluation.in");
+    $thissrctxt =
+      ( -e "$dirname/evaluation.in.txt"
+        ? load_file("$dirname/evaluation.in.txt")
+        : load_file("$dirname/evaluation.in"));
     my $thisoutfncode = defined $run ? "run$run" : "opt";
     $thisouttxt = load_file("$dirname/evaluation.$thisoutfncode.txt");
   }
