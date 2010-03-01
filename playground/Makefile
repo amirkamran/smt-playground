@@ -103,6 +103,9 @@ HOLDS?=
 # by default do not wait for any jobs
 # or HOLDS="--queue cosmos"
 
+GRIDFLAGS?= -hard -l mf=8g -l amf=8g
+# request 8GB of declared (mf) as well as really available (amf) memory
+
 # start a prepared run of an experiment
 exp.%.run:
 	[ -e "exp.$*" ] || ( echo "The experiment has not been prepared yet?"; exit 1 )
