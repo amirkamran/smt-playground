@@ -1,3 +1,7 @@
+./augment.pl wmt102.test10/csNa  || exit 1
+./augment.pl wmt102.test10/enNa2  || exit 1
+exit 0
+
 ./augment.pl wmt102.test08/csNa  || exit 1
 ./augment.pl wmt102.test09/csNa  || exit 1
 ./augment.pl czeng092-ne/csNa  || exit 1

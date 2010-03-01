@@ -444,42 +444,13 @@ SCENDIR=./prep-wmt10/
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
 	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
-	    "export PML_COMPILE=1; \
+	    "export PML_COMPILE=0; \
 	       $(SRUNBLOCKS) --errorlevel=FATAL $$srunblocksflags \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
 	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
 	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
 	| gzip > $*.gz \
 	&& echo "$$outinfo" > $*.info
-
-# %/enNm.gz.generate_language:
-# 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
-# 	set -o pipefail ; \
-# 	inlang=en_txt ; \
-# 	scenname=en_normm ; \
-# 	outlang=enNm ; \
-# 	inattr=english_source_sentence ; \
-# 	outattr=factored_output ; \
-# 	$(AUGMENT) --dump $(CORP)/$$inlang \
-# 	| qruncmd --jobs=$(JOBS) --join --jobname=$*/$$outlang.gz \
-# 	    "$(SRUNBLOCKS) --errorlevel=FATAL \
-# 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
-# 	| gzip > $*/$$outlang.gz \
-# 	&& cp $(SCENDIR)/$$scenname.info $*/$$outlang.info
-# %/csNm.gz.generate_language:
-# 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
-# 	set -o pipefail ; \
-# 	inlang=cs_txt ; \
-# 	scenname=cs_normm ; \
-# 	outlang=csNm ; \
-# 	inattr=czech_source_sentence ; \
-# 	outattr=factored_output ; \
-# 	$(AUGMENT) --dump $(CORP)/$$inlang \
-# 	| qruncmd --jobs=$(JOBS) --join --jobname=$*/$$outlang.gz \
-# 	    "$(SRUNBLOCKS) --errorlevel=FATAL \
-# 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
-# 	| gzip > $*/$$outlang.gz \
-# 	&& cp $(SCENDIR)/$$scenname.info $*/$$outlang.info
 
 %.generate_language:
 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)

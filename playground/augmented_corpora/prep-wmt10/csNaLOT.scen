@@ -1,5 +1,6 @@
 Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
 SCzechM_to_SCzechA::McD_parser_local TMT_PARAM_MCD_CZ_MODEL=pdt20_train_autTag_golden_latin2_pruned_0.02.model
+#SCzechM_to_SCzechA::McD_parser_local TMT_PARAM_MCD_CZ_MODEL=pdt20_train_autTag_golden_latin2_pruned_0.10.model
 SCzechM_to_SCzechA::Fix_atree_after_McD
 SCzechM_to_SCzechA::Fix_is_member
 # Puvodne jsem mel vytisk vystupu uz tady

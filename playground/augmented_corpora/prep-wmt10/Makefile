@@ -17,6 +17,12 @@ plaintext.%: configs.% make_all_configs.pl
 	./make_all_configs.pl --target=plaintext < $<
 	touch $@
 
+/ha/seznamdata/sents.gz: /ha/seznamdata/ftp/b-all.txt.converted.gz
+	zcat $< \
+	| ./select_czech_sents_from_seznamdata.pl \
+	| gzip -c \
+	> $@
+
 ../wmt09mono:
 	# create plaintext of wmt09 monolingual czech texts
 	mkdir $@
@@ -130,6 +136,8 @@ plaintext: wmt10dev
 	  | grep '$(COLUMNRE)' \
 	  | cut -f $(LANGCOL-$(ANOTLANG)) \
 	  | gzip -c > ../$(OUTCORPNAME)/$(ANOTLANG)_txt.gz || exit 1 ; \
+	  zcat ../$(OUTCORPNAME)/$(ANOTLANG)_txt.gz \
+	  | wc -l > ../$(OUTCORPNAME)/LINECOUNT || exit 1 ; \
 	fi
 
 .PHONY: analyze
@@ -167,8 +175,12 @@ dump:
 
 dev.tgz:
 	wget http://www.statmt.org/wmt10/dev.tgz
-dev: dev.tgz
+test.tgz:
+	wget http://www.statmt.org/wmt10/test.tgz
+dev: dev.tgz test.tgz
 	tar xzfv dev.tgz
+	tar xzfv test.tgz
+	mv test/* dev/
 	oldrename news news- dev/news[^-]*
 
 dev.plaintext: dev
@@ -185,7 +197,7 @@ dev.plaintext: dev
 
 wmt10dev: dev.plaintext
 	mkdir -p $@
-	for s in test2008 test2009 syscomb2009; do \
+	for s in test2008 test2009 syscomb2009 test2010; do \
 	  paste <(zcat $</news-$$s.en.gz)  <(zcat $</news-$$s.cs.gz) \
 	  | prefix --tab $$s \
 	  | gzip -c \
