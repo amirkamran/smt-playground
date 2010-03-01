@@ -1247,3 +1247,101 @@ hard resource_list:         mem_free=20g
 fcb29d2e.20100226-1239<dev2051><eval2525>
 
 **************
+
+zatim nejlepsi vysledek mam 15.30±0.49 db77ebc8.20100226-2329
+ - oprav mu czengovy LM, a zkus bud mixlm z exp.lm.*.20100227-2345 +
+   exp.lm.ba5502f6.20100227-2347 (emea)
+       -> exp.mixlm.e2d2938a.20100228-1254 -> exp.mert.8848756c.20100228-1258
+   nebo jeden nevazeny:
+   exp.lm.6ece8f5b.20100227-2347 -> zkousim exp.mert.508648ca.20100228-1257
+ - oprav anglicka pomlckova slova
+
+ - taky zkousim jeste slozitejsi model:
+exp.mert.75ec1522.20100227-2302 SRCczeng092-ne+czeng092-eu+czeng092-fi+czeng092-te+czeng092-su+czeng092-we+emea2+enNa2+stc+tag.TGT+csNm+stc+tag.ALIenNm-lemma-csNm-lemma-gdfa.LM0-5-MIX.czeng092-ne++czeng092-we++czeng092-fi+csNa+stc.5-sriLM0-6-MIX.syn200x++wmt09mono++wmt10mono2++webcoll+csNm+stc.6-sriLM1-7-wmt10mono2+csNm+tag.7.blm-sri.t0a1-0+g0-1At0-0+g0-1.or-bi-fe.r0-0SIGa+eN30DEVwmt102.test08.Scube
+
+ - a taky jeste vetsi LM:
+exp.mert.2566a8b1.20100227-2304 SRCczeng092-ne+czeng092-eu+czeng092-fi+czeng092-te+czeng092-su+czeng092-we+emea2+enNa2+stc+tag.TGT+csNm+stc.ALIenNm-lemma-csNm-lemma-gdfa.LM0-8-syn200x+csNm+stc.8.blm-sri.t0a1-0At0-0.or-bi-fe.r0-0SIGa+eN30DEVwmt102.test08.Scube
+
+ - jako kontrast k mixovanemu velkemu LM zkusim taky udelat prosty spojeny velky LM:
+
+ exp.lm.505ff3e3.20100227-2353/log
+
+
+**************
+
+rucne vyhodnot 15.30 proti googlu a vylepsi anglicky tagging (enNa2)
+
+**************
+
+podle exp.mixlm.e2d2938a.20100228-1254 zkus vyvazit i tm:
+exp.tm.6de1866e.20100205-1111
+exp.tm.*.20100228-1303
+
+Takto byly namichany LMs:
+(vaha druheho je 1-ostatni)
+
+exp.lm.29f3593b.20100227-2345	czeng092-ne     	  0.458047
+exp.lm.be1db092.20100227-2345	czeng092-eu     	0.13602491
+exp.lm.b1ce15cb.20100227-2345	czeng092-fi     	  0.177171
+exp.lm.d9031f93.20100227-2345	czeng092-te     	0.00516193
+exp.lm.4dcbf26a.20100227-2345	czeng092-su     	  0.112405
+exp.lm.43ffc9d2.20100227-2345	czeng092-we     	   0.10329
+exp.lm.ba5502f6.20100227-2347	emea2+csNa+stc.6	0.00790016
+
+Zapomnel jsem, ze nemam alignmenty, ze je musim vykousat z velkeho...
+
+Pocty radek jednotlivych souboru a jejich zacatky ve spojenem:
+czeng092-ne	 126144	1
+czeng092-eu	1431115	126145
+czeng092-fi	 933563	1557260
+czeng092-te	1090632	2490823
+czeng092-su	3194265	3581455
+czeng092-we	 418088	6775720
+emea2      	 350658	7193808
+
+# Prikazy na extrakci alignmentu
+ali=czeng092-ne+czeng092-eu+czeng092-fi+czeng092-te+czeng092-su+czeng092-we+emea2/enNm-lemma-csNm-lemma-gdfa.gz
+qruncmd --picksection 1:126144 $ali | gzip -c > czeng092-ne/alijoint.gz
+qruncmd --picksection 126145:1431115 $ali | gzip -c > czeng092-eu/alijoint.gz
+qruncmd --picksection 1557260:933563 $ali | gzip -c > czeng092-fi/alijoint.gz
+qruncmd --picksection 2490823:1090632 $ali | gzip -c > czeng092-te/alijoint.gz
+qruncmd --picksection 3581455:3194265 $ali | gzip -c > czeng092-su/alijoint.gz
+qruncmd --picksection 6775720:418088 $ali | gzip -c > czeng092-we/alijoint.gz
+qruncmd --picksection 7193808:350658 $ali | gzip -c > emea2/alijoint.gz
+
+TMs:
+
+exp.tm.47055c85.20100228-2329	czeng092-ne
+exp.tm.3df64569.20100301-1115	czeng092-eu
+exp.tm.30ca14ba.20100228-2334	czeng092-fi
+exp.tm.1d185bff.20100228-2334	czeng092-te
+exp.tm.2ab0a68d.20100228-2334	czeng092-su
+exp.tm.ea94822d.20100228-2334	czeng092-we
+exp.tm.c87fbb68.20100228-2334	emea2
+
+Zde zkombinovano:
+exp.mixtm.20100228-2254
+
+takto byly velke zdrojove tabulky:
+7652023	/mnt/h/tmp/temp-mixtm/table1
+43689043	/mnt/h/tmp/temp-mixtm/table2
+35489092	/mnt/h/tmp/temp-mixtm/table3
+5775888	/mnt/h/tmp/temp-mixtm/table4
+32581102	/mnt/h/tmp/temp-mixtm/table5
+9148141	/mnt/h/tmp/temp-mixtm/table6
+8138912	/mnt/h/tmp/temp-mixtm/table7
+
+a takto je velka ta nova:
+142090003	phrase-table.0-0.unfiltered.gz
+
+pro srovnani nevazena, standardne extrahovana tabulka ze stejne velkych dat:
+20504389	phrase-table.0-0.gz
+138581096	phrase-table.0-0.unfiltered.gz
+
+Takto pak vyrobis experiment:
+./manager.pl exp.mert.f829f803.20100301-1548 -s '/exp.tm.b2b6fa3e.20100220-1316/exp.mixtm.20100228-2254/'
+-> exp.mert.8a26929b.20100301-1828
+
+**************
+**************
+**************
