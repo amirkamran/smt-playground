@@ -1343,5 +1343,168 @@ Takto pak vyrobis experiment:
 -> exp.mert.8a26929b.20100301-1828
 
 **************
+
+do anglictiny:
+zakladni pokus exp.mert.1646950d.20100301-1956 selhal
+zkousim novy, viz nohup.out2
+a taky alternativne z lemmat
+
+Do anglictiny pouziju urcite radsi to s gigaLM:
+18.03±0.44 c5081904.20100303-0052
+
+BLEU je totiz zrejme ovlivneno uvozovkama:
+18.95±0.45 556f5ad7.20100301-2059
+
+(preklad z lemmat je rozhodne uspesnejsi)
+
+Davidovo rucni hodnoceni:
+
+11:05 tauri4 playground$./qj en_pro_davida | dett | grep -v Mark | list2tab  1 3 2 | sed 's/sys[0-9], //g' | tt --rmtab --utf8
+The evaluation called en_pro_davida already exists, interpreting:
+Hodnoty: sys1, 18.95±0.45,sys2, 18.03±0.44
+             18.95±0.45 18.03±0.44
+*            16         9
+**           -          2
+-            2          4
+equally-bad  13         13
+equally-fine 9          9
+
+Lepsi je pouzit mensi LM.
+
+**************
+
+
+vyhodnoceni od Davida Kolovratnika:
+
+23:02 tauri4 playground$./qj pro_davida | sed 's/- voc/-voc/' | dett | grep -v Mark | list2tab  1 3 2 | sed 's/sys[0-9], //g' | tt --rmtab --utf8
+The evaluation called pro_davida already exists, interpreting:
+Hodnoty: sys4, 15.07±0.49,sys1, 15.30±0.49,sys3, 15.21±0.48,sys2, GOOG
+             15.07±0.49 15.30±0.49 15.21±0.48 GOOG
+*            6          6          6          3
+**           4          3          3          5
+-vocabulary  1          1          1          2
+equally-bad  11         11         11         9
+equally-fine 7          7          7          7
+
+cili pouzivej radeji mixLM pres vsechny domeny, tj. 15.07
+
+
+
+**************
+
+osmigramovy velky LM:
+zrejme je podle BLEU neporovnatelny:
+
+14.88±0.51 6d8d7f90.20100226-2311  .... MIX sestigramu
+14.83±0.45 2566a8b1.20100227-2304  .... osmigramy
+
+... David rucne porovna:
+./qj osmigramy_pro_davida
+sys1    14.88Â±0.51     exp.mert.6d8d7f90.20100226-2311	6grmixlm
+sys2    14.83Â±0.45     exp.mert.2566a8b1.20100227-2304	8gr jen syn200x
+sys3    14.38Â±0.46     exp.mert.67c95223.20100226-1455	6gr jen syn200x
+
+16:18 tauri4 playground$./qj osmigramy_pro_davida | dett | grep -v Mark | list2tab  1 3 2 | sed 's/sys[0-9], //g' | tt --rmtab --utf8
+The evaluation called osmigramy_pro_davida already exists, interpreting:
+Hodnoty: sys3, 14.38±0.46,sys2, 14.83±0.45,sys1, 14.88±0.51
+             14.38±0.46 14.83±0.45 14.88±0.51
+*            6          8          7
+**           3          2          4
+-            8          8          -
+-vocabulary  1          -          1
+equally-bad  24         24         24
+equally-fine 9          9          9
+
+Zejmena mne zaujalo, ze 14.38 a 14.38 maji 8 spatnych vet. Je to tak jednoznacne, jak to vypada?
+
+Popisy rozdilu:
+
+14.38:   6gr jen na syn200x
+14.83:   8gr jen na syn200x
+14.88:   6gr na syn200x, webcoll, wmt10mono a wmt09mono, vazene dle ppl
+
+Díval jsem se na to a všechny - jsou opodstatněné. Jedná se o:
+
+ * negaci,
+ * změnu číslovky,
+ * změnu dvou čísel na jejich interval,
+ * vygenerování Spojených států do věty, kde nebyly,
+ * chybu ve slovesném čase,
+ * vypuštění podmětu (Obamy),
+ * vymyšlení si slovesa zeptal se místo původního řekl,
+
+tedy ve všech případech težko odhalitelné chyby, pokud nemám k
+dispozici referenci či originál.
+
+Zda je to jednoznačné? Mezi větami se těžko hledá podstatný
+rozdíl. Systémy se obvykle dopustí stejných chyb. Další souvětí
+jsou salát, jejichž význam by snad šlo vykládat jako věštbu.
+-vocabulary jsem dal jen jednou, nedával jsem jej, pokud by jej
+dostaly všechny věty, což by bylo častěji. Interpunkce je
+rozmístěna víceméně náhodně. Snažil jsem se hledat aspoň nějaké
+rozdíly, abych nedal všem equally-*.
+
+
+Bohuzel nemam experiment s osmigramy na vsech korpusech, to mi skoro jiste pretece kvota, kdyz se o to pokusim :-)
+
+Zkousim: exp.mixlm.bb26e2e2.20100303-2348, ten bych pak mel dosadit zejmena do 15.07!
+...bude to tento: exp.mert.7cf070a9.20100304-0006
+
+
+**************
+
+vyzkousej taky exp.mert.75ec1522.20100227-2302 ale s  exp.lm.6933e3bf.20100303-1607, tj. obrim LM na tagy a taky s vetsim MIXlm na formach
+=> bude to tento: exp.mert.81d9bf16.20100303-1616
+...zabil, lm zral moc pameti
+...novy LM (ted stejne pauziruje): exp.lm.311247a9.20100303-1943
+
+
+**************
+
+Zaverem:
+pro anglictinu odevzdej:
+17.59±0.51 a632bb5c.20100303-1642
+
+pro cestinu bud 15.07, nebo lepsi (porovnej rucne i s 14.24±0.49)
+
+**************
+
+zkousim nechat vyrobit LM na seznamdata, zatim radsi jen 6gr
+...bude jeste hrozne dlouho cekat, zkousim ho spustit paralelne v peti castech:
+  exp.lm.e1134c63.20100303-1825  ... v jedne casti
+  exp.lm.3fe4e3bc.20100303-2355  ... v peti castech
+
+**************
+
+Tento pokus zabil cluster:
+
+exp.mert.f20fe8a5.20100303-1943
+...pouzival totiz exp.lm.311247a9.20100303-1943:
++- exp.lm.311247a9.20100303-1943
+|  | Job: 867792 DONE syn200x+wmt09mono+wmt10mono2+webcoll+csNm+tag.8.blm
+|  | CORP=syn200x+wmt09mono+wmt10mono2+webcoll
+|  | CORPAUG=csNm+tag
+|  | ORDER=8
+|  | BINARIZE=yes
+|  | PARTS=1
+|  | == Finished:  Thu Mar  4 09:36:41 CET 2010
+|  | == Duration:  49973 (13h52m53s)
+|  | ==============================
+...a corpus.lm byl >40GB!
+
+
+sestigramovy LM na stejnych datech je pritom 20 GB:
++- exp.lm.afabe36b.20100303-1605
+|  | Job: 866530 DONE syn200x+wmt09mono+wmt10mono2+webcoll+csNm+stc.6.blm
+|  | CORP=syn200x+wmt09mono+wmt10mono2+webcoll
+|  | CORPAUG=csNm+stc
+|  | ORDER=6
+|  | BINARIZE=yes
+|  | PARTS=1
+|  | == Finished:  Thu Mar  4 02:31:00 CET 2010
+|  | == Duration:  37512 (10h25m12s)
+|  | ==============================
+
+
 **************
 **************
