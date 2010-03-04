@@ -17,11 +17,44 @@ plaintext.%: configs.% make_all_configs.pl
 	./make_all_configs.pl --target=plaintext < $<
 	touch $@
 
+# seznamdata:
 /ha/seznamdata/sents.gz: /ha/seznamdata/ftp/b-all.txt.converted.gz
 	zcat $< \
 	| ./select_czech_sents_from_seznamdata.pl \
 	| gzip -c \
 	> $@
+
+/ha/seznamdata/200M.tok.gz: /ha/seznamdata/sents.gz
+	cd /ha/seznamdata/ \
+	&& zcat $< \
+	| head -n 200000000 \
+	| sort -u \
+	| qruncmd --join --jobs=$(JOBS) \
+	    '$(SRUNBLOCKS) \
+	      "Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20 \
+	       Normalize_plaintext::Czech \
+	       SCzechW_to_SCzechM::Tokenize_joining_numbers \
+	       Print::Factored \
+	         TMT_PARAM_PRINT_FACTORED=SCzechW \
+		 TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output" \
+	      czech_source_sentence factored_output --errorlevel FATAL' \
+	| gzip -c > $@
+/ha/seznamdata/next100M.tok.gz: /ha/seznamdata/sents.gz
+	cd /ha/seznamdata/ \
+	&& zcat $< \
+	| skip 200000000 \
+	| head -n 100000000 \
+	| sort -u \
+	| qruncmd --join --jobs=$(JOBS) \
+	    '$(SRUNBLOCKS) \
+	      "Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20 \
+	       Normalize_plaintext::Czech \
+	       SCzechW_to_SCzechM::Tokenize_joining_numbers \
+	       Print::Factored \
+	         TMT_PARAM_PRINT_FACTORED=SCzechW \
+		 TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output" \
+	      czech_source_sentence factored_output --errorlevel FATAL' \
+	| gzip -c > $@
 
 ../wmt09mono:
 	# create plaintext of wmt09 monolingual czech texts

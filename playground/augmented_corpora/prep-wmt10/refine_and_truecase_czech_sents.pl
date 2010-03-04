@@ -79,7 +79,7 @@ while (<>) {
       next;
     }
     if ($known_lowercase{$lcword1}) {
-      $s =~ s/^$prefix$word1$suffix/$prefix$lcword1$suffix/;
+      $s =~ s/^\Q$prefix$word1$suffix/$prefix$lcword1$suffix/;
     }
 
     my $totwords = 0;
