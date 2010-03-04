@@ -68,10 +68,11 @@ KONEC
 echo $MODELEXP > ./info.modelexp
 echo $MERTEXP > info.mertexp
 
-echo $MODELEXP > ./deps
+echo $MERTEXP > ./deps
 
 ## Clone the moses.ini and source files
 $SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
+  --symlink \
   ../$MERTEXP/mert-tuning/"$iterprefix"moses.ini || exit 1
 
 ## We're using irstlm, change the lmodel-file type:
@@ -92,8 +93,8 @@ if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
 fi
 
 
-# for running this command, qsub it not allowed, because we're going to submit jobs ourselves
-echo "no" > qsub-allowed
+# for running this command, qsub is allowed, although we're going to submit jobs ourselves
+# echo "no" > qsub-allowed
 
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 
