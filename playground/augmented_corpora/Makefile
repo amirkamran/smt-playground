@@ -501,7 +501,7 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 	| ./simplify_numbers.pl \
 	| gzip -c > $@
 
-TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
+TRDCTOOLS=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 # hardwired rule just to keep track how the lexicon was collected
 .PRECIOUS: english_uppercased_tokens
 english_uppercased_tokens:
