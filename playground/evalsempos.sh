@@ -7,6 +7,7 @@ set -o pipefail
 
 SRUNBLOCKS=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
 QRUNCMD=/home/bojar/bin//qruncmd
+ZMERTJAR=$SCRIPTS_ROOTDIR/../../moses/zmert/zmert.jar
 JOBS=30
 
 d=`./manager.pl --guess $1`
@@ -24,7 +25,7 @@ testcorp=`cat VARS | grep ^TESTCORP | cut -d= -f2`
 [ -d ../augmented_corpora/$testcorp ] || die "Testcorp $testcorp not found"
 
 tgtlan=csNa
-refcorp=`../augmented_corpora/augment.pl $testcorp/$tgtlan+tlemma+sempos`
+refcorp=`../augmented_corpora/augment.pl $testcorp/$tgtlan+form+tlemma+sempos`
 
 [ -e $refcorp ] || die "Failed to get t-layer of reference set"
 
@@ -73,4 +74,21 @@ if [ ! -e evaluation.opt.semposbleu ]; then
   > evaluation.opt.semposbleu
 fi
 
-echo Now use evaluation.opt.txt and evaluation.sempos.ref.0 to create SemPOS.opt
+echo Using evaluation.opt.semposbleu and evaluation.semposbleu.ref.0 to create SemPOS.opt and SemPOSBLEU.opt
+
+[ -e $ZMERTJAR ] || die "Cannot find zmert.jar to compute SemPOS"
+
+EVALCMD="java -cp $ZMERTJAR EvalTool -cand evaluation.opt.semposbleu -ref evaluation.semposbleu.ref.0 -txtNrm 0 -m "
+
+SEMPOS="SemPOS 1 2"
+SEMPOSBLEU="SemPOS_BLEU 1 1 1 2 4 closest 0"
+
+echo Evaluation of SemPOS started at `date`
+
+$EVALCMD $SEMPOS > SemPOS.opt
+
+echo Evaluation of SemPOS_BLEU started at `date`
+
+$EVALCMD $SEMPOSBLEU > SemPOSBLEU.opt
+ 
+echo Evaluation finished
