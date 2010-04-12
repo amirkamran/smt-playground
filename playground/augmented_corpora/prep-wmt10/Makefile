@@ -17,6 +17,12 @@ plaintext.%: configs.% make_all_configs.pl
 	./make_all_configs.pl --target=plaintext < $<
 	touch $@
 
+justwmtdevs: plaintext.wmt10dev
+	cd .. \
+	&& for d in wmt102.test*; do zcat $$d/cs_txt.gz | wc -l > $$d/LINECOUNT; done \
+	&& for d in wmt102.test*; do echo untok > $$d/cs_txt.info; done \
+	&& for d in wmt102.test*; do echo untok > $$d/en_txt.info; done
+
 # seznamdata:
 /ha/seznamdata/sents.gz: /ha/seznamdata/ftp/b-all.txt.converted.gz
 	zcat $< \
