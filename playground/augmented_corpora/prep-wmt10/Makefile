@@ -163,7 +163,7 @@ plaintext: wmt10dev
 	if [ ! -e ../$(OUTCORPNAME)/$(ANOTLANG)_txt.gz ]; then \
 	  mkdir -p ../$(OUTCORPNAME); \
 	  set -o pipefail \
-	  ; ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz extra/*.gz \
+	  ; (ls $(CZENG09PLAINTEXTSDIR)/*.gz wmt10dev/*.gz extra/*.gz || true) \
 	  | grep '$(FILENAMERE)' \
 	  | autocat --filelist=- \
 	  | grep '$(COLUMNRE)' \
