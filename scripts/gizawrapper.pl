@@ -54,6 +54,7 @@ GetOptions(
   "rcol=i" => \$rcol, # use a different column of a bicolumn input, not 1
   "drop-bad-lines" => \$drop_bad_lines, # try to ignore some minor problems
   "keep" => \$keep,
+  "giza-flags=s" => \$giza_extra_options,
 ) or exit 1;
 my $MKCLS = "$bindir/mkcls";
 my $GIZA = "$bindir/GIZA++";
@@ -642,8 +643,8 @@ sub run_giza {
        m3 => 3 , 
        m4 => 3 , 
        o => "giza" ,
-       nodumps => 1 ,
-       onlyaldumps => 1 ,
+       nodumps => 0 ,
+       onlyaldumps => 0 ,
        nsmooth => 4 , 
        model1dumpfrequency => 1,
        model4smoothfactor => 0.4 ,
