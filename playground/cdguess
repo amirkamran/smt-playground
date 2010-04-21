@@ -1,4 +1,4 @@
 #!/bin/bash
 
 d=`./manager.pl --guess "$1"`
-[ -d "$d" ] && cd $d
+[ -d "$d" ] && cd $d && echo $d

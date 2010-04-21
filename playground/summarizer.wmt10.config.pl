@@ -50,7 +50,7 @@ my @scans = (
     $beautify,
   ],
   [
-    "Two-step",
+    "Two-step SMALL",
     "",
     # required
     "
@@ -62,12 +62,53 @@ my @scans = (
     09-
     wmt09czeng
     wmt09-news
+    092-na
+    TESTwmt102
+    092-eu
     ",
     1,
     # rows
     "
     u^enNa(2?)
+    t([0-9]+[a-][^.D]*)
+    lemma-csN?-lemma
+    lcstem4-csN?-lcstem4
+    LM([-0-9]*-[^+]*)
+    ",
+    # cols
+    "
+    SECphr([0-9]+)
+    u^\\+(plus|strip|)lemma(2?)
+    u^csX1
+    u^.
+    en([N4]*)\\+
+    ",
+    # sort
+    "enN\\+",
+    0, # verbose
+    $beautify,
+  ],
+  [
+    "Two-step LARGE",
+    "",
+    # required
+    "
+    MID|bsln|BEST|smallencs,bigLM
     092-eu
+    ",
+    # forbidden
+    "
+    =OUTDATED= BLEU.opt
+    09-
+    wmt09czeng
+    wmt09-news
+    092-na
+    TESTwmt102
+    ",
+    1,
+    # rows
+    "
+    u^enNa(2?)
     t([0-9]+[a-][^.D]*)
     lemma-csN?-lemma
     lcstem4-csN?-lcstem4

@@ -3,8 +3,14 @@
 e1="$1"
 e2="$2"
 
+inf=`./output "$e1" in`
+if [ -e "$inf.txt" ]; then
+  inf="$inf.txt"
+fi
+echo $inf
+
 tools/compare_translations/merge_src_ref_tst.pl \
-  `./output "$e1" in` \
+  $inf \
   `./output "$e1" ref.0` \
   `./output "$e1"` \
   `./output "$e2"` \
