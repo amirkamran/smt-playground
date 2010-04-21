@@ -12,6 +12,7 @@ if [ -z "$LMS" ] \
   echo "  \$HELDOUT to the shortname of corpus"
   echo "And optionally: "
   echo "  \$BINARIZE=yes to binarize the model"
+  echo "  \$PROMISEAUGMATCH=yes to ignore difference in corpaugs"
   exit 1
 fi
 
@@ -55,7 +56,7 @@ for lmexp in ${LMS//:/ }; do
   else
     [ x$thisorder == x$ORDER ] \
     || die "Mismatch in ORDER: Expected $ORDER, $lmexp has $thisorder"
-    [ x$thisaug == x$CORPAUG ] \
+    [ x$thisaug == x$CORPAUG ] || [ x$PROMISEAUGMATCH == xyes ] \
     || die "Mismatch in CORPAUG: Expected $CORPAUG, $lmexp has $thisaug"
   fi
 done
