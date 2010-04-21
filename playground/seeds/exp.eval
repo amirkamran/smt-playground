@@ -70,11 +70,6 @@ echo $MERTEXP > info.mertexp
 
 echo $MERTEXP > ./deps
 
-## Clone the moses.ini and source files
-$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  --symlink \
-  ../$MERTEXP/mert-tuning/"$iterprefix"moses.ini || exit 1
-
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
 
@@ -124,6 +119,11 @@ function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+## Clone the moses.ini and source files
+\$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
+  --symlink \\
+  ../$MERTEXP/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
