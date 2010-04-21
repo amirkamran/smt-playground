@@ -5,6 +5,9 @@ set -o pipefail
 
 [ ! -z "$1" ] || die "usage: $0 exp-identifier"
 
+SCRIPTS_ROOTDIR=$(cat $(cat workspace)/scripts.rootdir)
+echo "Using SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR"
+
 SRUNBLOCKS=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
 QRUNCMD=/home/bojar/bin//qruncmd
 ZMERTJAR=$SCRIPTS_ROOTDIR/../../moses/zmert/zmert.jar
@@ -14,6 +17,11 @@ d=`./manager.pl --guess $1`
 [ -d "$d" ] || die "Not an experiment: $d"
 
 cd $d || die "Failed to chdir"
+
+if [ -s SemPOSBLEU.opt ] && [ -s SemPOS.opt ] ; then
+  echo "Assuming finished: SemPOSBLEU.opt SemPOS.opt"
+  exit 0;
+fi
 
 [ -x "$SRUNBLOCKS" ] || die "Can't run $SRUNBLOCKS"
 [ -x "$QRUNCMD" ] || die "Can't run $QRUNCMD"

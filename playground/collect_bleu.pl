@@ -11,7 +11,7 @@ binmode STDOUT, ":utf8";
 
 my %collect_info = ();
 
-foreach my $path (bsd_glob("exp.*/BLEU.*")) {
+foreach my $path (bsd_glob("exp.*/BLEU.*"), bsd_glob("exp.*/SemPOS*")) {
   my ($dir, $fn) = split /\//, $path;
   next if -l $dir; # ignore symlinks
   my $devsize = linecount($dir."/tuning.ref.0");
@@ -88,11 +88,15 @@ sub pickbleu {
   my $fn = shift;
   open INF, $fn or return undef;
   binmode INF, ":utf8";
-  my $bleu = <INF>;
+  my $bleu = "";
+  while (<INF>) {
+    $bleu .= $_;
+  }
   close INF;
   return undef if !defined $bleu;
   return $1 if $bleu =~ /BLEU\s*=\s*(.*) at 90\.0.*/;
   return $1 if $bleu =~ /BLEU\s*=\s*(.*) \[/;
   return $1 if $bleu =~ /BLEU\s*=\s*([±0-9.]*),/;
+  return sprintf("%.2f", $2*100) if $bleu =~ /SemPOS(_BLEU)?\s*=\s*([±0-9.]*)/;
   return $bleu;
 }
