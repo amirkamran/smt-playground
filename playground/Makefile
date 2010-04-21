@@ -168,7 +168,7 @@ bleu:
 	| tt --utf8 \
 	> $@.`./sitename`
 	cat $@.* \
-	| recut 1,4,6,2,5,3 \
+	| recut 1,4,5,6,8,7,3 \
 	| numsort --skip=1 n1 \
 	| tt --utf8 \
 	> $@
