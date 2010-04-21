@@ -1507,4 +1507,43 @@ sestigramovy LM na stejnych datech je pritom 20 GB:
 
 
 **************
+
+Takto jsem rucne nasekal pomlckova slova:
+16:59 tauri4 augmented_corpora$zcat /a/merkur3/TMP/bojar/wmt10/playground/augmented_corpora/czeng092-ne/combinations/enNa2+stc+2.gz | ../tools/split_hyphenated_words.pl --inali=czeng092-ne/enNa-lemma-csNa-lemma-gdfa.gz | gzip -c > /a/merkur3/TMP/bojar/wmt10/playground/augmented_corpora/czeng092-ne/enNa2split.gz
+
+A takto k tomu doplnil .info:
+16:57 tauri4 augmented_corpora$for f in `ls */enNa2split.gz`; do i=${f/gz/info}; echo 'stc|tag' > $i; done
+
+
+Ted to zkusim na dvou experimentech:
+
+obri: exp.mert.37e25e0a.20100304-1021:
+17:01 tauri4 playground$HOLDS="-queue cosmos" ./manager.pl exp.mert.37e25e0a.20100304-1021 -s '/enNa2/enNa2split/' -s '/enNm/split-enNm/' -s '/exp.mixlm.3cab7943.20100225-1636/exp.mixlm.e2d2938a.20100228-1254/'
+... exp.mert.deedff95.20100304-1712
+
+
+baseline:
+e1198397.20100220-1707 -> exp.mert.cfeb4799.20100304-1711
+
+
+**************
+
+
+zrejme jsem odvaril switche 25GB mixlm: exp.mixlm.2405d833.20100304-1135
+zkousim ho ted prorezat...
+
+misto odvareneho exp.model.0acf1239.20100304-113
+pouziju exp.mert.e91400b1.20100305-1537
+
+**************
+
+odevzdavam:
+
+cu-bojar.encs           	15.95±0.49 15d045b7.20100305-1242
+cu-bojar-contrast-a.encs	16.29±0.54 fce771f7.20100301-1159
+cu-bojar.csen	19.26±0.54 c2611f11.20100302-2341
+cu-bojar-contrast-a.csen	17.59±0.51 a632bb5c.20100303-1642
+
+**************
+**************
 **************
