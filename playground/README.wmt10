@@ -1086,7 +1086,7 @@ chci zkusit preklad pres mezijazyk, zatim vse s *malym* prekladovym krokem:
 10.38±0.38	99ba61bc.20100220-1143     	pluslemma2 	notagLM
 10.12±0.39	f4351239.20100220-0116     	csX1       	notagLM
 9.63±0.36 	5e6da176.20100220-1144     	striplemma2	notagLM
-          	a8b3b75d.20100220-1336     	baseline   	tagLM
+11.30±0.41	a8b3b75d.20100220-1336     	baseline   	tagLM
 
 10.12±0.39 f4351239.20100220-0116
 ...s takhle malym generovanim horsi nez baseline:
@@ -1539,11 +1539,51 @@ pouziju exp.mert.e91400b1.20100305-1537
 
 odevzdavam:
 
-cu-bojar.encs           	15.95±0.49 15d045b7.20100305-1242
-cu-bojar-contrast-a.encs	16.29±0.54 fce771f7.20100301-1159
+cont	cu-bojar.encs           	15.95±0.49 15d045b7.20100305-1242
+PRIM	cu-bojar-contrast-a.encs	16.29±0.54 fce771f7.20100301-1159
+cont	cu-bojar-contrast-b.encs	16.26±0.54 b6eaa6d2.20100305-2125
+
 cu-bojar.csen	19.26±0.54 c2611f11.20100302-2341
 cu-bojar-contrast-a.csen	17.59±0.51 a632bb5c.20100303-1642
 
+jeste nadejnejsi by mohl byt:
+exp.mert.87a9306b.20100305-2215 (seznamdata => zabito)
+exp.eval.b7fc3258.20100306-0003 (6gr)
+
+
+**************
+
+Na cosmosu dobehl tm:
+/a/merkur3/TMP/bojar/wmt10/playground/exp.tm.0845ebae.20100304-1712
+spoj a vyzkousej ho
+
+**************
+
+2010-04-19
+
+- obsah clanku:
+  - sempos
+
+Spravedlive porovnani velkeho twostepu:
+
+                      	baseline  	\+pluslemma2	BLEU detail
+enNa2 LM0-6-wmt10mono2	14.17±0.51	-           	46.3/19.4/9.5/4.8
+enNa2 LM0-6-wmt10mono2	-         	14.06±0.49  	46.1/19.3/9.5/4.8
+
+Ukazuje se, ze unigramy i bigramy se v prumeru kapku kazi. I sempos vysel hur
+pro preklad pres lemmata, cili ani moc nema smysl delat evaluaci lematickym
+bleu, jak mne pred chvili napadlo.
+
+**************
+
+2010-04-19
+
+zbyle chyby: were unable => *byly schopny
+  hundreds of thousands of Americans were unable to pay off their mortgages
+
+
+**************
+**************
 **************
 **************
 **************
