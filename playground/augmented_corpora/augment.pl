@@ -702,6 +702,7 @@ sub count_lines {
   while (<$hdl>) {
     $nr++;
     die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
+    die "$fn:$nr:CR (\\r) can kill Giza, get rid of it!" if /\r/;
     unless (m/\n$/) {
 	print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
     }
