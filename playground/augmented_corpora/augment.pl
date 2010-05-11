@@ -702,6 +702,9 @@ sub count_lines {
   while (<$hdl>) {
     $nr++;
     die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
+    unless (m/\n$/) {
+	print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
+    }
   }
   close $hdl;
   my $outh = my_save($linecounttimestamp);
