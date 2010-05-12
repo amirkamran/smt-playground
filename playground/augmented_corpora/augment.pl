@@ -296,7 +296,7 @@ sub ensure_salm_index {
   my $indexdirname = dirname($indexpath);
 
   my $tmp = tempdir(DIR=>$tmpdir, CLEANUP=>1);
-  
+
   # unzip *and* truncate to 255 words at most
   my $inh = my_open($corpfile);
   my $outh = my_save("$tmp/$indexbasename");
@@ -654,7 +654,7 @@ sub safesystem {
 sub validate {
   my $corpbasefile = shift;
   my $needlinescount = shift;
-  
+
   if ($lazy) {
     my_nonempty($corpbasefile);
   } else {
@@ -702,7 +702,12 @@ sub count_lines {
   while (<$hdl>) {
     $nr++;
     die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
+    # Windows-style line breaks (CR LF instead of Linxu-style LF only) are dangerous for Giza.
     die "$fn:$nr:CR (\\r) can kill Giza, get rid of it!" if /\r/;
+    # Two consecutive spaces could be interpreted as empty tokens by some programs, which is dangerous.
+    die "$fn:$nr:Two or more consecutive spaces." if /\s\s/;
+    # No tabs and blank characters other than space and LF (line break).
+    die "$fn:$nr:Blank character other than space or LF." if /[\s^ \n]/;
     unless (m/\n$/) {
 	print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
     }
