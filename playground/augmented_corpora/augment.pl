@@ -709,7 +709,9 @@ sub count_lines {
     $x =~ s/[ \n]//g;
     die "$fn:$nr:Blank character other than space or LF." if $x =~ /\s/;
     # Two consecutive spaces could be interpreted as empty tokens by some programs, which is dangerous.
-    die "$fn:$nr:Two or more consecutive spaces." if /\s\s/;
+    $x = $_;
+    $x =~ s/\n$//;
+    die "$fn:$nr:Two or more consecutive spaces, or line beginning or ending with a space." if $x =~ /\s\s/ || $x =~ /^\s/ || $x =~ /\s$/;
     unless (m/\n$/) {
       print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
     }
