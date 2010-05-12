@@ -702,14 +702,16 @@ sub count_lines {
   while (<$hdl>) {
     $nr++;
     die "$fn:$nr:Blank line." if !$ignore_blank_lines && /^\s*$/;
-    # Windows-style line breaks (CR LF instead of Linxu-style LF only) are dangerous for Giza.
+    # Windows-style line breaks (CR LF instead of Linux-style LF only) are dangerous for Giza.
     die "$fn:$nr:CR (\\r) can kill Giza, get rid of it!" if /\r/;
+    # No tabs and blank characters other than space and LF (line break).
+    my $x = $_;
+    $x =~ s/[ \n]//g;
+    die "$fn:$nr:Blank character other than space or LF." if $x =~ /\s/;
     # Two consecutive spaces could be interpreted as empty tokens by some programs, which is dangerous.
     die "$fn:$nr:Two or more consecutive spaces." if /\s\s/;
-    # No tabs and blank characters other than space and LF (line break).
-    die "$fn:$nr:Blank character other than space or LF." if /[\s^ \n]/;
     unless (m/\n$/) {
-	print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
+      print STDERR "WARNING: last line ($fn:$nr) not terminated by LF which may cause the 'wc -l' command not to count it.\n";
     }
   }
   close $hdl;
