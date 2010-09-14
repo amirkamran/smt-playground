@@ -90,18 +90,22 @@ sub scan {
   print "Common properties: ".join(" ", @{$self->{reqtoksf}})."\n";
   print "Forbidden properties: ".join(" ", @{$self->{forbtoksf}})."\n";
 
-  my $col_to_pick = $self->{col};
-  if ($col_to_pick !~ /^[0-9]+$/) {
-    # we need to get the column number from the title line
-    for(my$i = 0; $i < scalar @{$lines->[0]}; $i++) {
-      if ($lines->[0]->[$i] eq $col_to_pick) {
-        $col_to_pick = $i;
-        last;
+  my $cols_to_pick = $self->{col};
+  my @cols_to_pick = ();
+  foreach my $col_to_pick (split /,/, $cols_to_pick) {
+    if ($col_to_pick !~ /^[0-9]+$/) {
+      # we need to get the column number from the title line
+      for(my$i = 0; $i < scalar @{$lines->[0]}; $i++) {
+        if ($lines->[0]->[$i] eq $col_to_pick) {
+          $col_to_pick = $i;
+          last;
+        }
       }
+  
+      die "Column $col_to_pick not found in $lines->[0]"
+        if $col_to_pick !~ /^[0-9]+$/;
     }
-
-    die "Column $col_to_pick not found in $lines->[0]"
-      if $col_to_pick !~ /^[0-9]+$/;
+    push @cols_to_pick, $col_to_pick;
   }
 
   my %coldef; my %rowdef;
@@ -144,8 +148,9 @@ sub scan {
       $coldef{$colid} = 1;
     }
     my $pos = "$rowid\t$colid";
+    my $value = join(",", map { $line->[$_] } @cols_to_pick);
     if (defined $table{$pos} 
-      && ($table{$pos} ne $line->[$col_to_pick] || $self->{verbose}>0)) {
+      && ($table{$pos} ne $value || $self->{verbose}>0)) {
       sub move_last_col_to_front {
         my $cols = shift;
         my @cols = split /\t/, $cols;
@@ -157,7 +162,12 @@ sub scan {
       print "With new: ".move_last_col_to_front($line->[0])."\n";
       delete $used{"@rowid\t@colid\t$tableinfo{$pos}"};
     }
-    $table{$pos} = $line->[$col_to_pick];
+    if (defined $self->{collectdelim}) {
+      $table{$pos} .= $self->{collectdelim} if defined $table{$pos};
+      $table{$pos} .= $value;
+    } else {
+      $table{$pos} = $value;
+    }
     $tableinfo{$pos} = $line->[0];
     $used{"@rowid\t@colid\t$line->[0]"} = 1;
   }
