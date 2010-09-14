@@ -38,6 +38,8 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$MERTPRG to mert, zmert (and hopefully new-mert later)"
   echo "  \$ZMERTMETRIC for zmert, to SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU"
   echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt"
+  echo "  \$ZMERTSEMPOSBLEUWEIGHTS for --semposbleu-weights, e.g. 1:1"
+  echo "  \$ZMERTFLAGS for zmert flags"
   echo "  \$TMT_ROOT for zmert SemPOS TMT_ROOT"
   exit 1
 fi
@@ -53,6 +55,11 @@ if [ "$MERTPRG" == zmert ]; then
     [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
     ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
     ZMERTSEMPOSSOURCEFLAG="--extract-sempos=$ZMERTSEMPOSSOURCE"
+  fi
+  if [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
+    [ ! -z "$ZMERTSEMPOSBLEUWEIGHTS" ] || ZMERTSEMPOSBLEUWEIGHTS=1:1
+    ZMERTMETRICTAG="$ZMERTMETRICTAG"WEIGHTS$ZMERTSEMPOSBLEUWEIGHTS
+    ZMERTSEMPOSSOURCEFLAG=$ZMERTSEMPOSSOURCEFLAG" --semposbleu-weights=$ZMERTSEMPOSBLEUWEIGHTS"
   fi
   MERTTAG=ZMERT$ZMERTMETRICTAG
 fi
@@ -85,6 +92,8 @@ STACK=$STACK
 MERTPRG=$MERTPRG
 ZMERTMETRIC="$ZMERTMETRIC"
 ZMERTSEMPOSSOURCE=$ZMERTSEMPOSSOURCE
+ZMERTSEMPOSBLEUWEIGHTS=$ZMERTSEMPOSBLEUWEIGHTS
+ZMERTFLAGS="$ZMERTFLAGS"
 TMT_ROOT=$TMT_ROOT
 KONEC
 
@@ -107,6 +116,10 @@ echo Checking tune and eval corp sizes
 [ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
 [ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
+
+reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
+  || die "Failed to cut factor 0 of evaluation.ref.0"
+
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
 if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
@@ -157,6 +170,7 @@ $ZMERTMOSES \
   \`pwd\`/moses.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
   --metric="$ZMERTMETRIC" $ZMERTSEMPOSSOURCEFLAG \\
+    $ZMERTFLAGS \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
@@ -244,7 +258,7 @@ $MOSESPARALLELIZER \\
 
 echo "Tuned BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt \\
+./testbleu evaluation.ref.0.factor0 < evaluation.opt.out | tee BLEU.opt \\
   || die "BLEU of evaluation.opt.out set failed"
 
 echo "Detokenizing evaluation.opt.out"

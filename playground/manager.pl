@@ -66,6 +66,7 @@ if ($cleanup) {
   # just cleaning up
   # construct a queue of needed experiments, starting from merts
   my %needed = map { ($_, 1) } grep { /^exp\.mert\./ } @dirs;
+  # if any other models are needed, we should mark them here
   my @q = keys %needed;
   while (my $e = shift @q) {
     next if ! -d $e; # ignore deps of nonexisting experiments

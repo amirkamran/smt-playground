@@ -1553,6 +1553,22 @@ exp.eval.b7fc3258.20100306-0003 (6gr)
 
 **************
 
+Legracni chyby:
+
+cu-bojar-contrast-a.encs.txt.gz Loví ho, ho, ho, hodil hořící boty na zdi, cítí bolest po celém těle.
+
+-         1860  They hunt him, kick him with heavy, flaming boots, throw him against walls, he feels the pain all over his body.
+cu-bojar-contrast-a.encs.txt.gz Loví ho, ho, ho, hodil hořící boty na zdi, cítí bolest po celém těle.
+cu-bojar-contrast-b.encs.txt.gz Loví ho, ho s těžkými, hořící boty, hoďte ho proti zdi, cítí bolest po celém těle.
+cu-bojar.encs.txt.gz    Loví ho kopnout ho s těžkými, hořící boty, hoďte ho proti zdi, cítí bolest po celém těle.
+eurotran.encs.txt.gz    Oni loví jej, kopnout jej s těžkými, planoucími botama, hodit jej proti zdím, on cítí bolest všude po jeho těle.
+google.encs.txt.gz      Loví ho, kopnout ho s těžkým, planoucí boty, hoď ho proti zdi, cítí bolest po celém těle.
+pctrans2007.encs.txt.gz Oni loví jemu, kopou jemu s těžkými, plápolající botami, hodit jemu proti zdím, on cítí bolest všude po jeho tělu.
+pctrans2010.encs.txt.gz Oni loví jemu, kopou ho s těžkými, plápolajícími botami, hodit ho proti zdem, on cítí bolest všude po jeho tělu.
+
+
+**************
+
 Na cosmosu dobehl tm:
 /a/merkur3/TMP/bojar/wmt10/playground/exp.tm.0845ebae.20100304-1712
 spoj a vyzkousej ho
@@ -1583,7 +1599,54 @@ zbyle chyby: were unable => *byly schopny
 
 
 **************
+
+zkousim obnovit constr, ale na pokusu exp.mert.5086ff3c.20100421-1645 se ukazuje, ze nejspis sigfilter hrozne skodi
+
+i se starou implementaci mosese to najednou dokaze dosahnout sotva 1% testovacich vet
+
+sigf	bez sigf
+exp.mert.5086ff3c.20100421-1645	exp.mert.1d083e5a.20100421-1830
+exp.mert.2455f00f.20100420-1818	exp.mert.46d3438f.20100421-1836
+exp.mert.8dd16fd6.20100420-1850	exp.mert.f06bed1d.20100421-1837
+exp.mert.bf6d4e58.20100421-1656	exp.mert.8f614a92.20100421-1840
+
 **************
+
+velky cs-en s lematy (exp.mert.5a72c2c0.20100421-0120) ma celkem velkou
+dosazitelnost:
+
+Sentences processed
+dl10    dl3     dl30    dl40    dl6
+ttl1    2525    2525    2525    2525    2525
+ttl10   2525    2525    2525    2525    2525
+ttl100  2525    2525    2525    1477    2525
+ttl20   2525    2525    2525    2525    2525
+ttl5    2525    2525    2525    2525    2525
+ttl50   2525    2525    2525    2043    2525
+
+Reachable
+ttl     dl3     dl6     dl10    dl30    dl40
+1       0.4     0.4     0.4     0.4     0.4
+5       1.5     1.9     2.0     2.0     2.0
+10      2.5     3.2     3.5     3.5     3.5
+20      3.7     5.0     5.5     5.6     5.6
+50      4.9     6.7     8.0     8.6     9.3
+100     5.3     7.6     9.1     9.4     11.6
+
+Zkousim velky cs-en *bez* lemat: exp.mert.e8add76a.20100421-1937
+
+
 **************
+
+zkusim 2step 12.29±0.47 rozsirit, aby pouzival i tag (hlavne kvuli padu podstatneho jmena)
+  nahrazuju tedy:
+    exp.mert.252aef71.20100220-1350 pokusem exp.mert.688e6e7f.20100423-1243
+    a
+    exp.mert.675e881b.20100223-1156 pokusem exp.mert.1b22a834.20100423-1248
+      (pokus exp.mert.2ba92790.20100423-1247 je vadny)
+      Taky bych mel pridat cilovy LM na tagach
+
+a pak to vpravim do exp.2step.a31c310a.20100223-1156
+
 **************
 **************

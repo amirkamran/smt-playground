@@ -8,3 +8,4 @@ wmt102.test08	en:enN4	normaforcs	wmt10dev/test2008	.	# wmt10 test2008 English no
 wmt102.test09	en:enN4	normaforcs	wmt10dev/test2009	.	# wmt10 test2009 English normalized and augmented for Czech
 
 wmt102.test10	en,cs:cs	a    	wmt10dev/test2010	.	# wmt10 test2010
+wmt102.test10.tectomt	en,cs:cs	a    	wmt10dev/test2010	.	# wmt10 test2010 as translated by tectomt
