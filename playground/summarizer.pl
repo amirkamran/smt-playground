@@ -45,7 +45,7 @@ die "Bad config in $configfile" if ! defined $config;
 my $data = Summarizer::load(*STDIN);
 
 foreach my $scan (@$config) {
-  my ($title, $subtitle, $req, $forb, $col, $rows, $cols, $sortcol, $verbose, $tokenmap)
+  my ($title, $subtitle, $req, $forb, $col, $rows, $cols, $sortcol, $verbose, $tokenmap, $collectdelim)
     = @$scan;
   Summarizer::newscan(
     {
@@ -59,6 +59,7 @@ foreach my $scan (@$config) {
       sortcol=>$sortcol,
       verbose=>$verbose,
       tokenmap=>$tokenmap,
+      collectdelim=>$collectdelim,
     },
     $data);
 }
