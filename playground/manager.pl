@@ -65,7 +65,9 @@ if ($guess) {
 if ($cleanup) {
   # just cleaning up
   # construct a queue of needed experiments, starting from merts
-  my %needed = map { ($_, 1) } grep { /^exp\.mert\./ } @dirs;
+  my %needed = map { ($_, 1) }
+    grep { /^exp\.(mert|2step|eval)\./ }
+    @dirs;
   # if any other models are needed, we should mark them here
   my @q = keys %needed;
   while (my $e = shift @q) {
@@ -80,7 +82,10 @@ if ($cleanup) {
   print STDERR "Listing unused experiments.\n";
   foreach my $e (@dirs) {
     next if $needed{$e};
-    print $e."\n";
+    print $e;
+    my $tag = `cat $e/TAG 2>/dev/null`; chomp $tag;
+    print "\t$tag" if $showtag;
+    print "\n";
   }
   exit 0;
 }
