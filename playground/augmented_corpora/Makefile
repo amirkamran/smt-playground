@@ -283,6 +283,12 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
+%.factors/tag1.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+tag \
+	| sed 's/\([^ ]\)[^ ]*/\1/g' \
+	| gzip -c > $@
+
 %.factors/pluslemma2.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+form+lemma+tag \
