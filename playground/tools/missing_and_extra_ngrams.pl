@@ -112,6 +112,7 @@ sub compare_ngrams {
     my $bad = 0;
     foreach my $ngr (@{factored_ngrams($n, $test->[$sent])}) {
       $tot++;
+      $stats->{"total"}->{"extra"}->{$ngr->{'report'}}++;
       next if $refngrams->{$ngr->{'compare'}};
       $bad++;
       # Chance to print per-sentence problems:
@@ -121,6 +122,7 @@ sub compare_ngrams {
     if (defined $compare_factor || defined $report_factor) {
       # use only the first reference with compare_factor
       foreach my $ngr (@{factored_ngrams($n, $refs->[$sent]->[0])}) {
+        $stats->{"total"}->{"missing"}->{$ngr->{'report'}}++;
         next if $testngrams->{$ngr->{'compare'}};
         # Chance to print per-sentence problems:
         # print "  MISSING:\t$ngr\n";
@@ -129,6 +131,7 @@ sub compare_ngrams {
     } else {
       # use all references 
       foreach my $ngr (keys %{$allrefngrams}) {
+        $stats->{"total"}->{"missing"}->{$ngr}++;
         next if $testngrams->{$ngr};
         # Chance to print per-sentence problems:
         # print "  MISSING:\t$ngr\n";
@@ -145,12 +148,16 @@ sub compare_ngrams {
 }
 
 # Report summaries:
-foreach my $type (sort keys %{$stats}) {
+foreach my $type ("extra", "missing") {
   print "Top $print_top $type $n-grams are:\n";
   my $outnr = 0;
   foreach my $ngr (sort {$stats->{$type}->{$b} <=> $stats->{$type}->{$a}}
                    keys %{$stats->{$type}}) {
-    print "$stats->{$type}->{$ngr}\t$ngr\n";
+    print "$stats->{$type}->{$ngr}\t$ngr";
+    printf "\tout of %i = %.1f%%",
+      $stats->{"total"}->{$type}->{$ngr},
+      $stats->{$type}->{$ngr} / $stats->{"total"}->{$type}->{$ngr} * 100;
+    print "\n";
     $outnr++;
     last if $outnr >= $print_top;
   }
