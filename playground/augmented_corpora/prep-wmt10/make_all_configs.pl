@@ -21,10 +21,10 @@ while (<>) {
   foreach my $langnames (split /,/, $langs) {
     my ($lang, $outlangname) = split /:/, $langnames;
     $outlangname = $lang if ! defined $outlangname;
-    # if (-e "../$outcorpname/$outlangname.gz" ) {
-      # print STDERR "Skipped existing ../$outcorpname/$outlangname.gz\n";
-      # next;
-    # }
+    if (-e "../$outcorpname/$outlangname.gz" ) {
+      print STDERR "Skipped existing ../$outcorpname/$outlangname.gz\n";
+      next;
+    }
     $ENV{"OUTCORPNAME"} = $outcorpname;
     $ENV{"ANOTLANG"} = $lang;
     $ENV{"OUTLANG"} = $outlangname;
