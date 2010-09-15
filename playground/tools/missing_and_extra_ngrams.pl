@@ -12,6 +12,8 @@ binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
 
 my $n = 2;
+my $compare_factor = undef;
+my $report_factor = undef;
 my $usage = 0;
 my $print_hypotheses = 0;
 my $print_references = 0;
@@ -20,6 +22,8 @@ my $print_top = 30;
 GetOptions(
   "n=i" => \$n,
   "help" => \$usage,
+  "compare-factor=i" => \$compare_factor,
+  "report-factor=i" => \$report_factor,
 );
 
 my $testfile = shift;
@@ -28,12 +32,21 @@ while ( my $reffile = shift ) {
   push @reffiles, $reffile;
 }
 
+die "Multiple refs not supported with --compare-factor or --report-factor"
+  if 1 < scalar(@reffiles)
+     && (defined $compare_factor || defined $report_factor);
+
 if ($usage || !defined $testfile || scalar @reffiles == 0) {
   print STDERR "missing_and_extra_ngrams.pl hypothesis ref1 ref2 ...
 Summarizes, which ngrams were not justified by any of the references
 and therefore hurt BLEU.
 Options: 
   --n=2   ... scan for how long n-grams?
+  --compare-factor=undef
+     ... which factor is used for checking (if undef, all factors are used)
+  --report-factor=undef
+     ... which factor is reported for missing or extra words
+     (factors are numbered from 0)
 ";
   exit 1;
 }
@@ -72,11 +85,14 @@ sub compare_ngrams {
 
   my $stats;
   for(my $sent=0; $sent < scalar @$refs; $sent++) {
-    my $testngrams = ngrams($n, $test->[$sent]);
+    # construct hashes of seen things, compare_factor used here
+    my $testngrams = ngrams($n,
+      reduce_to_factor($compare_factor, $test->[$sent]));
     my $refngrams = {};
     my $allrefngrams = undef;
     foreach my $reference (@{$refs->[$sent]}) {
-      my $ngrams = ngrams($n, $reference);
+      my $ngrams = ngrams($n,
+        reduce_to_factor($compare_factor, $reference));
       $refngrams = union($ngrams, $refngrams);
       $allrefngrams = defined $allrefngrams
                       ? intersect($ngrams, $allrefngrams)
@@ -94,25 +110,35 @@ sub compare_ngrams {
     # Collect the statistics:
     my $tot = 0;
     my $bad = 0;
-    foreach my $ngr (sort keys %{$testngrams}) {
+    foreach my $ngr (@{factored_ngrams($n, $test->[$sent])}) {
       $tot++;
-      next if $refngrams->{$ngr};
+      next if $refngrams->{$ngr->{'compare'}};
       $bad++;
       # Chance to print per-sentence problems:
       # print "  EXTRA:\t$ngr\n";
-      $stats->{"extra"}->{$ngr}++;
+      $stats->{"extra"}->{$ngr->{'report'}}++;
     }
-    foreach my $ngr (sort keys %{$allrefngrams}) {
-      next if $testngrams->{$ngr};
-      # Chance to print per-sentence problems:
-      # print "  MISSING:\t$ngr\n";
-      $stats->{"missing"}->{$ngr}++;
+    if (defined $compare_factor || defined $report_factor) {
+      # use only the first reference with compare_factor
+      foreach my $ngr (@{factored_ngrams($n, $refs->[$sent]->[0])}) {
+        next if $testngrams->{$ngr->{'compare'}};
+        # Chance to print per-sentence problems:
+        # print "  MISSING:\t$ngr\n";
+        $stats->{"missing"}->{$ngr->{'report'}}++;
+      }
+    } else {
+      # use all references 
+      foreach my $ngr (keys %{$allrefngrams}) {
+        next if $testngrams->{$ngr};
+        # Chance to print per-sentence problems:
+        # print "  MISSING:\t$ngr\n";
+        $stats->{"missing"}->{$ngr}++;
+      }
     }
     
     if ($print_sentence_summaries) {
       printf " %i bad / %i total = %.f %% $n-gram error rate\n", $bad, $tot,
         ($tot?($bad/$tot*100):0);
-      print "\n";
     }
   }
   return $stats;
@@ -140,6 +166,39 @@ sub ngrams {
     shift @words;
   }
   return $out;
+}
+
+sub reduce_to_factor {
+  my $factor = shift;
+  my $words = shift;
+  return $words if ! defined $factor;
+  return [ map { my @f = split /\|/, $_; $f[$factor]; } @$words ];
+}
+
+sub factored_ngrams {
+  my $n = shift;
+  my @words = @{shift()};
+  my @words_split = map { [ split /\|/, $_ ] } @words;
+  my @out;
+  for(my $i=0; $i+$n-1 <= $#words; $i++) {
+    my @w = @words[$i..$i+$n-1];
+    my @w_split = @words_split[$i..$i+$n-1];
+    # now restrict to the ngrams needed
+    my $compare;
+    if (defined $compare_factor) {
+      $compare = join(" ", map {$_->[$compare_factor]} @w_split);
+    } else {
+      $compare = join(" ", @w);
+    }
+    my $report;
+    if (defined $report_factor) {
+      $report = join(" ", map {$_->[$report_factor]} @w_split);
+    } else {
+      $report = join(" ", @w);
+    }
+    push @out, {'compare'=>$compare, 'report'=>$report};
+  }
+  return [@out];
 }
 
 sub intersect {
