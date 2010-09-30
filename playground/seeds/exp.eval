@@ -7,15 +7,12 @@ if [ -z "$MOSES" ]; then
   exit 1
 fi
 
-wiseln $MOSESCMD ./moses || exit 1
-
 if [ -z "$SCRIPTS_ROOTDIR" ]; then
   echo "Set \$SCRIPTS_ROOTDIR accordingly!"
   exit 1
 fi
 
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-wiseln $TESTBLEU ./testbleu || exit 1
 
 
 if [ -z "$MERTEXP" ] || [ -z "$TESTCORP" ]; then
@@ -69,6 +66,13 @@ echo $MODELEXP > ./info.modelexp
 echo $MERTEXP > info.mertexp
 
 echo $MERTEXP > ./deps
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# clone some importnant executables
+wiseln $MOSESCMD ./moses || exit 1
+wiseln $TESTBLEU ./testbleu || exit 1
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1

@@ -1650,3 +1650,50 @@ a pak to vpravim do exp.2step.a31c310a.20100223-1156
 
 **************
 **************
+
+2010-09-24
+
+Zkousim primo primichat hypotezy TectoMT do Mosese:
+
+KOnkretne do tm pro PRIMARY submission exp.eval.fce771f7.20100301-1159:
+Uz se extrahuje novy model:
+misto  exp.tm.4b78994e.20100225-0058  pouzij tedy exp.tm.1b5e1b3b.20100924-1244
+
+Dobehlo to. Zatim to neni moc presvedcive:
+
+edituj:   vim qj.data/tecto-output-in-training.anot
+vyhodnocuj:
+./qj tecto-output-in-training 16.47±0.52 16.29±0.54
+
+No, malinky rozdil ve prospech tectomt tam asi bude:
+01:13 tauri4 playground$./qj tecto-output-in-training 16.47±0.52 16.29±0.54
+The evaluation called tecto-output-in-training already exists, interpreting:
+Mark    Count   Tag
+*       16      sys1, 16.47±0.52
+*       12      sys2, 16.29±0.54
+-       7       sys2, 16.29±0.54
+-       7       sys1, 16.47±0.52
+**      2       sys2, 16.29±0.54
+**      2       sys1, 16.47±0.52
+
+2010-09-28
+
+Zkousim pouzit ten primitivni zpusob kombinovani i s ostatnimi systemy. Misto
+exp.tm.1b5e1b3b.20100924-1244 ted budu tedy mit exp.tm.537ee7f1.20100928-1122.
+Rucne jsem ovsem musel zahodit 313 radek, vsechny jsou z trenovaci casti
+korpusu, zadna z te testovaci.
+
+Az to bude, mel bych v experimentu 0ce3123d.20100926-0007 nahradit tm.
+
+Ano, zde je srovnani:
+	0ce3123d.20100926-0007  .. combinace jen s tectomt
+	exp.eval.89051646.20100929-1608  ... kombinace vsech, ale -313 radek
+	fce771f7.20100301-1159  ... primary (baseline)
+
+2010-09-30
+
+Mame vysledek:
+16.29±0.54	fce771f7.20100301-1159	primary
+16.47±0.52	0ce3123d.20100926-0007	primary+tecto
+17.02±0.50	89051646.20100929-1608	primary+semposopt+2stepsl+tecto
+
