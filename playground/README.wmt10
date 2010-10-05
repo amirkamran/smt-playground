@@ -1697,3 +1697,47 @@ Mame vysledek:
 16.47±0.52	0ce3123d.20100926-0007	primary+tecto
 17.02±0.50	89051646.20100929-1608	primary+semposopt+2stepsl+tecto
 
+
+2010-09-30
+
+Vymyslel jsem genialni vec, prelozit ceske monoligvalni veci zpet do aj a
+natrenovat na tomhle. Uz na tom pracuju, ve dvou krocich: prvnich 200k vet z
+wmt10mono2 a pak ten zbytek.
+
+Uz extrahuju fraze: exp.tm.20c2e12f.20100930-1652, to by pak melo byt nahrada
+za exp.tm.1b5e1b3b.20100924-1244 do 0ce3123d.20100926-0007
+...bude to tento pokus: exp.eval.41e9f74c.20101001-2157
+
+Na sol3 v /mnt/h/tmp mam classexp, zkousim toto:
+nohup nice ~bojar/diplomka/granty/emplus/wmt10/playground/augmented_corpora/../../playground/workspace.20100420-1817/bin/mkcls -c20000 -n2 -ptxt-a -Vclasses20k opt &
+
+
+2010-10-02
+
+zkousim porovnat maly baseline exp.mert.e8e18af7.20100928-0859 s tim, ktery budejen na wmt10mono: exp.mert.970283cf.20101002-0133
+
+a jeste dna pokusy z 20101009, ten druhy je exp.mert.dc8ee6a7.20101002-0204
+
+
+2010-10-03
+
+ohromujici zjisteni: opravdu staci trenovat na strojove prelozenych textech!
+Aspon v malem objemu to plati.
+
+10.59±0.39 970283cf.20101002-0133<dev2051><eval2525>               ?          ?              ===FINI?== SRCwmt10mono2.200k.tr55003043+enNm+stc.TGT+csNm+stc.ALIenNm-lemma-csNm-lemma-gdfa.LM0-5
+10.56±0.39 e8e18af7.20100928-0859<dev2051><eval2525>               ?          ?              ===FINI?== SMALLBASELINESRCczeng092-ne+enNa2+stc.TGT+csNa+stc.ALIenNa-lemma-csNa-lemma-gdfa.LM0-5-
+
+Ve velkem to ale asi neplati:
+16.29±0.54 fce771f7.20100301-1159
+15.83±0.52 41e9f74c.20101001-2157
+...i kdyz rucne bych rekl spis opacne...
+  vim qj.data/wmtmono200k-vs-prim.anot
+
+01:10 tauri4 playground$./qj wmtmono200k-vs-prim fce771f7.20100301-1159 41e9f74c.20101001-2157 |grep -v Tag| list2tab 3 1 2 | tt
+The evaluation called wmtmono200k-vs-prim already exists, interpreting:
+Hodnoty: equally-fine,equally-wrong,*,**
+                                equally-fine    equally-wrong   *       **
+sys1, fce771f7.20100301-1159    13              10              5       1
+sys2, 41e9f74c.20101001-2157    13              10              8       -
+
+No jestli je to lepsi, tak o naproste minimum.
