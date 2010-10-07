@@ -25,8 +25,10 @@ my $ignore_blank_lines = 0;
 my $sa_index = 0;
 my $salm_indexer = undef;
 my $tmpdir = "/mnt/h/tmp";
+my $aliases = 1;
 
 my @optionspecs = (
+  "aliases!" => \$aliases, # resolve aliases
   "lazy"=>\$lazy, # don't check number of lines, just non-emptiness
   "ignore-blank-lines"=>\$ignore_blank_lines, # don't check for blank lines
   "dump"=>\$dump,
@@ -121,6 +123,22 @@ system('chmod -R g+w . 2>/dev/null');
 
 #------------------------------------------------------------------------------
 
+sub find_info_file_including_aliases {
+  my $corp = shift;
+  my $lang = shift;
+  
+  my $infofile = "$basedir/$corp/$lang.info";
+  return $infofile if !$aliases || -e $infofile;
+
+  # resolve the alias at this step
+  my $aliasdescr = find_alias_descr($corp, $lang, undef);
+  # recursively resolve aliases, until a corpus is found
+  my $datafile = interpret_descr($aliasdescr);
+
+  $datafile =~ s/\.gz$/.info/; # use the info file instead of the man datafile
+  return $datafile;
+}
+
 sub construct_corpus_from_parts {
   my $corp = shift;
   my $lang = shift;
@@ -136,7 +154,8 @@ sub construct_corpus_from_parts {
   my $default_factors = undef;
   my %combfactors = ();
   foreach my $piece (@corppieces) {
-    my $infoh = my_open("$basedir/$piece/$lang.info");
+    my $infofile = find_info_file_including_aliases($piece, $lang);
+    my $infoh = my_open($infofile);
     my $info = <$infoh>;
     chomp $info;
     $default_factors = $info if !defined $default_factors;
@@ -163,8 +182,10 @@ sub construct_corpus_from_parts {
   my $corph = my_save("$basedir/$corp/$lang.gz");
   my $linecount = 0;
   foreach my $piece (@corppieces) {
-    print STDERR "Constructing $piece/$lang+$usefactors\n";
-    my $sourcefile = augment($piece, $lang, $usefactors);
+    my $piecedescr = "$piece/$lang";
+    $piecedescr .= "+$usefactors" if defined $usefactors;
+    print STDERR "Constructing $piecedescr\n";
+    my $sourcefile = interpret_descr($piecedescr);
     my $inh = my_open($sourcefile);
     while (<$inh>) {
       $linecount++;
@@ -276,9 +297,11 @@ sub interpret_descr {
     # create if nonexistent or malformed (small, no info file)
 
     # examine if there is an alias for the corpus
-    my $aliasdescr = find_alias_descr($corp, $lang, $facts);
-    if (defined $aliasdescr) {
-      return interpret_descr($aliasdescr);
+    if ($aliases) {
+      my $aliasdescr = find_alias_descr($corp, $lang, $facts);
+      if (defined $aliasdescr) {
+        return interpret_descr($aliasdescr);
+      }
     }
 
     print STDERR "Corpus $corp not found in $basedir...\n";
