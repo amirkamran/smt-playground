@@ -16,7 +16,7 @@ AUGMENTMAKEFILE ?= Makefile
 MAKEFILEDIR ?= ./
 
 # Use this just for debugging.
-SCRIPTS_ROOTDIR = /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
+SCRIPTS_ROOTDIR ?= /home/bojar/diplomka/granty/euromatrix/moses_wmt09/workspace.20081208-2049/bin/scripts-20081208-2056
 
 REDUCECOMBINE=$(SCRIPTS_ROOTDIR)/training/reduce_combine.pl
 
@@ -464,7 +464,7 @@ SCENDIR=./prep-wmt10/
 	exit 1
 
 # unsupervised truecasing
-TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
+TRDCTOOLS ?= ~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 
 # truecasing factors
 %.factors/utc.gz:
@@ -493,6 +493,7 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 %.factors/stc.gz:
 	# supervised truecasing
 	[ -x $(REDUCECOMBINE) ]
+	[ -x $(TRDCTOOLS)/add_truecased_form.pl ]
 	./augment.pl --dump $(CORP)/$(LANG)+form+lemma \
 	| $(TRDCTOOLS)/add_truecased_form.pl 0:1:0:1 \
 	    --replace-form \
@@ -507,7 +508,6 @@ TRDCTOOLS=~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 	| ./simplify_numbers.pl \
 	| gzip -c > $@
 
-TRDCTOOLS=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 # hardwired rule just to keep track how the lexicon was collected
 .PRECIOUS: english_uppercased_tokens
 english_uppercased_tokens:
