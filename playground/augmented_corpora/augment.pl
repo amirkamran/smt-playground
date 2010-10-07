@@ -94,152 +94,11 @@ Options:
 die "Provide --salm-indexer if you want to construct --suffix-array-index"
   if $sa_index && ! defined $salm_indexer;
 
-my $corp;
-my $lang;
-my $facts;
-if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
-  $corp = $1;
-  $lang = $2;
-  $facts = $3;
-} elsif ($descr =~ /^(.+?)\/([^+]+)$/) {
-  $corp = $1;
-  $lang = $2;
-  $facts = undef; # all default factors
-} else {
-  die "Bad descr format: $descr";
-}
 
-print STDERR "Running augment.pl $descr\n";
 
-# Check the corpus file and the header:
+# construct the corpus from a given descr
+my $corppathname = interpret_descr($descr);
 
-my $corpbasefile = "$basedir/$corp/$lang.gz";
-my $corpinfofile = "$basedir/$corp/$lang.info";
-if (! -e $corpbasefile
-  || (-e $corpbasefile && ! -e $corpinfofile && -s $corpbasefile < 10000)) {
-  # create if nonexistent or malformed (small, no info file)
-  if ($corp =~ /\+/) {
-    # combining corpus from various source corpora
-    my $lock = blocking_verbose_lock($corpbasefile);
-    print STDERR "Corpus $corp not found in $basedir...\n";
-    my @corppieces = split /\+/, $corp;
-    print STDERR "...trying to combine it from pieces: @corppieces\n";
-    # Collect the intersection of factors as available in all pieces
-    my $can_use_default_factors = 1; # will directly use lang.gz file, if
-                                     # all corpora share the factors (in order)
-    my $default_factors = undef;
-    my %combfactors = ();
-    foreach my $piece (@corppieces) {
-      my $infoh = my_open("$basedir/$piece/$lang.info");
-      my $info = <$infoh>;
-      chomp $info;
-      $default_factors = $info if !defined $default_factors;
-      $can_use_default_factors = 0 if $default_factors ne $info;
-      close $infoh;
-      foreach my $f (split /\|/, $info) {
-        $combfactors{$f}++;
-      }
-    }
-    my $usefactors = undef;
-    if (!$can_use_default_factors) {
-      my @usefactors = ();
-      # get the intersection
-      foreach my $f (sort keys %combfactors) {
-        push @usefactors, $f if $combfactors{$f} == scalar(@corppieces);
-      }
-      die "There are no common base factors in corpora: @corppieces"
-        if 0 == scalar @usefactors;
-      print STDERR "Will use these base factors for the combination: @usefactors\n";
-      $usefactors = join("+", @usefactors);
-    }
-
-    # construct the corpus by concatenating parts
-    my $corph = my_save("$basedir/$corp/$lang.gz");
-    my $linecount = 0;
-    foreach my $piece (@corppieces) {
-      print STDERR "Constructing $piece/$lang+$usefactors\n";
-      my $sourcefile = augment($piece, $lang, $usefactors);
-      my $inh = my_open($sourcefile);
-      while (<$inh>) {
-        $linecount++;
-        print $corph $_;
-      }
-      close $inh;
-    }
-    close $corph;
-
-    # check or create linecount file
-    if (-e "$basedir/$corp/LINECOUNT") {
-      my $h = my_open("$basedir/$corp/LINECOUNT");
-      my $expected_linecount = <$h>;
-      chomp $expected_linecount;
-      die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
-    } else {
-      my $infoh = my_save("$basedir/$corp/LINECOUNT");
-      print $infoh "$linecount\n";
-      close $infoh;
-    }
-    # add the signature describing which factors are there
-    my $infoh = my_save("$basedir/$corp/$lang.info");
-    my $usedfactors = $usefactors;
-    $usedfactors = $default_factors if ! defined $usedfactors;
-    $usedfactors =~ s/\+/|/g; # use pipe instead of + in info files
-    print $infoh "$usedfactors\n";
-    close $infoh;
-    unlock_verbose($lock); # let others know we're finished
-  } elsif ($corp =~ /^(\d+)(.*)/) {
-    my $lock = blocking_verbose_lock($corpbasefile);
-    print STDERR "Corpus $corp not found in $basedir...\n";
-    my $n_copies = $1;
-    my $corppiece = $2;
-    print STDERR "...trying to combine it from $n_copies copies of: $corppiece\n";
-    # Copy all factors available in the piece
-    my $infoh = my_open("$basedir/$corppiece/$lang.info");
-    my $info = <$infoh>;
-    chomp $info;
-    close $infoh;
-    my @usefactors = split /\|/, $info;
-    die "There are no base factors in corpus: $corppiece"
-      if 0 == scalar @usefactors;
-    print STDERR "Will use these base factors: @usefactors\n";
-
-    # construct the corpus by concatenating copies
-    my $corph = my_save("$basedir/$corp/$lang.gz");
-    my $sourcefile = augment($corppiece, $lang, join("+", @usefactors));
-    my $linecount = 0;
-    for(my $i = 0; $i<$n_copies; $i++)
-    {
-      my $inh = my_open($sourcefile);
-      while (<$inh>) {
-        $linecount++;
-        print $corph $_;
-      }
-      close $inh;
-    }
-    close $corph;
-
-    # check or create linecount file
-    if (-e "$basedir/$corp/LINECOUNT") {
-      my $h = my_open("$basedir/$corp/LINECOUNT");
-      my $expected_linecount = <$h>;
-      chomp $expected_linecount;
-      die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
-    } else {
-      my $infoh = my_save("$basedir/$corp/LINECOUNT");
-      print $infoh "$linecount\n";
-      close $infoh;
-    }
-    # add the signature describing which factors are there
-    my $infoh = my_save("$basedir/$corp/$lang.info");
-    print $infoh join("|", @usefactors)."\n";
-    close $infoh;
-    unlock_verbose($lock); # let others know we're finished
-  } else {
-    print STDERR "Corpus not found: $corpbasefile, will try to construct.\n";
-    generate_language("$corp/$lang.gz", $basedir, $corp, $lang);
-  }
-}
-my $corppathname = augment($corp, $lang, $facts);
 # report corpus location or dump the whole corpus
 if ($dump) {
   my $hdl = my_open($corppathname);
@@ -261,6 +120,226 @@ system('chmod -R g+w . 2>/dev/null');
 
 
 #------------------------------------------------------------------------------
+
+sub construct_corpus_from_parts {
+  my $corp = shift;
+  my $lang = shift;
+  my $corpbasefile = shift;
+
+  # combining corpus from various source corpora
+  my $lock = blocking_verbose_lock($corpbasefile);
+  my @corppieces = split /\+/, $corp;
+  print STDERR "...trying to combine it from pieces: @corppieces\n";
+  # Collect the intersection of factors as available in all pieces
+  my $can_use_default_factors = 1; # will directly use lang.gz file, if
+                                   # all corpora share the factors (in order)
+  my $default_factors = undef;
+  my %combfactors = ();
+  foreach my $piece (@corppieces) {
+    my $infoh = my_open("$basedir/$piece/$lang.info");
+    my $info = <$infoh>;
+    chomp $info;
+    $default_factors = $info if !defined $default_factors;
+    $can_use_default_factors = 0 if $default_factors ne $info;
+    close $infoh;
+    foreach my $f (split /\|/, $info) {
+      $combfactors{$f}++;
+    }
+  }
+  my $usefactors = undef;
+  if (!$can_use_default_factors) {
+    my @usefactors = ();
+    # get the intersection
+    foreach my $f (sort keys %combfactors) {
+      push @usefactors, $f if $combfactors{$f} == scalar(@corppieces);
+    }
+    die "There are no common base factors in corpora: @corppieces"
+      if 0 == scalar @usefactors;
+    print STDERR "Will use these base factors for the combination: @usefactors\n";
+    $usefactors = join("+", @usefactors);
+  }
+
+  # construct the corpus by concatenating parts
+  my $corph = my_save("$basedir/$corp/$lang.gz");
+  my $linecount = 0;
+  foreach my $piece (@corppieces) {
+    print STDERR "Constructing $piece/$lang+$usefactors\n";
+    my $sourcefile = augment($piece, $lang, $usefactors);
+    my $inh = my_open($sourcefile);
+    while (<$inh>) {
+      $linecount++;
+      print $corph $_;
+    }
+    close $inh;
+  }
+  close $corph;
+
+  # check or create linecount file
+  if (-e "$basedir/$corp/LINECOUNT") {
+    my $h = my_open("$basedir/$corp/LINECOUNT");
+    my $expected_linecount = <$h>;
+    chomp $expected_linecount;
+    die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+  } else {
+    my $infoh = my_save("$basedir/$corp/LINECOUNT");
+    print $infoh "$linecount\n";
+    close $infoh;
+  }
+  # add the signature describing which factors are there
+  my $infoh = my_save("$basedir/$corp/$lang.info");
+  my $usedfactors = $usefactors;
+  $usedfactors = $default_factors if ! defined $usedfactors;
+  $usedfactors =~ s/\+/|/g; # use pipe instead of + in info files
+  print $infoh "$usedfactors\n";
+  close $infoh;
+  unlock_verbose($lock); # let others know we're finished
+}
+
+sub construct_corpus_by_multiplication {
+  my $corp = shift;
+  my $lang = shift;
+  my $corpbasefile = shift;
+  my $corppiece = shift;
+  my $n_copies = shift;
+
+  my $lock = blocking_verbose_lock($corpbasefile);
+  print STDERR "...trying to combine it from $n_copies copies of: $corppiece\n";
+  # Copy all factors available in the piece
+  my $infoh = my_open("$basedir/$corppiece/$lang.info");
+  my $info = <$infoh>;
+  chomp $info;
+  close $infoh;
+  my @usefactors = split /\|/, $info;
+  die "There are no base factors in corpus: $corppiece"
+    if 0 == scalar @usefactors;
+  print STDERR "Will use these base factors: @usefactors\n";
+
+  # construct the corpus by concatenating copies
+  my $corph = my_save("$basedir/$corp/$lang.gz");
+  my $sourcefile = augment($corppiece, $lang, join("+", @usefactors));
+  my $linecount = 0;
+  for(my $i = 0; $i<$n_copies; $i++)
+  {
+    my $inh = my_open($sourcefile);
+    while (<$inh>) {
+      $linecount++;
+      print $corph $_;
+    }
+    close $inh;
+  }
+  close $corph;
+
+  # check or create linecount file
+  if (-e "$basedir/$corp/LINECOUNT") {
+    my $h = my_open("$basedir/$corp/LINECOUNT");
+    my $expected_linecount = <$h>;
+    chomp $expected_linecount;
+    die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+  } else {
+    my $infoh = my_save("$basedir/$corp/LINECOUNT");
+    print $infoh "$linecount\n";
+    close $infoh;
+  }
+  # add the signature describing which factors are there
+  my $infoh = my_save("$basedir/$corp/$lang.info");
+  print $infoh join("|", @usefactors)."\n";
+  close $infoh;
+  unlock_verbose($lock); # let others know we're finished
+}
+
+
+sub interpret_descr {
+  my $descr = shift;
+  my $corp;
+  my $lang;
+  my $facts;
+  if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
+    $corp = $1;
+    $lang = $2;
+    $facts = $3;
+  } elsif ($descr =~ /^(.+?)\/([^+]+)$/) {
+    $corp = $1;
+    $lang = $2;
+    $facts = undef; # all default factors
+  } else {
+    die "Bad descr format: $descr";
+  }
+  
+  print STDERR "augment.pl: Interpreting descr $descr\n";
+  
+  # Check the corpus file and the header:
+  
+  my $corpbasefile = "$basedir/$corp/$lang.gz";
+  my $corpinfofile = "$basedir/$corp/$lang.info";
+  if (! -e $corpbasefile
+    || (-e $corpbasefile && ! -e $corpinfofile && -s $corpbasefile < 10000)) {
+    # create if nonexistent or malformed (small, no info file)
+
+    # examine if there is an alias for the corpus
+    my $aliasdescr = find_alias_descr($corp, $lang, $facts);
+    if (defined $aliasdescr) {
+      return interpret_descr($aliasdescr);
+    }
+
+    print STDERR "Corpus $corp not found in $basedir...\n";
+
+    # no alias, let's construct from pieces
+    if ($corp =~ /\+/) {
+      construct_corpus_from_parts($corp, $lang, $corpbasefile);
+    } elsif ($corp =~ /^(\d+)(.*)/) {
+      my $n_copies = $1;
+      my $corppiece = $2;
+      construct_corpus_by_multiplication($corp, $lang, $corpbasefile,
+         $corppiece, $n_copies);
+    } else {
+      # The absolute default: generate the language using the makefile
+      print STDERR "Corpus not found: $corpbasefile, will try to construct.\n";
+      generate_language("$corp/$lang.gz", $basedir, $corp, $lang);
+    }
+  }
+  my $corppathname = augment($corp, $lang, $facts);
+  return $corppathname;
+}
+
+sub find_alias_descr {
+  my $corp = shift;
+  my $lang = shift;
+  my $facts = shift;
+
+  my $default_corpus = undef;
+  my $our_alias_lang = undef;
+  
+  my $aliasfile = "$basedir/$corp/ALIASES";
+  return undef if ! -e $aliasfile;
+  my $h = my_open($aliasfile);
+  while (<$h>) {
+    chomp;
+    next if /^\s*#/; # comments
+    my ($src, $tgt) =  split /\s*\t\s*/;
+    if ($src eq "DEFAULT_CORPUS") {
+      $default_corpus = $tgt;
+      next;
+    }
+    if ($src eq $lang) {
+      $our_alias_lang = $tgt;
+      last;
+    }
+  }
+  close $h;
+
+  my $aliasdescr = undef;
+  if (defined $our_alias_lang) {
+    $aliasdescr = "$corp/$our_alias_lang";
+    print STDERR "...alias $corp/$lang --> $aliasdescr\n";
+  } elsif (defined $default_corpus) {
+    $aliasdescr = "$default_corpus/$lang";
+    print STDERR "...alias $corp/$lang --> $aliasdescr\n";
+  }
+
+  $aliasdescr .= "+".$facts if defined $aliasdescr && defined $facts;
+  return $aliasdescr;
+}
+
 sub ensure_salm_index {
   my $corpfile = shift;
 
