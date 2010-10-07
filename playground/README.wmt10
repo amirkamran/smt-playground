@@ -1741,3 +1741,38 @@ sys1, fce771f7.20100301-1159    13              10              5       1
 sys2, 41e9f74c.20101001-2157    13              10              8       -
 
 No jestli je to lepsi, tak o naproste minimum.
+
+Nove to opravdu vypada horsi:
+09:08 tauri4 playground$./qj wmtmono200k-vs-prim |grep -v Tag| list2tab 3 1 2 | tt
+The evaluation called wmtmono200k-vs-prim already exists, interpreting:
+Hodnoty: *,equally-fine,equally-wrong,**
+                                *       equally-fine    equally-wrong   **
+sys1, fce771f7.20100301-1159    22      18              16              2
+sys2, 41e9f74c.20101001-2157    17      18              16              1
+
+
+2010-10-06
+
+Zkousim ten napad se zpetnym prekladem v realistickych podminkach malych dat:
+takto jsem si prelozit 2mio trenovacich: exp.translate.f51ef64a.20101004-1647
+
+Nyni tedy baseline v opacnem smeru nez exp.mert.b9dfad06.20100422-2305 vylepsim
+...tj. e8e18af7.20100928-0859
+a pouziju v nem data czeng092-ne+wmt10mono2.200k-2200k.trf51ef64a
+
+A jako jeste horsi alternativu mohu rucne zkombinovat alignmenty z czeng092-ne
+a wmt10mono2.200k-2200k.trf51ef64a.
+
+Potrebuju ovsem rozumne prozkoumat vliv LM:
+large TM = strojove prelozena zdrojova strana
+
+mert      	TM         	LM                  	mert
+10.56±0.39	small      	small               	exp.mert.e8e18af7.20100928-0859
+12.20±0.40	small      	small+large (interp)	exp.mert.7d74e0c5.20101006-1037
+12.24±0.44	small      	small.large (concat)	exp.mert.3fcabc30.20101006-1039
+12.33±0.43	small.large	small.large         	exp.mert.1fe6e5ee.20101006-1046
+12.27±0.41	small.large	small+large         	exp.mert.df1d00b1.20101006-1059
+10.70±0.40	large      	large               	exp.mert.8bbb7d88.20101006-1813
+11.06±0.40	large      	small.large         	exp.mert.4d123e7d.20101007-0012
+10.98±0.38	large      	small+large         	exp.mert.68582e25.20101007-0011
+          	small+large	...                 	nejak interpoluj frazove tabulky
