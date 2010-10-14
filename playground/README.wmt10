@@ -1776,3 +1776,31 @@ mert      	TM         	LM                  	mert
 11.06±0.40	large      	small.large         	exp.mert.4d123e7d.20101007-0012
 10.98±0.38	large      	small+large         	exp.mert.68582e25.20101007-0011
           	small+large	...                 	nejak interpoluj frazove tabulky
+12.65±0.42	small+large	small.large         	exp.mert.20ce36b1.20101011-2329
+          	small+large	small+large         	exp.mert.d66530de.20101012-0939
+
+Zkusim rucni hodnoceni:
+  vim qj.data/revtrans-small-concat.anot
+
+12:46 victoria playground$./qj revtrans-small-concat 12.24±0.44 12.33±0.43 | grep -v Tag | list2tab 3 1 2 | tt
+The evaluation called revtrans-small-concat already exists, interpreting:
+Hodnoty: *,equally-wrong,equally-fine
+                 	* 	equally-wrong	equally-fine
+sys1, 12.24±0.44	11	13           	5
+sys2, 12.33±0.43	16	13           	5
+
+Pripravim podklad pro Alese Tamchynu a sebe:
+./qj revtrans-small-concat-shuf --shuf 12.24±0.44 12.33±0.43
+
+  vim qj.data/revtrans-small-concat-shuf.anot
+
+
+2010-10-11
+
+Zkusim smichat frazove tabulky:
+exp.tm.69853e7e.20100928-0841	small
+exp.tm.7c2ae6b2.20101006-1812	large
+
+exp.mert.20ce36b1.20101011-2329	alternative decoding paths
+
+exp.mixtm.20101011-2332 zkousim richextrem spojit v pomeru 80:20
