@@ -159,6 +159,8 @@ mertdetails:
 
 bleu:
 	./collect_bleu.pl \
+	| grep -v 'Processing [0-9]* sentences\|Evaluating candidate translations' \
+	| grep -v '^$$' \
 	| sed 's/BLEU.run\([0-9]*\)	/BLEU.run	\1:/' \
 	| grp --keys=1,2 --items=COLLECT3 \
 	| numsort a1 \

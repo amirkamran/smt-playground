@@ -94,6 +94,7 @@ if ($redo || 0 < scalar @substitute) {
   # derive an experiment using a key (from arg)
   foreach my $key (@ARGV) {
     my $exp = guess_exp($key);
+    $avoid{$exp} = 1; # force redoing the top experiment
     my %deps = ();
     my $outexp = derive_exp($exp, \%deps);
     if ($outexp eq $exp) {

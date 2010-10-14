@@ -16,5 +16,7 @@ au BufNewFile,BufRead *.anot map <F1> 0i*<ESC>j
 au BufNewFile,BufRead *.anot map <F2> 0i**<ESC>j
 au BufNewFile,BufRead *.anot map <F3> 0i-<ESC>j
 au BufNewFile,BufRead *.anot map e 0iequally-fine<ESC>j
+au BufNewFile,BufRead *.anot map <F5> 0iequally-fine<ESC>j
 au BufNewFile,BufRead *.anot map w 0iequally-wrong<ESC>j
+au BufNewFile,BufRead *.anot map <F6> 0iequally-wrong<ESC>j
 

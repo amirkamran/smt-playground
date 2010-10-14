@@ -1766,18 +1766,25 @@ a wmt10mono2.200k-2200k.trf51ef64a.
 Potrebuju ovsem rozumne prozkoumat vliv LM:
 large TM = strojove prelozena zdrojova strana
 
-mert      	TM         	LM                  	mert
-10.56±0.39	small      	small               	exp.mert.e8e18af7.20100928-0859
-12.20±0.40	small      	small+large (interp)	exp.mert.7d74e0c5.20101006-1037
-12.24±0.44	small      	small.large (concat)	exp.mert.3fcabc30.20101006-1039
-12.33±0.43	small.large	small.large         	exp.mert.1fe6e5ee.20101006-1046
-12.27±0.41	small.large	small+large         	exp.mert.df1d00b1.20101006-1059
-10.70±0.40	large      	large               	exp.mert.8bbb7d88.20101006-1813
-11.06±0.40	large      	small.large         	exp.mert.4d123e7d.20101007-0012
-10.98±0.38	large      	small+large         	exp.mert.68582e25.20101007-0011
-          	small+large	...                 	nejak interpoluj frazove tabulky
-12.65±0.42	small+large	small.large         	exp.mert.20ce36b1.20101011-2329
-          	small+large	small+large         	exp.mert.d66530de.20101012-0939
+mert      	TM               	LM                  	mert                           	
+10.56±0.39	small            	small               	exp.mert.e8e18af7.20100928-0859	
+12.20±0.40	small            	small+large (interp)	exp.mert.7d74e0c5.20101006-1037	
+12.24±0.44	small            	small.large (concat)	exp.mert.3fcabc30.20101006-1039	
+12.33±0.43	small.large      	small.large         	exp.mert.1fe6e5ee.20101006-1046	
+12.27±0.41	small.large      	small+large         	exp.mert.df1d00b1.20101006-1059	
+10.70±0.40	large            	large               	exp.mert.8bbb7d88.20101006-1813	
+11.06±0.40	large            	small.large         	exp.mert.4d123e7d.20101007-0012	
+10.98±0.38	large            	small+large         	exp.mert.68582e25.20101007-0011	
+12.65±0.42	small+large      	small.large         	exp.mert.20ce36b1.20101011-2329	
+12.20±0.40	small+large      	small+large         	exp.mert.d66530de.20101012-0939	BUG, retried??
+12.46±0.43	80%small+20%large	small.large         	exp.mert.d70174e6.20101013-0022	
+
+velka data:
+bleu      	TM       	LM       	mert
+14.92±0.48	         	         	f829f803.20100301-1548 large baseline, unfactored
+14.73±0.49	para+mono	para+mono	0248de0f.20101012-2343 factored
+          	?        	?        	exp.mert.546a6792.20101012-1857
+14.89±0.51	para+mono	para+mono	d5f8cc72.20101013-1144 podle largebaseline
 
 Zkusim rucni hodnoceni:
   vim qj.data/revtrans-small-concat.anot
@@ -1794,6 +1801,16 @@ Pripravim podklad pro Alese Tamchynu a sebe:
 
   vim qj.data/revtrans-small-concat-shuf.anot
 
+Featury pro EMS:
+- najit podobny pokus
+- historie odvozovani pokusu (jako git, ale je problem s tim, ze commit zmeny je jednak 'cele konfigurace' a jednak jednotlivych kroku)
+- cdguess
+- modelusers (i.e. kdo zavisi na nas)
+- traceback (i.e. na kom zavisime)
+- graf podobnosti konfiguraci
+- graf zavislosti pokusu
+- sge+cekani, nez dobehnou dilci kroky
+- zachovat konfig, i kdyz experiment sam lehne, aby slo klonovat i smazane exprimenty
 
 2010-10-11
 
@@ -1801,6 +1818,19 @@ Zkusim smichat frazove tabulky:
 exp.tm.69853e7e.20100928-0841	small
 exp.tm.7c2ae6b2.20101006-1812	large
 
-exp.mert.20ce36b1.20101011-2329	alternative decoding paths
-
 exp.mixtm.20101011-2332 zkousim richextrem spojit v pomeru 80:20
+...prislusny mert: exp.mert.d70174e6.20101013-0022, vysledek viz vyse
+
+
+2010-10-12
+
+zkusim velka data pro revtrans:
+
+exp.tm.7c2ae6b2.20101006-1812  ... 2M vet *nefiltrovano*  ... prislusny eval: exp.eval.a93ebe6c.20101012-2217
+exp.tm.6d669f63.20101012-1756  ... 2M vet, filtrovano     ... prislusny eval: exp.eval.b61c4600.20101012-2343
+
+Jedno i druhe chci zapojit do exp.eval.fce771f7.20100301-1159
+Dosud mam totiz jediny pokus na velkych datech: exp.eval.41e9f74c.20101001-2157, kde se proste concatenovalo.
+
+Musim zkusit prekladat a pritom rovnou exportovat alignment! A tim prelozit celych tech 12M.
+
