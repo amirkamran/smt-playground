@@ -9,53 +9,158 @@
 # Ondrej Bojar, bojar@ufal.mff.cuni.cz
 
 use strict;
+use Getopt::Long;
 
-# not necessary until we touch tokens' contents
-# binmode(STDIN, ":utf8");
-# binmode(STDOUT, ":utf8");
-# binmode(STDERR, ":utf8");
+binmode(STDIN, ":utf8");
+binmode(STDOUT, ":utf8");
+binmode(STDERR, ":utf8");
 
-my @outnodes = ();
-my %is_final; # remember which nodes were final
-my $nr = 0;
-while (<>) {
-  chomp;
-  $nr++;
-  my ($src, $tgt, $label, $weight) = split /\s+/;
-  die "$nr:Bad src node index: $src" if $src !~ /^[0-9]+$/;
-  if (!defined $tgt) {
-    # explicit final node, warn at the end if there are any intermed. final
-    # nodes
-    $is_final{$src};
-    next;
+my $filelist;
+my $ignore_final_state_cost = 0;
+GetOptions(
+  "ignore-final-state-cost" => \$ignore_final_state_cost,
+    # sometimes, final states have a cost (e.g. "45 0.05\n")
+    # instead of dying there, ignore the problem
+  "filelist|fl=s" => \$filelist,
+) or exit 1;
+
+my @infiles;
+if (defined $filelist) {
+  my $fh = my_open($filelist);
+  while (<$fh>) {
+    chomp;
+    push @infiles, $_;
   }
-  # remember the node
-  push @{$outnodes[$src]}, [ $label, $weight, $tgt-$src ];
+  close $fh;
+}
+push @infiles, @ARGV;
+@ARGV = ();
+if (0 == scalar(@infiles)) {
+  print STDERR "Reading input from stdin\n";
+  push @infiles, "-";
 }
 
 my $err = 0;
-foreach my $f (keys %is_final) {
-  if (defined $outnodes[$f]) {
-    print STDERR "Node $f is final by has outgoing edges!\n";
-    $err = 1;
-  }
-}
-exit 1 if $err;
+foreach my $inf (@infiles) {
+  my %usedids; # collect all used ids for densification
+  my %usedtgtids; # collect all used ids for densification
+  my @outnodes = ();
+  my $fh = my_open($inf);
+  my %is_final; # remember which nodes were final
+  my $nr = 0;
+  while (<$fh>) {
+    chomp;
+    $nr++;
+    my ($src, $tgt, $label, $weight) = split /\s+/;
+    die "$inf:$nr:Bad src node index: $src" if $src !~ /^[0-9]+$/;
 
-print "(";
-foreach my $outnode (@outnodes) {
-  print "(";
-  foreach my $arc (@$outnode) {
-    print "('".apo($arc->[0])."',$arc->[1],$arc->[2]),";
+    if (!defined $label && !defined $weight) {
+      # explicit final node, warn at the end if there are any intermed. final
+      # nodes
+      $is_final{$src};
+      # final nodes can have a cost
+      die "$inf:$nr:Final state $src has cost $tgt. Unsupported, use --ignore-final-state-cost"
+        if defined $tgt && !$ignore_final_state_cost;
+        
+      next;
+    }
+    $weight = 0 if !defined $weight;
+
+    $usedids{$src} = 1;
+    $usedtgtids{$tgt} = 1;
+
+    # process the weight
+    # when reading RWTH FSA output, the weights are negated natural logarithms
+    # we need to negate them back
+    $weight = -$weight;
+    $weight =~ s/^\+//;
+    $weight = 0 if $weight =~ /^0\.0+$/;
+    # remember the node
+    my $targetnode = $tgt-$src;
+    die "$inf:$nr:Not topologically sorted, got arc from $src to $tgt"
+      if $targetnode <= 0;
+    push @{$outnodes[$src]}, [ $label, $weight, $tgt ];
   }
-  print "),";
+  close $fh;
+
+  # Assign our dense IDs: source node ids are assigned first
+  # All target nodes then get the same next id.
+  my %denseids; # maps node ids from the file to dense ids
+  my $nextid = 0;
+  foreach my $id (sort {$a<=>$b} keys %usedids) {
+    $denseids{$id} = $nextid;
+    $nextid++;
+  }
+  foreach my $id (keys %usedtgtids) {
+    next if defined $denseids{$id};
+    $denseids{$id} = $nextid;
+  }
+  
+  foreach my $f (keys %is_final) {
+    if (defined $outnodes[$f]) {
+      print STDERR "$inf:Node $f is final but it has outgoing edges!\n";
+      $err = 1;
+    }
+  }
+#   # Verbose: print original to dense IDs mapping
+#   foreach my $src (sort {$a<=>$b} keys %denseids) {
+#     print STDERR "$src  ...> $denseids{$src}\n";
+#   }
+  
+  print "(";
+  for(my $origsrc = 0; $origsrc < @outnodes; $origsrc++) {
+    my $src = $denseids{$origsrc};
+    next if !defined $src; # this original node ID is not used at all
+    next if $src == $nextid; # this is the ultimate merged final node
+    my $outnode = $outnodes[$origsrc];
+    print "(";
+    foreach my $arc (@$outnode) {
+      my $origtgt = $arc->[2];
+      my $tgt = $denseids{$origtgt};
+      if (!defined $tgt) {
+        # this was a final node only
+        $tgt = $denseids{$origtgt} = $nextid;
+        $nextid++;
+      }
+      my $step_to_target = $tgt - $src;
+      die "$inf:Bug, I damaged top-sortedness (orig $origsrc .. $origtgt; curr $src .. $tgt)." if $step_to_target <= 0;
+      print "('".apo($arc->[0])."',$arc->[1],$step_to_target),";
+    }
+    print "),";
+  }
+  print ")\n";
 }
-print ")\n";
+die "There were errors." if $err;
 
 sub apo {
   my $s = shift;
   # protects apostrophy and backslash
   $s =~ s/\\/\\\\/g;
-  $s =~ s/[']/\\$1/g;
+  $s =~ s/(['])/\\$1/g;
   return $s;
+}
+
+sub my_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  die "Not found: $f" if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file '$f'`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat '$f' |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat '$f' |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or die "Can't open '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
 }
