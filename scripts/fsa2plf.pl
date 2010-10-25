@@ -17,11 +17,13 @@ binmode(STDERR, ":utf8");
 
 my $filelist;
 my $ignore_final_state_cost = 0;
+my $mangle_weights = undef;
 GetOptions(
   "ignore-final-state-cost" => \$ignore_final_state_cost,
     # sometimes, final states have a cost (e.g. "45 0.05\n")
     # instead of dying there, ignore the problem
   "filelist|fl=s" => \$filelist,
+  "mangle-weights=s" => \$mangle_weights,
 ) or exit 1;
 
 my @infiles;
@@ -72,9 +74,13 @@ foreach my $inf (@infiles) {
     # process the weight
     # when reading RWTH FSA output, the weights are negated natural logarithms
     # we need to negate them back
-    $weight = -$weight;
-    $weight =~ s/^\+//;
-    $weight = 0 if $weight =~ /^0\.0+$/;
+    if (defined $mangle_weights) {
+      if ($mangle_weights eq "expneg") {
+        $weight = exp(-$weight);
+      } else {
+        die "Bad weights mangling: $mangle_weights";
+      }
+    }
     # remember the node
     my $targetnode = $tgt-$src;
     die "$inf:$nr:Not topologically sorted, got arc from $src to $tgt"
