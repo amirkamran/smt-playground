@@ -44,15 +44,17 @@ if (0 == scalar(@infiles)) {
 
 my $err = 0;
 foreach my $inf (@infiles) {
-  my %usedids; # collect all used ids for densification
-  my %usedtgtids; # collect all used ids for densification
+  my $nr = 0;
+  NEXTLATTICE:
+  my %usedids = (); # collect all used ids for densification
+  my %usedtgtids = (); # collect all used ids for densification
   my @outnodes = ();
   my $fh = my_open($inf);
   my %is_final; # remember which nodes were final
-  my $nr = 0;
   while (<$fh>) {
     chomp;
     $nr++;
+    last if $_ eq ""; # assume a blank line delimits lattices
     my ($src, $tgt, $label, $weight) = split /\s+/;
     die "$inf:$nr:Bad src node index: $src" if $src !~ /^[0-9]+$/;
 
@@ -76,7 +78,7 @@ foreach my $inf (@infiles) {
     # we need to negate them back
     if (defined $mangle_weights) {
       if ($mangle_weights eq "expneg") {
-        $weight = exp(-$weight);
+        $weight = join(",", map {exp(-$_)} split /,/, $weight);
       } else {
         die "Bad weights mangling: $mangle_weights";
       }
@@ -87,16 +89,19 @@ foreach my $inf (@infiles) {
       if $targetnode <= 0;
     push @{$outnodes[$src]}, [ $label, $weight, $tgt ];
   }
-  close $fh;
+  if (eof($fh)) {
+    close $fh;
+    $fh = undef;
+  }
 
   # Assign our dense IDs: source node ids are assigned first
-  # All target nodes then get the same next id.
-  my %denseids; # maps node ids from the file to dense ids
+  my %denseids = (); # maps node ids from the file to dense ids
   my $nextid = 0;
   foreach my $id (sort {$a<=>$b} keys %usedids) {
     $denseids{$id} = $nextid;
     $nextid++;
   }
+  # All unseen target nodes then get the same next id, the final node id
   foreach my $id (keys %usedtgtids) {
     next if defined $denseids{$id};
     $denseids{$id} = $nextid;
@@ -108,10 +113,10 @@ foreach my $inf (@infiles) {
       $err = 1;
     }
   }
-#   # Verbose: print original to dense IDs mapping
-#   foreach my $src (sort {$a<=>$b} keys %denseids) {
-#     print STDERR "$src  ...> $denseids{$src}\n";
-#   }
+  # Verbose: print original to dense IDs mapping
+  foreach my $src (sort {$a<=>$b} keys %denseids) {
+    print STDERR "$src  ...> $denseids{$src}\n";
+  }
   
   print "(";
   for(my $origsrc = 0; $origsrc < @outnodes; $origsrc++) {
@@ -135,6 +140,7 @@ foreach my $inf (@infiles) {
     print "),";
   }
   print ")\n";
+  goto NEXTLATTICE if defined $fh && ! eof($fh);
 }
 die "There were errors." if $err;
 
