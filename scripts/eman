@@ -1,0 +1,200 @@
+#!/usr/bin/perl
+# eman, experiment manager
+#
+# Ondrej Bojar, bojar@ufal.mff.cuni.cz
+
+use strict;
+use warnings;
+use Getopt::Long;
+use Pod::Usage;
+
+my $debug = 0;
+my $manpage = 0;
+my $help = 0;
+my $list_options = 0;
+my $show_tags = 1;
+my $show_vars = 1;
+my $show_status = 0;
+my $show_log = 0;
+my $reindex = 0;
+my $redo = undef;
+my $dirprefix = "e.";
+
+my %options = (
+  "help|h" => \$help,
+  "list-options" => \$list_options,
+  "man" => \$manpage,
+  "tags!" => \$show_tags,
+  "vars!" => \$show_vars,
+  "status!" => \$show_status,
+  "log!" => \$show_log,
+  "reindex!" => \$reindex,
+  "redo:s@" => \$redo,
+);
+GetOptions(%options) or exit 1;
+
+my $redo_all = (defined $redo && scalar(@$redo) == 0);
+my %redo = map { ($_,1) } @$redo if defined $redo;
+
+my $command = shift;
+my $cmd = recognize_command($command);
+my $waserror = 0;
+
+if (defined $command && !defined $cmd) {
+  print STDERR "Bad command: $command\n";
+  $waserror = 1;
+  $help = 1;
+}
+
+
+# Help and usage, inspired by btred by Petr Pajas
+if ($manpage) {
+### show manpage on console
+#  pod2usage(-exitstatus => 0, -verbose => 99, -sections => '.*');
+  pod2usage(-exitstatus => 0, -verbose => 2);
+}
+if ($help || !defined $command) {
+  pod2usage(-msg => 'eman, experiment management');
+  exit $waserror;
+}
+if ($list_options) {
+  foreach my $o (keys %options) {
+    $o=~s/=.$//;
+    foreach my $oo (split /\|/,$o) {
+      print sort ((length($oo)>1) ? "--$oo\n" : "-$oo\n");
+    }
+  }
+  exit;
+}
+
+
+# update md5 indices
+my $idx = loadidx() unless $reindex; # ignore saved values
+my @dirs = glob("$dirprefix*.*.[0-9]*");
+foreach my $d (@dirs) {
+  next if defined $idx->{$d};
+  next if ! experiment_valid($d);
+  my $hash = get_hash_from_dir($d);
+  $idx->{$d} = $hash;
+  $idx->{$hash} = $d;
+  print STDERR "$d: $idx->{$d}\n" if $debug;
+}
+saveidx($idx);
+
+
+## handle all the various commands
+
+
+
+if ($cmd eq "guess") {
+  # just guessing experiment directories
+  foreach my $key (@ARGV) {
+    my $exp = guess_exp($key);
+    print $exp."\n";
+  }
+  exit 0;
+}
+
+sub recognize_command {
+  my $command = shift;
+  return undef if !defined $command;
+  return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess)$/;
+  # todo: abbreviations, e.g. cl pr ls tb rm
+  return undef; # unrecognized
+}
+
+
+__END__
+
+=head1 eman
+
+eman, experiment manager
+
+=head1 SYNOPSIS
+
+  VAR=val eman init EXPTYPE   # create new experiment of the given type
+  VAR=val eman clone EXPDIR   # create new experiment based on EXPDIR
+  eman clone < traceback      # create exp. incl predecessors
+    --redo                    #   clone even DONE exps.
+    --redo=EXPDIR             #   clone the given exp. unconditionally
+    --start                   # after init/clone, submit to queue
+  
+  eman prepare EXPDIR         # prepare inited
+  eman run EXPDIR             # run prepared
+  eman start EXPDIR           # prepare and run, incl. all predecessors
+  
+  eman list EXPTYPE           # list all exps. of the given type
+    --tags --vars --status    #   incl. relevant information
+  eman guess TEXT             # guess a *single* experiment based on
+                              # a substring of the hash or final score
+  
+  eman traceback EXPDIR       # show tree of the exp. and predecessors
+  eman users EXPDIR           # show tree of the exp. and successors
+    --tags --vars --status    #   incl. relevant information
+    --log                     #   and the tail of the log
+  
+  eman abolish EXPDIR         # destroy all experiment files except
+                              #   metadata => can still be cloned
+
+  eman reindex                # re-create index of experiments
+
+Whereever EXPDIR is expected, you may also use `pwd` if in exp. dir.
+
+=head1 DESCRIPTION
+
+eman is an experiment manager, useful mainly for deriving experiments and
+experiment chains.
+
+=head2 Structure of an Experiment Directory
+
+We call each step in a (complex) pipeline an 'experiment'.
+Each experiment is represented as a single directory e.EXPTYPE.HASH.TIMESTAMP.
+Apart from any files needed for the experiment, the following files are always
+present in experiment directory:
+
+  eman.vars          ... the variables configuring the experiment
+  eman.deps          ... list of prerequisites of this experiment
+  eman.status        ... the status of the experiment
+  eman.seed          ... the script used to init the experiment
+  eman.command       ... the script used for preparation and run
+  eman.derived-from  ... the name of the experiment used when deriving
+
+=head2 Experiment Life Cycle
+
+1. The commands 'eman init' and 'eman clone' create a timestamped experiment
+directory, e.g. e.test.hash1234.20101115-1213.
+
+2. The file eman.seeds/EXPTYPE is copied there as eman.seed.
+
+3. The seed is run and expected to produce: eman.vars and eman.command
+
+4. eman.deps are constructed from eman.vars and eman.command
+
+5. eman.status is set to INITED if everything was successful
+
+The file eman.status in an experiment directory contains one line status:
+  UNBORN             ... not created yet
+  INITED             ... the experiment was just created
+  INITFAILED         ... the initialization failed
+  PREPARED           ... prepared using 'eman prepare'
+  PREPFAILED         ... 'eman prepare' failed
+  WAITING: ...       ... submitted by 'eman start', prereqs still run
+  RUNNING            ... running
+  FAILED             ... the running failed
+  DONE               ... the running succeeded
+
+=head1 USAGE PATTERNS
+
+eman tracebace EXPDIR | sed 's/.../.../' | eman clone
+  # clone the whole subtree of experiments replacing some vars
+
+eman abolish `eman list EXPTYPE --status | grep FAILED`
+  # remove all content files of all failing experiments
+
+=head1 AUTHOR
+
+Ondrej Bojar <obo@matfyz.cz>
+
+Copyright 2010 Ondrej Bojar, All rights reserved.
+
+=cut
