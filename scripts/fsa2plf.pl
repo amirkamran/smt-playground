@@ -113,10 +113,10 @@ foreach my $inf (@infiles) {
       $err = 1;
     }
   }
-  # Verbose: print original to dense IDs mapping
-  foreach my $src (sort {$a<=>$b} keys %denseids) {
-    print STDERR "$src  ...> $denseids{$src}\n";
-  }
+#   # Verbose: print original to dense IDs mapping
+#   foreach my $src (sort {$a<=>$b} keys %denseids) {
+#     print STDERR "$src  ...> $denseids{$src}\n";
+#   }
   
   print "(";
   for(my $origsrc = 0; $origsrc < @outnodes; $origsrc++) {
