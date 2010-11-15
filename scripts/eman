@@ -73,7 +73,7 @@ my $idx = loadidx() unless $reindex; # ignore saved values
 my @dirs = glob("$dirprefix*.*.[0-9]*");
 foreach my $d (@dirs) {
   next if defined $idx->{$d};
-  next if ! experiment_valid($d);
+  next if ! step_valid($d);
   my $hash = get_hash_from_dir($d);
   $idx->{$d} = $hash;
   $idx->{$hash} = $d;
@@ -87,10 +87,10 @@ saveidx($idx);
 
 
 if ($cmd eq "guess") {
-  # just guessing experiment directories
+  # just guessing step directories
   foreach my $key (@ARGV) {
-    my $exp = guess_exp($key);
-    print $exp."\n";
+    my $step = guess_step($key);
+    print $step."\n";
   }
   exit 0;
 }
@@ -112,59 +112,62 @@ eman, experiment manager
 
 =head1 SYNOPSIS
 
-  VAR=val eman init EXPTYPE   # create new experiment of the given type
-  VAR=val eman clone EXPDIR   # create new experiment based on EXPDIR
-  eman clone < traceback      # create exp. incl predecessors
-    --redo                    #   clone even DONE exps.
-    --redo=EXPDIR             #   clone the given exp. unconditionally
+  VAR=val eman init STEPTYPE  # create new step of the given type
+  VAR=val eman clone STEPDIR  # create new step based on STEPDIR
+  eman clone < traceback      # create step by cloning incl. predecessors
+    --redo                    #   clone even DONE steps
+    --redo=STEPDIR            #   clone the given step unconditionally
     --start                   # after init/clone, submit to queue
   
-  eman prepare EXPDIR         # prepare inited
-  eman run EXPDIR             # run prepared
-  eman start EXPDIR           # prepare and run, incl. all predecessors
+  eman prepare STEPDIR        # prepare inited
+  eman run STEPDIR            # run prepared
+  eman continue STEPDIR       # continue something that failed
+  eman start STEPDIR          # prepare and run, incl. all predecessors
   
-  eman list EXPTYPE           # list all exps. of the given type
-    --tags --vars --status    #   incl. relevant information
-  eman guess TEXT             # guess a *single* experiment based on
-                              # a substring of the hash or final score
+  eman guess TEXT             # guess a *single* step based on a
+                              # substring of the hash, the tag, the date
+                              # or final score
+
+  eman list STEPTYPE          # list all steps of the given type
+  eman traceback STEPDIR      # show tree of the steps and predecessors
+  eman users STEPDIR          # show tree of the steps and successors
+    --tags --vars --status    #   include relevant information
+    --log --jobid             #   and the tail of the log or SGE job ID
   
-  eman traceback EXPDIR       # show tree of the exp. and predecessors
-  eman users EXPDIR           # show tree of the exp. and successors
-    --tags --vars --status    #   incl. relevant information
-    --log                     #   and the tail of the log
-  
-  eman abolish EXPDIR         # destroy all experiment files except
+  eman abolish STEPDIR        # destroy all step files except
                               #   metadata => can still be cloned
 
-  eman reindex                # re-create index of experiments
+  eman reindex                # re-create index of steps
 
-Whereever EXPDIR is expected, you may also use `pwd` if in exp. dir.
+Whereever STEPDIR is expected, you may also use `pwd` if in the step dir.
 
 =head1 DESCRIPTION
 
-eman is an experiment manager, useful mainly for deriving experiments and
-experiment chains.
+eman is an experiment manager, useful mainly for deriving steps and
+step chains, i.e. complex experiment scenarios.
 
 =head2 Structure of an Experiment Directory
 
-We call each step in a (complex) pipeline an 'experiment'.
-Each experiment is represented as a single directory e.EXPTYPE.HASH.TIMESTAMP.
-Apart from any files needed for the experiment, the following files are always
-present in experiment directory:
+We call each step in a (complex) pipeline an 'step'.
+Each step is represented as a single directory s.STEPTYPE.HASH.TIMESTAMP.
+Apart from any files needed for the step, the following files are always
+present in the step directory:
 
-  eman.vars          ... the variables configuring the experiment
-  eman.deps          ... list of prerequisites of this experiment
-  eman.status        ... the status of the experiment
-  eman.seed          ... the script used to init the experiment
+  eman.tag           ... one-line "readable" summary of vars
+                         Often manually editted to contain special flags.
+  eman.vars          ... the variables configuring the step
+  eman.deps          ... list of prerequisites of this step
+  eman.status        ... the status of the step
+  eman.seed          ... the script used to init the step
   eman.command       ... the script used for preparation and run
-  eman.derived-from  ... the name of the experiment used when deriving
+  eman.derived-from  ... the name of the step used when deriving
 
 =head2 Experiment Life Cycle
 
-1. The commands 'eman init' and 'eman clone' create a timestamped experiment
-directory, e.g. e.test.hash1234.20101115-1213.
+1. The commands 'eman init' and 'eman clone' create a timestamped step
+directory, e.g. s.test.hash1234.20101115-1213.
 
-2. The file eman.seeds/EXPTYPE is copied there as eman.seed.
+2. The file eman.seeds/STEPTYPE is copied there as eman.seed.
 
 3. The seed is run and expected to produce: eman.vars and eman.command
 
@@ -172,9 +175,9 @@ directory, e.g. e.test.hash1234.20101115-1213.
 
 5. eman.status is set to INITED if everything was successful
 
-The file eman.status in an experiment directory contains one line status:
+The file eman.status in a step directory contains one line status:
   UNBORN             ... not created yet
-  INITED             ... the experiment was just created
+  INITED             ... the step was just created
   INITFAILED         ... the initialization failed
   PREPARED           ... prepared using 'eman prepare'
   PREPFAILED         ... 'eman prepare' failed
@@ -185,11 +188,11 @@ The file eman.status in an experiment directory contains one line status:
 
 =head1 USAGE PATTERNS
 
-eman tracebace EXPDIR | sed 's/.../.../' | eman clone
-  # clone the whole subtree of experiments replacing some vars
+eman traceback STEPDIR | sed 's/.../.../' | eman clone
+  # clone the whole subtree of steps replacing some vars
 
-eman abolish `eman list EXPTYPE --status | grep FAILED`
-  # remove all content files of all failing experiments
+eman abolish `eman list STEPTYPE --status | grep FAILED`
+  # clean up, i.e. remove all content files of all failing steps
 
 =head1 AUTHOR
 
