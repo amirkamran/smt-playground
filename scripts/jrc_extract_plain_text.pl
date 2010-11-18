@@ -27,6 +27,8 @@ sub usage_string
            "\tDefault OUTDIR is `.'\n";
 }
 
+system("renice 19 $$");
+
 if (!GetOptions(
         "src=s" => \$src,
         "tgt=s" => \$tgt,
@@ -36,8 +38,10 @@ if (!GetOptions(
     die(usage_string);
 }
 
+open ERR, ">$outdir/extract.err";
+
 if (!$src || !$tgt) {
-    print STDERR "Missing SRC or TGT.\n";
+    print ERR "Missing SRC or TGT.\n";
     die(usage_string);
 }
 
@@ -63,7 +67,7 @@ sub get_sentence
     }
     
     # need better error messages
-    print STDERR "Warning: Reached the end of file.\n";
+    print ERR "Warning: Reached the end of file.\n";
 }
 
 open ALIGNMENTS, "jrc-$src-$tgt.xml";
@@ -94,10 +98,14 @@ while (<ALIGNMENTS>) {
             $file_tgt =~ m/^([^-]+)/;
             $file_id_tgt = $1;
 
-            open $SRC_IN, "$src/$year/$file_src"
-                or die("Couldn't open file " . $file_src . "\n");
-            open $TGT_IN, "$tgt/$year/$file_tgt"
-                or die("Couldn't open file " . $file_tgt . "\n");
+            if (!(open $SRC_IN, "$src/$year/$file_src")) {
+                print ERR "Couldn't open file " . $file_src . "\n";
+                $excluding = 1;
+            }
+            if (!(open $TGT_IN, "$tgt/$year/$file_tgt")) {
+                print ERR "Couldn't open file " . $file_tgt . "\n";
+                $excluding = 1;
+            }
         } else {
             $excluding = 1;
         }
@@ -138,4 +146,5 @@ open LINE_COUNT, ">$outdir/LINECOUNT";
 print LINE_COUNT $line_count;
 close LINE_COUNT;
 
-print STDERR "Done.\n";
+print ERR "Done.\n";
+close ERR;
