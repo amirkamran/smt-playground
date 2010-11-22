@@ -14,7 +14,8 @@ use warnings;
 use Getopt::Long; 
 use IO::Compress::Gzip;
 
-my ($src, $tgt, $exclude, $output_file_ids, @exclude_names);
+my ($src, $tgt, $exclude, $output_file_ids, @exclude_names, $include_hunks);
+my $hunk_max_length = 100;
 my $outdir = ".";
 my $line_count = 0;
 
@@ -34,6 +35,8 @@ if (!GetOptions(
         "tgt=s" => \$tgt,
         "outdir=s" => \$outdir,
         "exclude=s" => \$exclude,
+        "include-hunks" => \$include_hunks,
+        "hunk-max-length=i" => \$hunk_max_length,
         "output-file-ids" => \$output_file_ids)) {
     die(usage_string);
 }
@@ -126,7 +129,7 @@ while (<ALIGNMENTS>) {
         my $type = $1;
         my $number_src = $2;
         my $number_tgt = $3;
-        if ($type eq "1-1") { # only extract 1-1 matches
+        if ($type eq "1-1") { # extract 1-1 matches
             if ($output_file_ids) {
                 print $SRC_OUT "$file_id_src\t";
                 print $TGT_OUT "$file_id_tgt\t";
@@ -134,6 +137,25 @@ while (<ALIGNMENTS>) {
             print $SRC_OUT get_sentence($SRC_IN, $number_src), "\n";
             print $TGT_OUT get_sentence($TGT_IN, $number_tgt), "\n";
             ++$line_count;
+        } elsif ($include_hunks &&
+                 $type !~ m/^0-/ &&
+                 $type !~ m/-0$/) {
+            my @numbers_src = split / /, $number_src;
+            my @numbers_tgt = split / /, $number_tgt;
+            my ($sentence_src, $sentence_tgt);
+            foreach (@numbers_src) {
+                $sentence_src .= get_sentence($SRC_IN, $_);
+            }
+            foreach (@numbers_tgt) {
+                $sentence_tgt .= get_sentence($TGT_IN, $_);
+            }
+            my @words_src = split / /, $sentence_src;
+            my @words_tgt = split / /, $sentence_tgt;
+            if (scalar(@words_src) <= $hunk_max_length &&
+                scalar(@words_tgt) <= $hunk_max_length) {
+                print $SRC_OUT $sentence_src, "\n";
+                print $TGT_OUT $sentence_tgt, "\n";
+            }
         }
     }
 }
