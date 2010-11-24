@@ -7,20 +7,34 @@
 
 use strict;
 use warnings;
+use Carp;
 use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use File::Path;
+use Cwd;
 use Digest::MD5 qw(md5_hex);
 
+# command name abbreviations
+my %expand_abbrev = qw(
+  ls list
+  cl clone
+  tb traceback
+  rm abolish
+  st start
+);
+
+my $startupwd = cwd();
 my $debug = 0;
+my $verbose = 0;
 my $manpage = 0;
 my $help = 0;
 my $list_options = 0;
-my $show_tags = 1;
+my $show_tag = 1;
 my $show_vars = 1;
 my $show_status = 0;
 my $show_log = 0;
+my $show_jobid = 0;
 my $reindex = 0;
 my $redo = undef;
 # standard filenames and filename parts
@@ -31,11 +45,13 @@ my $seedsdir = relative_to_stepsdir("eman.seeds");
 
 my %options = (
   "help|h" => \$help,
+  "verbose|v" => \$verbose,
   "list-options" => \$list_options,
   "man" => \$manpage,
-  "tags!" => \$show_tags,
+  "tag!" => \$show_tag,
   "vars!" => \$show_vars,
   "status!" => \$show_status,
+  "jobid!" => \$show_jobid,
   "log!" => \$show_log,
   "reindex!" => \$reindex,
   "redo:s@" => \$redo,
@@ -48,6 +64,12 @@ my %redo = map { ($_,1) } @$redo if defined $redo;
 my $command = shift;
 my $cmd = recognize_command($command);
 my $waserror = 0;
+
+sub mydie($) {
+  my $msg = shift;
+  print STDERR $msg."\n";
+  exit 1;
+}
 
 if (defined $command && !defined $cmd) {
   print STDERR "Bad command: $command\n";
@@ -104,27 +126,137 @@ if ($cmd eq "guess") {
   exit 0;
 }
 
+if ($cmd eq "list") {
+  # listing steps of the given types
+  my $only_some_steptypes = 0;
+  my %requested_steptype;
+  if (0 < scalar @ARGV) {
+    $only_some_steptypes = 1;
+    %requested_steptype = map { ( $_, 1) } @ARGV;
+  }
+  foreach my $s (sort {$a cmp $b} keys %$idx) {
+    next if $s !~ /^\Q$dirprefix/; # this is a reverse index
+    my $steptype = get_steptype($s);
+    next if $only_some_steptypes && !defined $requested_steptype{$steptype};
+    # mark that we accepted this argument
+    $requested_steptype{$steptype} = 2
+      if defined $requested_steptype{$steptype};
+    print $s;
+    print "\t".load_status($s) if $show_status;
+    print "\t".load_tag($s) if $show_tag;
+    print "\t".load_jobid($s) if $show_jobid;
+    print "\n";
+    # XXX handle show_log, show_vars
+  }
+  foreach my $req (keys %requested_steptype) {
+    if ($requested_steptype{$req} == 1) {
+      $waserror = 1;
+      print STDERR "No steps of type: $req\n";
+    }
+  }
+  exit $waserror;
+}
+
 if ($cmd eq "init") {
   my $steptype = shift;
-  die "usage: eman init STEPTYPE" if ! defined $steptype;
+  mydie "usage: eman init STEPTYPE" if ! defined $steptype;
   my $seed = $seedsdir."/".$steptype;
-  die "Seed $seed not found." if ! -e $seed;
-  die "Bad seed name, '.' not allowed." if $steptype =~ /\./;
+  mydie "Seed $seed not found." if ! -e $seed;
+  mydie "Bad seed name, '.' not allowed." if $steptype =~ /\./;
   my $timestamp = `date '+%Y%m%d-%H%M'`; chomp $timestamp;
-  die "Bad timestamp: $timestamp" if $timestamp !~ /^[-0-9]+$/;
-  my $s = mkdiruniq($dirprefix.$steptype, ".".$timestamp);
+  mydie "Bad timestamp: $timestamp" if $timestamp !~ /^[-0-9]+$/;
+  my $s = mkdiruniq($dirprefix.$steptype.".", ".".$timestamp);
   # populate the directory with all relevant files
-  safesystem("cp $seed $s/eman.seed") or die;
-  safesystem("set > $s/eman.init-env") or die;
-  die "unimplemented.";
-  exit 0;
+  quietsystem("cp $seed $s/eman.seed") or die;
+  quietsystem("set > $s/eman.init_env") or die;
+  chdir($s) or die "Failed to chdir to the new step directory.";
+  my $ok = 1;
+  my $preservedir = 0;
+  $ok = safesystem("INIT_ONLY=yes ./eman.seed >&2");
+  if ($ok) {
+    $preservedir = 1;
+    print STDERR "Step $s inited, checking required files, supplying defaults.\n"
+      if $verbose;
+
+    # tag: can be blank, non-blank must be valid
+    my $tag = try_load("eman.tag");
+    if (defined $tag) {
+      if ($tag !~ /[\s\n]/ ) {
+        $ok = 0;
+	print STDERR "No whitespace allowed in $s/eman.tag: $tag\n";
+      }
+    } else {
+      save("eman.tag", ""); # save blank tag
+    }
+
+    # deps: can be blank, non-blank must be valid
+    my $deps = try_load("eman.deps");
+    if (defined $deps) {
+      foreach my $d (split /\n/, $deps) {
+        if (!step_valid($d)) {
+	  print STDERR "Invalid dependence: $d\n";
+	  $ok = 0;
+	}
+      }
+    } else {
+      save("eman.deps", ""); # save blank tag
+    }
+
+    # vars: must exist (blank vars make no sense)
+    if (! defined try_load("eman.vars")) {
+      print STDERR "$seedsdir/$steptype did not create eman.vars for $s\n";
+      $ok = 0;
+    }
+  }
+
+  if ($ok) {
+    save("eman.status", "INITED");
+    print STDERR "Inited: $s\n";
+  } elsif ($preservedir) {
+    print STDERR "Failed to init the step. Check and delete: $s\n";
+    $waserror = 1;
+    save("eman.status", "INITFAILED");
+  } else {
+    print STDERR "Failed to init the step. Removing $s\n";
+    $waserror = 1;
+    chdir($startupwd) or die "Failed to chdir back to $startupwd";
+    rmtree($s) or die "Failed to remove $s";
+  }
+  exit $waserror;
 }
+
+if ($cmd eq "prepare") {
+  my $step = shift;
+  mydie "usage: eman prepare STEPDIR" if ! defined $step;
+  my $s = canon_stepdir($step);
+  my $status = load_status($step);
+  mydie "Only inited steps can be prepared" if $status ne "INITED";
+
+  chdir_to_stepdir($s);
+  # XXX need to export all variables
+  my $ok = 1;
+  $ok = safesystem("eval \$(cat eman.vars) RUN=no ./eman.seed");
+  print STDERR "Step $s prepared, checking required files.\n" if $verbose;
+  if (! -e "eman.command") {
+    $ok = 0;
+    print STDERR "Step $s prepared badly. No eman.command\n"
+  }
+  if ($ok) {
+    print STDERR "Step $s prepared.\n";
+    save("eman.status", "PREPARED");
+  } else {
+    $waserror = 1;
+    save("eman.status", "PREPFAILED");
+  }
+  exit $waserror;
+}
+
 
 sub recognize_command {
   my $command = shift;
   return undef if !defined $command;
+  $command = $expand_abbrev{$command} if defined $expand_abbrev{$command};
   return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess)$/;
-  # todo: abbreviations, e.g. cl pr ls tb rm
   return undef; # unrecognized
 }
 
@@ -161,6 +293,64 @@ sub relative_to_stepsdir {
   # if we are in a step directory, prepend ../
   # XXX TODO
   return $fn;
+}
+
+sub step_valid {
+  my $step = shift;
+  return -d relative_to_stepsdir($step)
+    && -e relative_to_stepsdir("$step/eman.seed")
+    && -e relative_to_stepsdir("$step/eman.vars");
+}
+
+sub get_steptype {
+  my $step = shift;
+  my $oldstep = $step;
+  $step =~ s/(\Q$dirprefix\E[^\.]+\.).*/$1/;
+  confess "Failed to get steptype from: $step" if $step eq $oldstep;
+  return $step;
+}
+
+sub load_status {
+  my $step = shift;
+  return try_load(relative_to_stepsdir("$step/eman.status"));
+}
+sub load_tag {
+  my $step = shift;
+  return try_load(relative_to_stepsdir("$step/eman.tag"));
+}
+sub load_vars {
+  my $step = shift;
+  return try_load(relative_to_stepsdir("$step/eman.vars"));
+}
+sub load_jobid {
+  my $step = shift;
+  my @logs = glob(relative_to_stepsdir("$step/log.o[0-9]*"));
+  return "-" if 0 == scalar @logs;
+  my @ids = sort {$b <=> $a} map { s/^.*log.o([0-9]+)$/$1/; $_ } @logs;
+  return $ids[0];
+}
+
+sub canon_stepdir {
+  my $step = shift;
+  # interprets uniquely supplied steps
+  my $s = $step;
+  $s = $1 if $step =~ /^.*\/([^\/]+)\/?/;
+  $s = guess_step_from_hashdate($s);
+  mydie "Not a valid step: $step" if !defined $s;
+  return $s;
+}
+
+sub chdir_to_stepdir {
+  my $stepdir = shift;
+  die "../$stepdir and ./$stepdir exist, I'm confused."
+    if -e "../$stepdir" && -e "./$stepdir";
+  if (-e $stepdir) {
+    chdir($stepdir) or die "Failed to chdir to $stepdir";
+  } elsif (-e "../$stepdir") {
+    chdir("../$stepdir") or die "Failed to chdir to $stepdir";
+  } else {
+    die "Neither ./$stepdir nor ../$stepdir exist.";
+  }
 }
 
 sub guess_step {
@@ -204,7 +394,8 @@ sub guess_step_from_hashdate {
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
   return $key if -d $key; # full dirname was given, this is it
   my %stepnames = map { ($_,1) }
-                  map { s/(\Q$dirprefix\E[^\.]+\.).*/$1/ }
+                  map { get_steptype($_) }
+                  grep { /^\Q$dirprefix/ } # this is a forward index
                   keys %$idx;
   foreach my $pref (keys %stepnames) {
     if (-d $pref.$key) {
@@ -236,14 +427,24 @@ sub saveidx {
 sub get_hash_from_dir {
   my $exp = shift;
 
-  my @vars = split /\n/, load($exp."/VARS");
-  my @deps = split /\n/, load($exp."/deps");
+  my @vars = split /\n/, load($exp."/eman.vars");
+  my @deps = split /\n/, load($exp."/eman.deps");
   return md5_hex(sort @vars, sort @deps);
 }
 sub get_hash_from_vars_deps {
   my $vars = shift;
   my $deps = shift;
   return md5_hex(sort @$vars, sort @$deps);
+}
+sub try_load {
+  my $f = shift;
+  my $h = try_open($f);
+  return undef if !defined $h;
+  my $o = "";
+  $o .= $_ while (<$h>);
+  close $h;
+  chomp $o;
+  return $o;
 }
 sub load {
   my $f = shift;
@@ -254,7 +455,39 @@ sub load {
   chomp $o;
   return $o;
 }
+sub save {
+  my $f = shift;
+  my $data = shift;
+  my $h = my_save($f);
+  print $h $data;
+  print $h "\n" if $data ne "" && $data !~ /\n$/m;
+  close $h;
+}
 
+sub try_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  return undef if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file $f`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat $f |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat $f |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or return undef;
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
 sub my_open {
   my $f = shift;
   if ($f eq "-") {
@@ -302,6 +535,9 @@ sub my_save {
 
 sub safesystem {
   print STDERR "Executing: @_\n";
+  return quietsystem(@_);
+}
+sub quietsystem {
   system(@_);
   if ($? == -1) {
       print STDERR "Failed to execute: @_\n  $!\n";
@@ -347,7 +583,7 @@ eman, experiment manager
   eman list STEPTYPE          # list all steps of the given type
   eman traceback STEPDIR      # show tree of the steps and predecessors
   eman users STEPDIR          # show tree of the steps and successors
-    --tags --vars --status    #   include relevant information
+    --tag --vars --status     #   include relevant information
     --log --jobid             #   and the tail of the log or SGE job ID
   
   eman abolish STEPDIR        # destroy all step files except
@@ -377,6 +613,7 @@ present in the step directory:
   eman.seed          ... the script used to init the step
   eman.command       ... the script used for preparation and run
   eman.derived-from  ... the name of the step used when deriving
+  eman.init_env      ... all environment variable at init time
 
 =head2 Special Files in Directory of Steps
 
