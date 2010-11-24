@@ -1,12 +1,17 @@
 #!/usr/bin/perl
 # eman, experiment manager
 #
+# More info: 'eman --help' or 'eman --man'
+#
 # Ondrej Bojar, bojar@ufal.mff.cuni.cz
 
 use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
+use File::Basename;
+use File::Path;
+use Digest::MD5 qw(md5_hex);
 
 my $debug = 0;
 my $manpage = 0;
@@ -18,7 +23,11 @@ my $show_status = 0;
 my $show_log = 0;
 my $reindex = 0;
 my $redo = undef;
-my $dirprefix = "e.";
+# standard filenames and filename parts
+my $dirprefix = "s."; # stands for 'step'
+my $indexfile = relative_to_stepsdir("eman.index");
+my $resultsfile = relative_to_stepsdir("eman.results");
+my $seedsdir = relative_to_stepsdir("eman.seeds");
 
 my %options = (
   "help|h" => \$help,
@@ -95,12 +104,219 @@ if ($cmd eq "guess") {
   exit 0;
 }
 
+if ($cmd eq "init") {
+  my $steptype = shift;
+  die "usage: eman init STEPTYPE" if ! defined $steptype;
+  my $seed = $seedsdir."/".$steptype;
+  die "Seed $seed not found." if ! -e $seed;
+  die "Bad seed name, '.' not allowed." if $steptype =~ /\./;
+  my $timestamp = `date '+%Y%m%d-%H%M'`; chomp $timestamp;
+  die "Bad timestamp: $timestamp" if $timestamp !~ /^[-0-9]+$/;
+  my $s = mkdiruniq($dirprefix.$steptype, ".".$timestamp);
+  # populate the directory with all relevant files
+  safesystem("cp $seed $s/eman.seed") or die;
+  safesystem("set > $s/eman.init-env") or die;
+  die "unimplemented.";
+  exit 0;
+}
+
 sub recognize_command {
   my $command = shift;
   return undef if !defined $command;
   return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess)$/;
   # todo: abbreviations, e.g. cl pr ls tb rm
   return undef; # unrecognized
+}
+
+sub mkdiruniq {
+  my $prefix = shift;
+  my $suffix = shift;
+  
+  my $dirnum = 1;
+  my $tryname = mkdiruniq2($prefix, $suffix, $dirnum);
+  while (-e $tryname) {
+    $dirnum++;
+    $tryname = mkdiruniq2($prefix, $suffix, $dirnum);
+  }
+  if (mkdir($tryname)) {
+    return $tryname;
+  } else {
+    print STDERR "Failed to create the directory $tryname, $!";
+    exit 1;
+  }
+}
+sub mkdiruniq2 {
+  my $prefix = shift;
+  my $suffix = shift;
+  my $num = shift;
+  my $forhash = $prefix.$suffix.$num;
+  my $hash = substr(md5_hex($forhash), 0, 8);
+  return $prefix.$hash.$suffix;
+}
+
+
+
+sub relative_to_stepsdir {
+  my $fn = shift;
+  # if we are in a step directory, prepend ../
+  # XXX TODO
+  return $fn;
+}
+
+sub guess_step {
+  my $key = shift;
+  my $step = guess_step_from_hashdate($key);
+  if (!defined $step && -e $resultsfile) {
+    # guess from results file
+    my $resultstext = load($resultsfile);
+    
+    my @resultsmatches = grep { /$key/ } split /\n/, $resultstext;
+    if (1<scalar(@resultsmatches)) {
+      print STDERR "Ambiguous in results file: $key:\n";
+      print STDERR join("", map { "  $_\n" } @resultsmatches);
+      exit 1;
+    }
+    
+    print STDERR scalar(@resultsmatches)." matches in results file\n" if $debug;
+    if (1==scalar @resultsmatches) {
+      my $f = field($resultsmatches[0], 1);
+      $f =~ s/\<.*//;
+      $step = guess_step_from_hashdate($f);
+    }
+  }
+  if (!defined $step) {
+    # guess from dir listing
+    my @dirs = grep { /$key/ } glob("$dirprefix*.*.[0-9]*");
+    # we do not use the preloaded index, because it contains only valid exps.
+    if (1<scalar(@dirs)) {
+      print STDERR "Ambiguous in dir listing: $key:\n";
+      print STDERR join("", map { "  $_\n" } @dirs);
+      exit 1;
+    }
+    $step = guess_step_from_hashdate($dirs[0]) if 1==scalar @dirs;
+  }
+  die "Failed to guess step from: $key" if !defined $step;
+  return $step;
+}  
+
+sub guess_step_from_hashdate {
+  my $key = shift;
+  print STDERR "Guessing step from hash and date: $key\n" if $debug;
+  return $key if -d $key; # full dirname was given, this is it
+  my %stepnames = map { ($_,1) }
+                  map { s/(\Q$dirprefix\E[^\.]+\.).*/$1/ }
+                  keys %$idx;
+  foreach my $pref (keys %stepnames) {
+    if (-d $pref.$key) {
+      return $pref.$key;
+    }
+  }
+  return undef; #couldn't confirm
+}
+
+
+sub loadidx {
+  # load the index file and hash it there and back
+  my %idx;
+  if (-e $indexfile) {
+    %idx = map { my ($d, $md5) = split /\t/; ($d, $md5, $md5, $d) }
+             split /\n/, load($indexfile);
+  }
+  return \%idx;
+}
+sub saveidx {
+  my $idx = shift;
+  my $h = my_save($indexfile);
+  foreach my $k (keys %$idx) {
+    print $h "$k\t$idx->{$k}\n";
+  }
+  close $h;
+}
+
+sub get_hash_from_dir {
+  my $exp = shift;
+
+  my @vars = split /\n/, load($exp."/VARS");
+  my @deps = split /\n/, load($exp."/deps");
+  return md5_hex(sort @vars, sort @deps);
+}
+sub get_hash_from_vars_deps {
+  my $vars = shift;
+  my $deps = shift;
+  return md5_hex(sort @$vars, sort @$deps);
+}
+sub load {
+  my $f = shift;
+  my $h = my_open($f);
+  my $o = "";
+  $o .= $_ while (<$h>);
+  close $h;
+  chomp $o;
+  return $o;
+}
+
+sub my_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  die "Not found: $f" if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file $f`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat $f |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat $f |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or die "Can't open '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
+
+sub my_save {
+  my $f = shift;
+
+  my $opn;
+  my $hdl;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/) {
+    $opn = "| gzip -c > $f";
+  } elsif ($f =~ /\.bz2$/) {
+    $opn = "| bzip2 > $f";
+  } else {
+    $opn = "> $f";
+  }
+  mkpath( dirname($f) );
+  open $hdl, $opn or die "Can't write to '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
+
+
+sub safesystem {
+  print STDERR "Executing: @_\n";
+  system(@_);
+  if ($? == -1) {
+      print STDERR "Failed to execute: @_\n  $!\n";
+      exit(1);
+  }
+  elsif ($? & 127) {
+      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+          ($? & 127),  ($? & 128) ? 'with' : 'without';
+      exit(1);
+  }
+  else {
+    my $exitcode = $? >> 8;
+    print STDERR "Exit code: $exitcode\n" if $exitcode;
+    return ! $exitcode;
+  }
 }
 
 
@@ -136,17 +352,17 @@ eman, experiment manager
   
   eman abolish STEPDIR        # destroy all step files except
                               #   metadata => can still be cloned
-
+  eman collect                # collect results of all experiments
   eman reindex                # re-create index of steps
 
-Whereever STEPDIR is expected, you may also use `pwd` if in the step dir.
+Use "`pwd`" as STEPDIR when you actually are in a step directory.
 
 =head1 DESCRIPTION
 
 eman is an experiment manager, useful mainly for deriving steps and
 step chains, i.e. complex experiment scenarios.
 
-=head2 Structure of an Experiment Directory
+=head2 Structure of a Step Directory
 
 We call each step in a (complex) pipeline an 'step'.
 Each step is represented as a single directory s.STEPTYPE.HASH.TIMESTAMP.
@@ -162,7 +378,15 @@ present in the step directory:
   eman.command       ... the script used for preparation and run
   eman.derived-from  ... the name of the step used when deriving
 
-=head2 Experiment Life Cycle
+=head2 Special Files in Directory of Steps
+
+In the directory containing all your steps, eman creates these files:
+
+  eman.seeds         ... the directory of all step seeds
+  eman.index         ... index of steps for quick check for identities
+  eman.results       ... collected results from all steps
+
+=head2 Life Cycle of Individual Steps
 
 1. The commands 'eman init' and 'eman clone' create a timestamped step
 directory, e.g. s.test.hash1234.20101115-1213.
