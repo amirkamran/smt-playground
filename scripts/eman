@@ -222,6 +222,7 @@ if ($cmd eq "clone") {
                          ! defined $ENV{$varname} } @srcvars;
     my $news = init(get_steptype($srcstep), \@usevars);
     $waserror = 1 if ! defined $news;
+    $waserror = ! start($news) if defined $news && $do_start;
   } else {
     die "Cloning based on traceback unimplemented";
   }
@@ -259,6 +260,7 @@ if ($command eq "redo") {
   my $recipe = traceback_to_recipe($s);
   my $depmap = undef;
   my $newtopstep = init_by_recipe($recipe, $depmap);
+  $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
   if (defined $newtopstep) {
     $show_status = 1;
     traceback("OLD ", $s);
