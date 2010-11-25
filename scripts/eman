@@ -13,6 +13,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use File::Path;
+use File::Spec;
 use Cwd;
 use Digest::MD5 qw(md5_hex);
 
@@ -22,6 +23,7 @@ my %expand_abbrev = qw(
   cl clone
   tb traceback
   tr traceback
+  tf traceforward
   rm abolish
   st start
   pr prepare
@@ -220,11 +222,20 @@ if ($cmd eq "clone") {
     my @srcvars = split /\n/, $srcvarsstr;
     my @usevars = grep { my ($varname, undef) = split /=/, $_, 2;
                          ! defined $ENV{$varname} } @srcvars;
-    my $news = init(get_steptype($srcstep), \@usevars);
+    my $news = init(get_steptype($srcstep), \@usevars, $srcstep);
     $waserror = 1 if ! defined $news;
     $waserror = ! start($news) if defined $news && $do_start;
   } else {
-    die "Cloning based on traceback unimplemented";
+    print STDERR "Loading recipe from stdin.\n";
+    my $recipestr = load("-");
+    my $recipe = parse_recipe([split /\n/, $recipestr]);
+    print YAML::Dump($recipe) if $debug;
+    my $newtopstep = init_by_recipe($recipe);
+    $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
+    if (defined $newtopstep) {
+      $show_status = 1;
+      traceback("NEW ", $newtopstep);
+    }
   }
   exit $waserror;
 }
@@ -258,8 +269,7 @@ if ($command eq "redo") {
   mydie "usage: eman redo STEPDIR" if ! defined $step;
   my $s = guess_step($step); # happily guess the exact step
   my $recipe = traceback_to_recipe($s);
-  my $depmap = undef;
-  my $newtopstep = init_by_recipe($recipe, $depmap);
+  my $newtopstep = init_by_recipe($recipe);
   $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
   if (defined $newtopstep) {
     $show_status = 1;
@@ -291,7 +301,59 @@ if ($cmd eq "abolish") {
   exit $waserror;
 }
 
+sub parse_recipe {
+  # parse traceback output with vars into a recipe
+  my $lines = shift;
+    # input stream of lines
+  my $cutprefix = shift;
+    # the depth we need to cut now
+  my $recipe = shift;
+    # the recipe so far
 
+  $cutprefix = "" if ! defined $cutprefix;
+
+  # peek at the first line, if going deeper, add one more dep,
+  # if going shallower or end, return accumulator
+  my $exact = "$cutprefix+- ";
+  my $deeper = "$cutprefix|  +- ";
+  my $shallower = substr($cutprefix, 0, -3);
+  if (! defined $lines->[0]
+    || ($shallower ne "" && $lines->[0] =~ /^\Q$shallower/)) {
+    print STDERR "Return at: $lines->[0]\n" if $debug;
+    return $recipe;
+  } elsif ($lines->[0] =~ /^\Q$deeper/) {
+    print STDERR "Deeper at: $lines->[0]\n" if $debug;
+    my $dep = parse_recipe($lines, $cutprefix."|  ");
+    push @{$recipe->{"deps"}}, $dep;
+    return parse_recipe($lines, $cutprefix, $recipe);
+  } elsif ($lines->[0] =~ /^\Q$exact\E([^ ]+)$/) {
+    my $name = $1;
+    print STDERR "Exact at: $lines->[0]\n" if $debug;
+    mydie "Bad recipe, got a name twice. Old: ".$recipe->{"name"}
+      .", New: ".$name
+      if defined $recipe->{"old"};
+    $recipe->{"name"} = $name;
+    $recipe->{"vars"} = [];
+    $recipe->{"deps"} = [];
+    shift @$lines;
+    my $tailexact = "$cutprefix|  | ";
+    while (defined $lines->[0] && $lines->[0] =~ /^\Q$tailexact\E(.*)/) {
+      my $line = $1;
+      my $thisline = shift @$lines;
+      next if $line =~ /^Job:/; # skip tag, jobid and other things
+      if ($line =~ /^[A-Za-z_0-9]+=/) {
+        # let's hope this is a variable
+        push @{$recipe->{"vars"}}, $line;
+      } else {
+        mydie "Bad recipe, strange line: $thisline";
+      }
+    }
+    return parse_recipe($lines, $cutprefix, $recipe);
+  } else {
+    mydie "Bad recipe, unexpected line: $lines->[0]";
+  }
+  die "Nonsense.";
+}
 
 sub init_by_recipe {
   # given a recipe; a recipe has the following form:
@@ -300,7 +362,6 @@ sub init_by_recipe {
   # initializes a fresh tree using the variables and dependences
   # we attempt to reuse existing steps unless they failed or are '--redo'ed
   my $recipe = shift;
-  my $depmap = shift; # probably useless
   
   # handle all dependencies
   # perform replacements of deps in vars
@@ -310,12 +371,11 @@ sub init_by_recipe {
   my @newdeps = ();
   if (defined $olddeps && scalar @$olddeps > 0) {
     foreach my $d (@$olddeps) {
-      my $newd = init_by_recipe($d, $depmap);
+      my $newd = init_by_recipe($d);
       return undef if !defined $newd;
       push @newdeps, $newd;
       my $oldd = $d->{"name"};
       if ($newd ne $oldd) {
-        $depmap->{$oldd} = $newd;
         @newvars = map { s/\Q$oldd\E/$newd/g; $_; } @newvars;
           # use the new step in the vars
       }
@@ -342,7 +402,7 @@ sub init_by_recipe {
   } else {
     # init a new step using the vars
     my $steptype = get_steptype($recipe->{"name"});
-    my $newstep = init($steptype, \@newvars);
+    my $newstep = init($steptype, \@newvars, $recipe->{"name"});
     return $newstep;
   }
 }
@@ -352,6 +412,7 @@ sub init {
   my $steptype = shift;
   my $varsarr = shift; # optional array of strings VAR="sd sdf"
                        # to be passed to the seed
+  my $derived_from = shift;
   my $seed = $seedsdir."/".$steptype;
   mydie "Seed $seed not found." if ! -e $seed;
   mydie "Bad seed name, '.' not allowed." if $steptype =~ /\./;
@@ -360,8 +421,9 @@ sub init {
   my $s = mkdiruniq($dirprefix.$steptype.".", ".".$timestamp);
   # populate the directory with all relevant files
   quietsystem("cp $seed $s/eman.seed") or die;
-  quietsystem("set > $s/eman.init_env") or die;
   my $oldwd = chdir_to_stepdir($s);
+  quietsystem("set > eman.init_env") or die;
+  save("eman.derived_from", $derived_from) if defined $derived_from;
   my $ok = 1;
   my $preservedir = 0;
   my @varsoverride = ();
@@ -851,7 +913,11 @@ sub guess_step {
 sub guess_step_from_hashdate {
   my $key = shift;
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
-  return $key if -d $key; # full dirname was given, this is it
+  if (-d $key) {
+    # directory name explicitly given, check if it is indeed a step directory
+    my $step = basename(File::Spec->rel2abs($key));
+    return $step if -e $key."/eman.seed";
+  }
   my %stepnames = map { ($_,1) }
                   map { s/(\Q$dirprefix\E[^\.]+\.).*/$1/; $_; }
                   grep { /^\Q$dirprefix/ } # this is a forward index
@@ -929,7 +995,7 @@ sub load {
   my $h = my_open($f);
   my $o = "";
   $o .= $_ while (<$h>);
-  close $h;
+  close $h if $f ne "-";
   chomp $o;
   return $o;
 }
@@ -1044,7 +1110,7 @@ eman, experiment manager
 
   VAR=val eman init STEPTYPE # create new step of the given type
   VAR=val eman clone SPEC    # create new step based on STEPDIR
- #eman clone < traceback     # create step by cloning incl. predecessors
+  eman clone < traceback     # create step by cloning incl. predecessors
   eman redo SPEC             # same as 'eman tb SPEC | eman clone'
                              # good predecessors are reused by default
     --redo=SPEC              #   don't reuse the given step in the clone
@@ -1073,7 +1139,8 @@ eman, experiment manager
  #eman collect               # collect results of all experiments
   eman reindex               # re-create index of steps
 
-Use "`pwd`" as STEPDIR when you actually are in a step directory.
+SPEC is a text snippet capable of identifying a step uniquely.
+You can even use '.' and '`pwd`' as SPEC.
 Commands marked with '#' are not yet implemented.
 
 =head1 DESCRIPTION
@@ -1096,7 +1163,7 @@ present in the step directory:
   eman.jobid         ... the jobid of the most recent (re)run
   eman.seed          ... the script used to init the step
   eman.command       ... the script used for preparation and run
-  eman.derived-from  ... the name of the step used when deriving
+  eman.derived_from  ... the name of the step used when deriving
   eman.init_env      ... all environment variables at init time
 
 =head2 Special Files in Directory of Steps
