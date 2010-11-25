@@ -40,6 +40,7 @@ my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
 my $sge = 1;
+my $do_start = 0;
 my $redo = undef;
 my $redo_all = 0;
 # standard filenames and filename parts
@@ -61,10 +62,11 @@ my %options = (
   "log!" => \$show_log,
   "redo=s@" => \$redo,
   "all-redo!" => \$redo_all,
+  "start!" => \$do_start,
 );
 GetOptions(%options) or exit 1;
 
-my %redo = map { ($_,1) } @$redo if defined $redo;
+my %redo = map { (guess_step($_),1) } @$redo if defined $redo;
 
 my $command = shift;
 my $cmd = recognize_command($command);
@@ -136,15 +138,6 @@ exit 0 if $cmd eq "reindex"; # the job has been done already
 
 ## handle all the various commands
 
-my $hide = <<'KONEC'
-clone stromu:
-nacti do struktury
-
-
-KONEC
-;
-
-
 if ($cmd eq "guess") {
   # just guessing step directories
   foreach my $key (@ARGV) {
@@ -212,6 +205,7 @@ if ($cmd eq "init") {
   mydie "usage: eman init STEPTYPE" if ! defined $steptype;
   my $s = init($steptype);
   $waserror = ! defined $s;
+  $waserror = ! start($s) if defined $s && $do_start;
   exit $waserror;
 }
 
@@ -1046,37 +1040,39 @@ eman, experiment manager
 
 =head1 SYNOPSIS
 
-  VAR=val eman init STEPTYPE  # create new step of the given type
-  VAR=val eman clone STEPDIR  # create new step based on STEPDIR
-  eman clone < traceback      # create step by cloning incl. predecessors
-    --redo                    #   clone even DONE steps
-    --redo=STEPDIR            #   clone the given step unconditionally
-    --start                   # after init/clone, submit to queue
+  VAR=val eman init STEPTYPE # create new step of the given type
+  VAR=val eman clone SPEC    # create new step based on STEPDIR
+ #eman clone < traceback     # create step by cloning incl. predecessors
+  eman redo SPEC             # same as 'eman tb SPEC | eman clone'
+                             # good predecessors are reused by default
+    --redo=SPEC              #   don't reuse the given step in the clone
+    --all-redo               #   recreate all steps unconditionally
+                             #   redo --redo is possible
+    --start                  # after init/clone/redo, submit to queue
   
-  eman prepare SPEC           # prepare inited step
-  eman run SPEC               # run prepared step
-  eman continue SPEC          # continue a single step that failed
-  eman start SPEC             # prepare and run, incl. all predecessors
+  eman prepare SPEC          # prepare inited step
+  eman run SPEC              # run prepared step
+ #eman continue SPEC         # continue a single step that failed
+  eman start SPEC            # prepare and run, incl. all predecessors
 
-  eman redo SPEC              # same as 'eman tb SPEC | eman clone'
-  
-  eman guess SPEC             # guess a *single* step based on a
-                              # substring of the hash, the tag, the date
-                              # or final score
+  eman guess SPEC            # guess a *single* step based on a
+                             # substring of the hash, the tag, the date
+                             # or final score
 
-  eman list STEPTYPE          # list all steps of the given type
-  eman users SPEC ...         # list all steps that use the given step
-  eman traceback SPEC ...     # show tree of the steps and predecessors
-  eman traceforward SPEC ...  # show tree of the steps and successors
-    --tag --vars --status     #   include relevant information
-    --log --jobid             #   and the tail of the log or SGE job ID
+  eman list STEPTYPE         # list all steps of the given type
+  eman users SPEC ...        # list all steps that use the given step
+  eman traceback SPEC ...    # show tree of the steps and predecessors
+ #eman traceforward SPEC ... # show tree of the steps and successors
+    --tag --vars --status    #   include relevant information
+    --log --jobid            #   and the tail of the log or SGE job ID
   
-  eman abolish STEPDIR ...    # destroy all step files except
-                              #   metadata => can still be cloned
-  eman collect                # collect results of all experiments
-  eman reindex                # re-create index of steps
+  eman abolish STEPDIR ...   # destroy all step files except
+                             #   metadata => can still be cloned
+ #eman collect               # collect results of all experiments
+  eman reindex               # re-create index of steps
 
 Use "`pwd`" as STEPDIR when you actually are in a step directory.
+Commands marked with '#' are not yet implemented.
 
 =head1 DESCRIPTION
 
@@ -1099,7 +1095,7 @@ present in the step directory:
   eman.seed          ... the script used to init the step
   eman.command       ... the script used for preparation and run
   eman.derived-from  ... the name of the step used when deriving
-  eman.init_env      ... all environment variable at init time
+  eman.init_env      ... all environment variables at init time
 
 =head2 Special Files in Directory of Steps
 
