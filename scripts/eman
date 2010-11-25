@@ -7,6 +7,7 @@
 
 use strict;
 use warnings;
+use YAML;
 use Carp;
 use Getopt::Long;
 use Pod::Usage;
@@ -38,8 +39,7 @@ my $show_vars = 0;
 my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
-my $reindex = 0;
-my $sge = 0;
+my $sge = 1;
 my $redo = undef;
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
@@ -58,7 +58,6 @@ my %options = (
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
-  "reindex!" => \$reindex,
   "redo:s@" => \$redo,
 );
 GetOptions(%options) or exit 1;
@@ -105,21 +104,80 @@ if ($list_options) {
 
 
 # update md5 indices
-my $idx = loadidx() unless $reindex; # ignore saved values
+my $idx;
+
+if ($cmd eq "reindex") {
+  # do not load any saved values
+} else {
+  $idx = loadidx();
+}
 my @dirs = glob("$dirprefix*.*.[0-9]*");
-foreach my $d (@dirs) {
-  next if defined $idx->{$d};
-  next if ! step_valid($d);
-  my $hash = get_hash_from_dir($d);
-  $idx->{$d} = $hash;
-  $idx->{$hash} = $d;
-  print STDERR "$d: $idx->{$d}\n" if $debug;
+foreach my $s (@dirs) {
+  next if defined $idx->{$s};
+  next if ! step_valid($s);
+  my $hash = get_hash_from_dir($s);
+  $idx->{$s} = $hash;
+  $idx->{$hash} = $s;
+  # mark that this step uses its deps
+  my $deps = load_depsarr($s);
+  if (defined $deps) {
+    foreach my $d (@$deps) {
+      $idx->{'USED_BY'}->{$d}->{$s} = 1;
+    }
+  }
+
+  print STDERR "$s: $idx->{$s}\n" if $debug;
 }
 saveidx($idx);
+
+exit 0 if $cmd eq "reindex"; # the job has been done already
 
 
 ## handle all the various commands
 
+my $hide = <<'KONEC'
+clone stromu:
+nacti do struktury
+$recipe = { "name"..., "vars"..., "deps"=>[recipe..]}
+init_by_recipe {
+  # given a recipe (a tree of steps incl. vars)
+  # initializes a fresh tree of identical steps
+  # we attempt to reuse existing steps unless they failed or are '--avoid'ed
+  my $recipe = shift;
+  my $dep = shift;
+  
+  my $deps = $recipe->{"deps"};
+  if (defined $deps && scalar @$deps > 0) {
+    foreach my $d (@$deps) {
+      my $newd = init_by_recipe($d, $depmapping);
+      $depmap->{$d} = $newd if $newd ne $d;
+    }
+  }
+  # perform replacements of deps in vars
+  ...
+  # check if such a step exists already
+  my $knowstep = ...
+  if (defined $knownstep && get_status($knownstep) !~ /FAILED/) {
+    return $knownstep;
+  } else {
+    my $newstep = init($steptype, $newvars);
+    return $newstep;
+  }
+}
+
+if ($command eq "redo") {
+  my $recipe = traceback_to_recipe($step);
+  my $depmap = undef;
+  my $newexp = init_by_recipe($recipe, 
+
+1. check if all done, prepared or inited
+   if *failed, fail
+2. walk back, make sure all are prepared (if not, prepare
+   if failed, fail
+3. walk back, if done, ok, if prepared, submit
+   subshould 
+KONEC
+;
 
 
 if ($cmd eq "guess") {
@@ -139,24 +197,19 @@ if ($cmd eq "list") {
     $only_some_steptypes = 1;
     %requested_steptype = map { ($_, 1) } @ARGV;
   }
-  my @steps_to_list;
-  foreach my $s (keys %$idx) {
-    next if $s !~ /^\Q$dirprefix/; # this is a reverse index
+  my %steps_to_list = ();
+  foreach my $s (all_steps()) {
+    next if ! step_valid($s);
     my $steptype = get_steptype($s);
     next if $only_some_steptypes && !defined $requested_steptype{$steptype};
     # mark that we accepted this argument
     $requested_steptype{$steptype} = 2
       if defined $requested_steptype{$steptype};
-    push @steps_to_list, $s;
+    $steps_to_list{$s} = 1;
   }
-  foreach my $s (sort { -C $b <=> -C $a } @steps_to_list) {
-    print $s;
-    print "\t".load_status($s) if $show_status;
-    print "\t".load_tag($s) if $show_tag;
-    print "\t".load_jobid($s) if $show_jobid;
-    print "\n";
-    print_vars("  ", $s) if $show_vars;
-    print_log("  ", $s) if $show_log;
+  foreach my $s (sort { if (-e $a && -e $b) { -C $b <=> -C $a } else { -1 } }
+                 keys %steps_to_list) {
+    print_short($s);
   }
   foreach my $req (keys %requested_steptype) {
     if ($requested_steptype{$req} == 1) {
@@ -172,6 +225,19 @@ if ($cmd eq "traceback") {
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
     traceback("", $step);
+  }
+  exit 0;
+}
+
+if ($cmd eq "users") {
+  mydie "usage: eman users SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    my $users = $idx->{'USED_BY'}->{$step};
+    next if !defined $users;
+    foreach my $u (keys %$users) {
+      print_short($u);
+    }
   }
   exit 0;
 }
@@ -219,6 +285,13 @@ if ($cmd eq "run") {
   exit $waserror;
 }
 
+if ($cmd eq "start") {
+  my $step = shift;
+  mydie "usage: eman run STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  $waserror = ! start($s);
+  exit $waserror;
+}
 
 
 
@@ -270,7 +343,7 @@ sub init {
     if (defined $tag) {
       if ($tag =~ /[\s\n]/ ) {
         $ok = 0;
-	print STDERR "No whitespace allowed in $s/eman.tag: $tag\n";
+        print STDERR "No whitespace allowed in $s/eman.tag: $tag\n";
       }
     } else {
       save("eman.tag", ""); # save blank tag
@@ -281,9 +354,9 @@ sub init {
     if (defined $deps) {
       foreach my $d (split /\n/, $deps) {
         if (!step_valid($d)) {
-	  print STDERR "Invalid dependence: $d\n";
-	  $ok = 0;
-	}
+          print STDERR "Invalid dependence: $d\n";
+          $ok = 0;
+        }
       }
     } else {
       save("eman.deps", ""); # save blank tag
@@ -335,6 +408,113 @@ sub prepare {
   return $ok;
 }
 
+sub start {
+  # 1. check if all predecessors done, prepared or inited
+  #    if *failed, fail
+  # 2. walk back, make sure all are prepared (if not, prepare
+  #    if failed, fail
+  # 3. walk back, if done, ok, if prepared, submit
+  #    subshould 
+  # check predecessors and if none of them failed
+  # so that we wait for them
+  my $s = shift;
+
+  my $all_ok = fold_back($s,
+                 sub {
+                   my $this = shift;
+                   my $aku = shift;
+                   return 0 if !$aku; # propagate failure
+                   my $stat = load_status($this);
+                   if ($stat =~ /FAILED/ || $stat eq "NONEXISTENT") {
+                     return 0;
+                   } else {
+                     return 1;
+                   }
+                 },
+                 1, # seed value
+               );
+  if (!$all_ok) {
+    print STDERR "Cannot start $s, some deps have failed:\n";
+    brief_traceback("  ", $s);
+    return 0;
+  }
+
+  # now prepare all that need preparation
+  my $prep_ok = fold_back($s,
+    sub {
+      my $this = shift;
+      my $aku = shift;
+      return 0 if !$aku; # propagate failure
+      my $stat = load_status($this);
+      return 1 if $stat =~ /^(PREPARED|DONE|RUNNING|STARTING)$|^WAITING/;
+      return prepare($this);
+    },
+    1, # seed value
+  );
+  if (!$prep_ok) {
+    print STDERR "Cannot start $s, failed to prepare some deps:\n";
+    brief_traceback("  ", $s);
+    return 0;
+  }
+
+  # finally submit bits that need to run
+  my $start_ok = fold_back($s,
+    sub {
+      my $this = shift;
+      my $aku = shift;
+      return 0 if !$aku; # propagate failure
+      return 1 if load_status($this) =~ /^(DONE|RUNNING|STARTING)$|^WAITING/;
+
+      # convert each prerequisite name to jobid
+      my @holds = ();
+      my $deps = load_depsarr($this);
+      if (defined $deps) {
+        foreach my $dep (@$deps) {
+          next if load_status($dep) eq "DONE";
+          my $depid = load_jobid($dep);
+          die "Failed to get jobid of $dep" if !defined $depid;
+          push @holds, $depid;
+        }
+      }
+
+      return submit($this, \@holds);
+    },
+    1, # seed value
+  );
+  if (!$start_ok) {
+    print STDERR "Cannot start $s, failed to submit some steps.\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+sub fold_back {
+  my $step = shift;
+  my $sub = shift;
+  my $aku = shift;
+
+  my $deps = load_depsarr($step);
+  foreach my $dep (@$deps) {
+    $aku = fold_back($dep, $sub, $aku);
+  }
+  return $sub->($step, $aku);
+}
+
+
+sub brief_traceback {
+  my $prefix = shift;
+  my $s = shift;
+
+  my @mem = ($show_status, $show_vars, $show_log);
+  $show_status = 1;
+  $show_vars = 0;
+  $show_log = 0;
+  traceback($prefix, $s);
+  ($show_status, $show_vars, $show_log) = @mem;
+}
+  
+
 sub submit {
   # assume all predecessors are DONE or their jobids are provided
   # so that we wait for them
@@ -349,11 +529,17 @@ sub submit {
   my $jid = undef;
   # XXX should split holdjids into holds (for sge) and active waiting loops
   my @holds = defined $holdjids ? map {"-hold=$_"} @$holdjids : ();
+
+  my $oldholds = $ENV{"HOLDS"};
+  $oldholds ||= "";
+  my $holdsstr = join(" ", ($oldholds, @holds));
   
+  # just to be sure
+  quietsystem("chmod +x eman.command")
+    or print STDERR "Failed to ensure executable bit for eman.command in $s\n";
   if (! $sge) {
     # avoid sun grid engine
     # XXX must wait for running jobs
-    quietsystem("chmod +x eman.command"); # just to be sure
 
     save("eman.wrapcommand", 'echo Host: `hostname` ; echo PID: $$ ; ./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
     $ok = safesystem("( nohup /bin/bash ./eman.wrapcommand > log 2>&1 & )");
@@ -379,7 +565,7 @@ sub submit {
     }
   } else {
     # use sge
-    $ok = safesystem("( qsubmit @holds --jobname=log ./eman.command 2>&1 ) > log");
+    $ok = safesystem("( qsubmit $holdsstr --jobname=log ./eman.command 2>&1 ) > log");
     if ($ok) {
       # get job id
       my $hdl = my_open("log");
@@ -412,10 +598,16 @@ sub submit {
   return $ok;
 }
 
-sub print_step {
-  my $prefix = shift;
+sub print_short {
   my $s = shift;
 
+  print $s;
+  print "\t".load_status($s) if $show_status;
+  print "\t".load_tag($s) if $show_tag;
+  print "\t".(load_jobid($s) || "") if $show_jobid;
+  print "\n";
+  print_vars("  ", $s) if $show_vars;
+  print_log("  ", $s) if $show_log;
 }
 sub print_vars {
   my $prefix = shift;
@@ -522,7 +714,7 @@ sub get_steptype {
 
 sub load_status {
   my $step = shift;
-  return try_load(relative_to_stepsdir("$step/eman.status"));
+  return try_load(relative_to_stepsdir("$step/eman.status")) || "NONEXISTENT";
 }
 sub load_tag {
   my $step = shift;
@@ -531,7 +723,7 @@ sub load_tag {
 sub load_depsarr {
   my $step = shift;
   my $depsstr = try_load(relative_to_stepsdir("$step/eman.deps"));
-  my $depsarr = [ split /\n/, $depsstr ];
+  my $depsarr = [ split /\n/, $depsstr ] if defined $depsstr;
   return $depsarr;
 
 }
@@ -628,19 +820,16 @@ sub guess_step_from_hashdate {
 
 sub loadidx {
   # load the index file and hash it there and back
-  my %idx;
+  my $idx;
   if (-e $indexfile) {
-    %idx = map { my ($d, $md5) = split /\t/; ($d, $md5, $md5, $d) }
-             split /\n/, load($indexfile);
+    $idx = Load(load($indexfile)."\n"); # YAML to Load the string
   }
-  return \%idx;
+  return $idx;
 }
 sub saveidx {
   my $idx = shift;
   my $h = my_save($indexfile);
-  foreach my $k (keys %$idx) {
-    print $h "$k\t$idx->{$k}\n";
-  }
+  print $h YAML::Dump($idx);
   close $h;
 }
 
@@ -656,6 +845,28 @@ sub get_hash_from_vars_deps {
   my $deps = shift;
   return md5_hex(sort @$vars, sort @$deps);
 }
+
+sub all_steps {
+  # returns an array of all steps mentioned anywhere
+  my %steps_to_list = ();
+  foreach my $s (keys %$idx) {
+    next if $s !~ /^\Q$dirprefix/; # this is a reverse index
+    $steps_to_list{$s} = 1;
+  }
+  if (defined $idx->{'USED_BY'}) {
+    # eagerly collect also all steps mentioned in deps
+    foreach my $d (keys %{$idx->{'USED_BY'}}) {
+      $steps_to_list{$d} = 1;
+      my $sources = $idx->{'USED_BY'}->{$d};
+      next if !defined $sources;
+      foreach my $s (keys %$sources) {
+        $steps_to_list{$s} = 1;
+      }
+    }
+  }
+  return keys %steps_to_list;
+}
+
 sub try_load {
   my $f = shift;
   my $h = try_open($f);
@@ -791,9 +1002,9 @@ eman, experiment manager
     --redo=STEPDIR            #   clone the given step unconditionally
     --start                   # after init/clone, submit to queue
   
-  eman prepare SPEC           # prepare inited
-  eman run SPEC               # run prepared
-  eman continue SPEC          # continue something that failed
+  eman prepare SPEC           # prepare inited step
+  eman run SPEC               # run prepared step
+  eman continue SPEC          # continue a single step that failed
   eman start SPEC             # prepare and run, incl. all predecessors
   
   eman guess SPEC             # guess a *single* step based on a
@@ -801,8 +1012,9 @@ eman, experiment manager
                               # or final score
 
   eman list STEPTYPE          # list all steps of the given type
+  eman users SPEC ...         # list all steps that use the given step
   eman traceback SPEC ...     # show tree of the steps and predecessors
-  eman users SPEC ...         # show tree of the steps and successors
+  eman traceforward SPEC ...  # show tree of the steps and successors
     --tag --vars --status     #   include relevant information
     --log --jobid             #   and the tail of the log or SGE job ID
   
@@ -858,7 +1070,7 @@ directory, e.g. s.test.hash1234.20101115-1213.
 5. eman.status is set to INITED if everything was successful
 
 The file eman.status in a step directory contains one line status:
-  UNBORN             ... not created yet
+  NONEXISTENT        ... not created yet
   INITED             ... the step was just created
   INITFAILED         ... the initialization failed
   PREPARED           ... prepared using 'eman prepare'
