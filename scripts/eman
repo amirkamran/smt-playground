@@ -1068,7 +1068,7 @@ eman, experiment manager
     --tag --vars --status    #   include relevant information
     --log --jobid            #   and the tail of the log or SGE job ID
   
-  eman abolish STEPDIR ...   # destroy all step files except
+  eman abolish SPEC ...      # destroy all step files except
                              #   metadata => can still be cloned
  #eman collect               # collect results of all experiments
   eman reindex               # re-create index of steps
