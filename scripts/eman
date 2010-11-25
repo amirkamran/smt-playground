@@ -41,6 +41,7 @@ my $show_log = 0;
 my $show_jobid = 0;
 my $sge = 1;
 my $redo = undef;
+my $redo_all = 0;
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
 my $indexfile = relative_to_stepsdir("eman.index");
@@ -58,11 +59,11 @@ my %options = (
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
-  "redo:s@" => \$redo,
+  "redo=s@" => \$redo,
+  "all-redo!" => \$redo_all,
 );
 GetOptions(%options) or exit 1;
 
-my $redo_all = (defined $redo && scalar(@$redo) == 0);
 my %redo = map { ($_,1) } @$redo if defined $redo;
 
 my $command = shift;
@@ -138,44 +139,8 @@ exit 0 if $cmd eq "reindex"; # the job has been done already
 my $hide = <<'KONEC'
 clone stromu:
 nacti do struktury
-$recipe = { "name"..., "vars"..., "deps"=>[recipe..]}
-init_by_recipe {
-  # given a recipe (a tree of steps incl. vars)
-  # initializes a fresh tree of identical steps
-  # we attempt to reuse existing steps unless they failed or are '--avoid'ed
-  my $recipe = shift;
-  my $dep = shift;
-  
-  my $deps = $recipe->{"deps"};
-  if (defined $deps && scalar @$deps > 0) {
-    foreach my $d (@$deps) {
-      my $newd = init_by_recipe($d, $depmapping);
-      $depmap->{$d} = $newd if $newd ne $d;
-    }
-  }
-  # perform replacements of deps in vars
-  ...
-  # check if such a step exists already
-  my $knowstep = ...
-  if (defined $knownstep && get_status($knownstep) !~ /FAILED/) {
-    return $knownstep;
-  } else {
-    my $newstep = init($steptype, $newvars);
-    return $newstep;
-  }
-}
 
-if ($command eq "redo") {
-  my $recipe = traceback_to_recipe($step);
-  my $depmap = undef;
-  my $newexp = init_by_recipe($recipe, 
 
-1. check if all done, prepared or inited
-   if *failed, fail
-2. walk back, make sure all are prepared (if not, prepare
-   if failed, fail
-3. walk back, if done, ok, if prepared, submit
-   subshould 
 KONEC
 ;
 
@@ -293,6 +258,23 @@ if ($cmd eq "start") {
   exit $waserror;
 }
 
+if ($command eq "redo") {
+  my $step = shift;
+  mydie "usage: eman redo STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  my $recipe = traceback_to_recipe($s);
+  my $depmap = undef;
+  my $newtopstep = init_by_recipe($recipe, $depmap);
+  if (defined $newtopstep) {
+    $show_status = 1;
+    traceback("OLD ", $s);
+    traceback("NEW ", $newtopstep);
+  } else {
+    $waserror = 1;
+  }
+  exit $waserror;
+}
+
 
 
 if ($cmd eq "abolish") {
@@ -311,6 +293,62 @@ if ($cmd eq "abolish") {
   }
   save("eman.abolished", `date`);
   exit $waserror;
+}
+
+
+
+sub init_by_recipe {
+  # given a recipe; a recipe has the following form:
+  #      $recipe = { "name"=>'s.type.abcdef.2010',
+  #                  "vars"=>['X=x', 'Y=y'], "deps"=>[recipe1, recipe2]}
+  # initializes a fresh tree using the variables and dependences
+  # we attempt to reuse existing steps unless they failed or are '--redo'ed
+  my $recipe = shift;
+  my $depmap = shift; # probably useless
+  
+  # handle all dependencies
+  # perform replacements of deps in vars
+  my $oldvars = $recipe->{"vars"};
+  my @newvars = ( @$oldvars );
+  my $olddeps = $recipe->{"deps"};
+  my @newdeps = ();
+  if (defined $olddeps && scalar @$olddeps > 0) {
+    foreach my $d (@$olddeps) {
+      my $newd = init_by_recipe($d, $depmap);
+      return undef if !defined $newd;
+      push @newdeps, $newd;
+      my $oldd = $d->{"name"};
+      if ($newd ne $oldd) {
+        $depmap->{$oldd} = $newd;
+        @newvars = map { s/\Q$oldd\E/$newd/g; $_; } @newvars;
+          # use the new step in the vars
+      }
+    }
+  }
+
+  # check if such a step exists already
+  my $knownstep;
+  if (!$redo_all) {
+    my $hash = get_hash_from_vars_deps(\@newvars, \@newdeps);
+    if (defined $idx->{$hash}
+        && -d $idx->{$hash}
+        && step_valid($idx->{$hash})
+        ) {
+      $knownstep = $idx->{$hash};
+    }
+  }
+  $knownstep = undef
+    if defined $knownstep
+    && ($redo{$knownstep} || load_status($knownstep) =~ /FAILED|NONEXISTENT/);
+  if (defined $knownstep) {
+    print STDERR "Reusing existing step: $knownstep\n";
+    return $knownstep;
+  } else {
+    # init a new step using the vars
+    my $steptype = get_steptype($recipe->{"name"});
+    my $newstep = init($steptype, \@newvars);
+    return $newstep;
+  }
 }
 
 
@@ -628,6 +666,19 @@ sub print_log {
   }
 }
 
+sub traceback_to_recipe {
+  # construct a recipe from a traceback
+  my $step = shift;
+  my $recipe = { "name" => $step,
+                 "vars" => [ split /\n/, load_vars($step) ],
+                 "deps" => [],
+               };
+  my $deps = load_depsarr($step);
+  foreach my $dep (@$deps) {
+    push @{$recipe->{"deps"}}, traceback_to_recipe($dep);
+  }
+  return $recipe;
+}
 sub traceback {
   my $prefix = shift;
   my $step = shift;
@@ -653,7 +704,7 @@ sub recognize_command {
   my $command = shift;
   return undef if !defined $command;
   $command = $expand_abbrev{$command} if defined $expand_abbrev{$command};
-  return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess)$/;
+  return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess|redo)$/;
   return undef; # unrecognized
 }
 
@@ -1006,6 +1057,8 @@ eman, experiment manager
   eman run SPEC               # run prepared step
   eman continue SPEC          # continue a single step that failed
   eman start SPEC             # prepare and run, incl. all predecessors
+
+  eman redo SPEC              # same as 'eman tb SPEC | eman clone'
   
   eman guess SPEC             # guess a *single* step based on a
                               # substring of the hash, the tag, the date
