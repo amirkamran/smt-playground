@@ -33,12 +33,13 @@ my $verbose = 0;
 my $manpage = 0;
 my $help = 0;
 my $list_options = 0;
-my $show_tag = 1;
-my $show_vars = 1;
+my $show_tag = 0;
+my $show_vars = 0;
 my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
 my $reindex = 0;
+my $sge = 0;
 my $redo = undef;
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
@@ -51,6 +52,7 @@ my %options = (
   "verbose|v" => \$verbose,
   "list-options" => \$list_options,
   "man" => \$manpage,
+  "sge!" => \$sge, # not quite supported
   "tag!" => \$show_tag,
   "vars!" => \$show_vars,
   "status!" => \$show_status,
@@ -137,13 +139,17 @@ if ($cmd eq "list") {
     $only_some_steptypes = 1;
     %requested_steptype = map { ($_, 1) } @ARGV;
   }
-  foreach my $s (sort {$a cmp $b} keys %$idx) {
+  my @steps_to_list;
+  foreach my $s (keys %$idx) {
     next if $s !~ /^\Q$dirprefix/; # this is a reverse index
     my $steptype = get_steptype($s);
     next if $only_some_steptypes && !defined $requested_steptype{$steptype};
     # mark that we accepted this argument
     $requested_steptype{$steptype} = 2
       if defined $requested_steptype{$steptype};
+    push @steps_to_list, $s;
+  }
+  foreach my $s (sort { -C $b <=> -C $a } @steps_to_list) {
     print $s;
     print "\t".load_status($s) if $show_status;
     print "\t".load_tag($s) if $show_tag;
@@ -202,6 +208,14 @@ if ($cmd eq "prepare") {
   mydie "usage: eman prepare STEPDIR" if ! defined $step;
   my $s = guess_step($step); # happily guess the exact step
   $waserror = ! prepare($s);
+  exit $waserror;
+}
+
+if ($cmd eq "run") {
+  my $step = shift;
+  mydie "usage: eman run STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  $waserror = ! submit($s);
   exit $waserror;
 }
 
@@ -304,7 +318,6 @@ sub prepare {
   mydie "Only inited steps can be prepared" if $status ne "INITED";
 
   my $prevdir = chdir_to_stepdir($s);
-  # XXX need to export all variables
   my $ok = 1;
   $ok = safesystem("eval \$(cat eman.vars) RUN=no ./eman.seed");
   print STDERR "Step $s prepared, checking required files.\n" if $verbose;
@@ -317,6 +330,83 @@ sub prepare {
     save("eman.status", "PREPARED");
   } else {
     save("eman.status", "PREPFAILED");
+  }
+  mychdir($prevdir);
+  return $ok;
+}
+
+sub submit {
+  # assume all predecessors are DONE or their jobids are provided
+  # so that we wait for them
+  my $s = shift;
+  my $holdjids = shift;
+  my $status = load_status($s);
+  mydie "Only prepared steps can be submitted" if $status ne "PREPARED";
+
+  my $prevdir = chdir_to_stepdir($s);
+  save("eman.status", "STARTING");
+  my $ok = 1;
+  my $jid = undef;
+  # XXX should split holdjids into holds (for sge) and active waiting loops
+  my @holds = defined $holdjids ? map {"-hold=$_"} @$holdjids : ();
+  
+  if (! $sge) {
+    # avoid sun grid engine
+    # XXX must wait for running jobs
+    quietsystem("chmod +x eman.command"); # just to be sure
+
+    save("eman.wrapcommand", 'echo Host: `hostname` ; echo PID: $$ ; ./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
+    $ok = safesystem("( nohup /bin/bash ./eman.wrapcommand > log 2>&1 & )");
+    my $pid = undef;
+    if ($ok) {
+      # get process id
+      my $hdl = my_open("log");
+      my $nl = 0;
+      while(<$hdl>) {
+        $nl++;
+        last if $nl > 10;
+        if (/^PID: ([0-9]+)$/) {
+          $pid = $1;
+          last;
+        }
+      }
+      close $hdl;
+    }
+    if (defined $pid) {
+      $jid = `hostname`;
+      chomp $jid;
+      $jid .= ":$pid";
+    }
+  } else {
+    # use sge
+    $ok = safesystem("( qsubmit @holds --jobname=log ./eman.command 2>&1 ) > log");
+    if ($ok) {
+      # get job id
+      my $hdl = my_open("log");
+      my $nl = 0;
+      while(<$hdl>) {
+        $nl++;
+        last if $nl > 10;
+        if (/Your job ([0-9]+) .*has been submitted/) {
+          $jid = $1;
+          last;
+        }
+      }
+      close $hdl;
+    }
+  }
+
+  if (defined $jid) {
+    save("eman.jobid", $jid);
+  } else {
+    die "Failed to get jobid of the just submitted $s";
+  }
+
+  if ($ok) {
+    print STDERR "Step $s submitted as job $jid\n";
+    save("eman.status", "RUNNING");
+  } else {
+    save("eman.status", "FAILED");
   }
   mychdir($prevdir);
   return $ok;
@@ -451,10 +541,7 @@ sub load_vars {
 }
 sub load_jobid {
   my $step = shift;
-  my @logs = glob(relative_to_stepsdir("$step/log.o[0-9]*"));
-  return "-" if 0 == scalar @logs;
-  my @ids = sort {$b <=> $a} map { s/^.*log.o([0-9]+)$/$1/; $_ } @logs;
-  return $ids[0];
+  return try_load(relative_to_stepsdir("$step/eman.jobid"));
 }
 
 sub canon_stepdir {
@@ -743,6 +830,7 @@ present in the step directory:
   eman.vars          ... the variables configuring the step
   eman.deps          ... list of prerequisites of this step
   eman.status        ... the status of the step
+  eman.jobid         ... the jobid of the most recent (re)run
   eman.seed          ... the script used to init the step
   eman.command       ... the script used for preparation and run
   eman.derived-from  ... the name of the step used when deriving
@@ -776,6 +864,8 @@ The file eman.status in a step directory contains one line status:
   PREPARED           ... prepared using 'eman prepare'
   PREPFAILED         ... 'eman prepare' failed
   WAITING: ...       ... submitted by 'eman start', prereqs still run
+                         (not supported yet)
+  STARTING           ... just before 'running'
   RUNNING            ... running
   FAILED             ... the running failed
   DONE               ... the running succeeded
