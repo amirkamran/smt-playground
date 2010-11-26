@@ -804,13 +804,16 @@ sub mkdiruniq2 {
 
 sub relative_to_stepsdir {
   my $fn = shift;
-  if (-e "eman.index") {
+  if (-e "eman.index" || -d "eman.seeds") {
     # assume we are in stepsdir
     return $fn;
-  } elsif (-e "../eman.index") {
+  } elsif (-e "../eman.index" || -d "eman.seeds") {
     # assume we are in a dir of a step
     return $fn if $fn =~ /^\//; # do not mangle absolute paths
     return "../".$fn;
+  } else {
+    print STDERR "Can't guess our location. Hoping we're in steps directory.\n";
+    return $fn;
   }
 }
 
