@@ -1135,7 +1135,7 @@ eman, experiment manager
                              # substring of the hash, the tag, the date
                              # or final score
 
-  eman list STEPTYPE         # list all steps of the given type
+  eman list STEPTYPE ...     # list all steps of the given type
   eman users SPEC ...        # list all steps that use the given step
   eman traceback SPEC ...    # show tree of the steps and predecessors
  #eman traceforward SPEC ... # show tree of the steps and successors
