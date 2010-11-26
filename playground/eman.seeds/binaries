@@ -1,0 +1,146 @@
+#!/bin/bash
+# eman seed for compiling all moses tools
+# Accepted vars:
+#   SKIP_SRILM=yes
+#   SKIP_IRSTLM=yes
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+cat > eman.vars << KONEC
+BINARIES=$(basename $(pwd))
+SKIP_SRILM=$SKIP_SRILM
+SKIP_IRSTLM=$SKIP_IRSTLM
+KONEC
+
+if [ ! -z "$INIT_ONLY" ]; then
+  echo "## Making sure you accept sourceforge's SSL certificate."
+  echo "## Please say (p)ermanently if you are asked anything:"
+  svn cat https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk/BUILD-INSTRUCTIONS.txt \
+	  > /dev/null || die "Can't access moses, no point in trying others"
+
+  # Stop here if we are just initing ourselves
+  exit 0
+fi
+
+cat > eman.command << KONEC
+#!/bin/bash
+
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo FAILED > \$mydir/eman.status ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+
+tar xzf ../../src/giza-pp-v1.0.5.tar.gz || die "giza-pp missing"
+cd giza-pp || die "Failed to chdir to giza-pp"
+cd GIZA++-v2 && make && make snt2cooc.out && cd ../ || die "GIZA failed"
+cd mkcls-v2 && make && cd ../ || die "mkcls failed"
+cd ../ || die "chdir back after giza-pp failed"
+mkdir -p bin || die "Can't make bindir"
+ln -s ../giza-pp/GIZA++-v2/GIZA++ ../giza-pp/GIZA++-v2/snt2cooc.out \
+   ../giza-pp/mkcls-v2/mkcls bin/
+
+echo "GIZA COMPILED."
+
+cd \$mydir || die "Failed to chdir back after srilm"
+
+if [ "$SKIP_SRILM" != yes ]; then
+  if [ \$(uname -m) == "x86_64" ]; then
+    SRILM_MACHTYPE=i686-m64
+  else
+    SRILM_MACHTYPE=i686-gcc4
+  fi
+
+  echo "Extracting srilm"
+  mkdir srilm || die "Failed to mkdir"
+  cd srilm || die "chdir failed"
+  tar xzf ../../../src/srilm.tgz || die "Failed to extract srilm"
+  export SRILM=\$(pwd)
+  export NO_TCL=X
+  make -j4 MACHINE_TYPE=\$SRILM_MACHTYPE World || die "SRILM failed"
+  echo "Making symlinks so that Moses will find srilm" 
+  if [ -e lib/i686-m64 ] ; then ln -s i686-m64 lib/i686; fi
+  if [ -e lib/i686-gcc4 ] ; then ln -s i686-gcc4 lib/i686; fi
+  if [ -e bin/i686-m64 ] ; then ln -s i686-m64 bin/i686; fi
+  if [ -e bin/i686-gcc4 ] ; then ln -s i686-gcc4 bin/i686; fi
+  pwd > ../srilm.path
+  
+  cd \$mydir || die "Failed to chdir back after srilm"
+fi
+
+if [ "$SKIP_IRSTLM" != yes ]; then
+  echo "Extracting irstlm"
+  tar xzf ../../src/irstlm-5.50.02.tgz || die "Failed to extract srilm"
+  mv irstlm-5.50.02 irstlm || die "Failed to rename dir"
+  cd irstlm
+  ./configure --prefix=\$(pwd) --enable-caching || die "irstlm configure failed"
+  make || die "irstlm make failed"
+  make install || die "irstlm install failed"
+  
+  echo \$(pwd)/bin/ > ../irstlm.bindir
+  echo \$(pwd) > ../irstlm.path
+  cd \$mydir || die "Failed to chdir back"
+  
+  # Checking if libirstlm was successfully created
+  [ -e \$mydir/irstlm/lib/libirstlm.a ] \
+    || die "Final check of irstlm failed"
+fi
+
+
+echo "Extracting SALM"
+tar xzf ../../src/salm-src.tar.gz || die "Failed to extract salm"
+mv SALM salm-src || die "salm rename failed"
+cd salm-src/Distribution/Linux || die "chdir failed"
+make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ]
+cd ../../../bin || die "chdir back failed"
+ln -s ../salm-src/Bin/Linux/Index/IndexSA.O64 ./
+ln -s ../salm-src/Bin/Linux/Search/FrequencyOfNgrams.O64 ./
+# Check of indexer
+[ -e ../salm-src/Bin/Linux/Index/IndexSA.O64 ] || die "Final SALM check failed"
+cd \$mydir || die "Failed to chdir back"
+echo \$(pwd)/salm-src > salm.path
+
+echo "Getting moses"
+if [ svn == svn ]; then
+  CLONE_CMD="svn co https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses"
+else
+  CLONE_CMD="git clone /net/work/projects/moses-ufal-git-repo moses"
+fi
+
+eval \$CLONE_CMD || die "Failed to obtain moses"
+cd moses || die "Failed to chdir to moses"
+./regenerate-makefiles.sh || die "moses reg.makefiles failed"
+WITH=""
+[ "$SKIP_IRSTLM" == yes ] WITH="\$WITH --with-irstlm=\$(cat ../irstlm.path)"
+[ "$SKIP_SRILM" == yes ] WITH="\$WITH --with-srilm=\$(cat ../srilm.path)"
+# XXX --with-randlm=`cat ../randlm.path`
+./configure $WITH || die "Failed configure"
+make -j 4 || die "Moses compilation failed"
+ln -s ../moses/moses-cmd/src/moses ../bin/
+ln -s ../moses/moses-chart-cmd/src/moses_chart ../bin/
+
+echo "Compiling scripts, not releasing, will keep them unreleased"
+cd scripts || die "moses scripts missing"
+make || echo "Compilation of some scripts failed"
+pwd > ../../scripts.rootdir
+cd ..
+ln -s ../moses/scripts/training/symal/symal ../bin/
+
+cd \$mydir || die "Failed to chdir back"
+
+echo "Compiling filterpt"
+cd moses/sigtest-filter || die "Failed to chdir to filter-pt"
+make SALMDIR=\$(pwd)/../../salm-src FLAVOR=o64 \
+  || die "Failed to compile filterpt"
+cd ../../bin || die "Failed to chdir to bin"
+ln -s ../moses/sigtest-filter/filter-pt ./
+cd \$mydir || die "Failed to chdir back"
+echo \$(pwd)/moses/sigtest-filter > filterpt.path
+
+
+echo DONE > \$mydir/eman.status
+
+KONEC
