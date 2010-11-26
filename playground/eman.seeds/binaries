@@ -140,6 +140,13 @@ ln -s ../moses/sigtest-filter/filter-pt ./
 cd \$mydir || die "Failed to chdir back"
 echo \$(pwd)/moses/sigtest-filter > filterpt.path
 
+echo "Getting richextr"
+git clone git://moses-phrasetab.git.sourceforge.net/gitroot/moses-phrasetab/moses-phrasetab richextr || \
+  die "Failed to clone richextr Git repository"
+cd richextr || die "Failed to chdir to richextr"
+./autogen.sh || die "Failed to configure richextr"
+make -j 4 || die "Failed to compile richextr"
+ln -s ../richextr/src/richextr ../bin/
 
 echo DONE > \$mydir/eman.status
 
