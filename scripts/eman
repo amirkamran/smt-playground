@@ -367,6 +367,14 @@ sub init_by_recipe {
   # perform replacements of deps in vars
   my $oldvars = $recipe->{"vars"};
   my @newvars = ( @$oldvars );
+  # env. vars override the recipe (for usecases like V=x eman redo)
+  # we do that by deleting such vars from the recipe, seed will get them
+  # from the environment
+  # (this causes a bug with reusing: an identical model will get created
+  # because we don't recognize it), TODO
+  @newvars = grep { my ($varname, undef) = split /=/, $_, 2;
+                    ! defined $ENV{$varname} } @newvars;
+
   my $olddeps = $recipe->{"deps"};
   my @newdeps = ();
   if (defined $olddeps && scalar @$olddeps > 0) {
@@ -1111,7 +1119,7 @@ eman, experiment manager
   VAR=val eman init STEPTYPE # create new step of the given type
   VAR=val eman clone SPEC    # create new step based on STEPDIR
   eman clone < traceback     # create step by cloning incl. predecessors
-  eman redo SPEC             # same as 'eman tb SPEC | eman clone'
+  eman redo SPEC             # equals 'eman tb --vars SPEC | eman clone'
                              # good predecessors are reused by default
     --redo=SPEC              #   don't reuse the given step in the clone
     --all-redo               #   recreate all steps unconditionally
@@ -1202,10 +1210,13 @@ The file eman.status in a step directory contains one line status:
 
 =head1 USAGE PATTERNS
 
-eman traceback STEPDIR | sed 's/.../.../' | eman clone
+eman traceback --vars SPEC | sed 's/.../.../' | eman clone
   # clone the whole subtree of steps replacing some vars
 
-eman abolish `eman list STEPTYPE --status | grep FAILED`
+VAR=x eman redo SPEC
+  # clone the whole subtree replacing VAR with some new value x
+
+eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
   # clean up, i.e. remove all content files of all failing steps
 
 =head1 AUTHOR
