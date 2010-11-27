@@ -1,0 +1,16 @@
+#!/bin/bash
+# tail -f the log of the given SPEC
+
+function die() { echo "$@" >&2; exit 1; }
+
+s=`eman guess "$1"`
+[ -d "$s" ] || die "Bad step specifier: $1"
+
+logf=`ls -t $s/log.o* | head -n1`
+if [ -e "$logf" ]; then
+  echo Following $logf
+  tail -f $logf
+else
+  echo "No log yet. Could wait for it but not implemented"
+  exit 1
+fi

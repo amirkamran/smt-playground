@@ -4,26 +4,22 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-WORKSPACE="`pwd`/../$BINARIES/"
-
-if [ -z "$ALIAUG" ] || [ -z "$DECODINGSTEPS" ] \
+if [ -z "$DECODINGSTEPS" ] \
   || [ -z "$SRCCORP" ] \
   || [ -z "$SRCAUG" ] \
   || [ -z "$TGTAUG" ] \
+  || ( [ -z "$ALIAUG" ] && [ -z "$ALISTEP" ] ) \
+  || ( [ -z "$BINARIES" ] && [ -z "$ALISTEP" ] ) \
   ; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools; inherited from ALISTEP"
   echo "  \$SRCCORP to source corpus name"
   echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
   echo "  \$SRCAUG to the string describing lang+factors of src corpus"
   echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
   echo "  \$ALICORP to target corpus name, can be omitted if equal to SRCCORP"
   echo "  \$ALIAUG to the string describing the 'language', e.g. 'ali'"
+  echo "    or \$ALISTEP to the step where alignment was constructed"
   echo "  \$DECODINGSTEPS to specification of decoding steps, e.g. 0a1-0+1-1"
   echo "And optionally:"
   echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
@@ -38,6 +34,23 @@ fi
 # TGT and ALI corp default to srccorp
 [ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
 [ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
+
+# get ali corpus and aug from alistep
+if [ ! -z "$ALISTEP" ]; then
+  ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
+  ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
+  echo $ALISTEP >> eman.deps
+
+  # inherit binaries
+  [ ! -z "$BINARIES" ] \
+    || BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+WORKSPACE="`pwd`/../$BINARIES/"
+
+echo $BINARIES >> eman.deps
+
 
 [ ! -z "$CUTOFF" ] || CUTOFF=0
 
@@ -59,11 +72,13 @@ else
 fi
 
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 SRCCORP=$SRCCORP
 TGTCORP=$TGTCORP
 ALICORP=$ALICORP
 SRCAUG=$SRCAUG
 TGTAUG=$TGTAUG
+ALISTEP=$ALISTEP
 ALIAUG=$ALIAUG
 DECODINGSTEPS=$DECODINGSTEPS
 REORDERING=$REORDERING
@@ -75,8 +90,6 @@ KONEC
 
 echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
-
-echo $BINARIES > eman.deps
 
 if [ $SRCCORP == $TGTCORP ] ; then
   echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS$DOTREORDTAG > eman.tag
@@ -104,7 +117,7 @@ echo "=============================="
 mydir=\`pwd\`
 
 set -o pipefail
-function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+function die() { echo XXX; echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 renice 10 \$\$
 
@@ -115,9 +128,9 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 mkdir corpus
 
 cd corpus
-wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
+wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \\
   || die "Failed to clone source corpus"
-wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
+wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \\
   || die "Failed to clone target corpus"
 cd ..
 
@@ -141,13 +154,14 @@ mkdir model
 
 tempdir=\`mktemp -d /mnt/h/tmp/exp.model.XXXXXX\`
 echo "COPYING SELF TO TEMPDIR: \$tempdir"
-rsync -avz --exclude '*.hardlink' * \$tempdir/ || die "Failed to rsync"
+rsync -avz --exclude 'log*' --exclude '*.hardlink' * \$tempdir/ \\
+  || die "Failed to rsync"
 echo "COPIED, used disk space:"
 
 df \$tempdir
 
 if \\
-  \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+  \$SCRIPTS_ROOTDIR/training/train-model.perl \\
         --force-factored-filenames \\
 	    --first-step 4 --last-step 6 \\
 	    --root-dir \$tempdir \\
@@ -165,7 +179,7 @@ if \\
         --workspace=$WORKSPACE \\
         \$tempdir/model/phrase-table.* \\
   && echo "Now will extract generation models" \\
-  && \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+  && \$SCRIPTS_ROOTDIR/training/train-model.perl \\
         --force-factored-filenames \\
 	    --first-step 8 --last-step 8 \\
 	    --root-dir \$tempdir \\

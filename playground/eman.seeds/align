@@ -52,7 +52,7 @@ cat > eman.command << KONEC
 # standard command header
 mydir=\$(pwd)
 set -o pipefail
-function die() { echo FAILED > \$mydir/eman.status ; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
