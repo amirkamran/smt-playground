@@ -31,6 +31,23 @@ if [ -z "$DECODINGSTEPS" ] \
   exit 1
 fi
 
+# load inherited/inheritable binaries
+[ ! -z "$ALISTEP" ] \
+  && INHER_BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
+
+if [ -z "$BINARIES" ] || [ "$INHER_BINARIES" == "$BINARIES" ]; then
+  # inherit binaries from alistep
+  BINARIES=$INHER_BINARIES
+  # inherited binaries don't belong to our dependencies, we
+  # hope our predecessor has them as a dependence
+else
+  # put BINARIES to our deps as well
+  echo "PUTTING $BINARIES TO DEPS"
+  echo $BINARIES >> eman.deps
+fi
+SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
+WORKSPACE="`pwd`/../$BINARIES/"
+
 # TGT and ALI corp default to srccorp
 [ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
 [ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
@@ -40,16 +57,7 @@ if [ ! -z "$ALISTEP" ]; then
   ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
   ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
   echo $ALISTEP >> eman.deps
-
-  # inherit binaries
-  [ ! -z "$BINARIES" ] \
-    || BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
 fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-WORKSPACE="`pwd`/../$BINARIES/"
-
-echo $BINARIES >> eman.deps
 
 
 [ ! -z "$CUTOFF" ] || CUTOFF=0

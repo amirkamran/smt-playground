@@ -1,5 +1,5 @@
 #!/bin/bash
-## Save our own copy of moses
+# eman seed for running mert on a moses model
 
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 set -o pipefail
