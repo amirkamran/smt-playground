@@ -113,7 +113,6 @@ if ($list_options) {
   exit;
 }
 
-
 # update md5 indices
 my $idx;
 
@@ -126,9 +125,7 @@ my @dirs = glob("$dirprefix*.*.[0-9]*");
 foreach my $s (@dirs) {
   next if defined $idx->{$s};
   next if ! step_valid($s);
-  my $hash = get_hash_from_dir($s);
-  $idx->{$s} = $hash;
-  $idx->{$hash} = $s;
+  add_step_to_index($s);
   # mark that this step uses its deps
   my $deps = load_depsarr($s);
   if (defined $deps) {
@@ -136,7 +133,6 @@ foreach my $s (@dirs) {
       $idx->{'USED_BY'}->{$d}->{$s} = 1;
     }
   }
-
   print STDERR "$s: $idx->{$s}\n" if $debug;
 }
 saveidx($idx);
@@ -218,7 +214,8 @@ if ($cmd eq "clone") {
     my $recipestr = load("-");
     my $recipe = parse_recipe([split /\n/, $recipestr]);
     print YAML::Dump($recipe) if $debug;
-    my $newtopstep = init_by_recipe($recipe);
+    my $depmap = {};
+    my $newtopstep = init_by_recipe($recipe, $depmap);
     $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
     if (defined $newtopstep) {
       $show_status = 1;
@@ -257,7 +254,8 @@ if ($command eq "redo") {
   mydie "usage: eman redo STEPDIR" if ! defined $step;
   my $s = guess_step($step); # happily guess the exact step
   my $recipe = traceback_to_recipe($s);
-  my $newtopstep = init_by_recipe($recipe);
+  my $depmap = {};
+  my $newtopstep = init_by_recipe($recipe, $depmap);
   $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
   if (defined $newtopstep) {
     $show_status = 1;
@@ -350,11 +348,45 @@ sub init_by_recipe {
   # initializes a fresh tree using the variables and dependences
   # we attempt to reuse existing steps unless they failed or are '--redo'ed
   my $recipe = shift;
+  my $depmap = shift;
+  confess "implementation error: undef depmap" if !defined $depmap;
+
+  # print "INIT_BY_RECIPE: $recipe->{name}\n";
   
   # handle all dependencies
+  my $olddeps = $recipe->{"deps"};
+  my @newdeps = ();
+  if (defined $olddeps && scalar @$olddeps > 0) {
+    foreach my $d (@$olddeps) {
+      # print "DEPMAP1: ".join(" ", %$depmap)."\n" if defined $depmap;
+      my $newd = init_by_recipe($d, $depmap);
+      return undef if !defined $newd;
+      push @newdeps, $newd;
+      my $oldd = $d->{"name"};
+      # print "OLDD $oldd\n";
+      # print "NEWD $newd\n";
+      if ($newd ne $oldd) {
+	$depmap->{$oldd} = $newd;
+      }
+      # print "DEPMAP2: ".join(" ", %$depmap)."\n" if defined $depmap;
+    }
+  }
+
   # perform replacements of deps in vars
+  # note that previous init_by_recipe might have proposed more replacements
   my $oldvars = $recipe->{"vars"};
-  my @newvars = ( @$oldvars );
+  # print "REPL: ".join(" ", %$depmap)."\n" if defined $depmap;
+  # print "VARSBEF: @$oldvars\n";
+  my @newvars = map {
+      foreach my $oldd (keys %$depmap) {
+        my $newd = $depmap->{$oldd};
+        #print "VARSOLDD $oldd\n";
+        #print "VARSNEWD $newd\n";
+        s/\Q$oldd\E/$newd/g;
+      }
+      $_;
+    } ( @$oldvars );
+  # print "VARSAFT: @newvars\n";
   # env. vars override the recipe (for usecases like V=x eman redo)
   # we do that by deleting such vars from the recipe, seed will get them
   # from the environment
@@ -363,42 +395,33 @@ sub init_by_recipe {
   @newvars = grep { my ($varname, undef) = split /=/, $_, 2;
                     ! defined $ENV{$varname} } @newvars;
 
-  my $olddeps = $recipe->{"deps"};
-  my @newdeps = ();
-  if (defined $olddeps && scalar @$olddeps > 0) {
-    foreach my $d (@$olddeps) {
-      my $newd = init_by_recipe($d);
-      return undef if !defined $newd;
-      push @newdeps, $newd;
-      my $oldd = $d->{"name"};
-      if ($newd ne $oldd) {
-        @newvars = map { s/\Q$oldd\E/$newd/g; $_; } @newvars;
-          # use the new step in the vars
-      }
-    }
-  }
-
   # check if such a step exists already
   my $knownstep;
-  if (!$redo_all) {
-    my $hash = get_hash_from_vars_deps(\@newvars, \@newdeps);
-    if (defined $idx->{$hash}
-        && -d $idx->{$hash}
-        && step_valid($idx->{$hash})
-        ) {
-      $knownstep = $idx->{$hash};
-    }
+  my $hash = get_hash_from_vars_deps(\@newvars, \@newdeps);
+  # print "CHECKING $hash\n";
+  if (defined $idx->{$hash}
+      && -d $idx->{$hash}
+      && step_valid($idx->{$hash})
+      ) {
+    $knownstep = $idx->{$hash};
   }
+  $redo{$recipe->{"name"}}=1 if $redo_all;
+    # --all-redo forbids reusing *input* steps
+    # but it does not prohibit reusing freshly created steps
+  
+  # redo if wanted
   $knownstep = undef
     if defined $knownstep
     && ($redo{$knownstep} || load_status($knownstep) =~ /FAILED|NONEXISTENT/);
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
+    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
     return $knownstep;
   } else {
     # init a new step using the vars
     my $steptype = get_steptype($recipe->{"name"});
     my $newstep = init($steptype, \@newvars, $recipe->{"name"});
+    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
     return $newstep;
   }
 }
@@ -463,6 +486,8 @@ sub init {
 
   if ($ok) {
     save("eman.status", "INITED");
+    mychdir($oldwd);
+    add_step_to_index($s); # so that further cloning can use that
     print STDERR "Inited: $s\n";
   } elsif ($preservedir) {
     print STDERR "Failed to init the step. Check and delete: $s\n";
@@ -484,7 +509,7 @@ sub prepare {
 
   my $prevdir = chdir_to_stepdir($s);
   my $ok = 1;
-  $ok = safesystem("eval \$(cat eman.vars) RUN=no ./eman.seed");
+  $ok = safesystem("eval \$(cat eman.vars) ./eman.seed");
   print STDERR "Step $s prepared, checking required files.\n" if $verbose;
   if (! -e "eman.command") {
     $ok = 0;
@@ -873,7 +898,17 @@ sub load_tag {
 sub load_depsarr {
   my $step = shift;
   my $depsstr = try_load(relative_to_stepsdir("$step/eman.deps"));
-  my $depsarr = [ split /\n/, $depsstr ] if defined $depsstr;
+  my $depsarr;
+  if (defined $depsstr) {
+    my @deps = split /\n/, $depsstr;
+    $depsarr = [];
+    my %seen = ();
+    foreach my $d (@deps) {
+      next if $seen{$d};
+      push @$depsarr, $d;
+      $seen{$d} = 1;
+    }
+  }
   return $depsarr;
 
 }
@@ -971,7 +1006,13 @@ sub guess_step_from_hashdate {
   return undef; #couldn't confirm
 }
 
-
+sub add_step_to_index {
+  my $s = shift;
+  my $hash = get_hash_from_dir($s);
+  # print STDERR "ADDED: $s  -> $hash\n";
+  $idx->{$s} = $hash;
+  $idx->{$hash} = $s;
+}
 sub loadidx {
   # load the index file and hash it there and back
   my $idx;
@@ -992,12 +1033,16 @@ sub get_hash_from_dir {
 
   my @vars = split /\n/, load($exp."/eman.vars");
   my @deps = split /\n/, load($exp."/eman.deps");
-  return md5_hex(sort @vars, sort @deps);
+  #print "HASH: @vars @deps\n";
+  #return md5_hex(sort @vars, sort @deps);
+  return md5_hex(sort @vars);
 }
 sub get_hash_from_vars_deps {
   my $vars = shift;
   my $deps = shift;
-  return md5_hex(sort @$vars, sort @$deps);
+  #print "HASH: @$vars @$deps\n";
+  #return md5_hex(sort @$vars, sort @$deps);
+  return md5_hex(sort @$vars);
 }
 
 sub all_steps {
