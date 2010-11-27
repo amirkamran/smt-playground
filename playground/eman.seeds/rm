@@ -1,0 +1,171 @@
+#!/bin/bash
+# Prepare a reordering model for moses
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+if [ -z "$BINARIES" ]; then
+  echo "Set \$BINARIES to the step containing compiled tools"
+  exit 1
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
+if [ -z "$ALIAUG" ] \
+  || [ -z "$SRCCORP" ] \
+  || [ -z "$SRCAUG" ] \
+  || [ -z "$TGTAUG" ] \
+  || [ -z "$REORDERING" ] || [ -z "$REORDFACTORS" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$SRCCORP to source corpus name"
+  echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
+  echo "  \$SRCAUG to the string describing lang+factors of src corpus"
+  echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
+  echo "  \$ALICORP to target corpus name, can be omitted if equal to SRCCORP"
+  echo "  \$ALIAUG to the string describing the 'language', e.g. 'ali'"
+  echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
+  echo "  \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
+  exit 1
+fi
+
+# TGT and ALI corp default to srccorp
+[ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
+[ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
+
+# shorten the reordering name to produce the tag for this reord model
+REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
+
+cat << KONEC > eman.vars
+SRCCORP=$SRCCORP
+TGTCORP=$TGTCORP
+ALICORP=$ALICORP
+SRCAUG=$SRCAUG
+TGTAUG=$TGTAUG
+ALIAUG=$ALIAUG
+REORDERING=$REORDERING
+REORDFACTORS=$REORDFACTORS
+KONEC
+
+echo $SRCAUG > var-SRCAUG
+echo $TGTAUG > var-TGTAUG
+echo $REORDERING > var-REORDERING
+echo $REORDFACTORS > var-REORDFACTORS
+echo $REORDTAG > var-REORDTAG
+
+echo $BINARIES > eman.deps
+
+if [ $SRCCORP == $TGTCORP ] ; then
+  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$REORDTAG > eman.tag
+else
+  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$REORDTAG > eman.tag
+fi
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+
+mydir=\`pwd\`
+
+set -o pipefail
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+
+renice 10 \$\$
+
+## Prepare the corpus from more factors
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+mkdir corpus
+
+cd corpus
+wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
+  || die "Failed to clone source corpus"
+wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
+  || die "Failed to clone target corpus"
+cd ..
+
+wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
+  || die "Failed to clone alignment file"
+
+alilen=\`zcat alignment.custom.gz | wc -l\`
+srclen=\`zcat corpus/corpus.src.gz | wc -l\`
+tgtlen=\`zcat corpus/corpus.tgt.gz | wc -l\`
+if [[ \$alilen -ne \$srclen ]] \\
+   || [[ \$alilen -ne \$tgtlen ]] \\
+; then
+  echo "Incompatible corpus lengths:"
+  echo "\$alilen  alignment.custom.gz"
+  echo "\$srclen  corpus.src.gz"
+  echo "\$tgtlen  corpus.tgt.gz"
+  die "Incompatible corpus lengths."
+fi
+
+mkdir model
+
+tempdir=\`mktemp -d /mnt/h/tmp/exp.rm.XXXXXX\`
+echo "COPYING SELF TO TEMPDIR: \$tempdir"
+rsync -avz --exclude '*.hardlink' * \$tempdir/ || die "Failed to rsync"
+echo "COPIED, used disk space:"
+
+df \$tempdir
+
+if \\
+  \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+        --force-factored-filenames \\
+	    --first-step 5 --last-step 5 \\
+	    --root-dir \$tempdir \\
+	    --alignment-file=alignment \\
+	    --alignment=custom \\
+	    --corpus=corpus/corpus \\
+	    --f src --e tgt \\
+	    --reordering $REORDERING \\
+	    --reordering-factors $REORDFACTORS \\
+  && echo "Extracted phrases, now build reordering model" \\
+  && \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+        --force-factored-filenames \\
+	    --first-step 7 --last-step 7 \\
+	    --root-dir \$tempdir \\
+	    --alignment-file=alignment \\
+	    --alignment=custom \\
+	    --corpus=corpus/corpus \\
+	    --f src --e tgt \\
+	    --reordering $REORDERING \\
+	    --reordering-factors $REORDFACTORS \\
+; then
+  success=1
+  rm -f \$tempdir/model/extract*
+  echo "COPYING TEMPDIR \$tempdir BACK"
+  rsync -uavz \$tempdir/* ./ || die "Rsync back failed"
+  echo "COPIED"
+
+  echo Deleting \$tempdir
+  rm -rf \$tempdir
+else
+  success=0
+  rsync -uavz \$tempdir/log* ./ || die "Rsync of log back failed"
+  echo "ONLY log copied back. Majority of files left here: \$tempdir"
+fi
+
+[ \$success == 1 ] || die "THERE WERE ERRORS!! See above."
+
+echo DONE > \$mydir/eman.status
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
+if [ "$RUN" == "yes" ]; then
+  sh eman.command
+fi

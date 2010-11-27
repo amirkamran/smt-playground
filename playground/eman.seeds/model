@@ -1,0 +1,205 @@
+#!/bin/bash
+# Prepare a moses.ini file by combining:
+#   translation model
+#   (optional reordering model)
+#   language models
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+if [ -z "$BINARIES" ]; then
+  echo "Set \$BINARIES to the step containing compiled tools"
+  exit 1
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
+if [ -z "$TMEXP" ] || [ -z "$LMEXPS" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$TMEXP to the extracted phrases"
+  echo "  \$LMEXPS to factor:lmdir:::factor:lmdir:::factor:lmdir"
+  echo "And optionally:"
+  echo "  \$RMEXP to reordering models"
+  exit 1
+fi
+
+# Load variables from TMexp
+[ -e ../$TMEXP/eman.vars ] || die "Bad translation model: $TMEXP"
+. ../$TMEXP/eman.vars
+
+# Load variables from RMexp
+if [ -z "$RMEXP" ]; then
+  REORDERING=distance
+  REORDFACTORS="0-0"
+  DOTREORDTAG=""
+else
+  [ "$SRCAUG" == $(cat ../$RMEXP/var-SRCAUG) ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(cat ../$RMEXP/var-TGTAUG) ] || die "Incompatible TGTAUGs"
+  REORDERING=`cat ../$RMEXP/var-REORDERING` || die "Missed REORDERING"
+  REORDFACTORS=`cat ../$RMEXP/var-REORDFACTORS` || die "Missed REORDFACTORS"
+  REORDTAG=`cat ../$RMEXP/var-REORDTAG` || die "Missed REORDTAG"
+  [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] && [ ! -z "$REORDTAG" ] \
+    || die "Bad reordering model: $RMEXP"
+  DOTREORDTAG=".$REORDTAG"
+fi
+
+echo "Print and save used variables:"
+cat << KONEC | tee eman.vars
+TMEXP=$TMEXP
+RMEXP=$RMEXP
+LMEXPS=$LMEXPS
+SRCCORP=$SRCCORP
+TGTCORP=$TGTCORP
+ALICORP=$ALICORP
+SRCAUG=$SRCAUG
+TGTAUG=$TGTAUG
+ALIAUG=$ALIAUG
+DECODINGSTEPS=$DECODINGSTEPS
+REORDERING=$REORDERING
+REORDFACTORS=$REORDFACTORS
+KONEC
+
+echo $SRCAUG > var-SRCAUG
+echo $TGTAUG > var-TGTAUG
+
+echo $TMEXP > eman.deps
+echo $BINARIES >> eman.deps
+
+[ -z "$RMEXP" ] || echo $RMEXP >> eman.deps
+
+## Create the tag based on LMs
+i=1
+for lm in `echo $LMEXPS | sed 's/:::/ /g'`; do
+  eval `makearg --delim=: $lm factor lmdir lmtype`
+  echo $lmdir >> eman.deps
+  # default to sri
+  lmtypetag=${lmtype:-sri}
+  order=`cat ../$lmdir/var-ORDER` || die "Missing: ../$lmdir/var-ORDER"
+  i=$(($i+1))
+  factor=`echo $factor | sed 'y/\,/+/'`
+  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmdir/eman.tag`-$lmtypetag
+done
+i=$(($i-1))
+
+eval "cat ../$TMEXP/eman.vars | grep 'THRESHOLD\|CUTOFF'"
+if [ ! -z "$THRESHOLD" ]; then
+  SIGFILTERTAG=SIG$THRESHOLD"N"$CUTOFF
+fi
+
+if [ $SRCCORP == $TGTCORP ] ; then
+  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+else
+  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+fi
+
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+
+mkdir -p model
+
+DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
+[ -x $DECRYPT ] || die "Missing: $DECRYPT"
+
+DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+
+mydir=\`pwd\`
+
+set -o pipefail
+function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+
+renice 10 \$\$
+
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+## Cloning translation model
+cd model || die "Chdir failed"
+for f in ../../$TMEXP/model/*gz ; do
+  wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
+done
+cd \$mydir || die "Chdir back failed"
+
+
+## Cloning reordering model
+if [ ! -z "$RMEXP" ]; then
+  cd model || die "Chdir failed"
+  for f in ../../$RMEXP/model/reordering-table*gz ; do
+    wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
+  done
+  cd \$mydir || die "Chdir back failed"
+fi
+
+
+## Clone the lms
+echo "Cloning LMs"
+i=1
+for lm in \`echo $LMEXPS | sed 's/:::/ /g'\`; do
+  eval \`makearg --delim=: \$lm factor lmdir lmtype\`
+  echo "Cloning lm from \$lmdir, using lmtype \$lmtype"
+  if [ x\$lmtype == xblm ]; then
+    numericlmtype=1
+    lmsuffix=blm
+  elif [ x\$lmtype == xflm ]; then
+    numericlmtype=7
+    lmsuffix=flm
+  else    
+    numericlmtype=0
+    lmsuffix=lm
+  fi
+
+  if [ \$lmsuffix == flm ]; then
+    wiseln ../\$lmdir/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link flm: ../\$lmdir/config.prepared.flm"
+  else
+    wiseln ../\$lmdir/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link lm: ../\$lmdir/corpus.\$lmsuffix"
+  fi
+
+  order=\`cat ../\$lmdir/var-ORDER\` || die "Missing: ../\$lmdir/var-ORDER"
+
+  lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
+  i=\$((\$i+1))
+done
+i=\$((\$i-1))
+
+echo lmopts: \$lmopts
+
+\$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+    --force-factored-filenames \\
+    --first-step 9 --last-step 9 \\
+    --root-dir . \\
+    --alignment-file=alignment \\
+    --alignment=custom \\
+    --corpus=corpus/corpus \\
+    --f src --e tgt \\
+    --reordering $REORDERING \\
+    --reordering-factors $REORDFACTORS \\
+    \$lmopts \\
+    $DECRYPTEDSTEPS \\
+|| die "Failed to create moses.ini"
+
+
+echo DONE > \$mydir/eman.status
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
+if [ "$RUN" == "yes" ]; then
+  sh eman.command
+fi
+

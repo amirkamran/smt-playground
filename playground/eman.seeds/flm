@@ -1,0 +1,156 @@
+#!/bin/bash
+
+function die() { echo "$@" >&2; exit 1 ; }
+
+PATH=.:`pwd`/..:$PATH
+
+echo "PATH="$PATH
+
+set -o pipefail
+
+if [ -z "$BINARIES" ]; then
+  echo "Set \$BINARIES to the step containing compiled tools"
+  exit 1
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
+
+if [ -z "$CORP" ] \
+|| [ -z "$CORPAUG" ] \
+|| [ -z "$FLMCONFIG" ] \
+|| [ -z "$ORDER" ]; then
+  echo "You must set: "
+  echo "  \$CORP to the shortname of corpus"
+  echo "  \$CORPAUG to the factors used for lm"
+  echo "  \$FLMCONFIG to the flm definition"
+  echo "  \$ORDER to lm order"
+  echo "And optionally: "
+  exit 1
+fi
+
+if [[ ! -d "$SRILMDIR1" ]] || [[ ! -d "$SRILMDIR2" ]]; then
+  echo "   SRILMDIR1: $SRILMDIR1"
+  echo "or SRILMDIR2: $SRILMDIR2"
+  echo "not found."
+  exit 1
+fi
+
+echo $CORP+$CORPAUG.$ORDER.$FLMCONFIG > eman.tag
+
+cat << KONEC > eman.vars
+CORP=$CORP
+CORPAUG=$CORPAUG
+ORDER=$ORDER
+FLMCONFIG=$FLMCONFIG
+KONEC
+
+echo $DIR > var-DIR
+echo $ORDER > var-ORDER
+echo $CORP > var-CORP
+echo $FLMCONFIG > var-FLMCONFIG
+echo $CORPAUG > var-CORPAUG
+
+echo $BINARIES > eman.deps
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Remember the core settings
+
+../flmconfigs/generator.pl $FLMCONFIG \
+  || die "Failed to generate flm config for '$FLMCONFIG'"
+
+flmcfgfile=../flmconfigs/configs/$FLMCONFIG.flm
+
+[ -e $flmcfgfile ] || die "Failed to find $flmcfgfile"
+
+eval `makearg --delim=- $DIR srclan tgtlan`
+
+cp $flmcfgfile config.orig.flm \
+  || die "Failed to create a local copy of the config file"
+
+CurrentPath=`pwd`
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+renice 10 \$\$
+
+function die() { echo "\$@" >&2; exit 1 ; }
+
+CurrentPath=$CurrentPath
+cd \$CurrentPath
+
+export TMP=/mnt/h/tmp
+
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
+
+PATH=.:`pwd`/..:\$PATH
+
+echo "PATH="\$PATH
+
+echo "Using this fngram-count:"
+which fngram-count
+
+# Obtain the corpus in factored format
+CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
+[ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
+
+if [ -e "\$CORPSOURCE".text-for-fngram.gz ]; then
+   echo "We already have corpus prepared for fngram"
+else
+   ../augmented_corpora/prepare_for_flm.pl \$CORPSOURCE "\$CORPSOURCE".text-for-fngram.gz \
+   || die "Failed to create \$CORPSOURCE.text-for-fngram.gz"
+fi
+
+wiseln \$CORPSOURCE corpus.text.gz \
+  || die "Failed to make local backup of corpus \$CORPSOURCE"
+wiseln "\$CORPSOURCE".text-for-fngram.gz corpus.text-for-fngram.gz \
+  || die "Failed to make local backup of \$CORPSOURCE.text-for-fngram.gz"
+
+# Convert it to the format of fngram-count
+#../augmented_corpora/prepare_for_flm.pl corpus.text.gz corpus.text-for-fngram.gz \
+#  || die "Failed to create corpus.factored.gz"
+
+CORPAUG=\`cat var-CORPAUG\`
+
+../prepare_flm_config.pl \$CORPAUG \
+  \$CurrentPath/config.orig.flm \$CurrentPath/config.prepared.flm \
+  \$CurrentPath \
+  || die "Failed to prepare flm config"
+
+echo Generating model from corpus...
+
+echo "making FLM..."
+if zcat corpus.text-for-fngram.gz | fngram-count \\
+  	-factor-file config.prepared.flm \\
+  -text - \\
+  -lm flm.lm \\
+  	-write-counts flm.count \\
+  -unk; then
+  echo "Succeeded."
+else
+  die "FLM preparation failed"
+fi
+
+[ -e flm.lm.gz ] || die "FLM did not prepare any model file"
+
+echo DONE > \$mydir/eman.status
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
+if [ "$RUN" == "yes" ]; then
+  sh eman.command
+fi
