@@ -1,0 +1,99 @@
+#!/bin/bash
+# eman seed for word alignment
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+if [ -z "$CORPUS" ] \
+  || [ -z "$SRCALIAUG" ] \
+  || [ -z "$TGTALIAUG" ] \
+  || [ -z "$BINARIES" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
+  echo "  \$CORPUS to corpus name"
+  echo "  \$SRCALIAUG to the string describing lang+factors of src corpus"
+  echo "  \$TGTALIAUG same for target, e.g. cs+lemma"
+  echo "And optionally:"
+  echo "  \$ALISYM defaults to gdfa"
+  echo "  \$OUTALILABEL ... where to save the alignment to augmented_corpora"
+  exit 1
+fi
+# Accepted vars:
+#   BINARIES=s.binaries.9209b705.20101126-1547
+#   CORPUS=czeng
+#   SRC
+
+[ -z "ALISYM" ] || ALISYM=gdfa
+[ -z "OUTALILABEL" ] \
+  || OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+
+cat > eman.vars << KONEC
+BINARIES=$BINARIES
+CORPUS=$CORPUS
+SRCALIAUG=$SRCALIAUG
+TGTALIAUG=$TGTALIAUG
+OUTALILABEL=$OUTALILABEL
+ALISYM=$ALISYM
+KONEC
+
+echo $BINARIES > eman.deps
+
+GIZAWRAPPER=../../scripts/gizawrapper.pl
+[ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+
+cat > eman.command << KONEC
+#!/bin/bash
+
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo FAILED > \$mydir/eman.status ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+export SCRIPTS_ROOTDIR=$BINARIES/moses/scripts
+echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
+
+function mkcorpus() {
+  ../augmented_corpora/augment.pl \$1 || die "Failed to prepare \$1"
+  wiseln \$(../augmented_corpora/augment.pl \$1) corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+}
+mkcorpus $CORPUS/$SRCALIAUG src
+mkcorpus $CORPUS/$TGTALIAUG tgt
+
+$GIZAWRAPPER \
+  corpus.src.gz corpus.tgt.gz \
+  --lfactors=0 --rfactors=0 \
+  --tempdir=/mnt/h/tmp \
+  --bindir=../$BINARIES/bin \
+  --dirsym=$ALISYM \
+  --drop-bad-lines \
+| cut -f2 \
+| gzip -c > alignment.gz \
+|| die "Failed to align the corpus"
+
+alilen=\`zcat alignment.gz | wc -l\`
+srclen=\`zcat corpus.src.gz | wc -l\`
+[ \$alilen == \$srclen ] \
+  || die "Mismatched file lengths: ali \$alilen, src \$srclen"
+  
+
+echo "Aligned, now export this to augmented corpora."
+
+[ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ] \
+  && die "Won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+
+cd ../augmented_corpora/$CORPUS
+wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
+  || die "Failed to save to augmented_corpora"
+echo ali > $OUTALILABEL.info
+
+echo DONE > \$mydir/eman.status
+
+KONEC
