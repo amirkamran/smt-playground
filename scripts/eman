@@ -17,7 +17,7 @@ use File::Spec;
 use Cwd;
 use Digest::MD5 qw(md5_hex);
 
-# command name abbreviations
+# command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
   ls list
   cl clone
@@ -28,6 +28,12 @@ my %expand_abbrev = qw(
   st start
   pr prepare
   prep prepare
+  stat status
+  init init
+  run run
+  users users
+  reindex reindex
+  redo redo
 );
 
 my $startupwd = cwd();
@@ -151,32 +157,14 @@ if ($cmd eq "guess") {
 
 if ($cmd eq "list") {
   # listing steps of the given types
-  my $only_some_steptypes = 0;
-  my %requested_steptype;
-  if (0 < scalar @ARGV) {
-    $only_some_steptypes = 1;
-    %requested_steptype = map { ($_, 1) } @ARGV;
-  }
-  my %steps_to_list = ();
-  foreach my $s (all_steps()) {
-    next if ! step_valid($s);
-    my $steptype = get_steptype($s);
-    next if $only_some_steptypes && !defined $requested_steptype{$steptype};
-    # mark that we accepted this argument
-    $requested_steptype{$steptype} = 2
-      if defined $requested_steptype{$steptype};
-    $steps_to_list{$s} = 1;
-  }
-  foreach my $s (sort { if (-e $a && -e $b) { -C $b <=> -C $a } else { -1 } }
-                 keys %steps_to_list) {
-    print_short($s);
-  }
-  foreach my $req (keys %requested_steptype) {
-    if ($requested_steptype{$req} == 1) {
-      $waserror = 1;
-      print STDERR "No steps of type: $req\n";
-    }
-  }
+  $waserror = !list([@ARGV]);
+  exit $waserror;
+}
+
+if ($cmd eq "status") {
+  # listing steps of the given types including status
+  $show_status = 1;
+  $waserror = !list([@ARGV]);
   exit $waserror;
 }
 
@@ -702,6 +690,49 @@ sub submit {
   return $ok;
 }
 
+sub list {
+  my $args = shift;
+  # listing steps of the given types
+  my $only_some_steptypes = 0;
+  my %requested_steptype;
+  if (0 < scalar @$args) {
+    $only_some_steptypes = 1;
+    %requested_steptype = map { ($_, 1) } @$args;
+  }
+  my %steps_to_list = ();
+  foreach my $s (all_steps()) {
+    next if ! step_valid($s);
+    my $steptype = get_steptype($s);
+    next if $only_some_steptypes && !defined $requested_steptype{$steptype};
+    # mark that we accepted this argument
+    $requested_steptype{$steptype} = 2
+      if defined $requested_steptype{$steptype};
+    $steps_to_list{$s} = 1;
+  }
+  my @not_found = ();
+  foreach my $req (keys %requested_steptype) {
+    if ($requested_steptype{$req} == 1) {
+      my $guess = guess_step($req);
+      if (defined $guess) {
+        # this was not a steptype but a specific experiment
+	$steps_to_list{$guess} = 1;
+      } else {
+        push @not_found, $req;
+      }
+    }
+  }
+  foreach my $s (sort { if (-e $a && -e $b) { -C $b <=> -C $a } else { -1 } }
+                 keys %steps_to_list) {
+    print_short($s);
+  }
+  my $ok = 1;
+  foreach my $req (@not_found) {
+    $ok = 0;
+    print STDERR "No steps of type: $req\n";
+  }
+  return $ok;
+}
+
 sub print_short {
   my $s = shift;
 
@@ -770,8 +801,7 @@ sub recognize_command {
   my $command = shift;
   return undef if !defined $command;
   $command = $expand_abbrev{$command} if defined $expand_abbrev{$command};
-  return $command if $command =~ /^(init|clone|prepare|run|start|list|traceback|users|abolish|reindex|guess|redo)$/;
-  return undef; # unrecognized
+  return $command; # this implicitly checked for unrecognized
 }
 
 sub mkdiruniq {
@@ -1139,6 +1169,7 @@ eman, experiment manager
                              # or final score
 
   eman list STEPTYPE ...     # list all steps of the given type
+  eman status SPEC/STEPTYPE  # like 'list --status', abbr. 'stat'
   eman users SPEC ...        # list all steps that use the given step
   eman traceback SPEC ...    # show tree of the steps and predecessors
  #eman traceforward SPEC ... # show tree of the steps and successors
