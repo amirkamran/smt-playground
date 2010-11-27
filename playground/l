@@ -1,5 +1,5 @@
 #!/bin/bash
-# tail -f the log of the given SPEC
+# 'less' the log of the given SPEC
 
 function die() { echo "$@" >&2; exit 1; }
 
@@ -9,7 +9,7 @@ s=`eman guess "$1"`
 logf=`ls -t $s/log.o* 2>/dev/null | head -n1`
 if [ -e "$logf" ]; then
   echo Following $logf
-  tail -f $logf
+  less $logf
 else
   echo "No log yet. Could wait for it but not implemented"
   exit 1

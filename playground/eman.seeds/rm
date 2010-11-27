@@ -4,26 +4,22 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-
-if [ -z "$ALIAUG" ] \
-  || [ -z "$SRCCORP" ] \
+if   [ -z "$SRCCORP" ] \
   || [ -z "$SRCAUG" ] \
   || [ -z "$TGTAUG" ] \
+  || ( [ -z "$ALIAUG" ] && [ -z "$ALISTEP" ] ) \
+  || ( [ -z "$BINARIES" ] && [ -z "$ALISTEP" ] ) \
   || [ -z "$REORDERING" ] || [ -z "$REORDFACTORS" ] \
   ; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools; inherited from ALISTEP"
   echo "  \$SRCCORP to source corpus name"
   echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
   echo "  \$SRCAUG to the string describing lang+factors of src corpus"
   echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
   echo "  \$ALICORP to target corpus name, can be omitted if equal to SRCCORP"
   echo "  \$ALIAUG to the string describing the 'language', e.g. 'ali'"
+  echo "    or \$ALISTEP to the step where alignment was constructed"
   echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
   echo "  \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
   exit 1
@@ -33,16 +29,33 @@ fi
 [ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
 [ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
 
+# get ali corpus and aug from alistep
+if [ ! -z "$ALISTEP" ]; then
+  ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
+  ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
+  echo $ALISTEP >> eman.deps
+
+  # inherit binaries
+  [ ! -z "$BINARIES" ] \
+    || BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
+echo $BINARIES >> eman.deps
+
 # shorten the reordering name to produce the tag for this reord model
 REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
 
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 SRCCORP=$SRCCORP
 TGTCORP=$TGTCORP
 ALICORP=$ALICORP
 SRCAUG=$SRCAUG
 TGTAUG=$TGTAUG
 ALIAUG=$ALIAUG
+ALISTEP=$ALISTEP
 REORDERING=$REORDERING
 REORDFACTORS=$REORDFACTORS
 KONEC
@@ -52,8 +65,6 @@ echo $TGTAUG > var-TGTAUG
 echo $REORDERING > var-REORDERING
 echo $REORDFACTORS > var-REORDFACTORS
 echo $REORDTAG > var-REORDTAG
-
-echo $BINARIES > eman.deps
 
 if [ $SRCCORP == $TGTCORP ] ; then
   echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$REORDTAG > eman.tag
@@ -76,7 +87,7 @@ echo "=============================="
 mydir=\`pwd\`
 
 set -o pipefail
-function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 renice 10 \$\$
 
@@ -119,7 +130,7 @@ echo "COPIED, used disk space:"
 df \$tempdir
 
 if \\
-  \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+  \$SCRIPTS_ROOTDIR/training/train-model.perl \\
         --force-factored-filenames \\
 	    --first-step 5 --last-step 5 \\
 	    --root-dir \$tempdir \\
@@ -130,7 +141,7 @@ if \\
 	    --reordering $REORDERING \\
 	    --reordering-factors $REORDFACTORS \\
   && echo "Extracted phrases, now build reordering model" \\
-  && \$SCRIPTS_ROOTDIR/training/train-factored-phrase-model.perl \\
+  && \$SCRIPTS_ROOTDIR/training/train-model.perl \\
         --force-factored-filenames \\
 	    --first-step 7 --last-step 7 \\
 	    --root-dir \$tempdir \\
@@ -165,7 +176,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi
