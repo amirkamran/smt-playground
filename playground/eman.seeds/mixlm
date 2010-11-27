@@ -4,17 +4,11 @@ function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 set -o pipefail
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-BINDIR="`pwd`../$BINARIES/bin/"
-
 if [ -z "$LMS" ] \
+|| [ -z "$BINARIES" ] \
 || [ -z "$HELDOUT" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$LMS to colon-delimited list of lm experiments"
   echo "  \$HELDOUT to the shortname of corpus"
   echo "And optionally: "
@@ -23,20 +17,23 @@ if [ -z "$LMS" ] \
   exit 1
 fi
 
-if [[ ! -d "$SRILMDIR1" ]] || [[ ! -d "$SRILMDIR2" ]]; then
-  echo "   SRILMDIR1: $SRILMDIR1"
-  echo "or SRILMDIR2: $SRILMDIR2"
-  echo "not found."
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+BINDIR="`pwd`../$BINARIES/bin/"
+
+if [ ! -f ../$BINARIES/srilm.path ]; then
+  echo "SRILM not found in $BINARIES"
   exit 1
 fi
 
-if [[ x$BINARIZE == xyes ]] && [[ ! -d "$IRSTLMDIR" ]] ; then
-  echo "   IRSTLMDIR: $IRSTLMDIR"
-  echo "not found."
-  exit 1
-fi
+SRILMDIR1="`cat ../$BINARIES/srilm.path`/bin/"
+SRILMDIR2="`cat ../$BINARIES/srilm.path`/bin/i686/"
 
 if [ x$BINARIZE == xyes ]; then
+  if [ ! -f ../$BINARIES/irstlm.path ]; then
+    echo "Asking for LM binarization and IRSTLM not found in $BINARIES";
+    exit 1
+  fi
+  IRSTLMDIR="`cat ../$BINARIES/irstlm.path`/bin/"
   lmtypetag=.blm
 else
   lmtypetag=
@@ -77,6 +74,7 @@ done
 echo MIX.$NAMELIST+$CORPAUG.$ORDER$lmtypetag > eman.tag
 
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 LMS=$LMS
 HELDOUT=$HELDOUT
 CORPAUG=$CORPAUG
@@ -151,7 +149,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi

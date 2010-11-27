@@ -8,19 +8,13 @@ echo "PATH="$PATH
 
 set -o pipefail
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-
-
 if [ -z "$CORP" ] \
+|| [ -z "$BINARIES" ] \
 || [ -z "$CORPAUG" ] \
 || [ -z "$FLMCONFIG" ] \
 || [ -z "$ORDER" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$CORP to the shortname of corpus"
   echo "  \$CORPAUG to the factors used for lm"
   echo "  \$FLMCONFIG to the flm definition"
@@ -29,16 +23,20 @@ if [ -z "$CORP" ] \
   exit 1
 fi
 
-if [[ ! -d "$SRILMDIR1" ]] || [[ ! -d "$SRILMDIR2" ]]; then
-  echo "   SRILMDIR1: $SRILMDIR1"
-  echo "or SRILMDIR2: $SRILMDIR2"
-  echo "not found."
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
+if [ ! -f ../$BINARIES/srilm.path ]; then
+  echo "SRILM not found in $BINARIES"
   exit 1
 fi
+
+SRILMDIR1="`cat ../$BINARIES/srilm.path`/bin/"
+SRILMDIR2="`cat ../$BINARIES/srilm.path`/bin/i686/"
 
 echo $CORP+$CORPAUG.$ORDER.$FLMCONFIG > eman.tag
 
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 CORP=$CORP
 CORPAUG=$CORPAUG
 ORDER=$ORDER
@@ -150,7 +148,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi
