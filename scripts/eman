@@ -1241,27 +1241,33 @@ step chains, i.e. complex experiment scenarios.
 
 We call each step in a (complex) pipeline an 'step'.
 Each step is represented as a single directory s.STEPTYPE.HASH.TIMESTAMP.
-Apart from any files needed for the step, the following files are always
-present in the step directory:
+Apart from any files needed or produced by the step, the following files are
+always present in the step directory:
 
  *eman.tag           ... one-line "readable" summary of vars
-                         Often manually editted to contain special flags.
+                         Often manually edited to contain special flags.
  #eman.vars          ... the variables configuring the step
  *eman.deps          ... list of prerequisites of this step
  *eman.status        ... the status of the step
   eman.jobid         ... the jobid of the most recent (re)run
   eman.seed          ... the script used to init the step
- *eman.command       ... the script used for preparation and run
+ #eman.command       ... the script used for preparation and run
   eman.derived_from  ... the name of the step used when deriving
   eman.init_env      ... all environment variables at init time
 
+Files marked with '#' have to be provided by your 'seed' scripts. Files marked
+with '*' can be provided by your 'seed' scripts. Other files are created by
+eman.
+
 =head2 Special Files in Directory of Steps
 
-In the directory containing all your steps, eman creates these files:
+In the directory containing all your steps, eman uses the following files:
 
-  eman.seeds         ... the directory of all step seeds
+ #eman.seeds         ... the directory of all step seeds
   eman.index         ... index of steps for quick check for identities
   eman.results       ... collected results from all steps
+
+Again, you are responsible for providing the items marked '#'.
 
 =head2 Life Cycle of Individual Steps
 
@@ -1272,14 +1278,14 @@ Each (successful) step goes through these core phases:
   prepare ... quickly check that all input files exist
   run     ... long computation, submitted to cluster
 
-Other than than, steps are considered immutable. You *can* modify
+Other than than, steps are considered immutable. You can modify
 existing steps as you like (changing status, variables, contents) but
 you are sacrificing the replicability of your experiment. Our best
 practice involves a lot of hacking of existing steps in early stages of
 implementation interleaved with frequent cloning and reruning the
 experiments from scratch. Later, once all new tweaks are exposed as
 variables of the respective steps, we absolutely avoid modifying
-existing experiments.
+existing steps and use cloning only.
 
 The progress of a step is achieved by eman following this procedure:
 
