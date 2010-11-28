@@ -25,6 +25,21 @@ if   [ -z "$SRCCORP" ] \
   exit 1
 fi
 
+# load inherited/inheritable binaries
+[ ! -z "$ALISTEP" ] \
+  && INHER_BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
+
+if [ -z "$BINARIES" ] || [ "$INHER_BINARIES" == "$BINARIES" ]; then
+  # inherit binaries from alistep
+  BINARIES=$INHER_BINARIES
+  # inherited binaries don't belong to our dependencies, we
+  # hope our predecessor has them as a dependence
+else
+  # put BINARIES to our deps as well
+  echo $BINARIES >> eman.deps
+fi
+SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
+
 # TGT and ALI corp default to srccorp
 [ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
 [ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
@@ -34,15 +49,7 @@ if [ ! -z "$ALISTEP" ]; then
   ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
   ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
   echo $ALISTEP >> eman.deps
-
-  # inherit binaries
-  [ ! -z "$BINARIES" ] \
-    || BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
 fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-
-echo $BINARIES >> eman.deps
 
 # shorten the reordering name to produce the tag for this reord model
 REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`

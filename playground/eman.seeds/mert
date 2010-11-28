@@ -4,23 +4,12 @@
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 set -o pipefail
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
-
-SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-
-if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
+if [ -z "$MODELSTEP" ] || [ -z "$DEVCORP" ] \
   || [ -z "$TESTCORP" ] \
   || [ -z "$REFAUG" ] \
   ; then
   echo "You must set: "
-  echo "  \$MODELEXP to the directory that contains the model, incl. all files"
+  echo "  \$MODELSTEP to the directory that contains the model, incl. all files"
   echo "  \$DEVCORP to the corpus for tuning"
   echo "  \$TESTCORP to the corpus for evaluation"
   echo "  \$REFAUG to the target (reference) lang+factors"
@@ -38,8 +27,32 @@ if [ -z "$MODELEXP" ] || [ -z "$DEVCORP" ] \
   echo "  \$ZMERTSEMPOSBLEUWEIGHTS for --semposbleu-weights, e.g. 1:1"
   echo "  \$ZMERTFLAGS for zmert flags"
   echo "  \$TMT_ROOT for zmert SemPOS TMT_ROOT"
+  echo "  \$BINARIES if you don't want to inherit them from MODELSTEP"
   exit 1
 fi
+
+echo $MODELSTEP > eman.deps
+
+# Load variables from MODEL
+[ -e ../$MODELSTEP/eman.vars ] || die "Bad translation model: $MODELSTEP"
+SAVEBINARIES=$BINARIES
+# inherit all variables
+eval `cat ../$MODELSTEP/eman.vars` || exit 1
+
+if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
+  # inheriting, ignoring our SAVEBINARIES
+  true
+else
+  # using our own
+  BINARIES=$SAVEBINARIES
+  echo $BINARIES >> eman.deps
+fi
+
+SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
+MOSESCMD="`pwd`/../$BINARIES/bin/moses"
+
+SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
+TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
 [ ! -z "$SEARCH" ] || SEARCH=beam
 [ ! -z "$MERTPRG" ] || MERTPRG=mert
@@ -62,21 +75,17 @@ if [ "$MERTPRG" == zmert ]; then
 fi
 
 
-echo $TAGPREF`cat ../$MODELEXP/eman.tag`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
+echo $TAGPREF`cat ../$MODELSTEP/eman.tag`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
 
-echo SETTING eman.tag: `cat eman.tag`
+#echo SETTING eman.tag: `cat eman.tag`
 
-SAVEMODELEXP=$MODELEXP
-eval `cat ../$MODELEXP/eman.vars` || exit 1
-MODELEXP=$SAVEMODELEXP
-
-echo $MODELEXP > eman.deps
 echo $BINARIES >> eman.deps
 
-echo $MODELEXP > info.modelexp
+echo $MODELSTEP > info.modelexp
 
 cat << KONEC > eman.vars
-MODELEXP=$MODELEXP
+BINARIES=$BINARIES
+MODELSTEP=$MODELSTEP
 DEVCORP=$DEVCORP
 TESTCORP=$TESTCORP
 SRCAUG=$SRCAUG
@@ -176,9 +185,9 @@ $ZMERTMOSES \
 KONEC
 ;;
 mert)
+  #--obo-scorenbest=\`pwd\`/scorenbest
   cat << KONEC > command.mert
 $MERTMOSES \
-  --obo-scorenbest=\`pwd\`/scorenbest \\
   --working-dir=mert-tuning \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
@@ -206,8 +215,10 @@ echo "=============================="
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
+mydir=\`pwd\`
+
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 renice 10 \$\$
 
@@ -230,8 +241,8 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  ../$MODELEXP/model/moses.ini \
-  || die "Failed to clone ../$MODELEXP/model/moses.ini"
+  ../$MODELSTEP/model/moses.ini \
+  || die "Failed to clone ../$MODELSTEP/model/moses.ini"
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1

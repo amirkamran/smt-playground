@@ -114,9 +114,9 @@ eval \$CLONE_CMD || die "Failed to obtain moses"
 cd moses || die "Failed to chdir to moses"
 ./regenerate-makefiles.sh || die "moses reg.makefiles failed"
 WITH=""
-[ "$SKIP_IRSTLM" == yes ] WITH="\$WITH --with-irstlm=\$(cat ../irstlm.path)"
-[ "$SKIP_SRILM" == yes ] WITH="\$WITH --with-srilm=\$(cat ../srilm.path)"
-# XXX --with-randlm=`cat ../randlm.path`
+[ "$SKIP_IRSTLM" == yes ] && WITH="\$WITH --with-irstlm=\$(cat ../irstlm.path)"
+[ "$SKIP_SRILM" == yes ] && WITH="\$WITH --with-srilm=\$(cat ../srilm.path)"
+# XXX --with-randlm=\`cat ../randlm.path\`
 ./configure $WITH || die "Failed configure"
 make -j 4 || die "Moses compilation failed"
 ln -s ../moses/moses-cmd/src/moses ../bin/

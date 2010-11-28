@@ -42,7 +42,6 @@ if [ -z "$BINARIES" ] || [ "$INHER_BINARIES" == "$BINARIES" ]; then
   # hope our predecessor has them as a dependence
 else
   # put BINARIES to our deps as well
-  echo "PUTTING $BINARIES TO DEPS"
   echo $BINARIES >> eman.deps
 fi
 SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
