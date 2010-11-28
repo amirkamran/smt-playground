@@ -284,6 +284,7 @@ if ($cmd eq "abolish") {
     }
   }
   save("eman.abolished", `date`);
+  save("eman.stat", "ABOLISHED");
   exit $waserror;
 }
 
@@ -773,6 +774,7 @@ sub print_vars {
   my $prefix = shift;
   my $s = shift;
   my $v = load_vars($s);
+  return if !defined $v;
   foreach my $l (split /\n/, $v) {
     print "$prefix$l\n";
   }
@@ -810,8 +812,8 @@ sub traceback {
     my $jid = load_jobid($step);
     push @kws, $jid if defined $jid && $jid ne "-";
   }
-  push @kws, load_status($step) if $show_status;
-  push @kws, load_tag($step) if $show_tag;
+  push @kws, load_status($step) || "" if $show_status;
+  push @kws, load_tag($step) || "" if $show_tag;
   print "$prefix|  | Job: @kws\n";
   print_vars("$prefix|  | ", $step) if $show_vars;
   print_log("$prefix|  | ", $step) if $show_log;
@@ -1242,14 +1244,14 @@ Each step is represented as a single directory s.STEPTYPE.HASH.TIMESTAMP.
 Apart from any files needed for the step, the following files are always
 present in the step directory:
 
-  eman.tag           ... one-line "readable" summary of vars
+ *eman.tag           ... one-line "readable" summary of vars
                          Often manually editted to contain special flags.
-  eman.vars          ... the variables configuring the step
-  eman.deps          ... list of prerequisites of this step
-  eman.status        ... the status of the step
+ #eman.vars          ... the variables configuring the step
+ *eman.deps          ... list of prerequisites of this step
+ *eman.status        ... the status of the step
   eman.jobid         ... the jobid of the most recent (re)run
   eman.seed          ... the script used to init the step
-  eman.command       ... the script used for preparation and run
+ *eman.command       ... the script used for preparation and run
   eman.derived_from  ... the name of the step used when deriving
   eman.init_env      ... all environment variables at init time
 
@@ -1263,19 +1265,43 @@ In the directory containing all your steps, eman creates these files:
 
 =head2 Life Cycle of Individual Steps
 
-1. The commands 'eman init' and 'eman clone' create a timestamped step
-directory, e.g. s.test.hash1234.20101115-1213.
+Each (successful) step goes through these core phases:
+
+  init    ... become part of structure of experiments, depend on other
+              steps and allow other steps depend on me
+  prepare ... quickly check that all input files exist
+  run     ... long computation, submitted to cluster
+
+Other than than, steps are considered immutable. You *can* modify
+existing steps as you like (changing status, variables, contents) but
+you are sacrificing the replicability of your experiment. Our best
+practice involves a lot of hacking of existing steps in early stages of
+implementation interleaved with frequent cloning and reruning the
+experiments from scratch. Later, once all new tweaks are exposed as
+variables of the respective steps, we absolutely avoid modifying
+existing experiments.
+
+The progress of a step is achieved by eman following this procedure:
+
+1. The commands 'eman init STEPTYPE' and 'eman clone s.STEPTYPE....'
+create a timestamped step directory, e.g. s.test.hash1234.20101115-1213.
 
 2. The file eman.seeds/STEPTYPE is copied there as eman.seed.
 
-3. The seed is run and expected to produce: eman.vars and eman.command
+3. The seed is run and expected to 'init' (i.e. produce the file
+eman.vars and optionally eman.deps). The seed may also produce
+eman.status with the content 'DONE' or 'PREPARED' to skip some of the
+following phases (XXX unimplemented). By default, the status becomes
+'INITED'.
 
-4. eman.deps are constructed from eman.vars and eman.command
+4. The seed is run and expected to 'prepare' (i.e. produce the file
+eman.command). The status becomes 'PREPARED'.
 
-5. eman.status is set to INITED if everything was successful
+5. eman.command is run and expected to write 'DONE' or 'FAILED' to
+eman.status.
 
-The file eman.status in a step directory contains one line status:
-  NONEXISTENT        ... not created yet
+The following statuses are recognized:
+  NONEXISTENT        ... not created yet / irreversibly deleted
   INITED             ... the step was just created
   INITFAILED         ... the initialization failed
   PREPARED           ... prepared using 'eman prepare'
@@ -1284,8 +1310,27 @@ The file eman.status in a step directory contains one line status:
                          (not supported yet)
   STARTING           ... just before 'running'
   RUNNING            ... running
-  FAILED             ... the running failed
-  DONE               ... the running succeeded
+  FAILED             ... the run failed
+  DONE               ... the run succeeded
+  ABOLISHED          ... has just vars, deps but no more content
+
+=head1 STEP AND EXPERIMENT CLONING
+
+The support for cloning steps and whole experiments (sequences of steps)
+is a key feature of eman. Cloning could be also called 'deriving',
+because we allow the clone to bear different variable values.
+
+Cloning a step (the command 'eman clone SPEC') means creating a
+completely new step and providing it with variables from the source
+step and possibly adding or modifying some.
+
+Cloning a sequence of steps (the commands 'eman clone < traceback' and
+'eman redo') is slightly trickier: imagine we change a variable in an
+early step in the sequence. All the following steps in the experiment
+then have to be instructed to use this modified step. Eman achieves this
+by explicitly replacing the original step name with the name of the new
+step in variables of subsequent steps. The immutability of steps
+naturally requires to clone the subsequent steps as well.
 
 =head1 USAGE PATTERNS
 
@@ -1297,6 +1342,101 @@ VAR=x eman redo SPEC
 
 eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
   # clean up, i.e. remove all content files of all failing steps
+
+=head1 WRITING SEEDS: CORE CONVENTIONS
+
+Seeds (in eman.seeds) have to follow some conventions.
+
+- executable
+
+- respond to environment variables
+
+- exit code 0 for success, other for failure
+
+- init and prepare by default
+
+- init only if $INIT_ONLY==yes
+
+=head2 When Initing
+
+- create the file: eman.vars
+
+- optionally also create: eman.tag, eman.deps
+
+Note that for reliable cloning, deps must be directly determined from
+the vars. It is actually best to include the full name of the dependence
+in one of the variables.
+
+=head2 When Preparing
+
+- create the file: eman.command
+
+=head1 WRITING SEEDS: TIPS
+
+=head2 Inheriting Variables
+
+It is often useful to propagate a value of a variable from a dependence to the
+current step. This can be easily achieved:
+
+  INHERITED=`cat ../$DEPENDENCE/eman.vars | grep TO_INHERIT | cut -d= -f2`
+  echo INHERITED=$INHERITED >> eman.vars # save as our variable
+
+Note that your seed can be asked to perform the init before the $DEPENDENCE was
+prepared and likewise, it can be asked to prepare before $DEPENDENCE was run.
+So avoid asking for files in $DEPENDENCE too early.
+
+
+=head2 Inheriting Dependencies
+
+Consider the following traceback:
+
+  +- s.tm.ABC.20101127-1856
+  |  | ALIGN=s.align.DEF.20101127-1856
+  |  | BINARIES=s.binaries.GHI.20101127-1856
+  |  +- s.align.DEF.20101127-1856
+  |  |  | BINARIES=s.binaries.GHI.20101127-1856
+  |  |  +- s.binaries.GHI.20101127-1856
+  |  +- s.binaries.GHI.20101127-1856
+
+The step 'binaries' is used by 'tm' directly but could be 'inherited' from
+'align', so that we don't have to specify it when initing 'tm' and also the
+traceback is simpler:
+
+  +- s.tm.ABC.20101127-1856
+  |  +- s.align.DEF.20101127-1856
+  |  |  +- s.binaries.GHI.20101127-1856
+
+The best technique to achieve this simplification is:
+
+1. 'align' should have BINARIES as a variable as well as a dependence.
+
+2. 'tm' should have BINARIES only as a variable and not as a dependence.
+
+3. The seed of 'tm' should use the given ALIGN to copy BINARIES from there.
+
+4. For best flexibility, 'tm' should allow for using a different 'binaries'
+step. If and only if this happens, 'tm' should add the extra dependence:
+
+  +- s.tm.ABC.20101127-1856
+  |  | ALIGN=s.align.DEF.20101127-1856
+  |  | BINARIES=s.binaries.JKL.20101130-1100
+  |  +- s.align.DEF.20101127-1856
+  |  |  | BINARIES=s.binaries.GHI.20101127-1856
+  |  |  +- s.binaries.GHI.20101127-1856
+  |  +- s.binaries.GHI.20101120-1100
+
+Here a is proposed bash solution for the 'tm' seed:
+
+  INHERITED=`cat ../$ALIGN/eman.vars | grep BINARIES | cut -d= -f2`
+  if [ -z "$BINARIES" ] || [ "$BINARIES" == "$INHERITED" ]; then
+    # inheriting
+    BINARIES=$INHERITED
+  else
+    # using our own
+    echo $BINARIES >> eman.deps
+  fi
+  # surely store the var
+  echo BINARIES=$BINARIES >> eman.vars
 
 =head1 AUTHOR
 
