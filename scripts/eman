@@ -31,6 +31,7 @@ my %expand_abbrev = qw(
   stat status
   init init
   run run
+  cont continue
   users users
   reindex reindex
   redo redo
@@ -240,6 +241,19 @@ if ($cmd eq "run") {
   $waserror = ! submit($s);
   exit $waserror;
 }
+
+if ($cmd eq "continue") {
+  my $step = shift;
+  mydie "usage: eman continue STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  my $stat = load_status($s);
+  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)." 
+    if $stat ne "FAILED";
+  save("$s/eman.status", "PREPARED"); # fake our status
+  $waserror = ! submit($s);
+  exit $waserror;
+}
+
 
 if ($cmd eq "start") {
   my $step = shift;
@@ -639,7 +653,8 @@ sub submit {
   my $s = shift;
   my $holdjids = shift;
   my $status = load_status($s);
-  mydie "Only prepared steps can be submitted" if $status ne "PREPARED";
+  mydie "Only prepared steps can be submitted, $s is $status"
+    if $status ne "PREPARED";
 
   my $prevdir = chdir_to_stepdir($s);
   save("eman.status", "STARTING");
@@ -793,6 +808,8 @@ sub print_log {
 sub traceback_to_recipe {
   # construct a recipe from a traceback
   my $step = shift;
+  mydie "Can't create traceback, $step nonexistent.\n"
+    if ! -e relative_to_stepsdir($step);
   my $recipe = { "name" => $step,
                  "vars" => [ split /\n/, load_vars($step) ],
                  "deps" => [],
@@ -1208,7 +1225,7 @@ eman, experiment manager
   
   eman prepare SPEC          # prepare inited step
   eman run SPEC              # run prepared step
- #eman continue SPEC         # continue a single step that failed
+  eman continue SPEC         # continue a single step that failed
   eman start SPEC            # prepare and run, incl. all predecessors
 
   eman guess SPEC            # guess a *single* step based on a
