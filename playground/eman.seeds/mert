@@ -79,8 +79,6 @@ echo $TAGPREF`cat ../$MODELSTEP/eman.tag`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG 
 
 #echo SETTING eman.tag: `cat eman.tag`
 
-echo $BINARIES >> eman.deps
-
 echo $MODELSTEP > info.modelexp
 
 cat << KONEC > eman.vars
@@ -129,7 +127,7 @@ reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
 
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
-if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
+if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
        -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
   echo "Defaulting to 'en' as the targetlang for detokenizer."
   TARGETLAN_FOR_DETOKENIZER=en
@@ -271,7 +269,7 @@ echo "Tuned BLEU:"
   || die "BLEU of evaluation.opt.out set failed"
 
 echo "Detokenizing evaluation.opt.out"
-\$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+\$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
   < evaluation.opt.out > evaluation.opt.txt
 
 
@@ -292,7 +290,7 @@ echo "Default BLEU:"
   || die "BLEU of evaluation.std.out set failed"
 
 echo "Detokenizing evaluation.std.out"
-\$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+\$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
 < evaluation.std.out > evaluation.std.txt
 
 echo "You could use the following to prepare detailed output for manual inpection"

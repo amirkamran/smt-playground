@@ -86,13 +86,24 @@ srclen=\`zcat corpus.src.gz | wc -l\`
 
 echo "Aligned, now export this to augmented corpora."
 
-[ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ] \
-  && die "Won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+do_export=1
+if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
+  origlen=\`zcat ../augmented_corpora/$CORPUS/$OUTALILABEL.gz | wc -l\`
+  if [ \$alilen == \$origlen ]; then
+    echo "WARNING: won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+    do_export=0
+  else
+    echo "REMOVING BAD: ../augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+    rm ../augmented_corpora/$CORPUS/$OUTALILABEL.gz
+  fi
+}
 
-cd ../augmented_corpora/$CORPUS
-wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
-  || die "Failed to save to augmented_corpora"
-echo ali > $OUTALILABEL.info
+if [ x1 == x$do_export ]; then
+  cd ../augmented_corpora/$CORPUS
+  wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
+    || die "Failed to save to augmented_corpora"
+  echo ali > $OUTALILABEL.info
+fi
 
 echo DONE > \$mydir/eman.status
 
