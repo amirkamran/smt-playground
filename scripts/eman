@@ -52,6 +52,7 @@ my $sge = 1;
 my $do_start = 0;
 my $redo = undef;
 my $redo_all = 0;
+my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
 my $indexfile = relative_to_stepsdir("eman.index");
@@ -114,6 +115,11 @@ if ($list_options) {
   exit;
 }
 
+if (! -w $indexfile || ! -w '.') {
+  $readonly = 1;
+  print STDERR "Read-only mode.\n";
+}
+
 # update md5 indices
 my $idx;
 
@@ -136,7 +142,7 @@ foreach my $s (@dirs) {
   }
   print STDERR "$s: $idx->{$s}\n" if $debug;
 }
-saveidx($idx);
+saveidx($idx) if ! $readonly;
 
 exit 0 if $cmd eq "reindex"; # the job has been done already
 
@@ -186,6 +192,9 @@ if ($cmd eq "users") {
   }
   exit 0;
 }
+
+# the following commands don't work with readonly
+mydie "Can't run '$cmd' in read-only mode." if $readonly;
 
 if ($cmd eq "init") {
   my $steptype = shift;
