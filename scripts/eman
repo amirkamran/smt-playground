@@ -130,7 +130,7 @@ if ($cmd eq "reindex") {
 }
 my @dirs = glob("$dirprefix*.*.[0-9]*");
 foreach my $s (@dirs) {
-  next if defined $idx->{$s};
+  next if defined $idx->{$s} && defined $idx->{$s."jid"};
   next if ! step_valid($s);
   add_step_to_index($s);
   # mark that this step uses its deps
@@ -390,7 +390,7 @@ sub init_by_recipe {
       # print "OLDD $oldd\n";
       # print "NEWD $newd\n";
       if ($newd ne $oldd) {
-	$depmap->{$oldd} = $newd;
+        $depmap->{$oldd} = $newd;
       }
       # print "DEPMAP2: ".join(" ", %$depmap)."\n" if defined $depmap;
     }
@@ -765,7 +765,7 @@ sub list {
       my $guess = guess_step($req);
       if (defined $guess) {
         # this was not a steptype but a specific experiment
-	$steps_to_list{$guess} = 1;
+        $steps_to_list{$guess} = 1;
       } else {
         push @not_found, $req;
       }
@@ -981,6 +981,10 @@ sub mychdir {
 sub guess_step {
   my $key = shift;
   my $step = guess_step_from_hashdate($key);
+  if (!defined $step) {
+    # guess from jobid
+    $step = $idx->{"jid$key"};
+  }
   if (!defined $step && -e $resultsfile) {
     # guess from results file
     my $resultstext = load($resultsfile);
@@ -1040,6 +1044,13 @@ sub add_step_to_index {
   # print STDERR "ADDED: $s  -> $hash\n";
   $idx->{$s} = $hash;
   $idx->{$hash} = $s;
+  my $jid = load_jobid($s);
+  # also store jobid, if available
+  if (defined $jid) {
+    $idx->{$s} = $hash;
+    $idx->{"jid$jid"} = $s;
+    $idx->{$s."jid"} = $jid;
+  }
 }
 sub loadidx {
   # load the index file and hash it there and back
@@ -1237,9 +1248,9 @@ eman, experiment manager
   eman continue SPEC         # continue a single step that failed
   eman start SPEC            # prepare and run, incl. all predecessors
 
-  eman guess SPEC            # guess a *single* step based on a
-                             # substring of the hash, the tag, the date
-                             # or final score
+  eman guess SPEC            # guess a *single* step based on the jobid
+                             # or a substring of the hash, the tag, the
+                             # date or final score
 
   eman list STEPTYPE ...     # list all steps of the given type
   eman status SPEC/STEPTYPE  # like 'list --status', abbr. 'stat'
