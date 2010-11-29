@@ -51,6 +51,7 @@ my $show_jobid = 0;
 my $sge = 1;
 my $do_start = 0;
 my $redo = undef;
+my $reuse = undef;
 my $redo_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
@@ -71,12 +72,14 @@ my %options = (
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
   "redo=s@" => \$redo,
+  "reuse=s@" => \$reuse,
   "all-redo!" => \$redo_all,
   "start!" => \$do_start,
 );
 GetOptions(%options) or exit 1;
 
 my %redo = map { (guess_step($_),1) } @$redo if defined $redo;
+my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
 
 my $command = shift;
 my $cmd = recognize_command($command);
@@ -374,6 +377,11 @@ sub init_by_recipe {
   my $recipe = shift;
   my $depmap = shift;
   confess "implementation error: undef depmap" if !defined $depmap;
+
+  if ($reuse{$recipe->{"name"}}) {
+    print STDERR "Forced to --reuse: $recipe->{name}\n";
+    return $recipe->{"name"};
+  }
 
   # print "INIT_BY_RECIPE: $recipe->{name}\n";
   
@@ -1235,10 +1243,13 @@ eman, experiment manager
 
   VAR=val eman init STEPTYPE # create new step of the given type
   VAR=val eman clone SPEC    # create new step based on STEPDIR
+
   eman clone < traceback     # create step by cloning incl. predecessors
   eman redo SPEC             # equals 'eman tb --vars SPEC | eman clone'
                              # good predecessors are reused by default
     --redo=SPEC              #   don't reuse the given step in the clone
+    --reuse=SPEC             #   do reuse the given step (incl. predecessors)
+                             #   takes precedence over --redo and --all-redo
     --all-redo               #   recreate all steps unconditionally
                              #   redo --redo is possible
     --start                  # after init/clone/redo, submit to queue
@@ -1385,6 +1396,11 @@ VAR=x eman redo SPEC
 
 eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
   # clean up, i.e. remove all content files of all failing steps
+
+eman stat `qstat | cut -c 1-8 | skip 2`
+  # show status of all running/held jobs in SGE
+  # the skip command is available here:
+  #   http://www.cuni.cz/~obo/textutils/#skip
 
 =head1 WRITING SEEDS: CORE CONVENTIONS
 
