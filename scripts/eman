@@ -118,7 +118,7 @@ if ($list_options) {
   exit;
 }
 
-if (! -w $indexfile || ! -w '.') {
+if ((-e $indexfile && ! -w $indexfile) || ! -w '.') {
   $readonly = 1;
   print STDERR "Read-only mode.\n";
 }
