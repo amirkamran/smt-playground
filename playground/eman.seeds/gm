@@ -4,17 +4,11 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-
 if [ -z "$GENCORP" ] \
-  || [ -z "$TGTAUG" ] \
-  ; then
+|| [ -z "$BINARIES" ] \
+|| [ -z "$TGTAUG" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$GENCORP to target corpus name"
   echo "  \$GENLANG to the language"
   echo "  \$SRCAUG to the string describing src factors, e.g. lemma+tag"
@@ -22,7 +16,10 @@ if [ -z "$GENCORP" ] \
   exit 1
 fi
 
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 GENCORP=$GENCORP
 GENLANG=$GENLANG
 SRCAUG=$SRCAUG
@@ -114,7 +111,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi

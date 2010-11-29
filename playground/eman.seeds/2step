@@ -4,19 +4,13 @@
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 set -o pipefail
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
-
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
-if [ -z "$PHASE1MERT" ] || [ -z "$PHASE2MERT" ] \
-  ; then
+if [ -z "$PHASE1MERT" ] \
+|| [ -z "$BINARIES" ] \
+|| [ -z "$PHASE2MERT" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$PHASE1MERT to the directory that contains the mert for phase 1"
   echo "  \$PHASE2MERT to the directory that contains the mert for phase 2"
   echo "and optionally"
@@ -32,6 +26,9 @@ if [ -z "$PHASE1MERT" ] || [ -z "$PHASE2MERT" ] \
   echo "  \$TAGPREF to tag prefix"
   exit 1
 fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
 [ ! -z "$SEARCH" ] || SEARCH=beam
 
@@ -54,6 +51,7 @@ echo SETTING eman.tag: `cat eman.tag`
 
 
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 PHASE1MERT=$PHASE1MERT
 PHASE2MERT=$PHASE2MERT
 TESTCORP=$TESTCORP
@@ -221,7 +219,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi

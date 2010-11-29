@@ -3,16 +3,11 @@
 
 ## Save our own copy of moses
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
-
-if [ -z "$MERTEXP" ] || [ -z "$TESTCORP" ]; then
+if [ -z "$MERTEXP" ] \
+|| [ -z "$BINARIES" ] \
+|| [ -z "$TESTCORP" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$MERTEXP to the directory that contains the model, incl. all files, the optimized ini will be used"
   echo "  \$TESTCORP to the corpus for evaluation"
   echo "and optionally"
@@ -22,6 +17,9 @@ if [ -z "$MERTEXP" ] || [ -z "$TESTCORP" ]; then
   echo "  \$ITER to the ITER-th BEST at... (will use run(ITER+1).moses.ini)"
   exit 1
 fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
 [[ -d ../exp.mert.$MERTEXP ]] && MERTEXP=exp.mert.$MERTEXP
 
@@ -49,6 +47,7 @@ SAVEMODELEXP=$MODELEXP
 eval `cat ../$MODELEXP/eman.vars` || exit 1
 MODELEXP=$SAVEMODELEXP
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 MERTEXP=$MERTEXP
 TESTCORP=$TESTCORP
 MOSESFLAGS="$MOSESFLAGS"
@@ -159,7 +158,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi

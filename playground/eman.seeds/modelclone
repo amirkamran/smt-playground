@@ -1,15 +1,9 @@
 ## Save our own copy of the training script
 
-if [ -z "$BINARIES" ]; then
-  echo "Set \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
-
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-
 if [ -z "$MODELEXP" ] \
-  ; then
+|| [ -z "$BINARIES" ]; then
   echo "You must set: "
+  echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$MODELEXP to source model dir"
   echo "And you may override any of the following:"
   echo "  \$LMEXPS to factor:lmdir:lmtype:::factor:lmdir:::factor:lmdir"
@@ -18,6 +12,8 @@ if [ -z "$MODELEXP" ] \
   echo "              and \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
   exit 1
 fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
 
 echo $BINARIES > eman.deps
 
@@ -73,6 +69,7 @@ fi
 
 rm eman.vars # delete to avoid hardlinks talk back
 cat << KONEC > eman.vars
+BINARIES=$BINARIES
 MODELEXP=$MODELEXP
 SRCCORP=$SRCCORP
 TGTCORP=$TGTCORP
