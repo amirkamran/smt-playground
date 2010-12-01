@@ -1290,12 +1290,30 @@ Commands marked with '#' are not yet implemented.
 
 =head1 DESCRIPTION
 
-eman is an experiment manager, useful mainly for deriving steps and
+Eman is an experiment manager, useful mainly for deriving steps and
 step chains, i.e. complex experiment scenarios.
+
+In the following:
+
+ a step        ... is a single unit of work
+ an experiment ... is a directed acyclic graph (DAG) of depending steps.
+                   an experiment can be also called a workflow.
+                   eman currently displays DAGs as trees, repeating
+		   shared steps
+ a step seed   ... is a recipe to build individual steps
+
+=head2 Why Should You Use eman?
+
+Eman is designed to speed up your 'experimental loop' and broaden the range of
+explored experiment configurations while maintaining the reproducibility of all
+the various experiment runs. The specific subject of your experiments is not
+important for eman---all commands to run etc. are encoded in your custom
+'seeds'.
+
+
 
 =head2 Structure of a Step Directory
 
-We call each step in a (complex) pipeline an 'step'.
 Each step is represented as a single directory s.STEPTYPE.HASH.TIMESTAMP.
 Apart from any files needed or produced by the step, the following files are
 always present in the step directory:
@@ -1306,8 +1324,8 @@ always present in the step directory:
  *eman.deps          ... list of prerequisites of this step
  *eman.status        ... the status of the step
   eman.jobid         ... the jobid of the most recent (re)run
-  eman.seed          ... the script used to init the step
- #eman.command       ... the script used for preparation and run
+  eman.seed          ... the script used to init and prepare the step
+ #eman.command       ... the script used to run the step
   eman.derived_from  ... the name of the step used when deriving
   eman.init_env      ... all environment variables at init time
 
@@ -1334,11 +1352,11 @@ Each (successful) step goes through these core phases:
   prepare ... quickly check that all input files exist
   run     ... long computation, submitted to cluster
 
-Other than than, steps are considered immutable. You can modify
+Other than that, steps are considered immutable. You can modify
 existing steps as you like (changing status, variables, contents) but
-you are sacrificing the replicability of your experiment. Our best
+you are sacrificing the reproducibility of your experiments. Our best
 practice involves a lot of hacking of existing steps in early stages of
-implementation interleaved with frequent cloning and reruning the
+implementation interleaved with frequent cloning and reruning of the
 experiments from scratch. Later, once all new tweaks are exposed as
 variables of the respective steps, we absolutely avoid modifying
 existing steps and use cloning only.
@@ -1504,6 +1522,50 @@ Here a is proposed bash solution for the 'tm' seed:
   fi
   # surely store the var
   echo BINARIES=$BINARIES >> eman.vars
+
+The topic of inherited dependencies is related to the question whether we see
+the experiment as a tree or a directed acyclic graph.
+
+=head1 SEE ALSO
+
+Eman is somewhat similar but also different from other experiment managements
+systems.
+
+While other experiment management systems treat the whole experiment
+as the main goal (allowing to represent variations within the experiment and
+reusing parts of previous experiment runs), eman works primarily with the
+individual steps. The complete experiments emerge rather as side-effects.
+Later, they can be easily displayed using 'eman traceback' as well as reused or
+modified using 'eman clone|redo'. We like to say that this make eman more
+flexible.
+
+Essentially, an eman traceback can be seen as a sample workflow and 'eman clone
+< traceback' can be used to instantiate the workflow.
+
+A feature very natural for eman but still unique compared to other systems is
+the command-line interface to construct variations of steps or experiments. The
+exploration of the space of configurations can thus be quickly automated.
+
+Related experiment or workflow management systems:
+
+=head2 LoonyBin
+
+  http://www.cs.cmu.edu/~jhclark/loonybin/
+
+LoonyBin is a clickable Java tool. The good sides of LoonyBin are: support
+for multiple clusters and schedulers.
+
+=head2 Moses Experiment Management System
+
+  http://www.statmt.org/moses/?n=FactoredTraining.EMS
+
+Moses EMS (experiment.perl) is centered around a single (customizable)
+experiment which consists of steps.
+
+=head2 Other
+
+There are also the following workflow management systems: DAGMan, Pegasus,
+Dryad.
 
 =head1 AUTHOR
 
