@@ -16,6 +16,7 @@ use File::Path;
 use File::Spec;
 use Cwd;
 use Digest::MD5 qw(md5_hex);
+use Fcntl ':flock';
 
 # command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
@@ -56,6 +57,7 @@ my $redo_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
+my $lockfile = relative_to_stepsdir(".eman.lock");
 my $indexfile = relative_to_stepsdir("eman.index");
 my $resultsfile = relative_to_stepsdir("eman.results");
 my $seedsdir = relative_to_stepsdir("eman.seeds");
@@ -1064,15 +1066,21 @@ sub loadidx {
   # load the index file and hash it there and back
   my $idx;
   if (-e $indexfile) {
+    open(my $lock, '>>', $lockfile);
+    flock($lock, LOCK_EX);
     $idx = Load(load($indexfile)."\n"); # YAML to Load the string
+    close $lock;
   }
   return $idx;
 }
 sub saveidx {
   my $idx = shift;
+  open(my $lock, '>>', $lockfile);
+  flock($lock, LOCK_EX);
   my $h = my_save($indexfile);
   print $h YAML::Dump($idx);
   close $h;
+  close $lock;
 }
 
 sub get_hash_from_dir {
