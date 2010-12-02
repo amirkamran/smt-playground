@@ -101,22 +101,51 @@ Options:
 die "Provide --salm-indexer if you want to construct --suffix-array-index"
   if $sa_index && ! defined $salm_indexer;
 
+# quick check of subcorpus specifier
+if (defined $subcorpus) {
+  if ($subcorpus =~ /^head([0-9]+)([kMGp]?)$/) {
+  } elsif ($subcorpus =~ /^tail([0-9]+)([kMGp]?)$/) {
+  } elsif ($subcorpus =~ /^([0-9]+)mod([0-9]+)$/) {
+  } else {
+    die "Bad subcorpus specifier: $subcorpus";
+  }
+}
+
+
+my $outcorpus_length = undef; # global variable to catch the corpus size
+
+# construct the corpus from a given descr
+my $corppathname = interpret_descr($descr);
+
 my $subcorpsel = undef;
 if (defined $subcorpus) {
+  die "Bug: expected to know the corpus length by now."
+    if !defined $outcorpus_length;
   $subcorpus =~ s/^(not)//;
   my $neg = ($1 eq "not") ? 1 : 0;
-  if ($subcorpus =~ /^head([0-9]+)([kMG]?)$/) {
-    my $head = $1;
-    my $unit = $2;
-    $head *= 1000 if $unit eq "k";
-    $head *= 1000**2 if $unit eq "M";
-    $head *= 1000**3 if $unit eq "G";
-    $subcorpsel = sub {
-      my $nr = shift;
-      my $res =  $nr <= $head;
-      $res = ! $res if $neg;
-      return $res;
-    };
+  if ($subcorpus =~ /^(head|tail)([0-9]+)([kMGp]?)$/) {
+    my $type = $1;
+    my $part = $2;
+    my $unit = $3;
+    $part *= 1000 if $unit eq "k";
+    $part *= 1000**2 if $unit eq "M";
+    $part *= 1000**3 if $unit eq "G";
+    $part = $outcorpus_length*$part/100 if $unit eq "p";
+    if ($type eq "head") {
+      $subcorpsel = sub {
+        my $nr = shift;
+        my $res =  $nr <= $part;
+        $res = ! $res if $neg;
+        return $res;
+      };
+    } else {
+      $subcorpsel = sub {
+        my $nr = shift;
+        my $res = ($outcorpus_length - $nr) < $part;
+        $res = ! $res if $neg;
+        return $res;
+      };
+    }
   } elsif ($subcorpus =~ /^([0-9]+)mod([0-9]+)$/) {
     my $item = $1;
     my $basis = $2;
@@ -130,10 +159,6 @@ if (defined $subcorpus) {
     die "Bad subcorpus specifier: $subcorpus";
   }
 }
-
-
-# construct the corpus from a given descr
-my $corppathname = interpret_descr($descr);
 
 # report corpus location or dump the whole corpus
 if ($dump) {
@@ -242,7 +267,9 @@ sub construct_corpus_from_parts {
     my $h = my_open("$basedir/$corp/LINECOUNT");
     my $expected_linecount = <$h>;
     chomp $expected_linecount;
-    die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+    die "Failed to create valid $corp/$lang; "
+      ."expected $expected_linecount, got $linecount"
+      if $linecount != $expected_linecount;
   } else {
     my $infoh = my_save("$basedir/$corp/LINECOUNT");
     print $infoh "$linecount\n";
@@ -297,7 +324,9 @@ sub construct_corpus_by_multiplication {
     my $h = my_open("$basedir/$corp/LINECOUNT");
     my $expected_linecount = <$h>;
     chomp $expected_linecount;
-    die "Failed to create valid $corp/$lang; expected $expected_linecount, got $linecount" if $linecount != $expected_linecount;
+    die "Failed to create valid $corp/$lang; "
+      ."expected $expected_linecount, got $linecount"
+      if $linecount != $expected_linecount;
   } else {
     my $infoh = my_save("$basedir/$corp/LINECOUNT");
     print $infoh "$linecount\n";
@@ -804,6 +833,7 @@ sub validate {
   } else {
     ensure_linecount($corpbasefile, $needlinescount);
   }
+  $outcorpus_length = $needlinescount;
 }
 
 
@@ -823,6 +853,7 @@ sub ensure_linecount {
   my $reqnr = shift;
   my $nr = count_lines($fn);
   die "$fn:Expected $reqnr lines, got $nr." if $reqnr != $nr;
+  $outcorpus_length = $nr;
 }
 
 
