@@ -66,7 +66,7 @@ my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
 my $seedsdir = "eman.seeds";
 
-my $qsub_available = `which qsub 2>/dev/null` =~ /\//;
+my $qsub_available = undef;
 
 my %options = (
   "help|h" => \$help,
@@ -746,6 +746,8 @@ sub submit {
   quietsystem("chmod +x eman.command")
     or print STDERR "Failed to ensure executable bit for eman.command in $s\n";
 
+  $qsub_available = `which qsub 2>/dev/null` =~ /\//
+    if !defined $qsub_available;
   if ($sge && !$qsub_available) {
     print STDERR "Disabling SGE by default, failed to find qsub.\n";
     $sge = 0;
