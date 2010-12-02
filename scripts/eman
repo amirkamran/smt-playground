@@ -584,7 +584,12 @@ sub init {
 sub prepare {
   my $s = shift;
   my $status = load_status($s);
-  mydie "Only inited steps can be prepared" if $status ne "INITED";
+  if ($status eq "PREPARED") {
+    print STDERR "$s already prepared.\n";
+    return 1;
+  }
+  mydie "Only inited steps can be prepared"
+    if $status ne "INITED" && $status ne "PREPFAILED";
 
   my $prevdir = chdir_to_stepdir($s);
   my $ok = 1;
