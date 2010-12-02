@@ -26,12 +26,14 @@ my $sa_index = 0;
 my $salm_indexer = undef;
 my $tmpdir = "/mnt/h/tmp";
 my $aliases = 1;
+my $subcorpus = undef;
 
 my @optionspecs = (
   "aliases!" => \$aliases, # resolve aliases
   "lazy"=>\$lazy, # don't check number of lines, just non-emptiness
   "ignore-blank-lines"=>\$ignore_blank_lines, # don't check for blank lines
   "dump"=>\$dump,
+  "subcorpus=s" => \$subcorpus, # when dumping, select only some lines
   "d|dir=s" => \$basedir,
   "m|makefile=s" => \$makefile,
   "suffix-array-index" => \$sa_index,
@@ -57,6 +59,7 @@ $makefile = $ENV{"AUGMENTMAKEFILE"} if defined $ENV{"AUGMENTMAKEFILE"};
 
 
 GetOptions(@optionspecs) or exit 1;
+die "--subcorpus requires --dump" if defined $subcorpus && ! $dump;
 
 my $MAKEFILEDIR = dirname($makefile);
 
@@ -82,6 +85,8 @@ Allowed corpus descriptions:
          of a corpus, such as a translation dictionary
 Options:
   --dump  ... to dump the corpus contents to stdout
+  --subcorpus=SPEC ... dump only some lines. Allowed SPECs:
+                          head10k, head2M, head10, 0mod10, 1mod10, not*
   --d|dir=PATH  ... specify a different base directory
   --m|makefile=PATH  ... create factors using a specified Makefile
   --suffix-array-index  ... use SALM to index the corpus and return path to the
@@ -96,6 +101,35 @@ Options:
 die "Provide --salm-indexer if you want to construct --suffix-array-index"
   if $sa_index && ! defined $salm_indexer;
 
+my $subcorpsel = undef;
+if (defined $subcorpus) {
+  $subcorpus =~ s/^(not)//;
+  my $neg = ($1 eq "not") ? 1 : 0;
+  if ($subcorpus =~ /^head([0-9]+)([kMG]?)$/) {
+    my $head = $1;
+    my $unit = $2;
+    $head *= 1000 if $unit eq "k";
+    $head *= 1000**2 if $unit eq "M";
+    $head *= 1000**3 if $unit eq "G";
+    $subcorpsel = sub {
+      my $nr = shift;
+      my $res =  $nr <= $head;
+      $res = ! $res if $neg;
+      return $res;
+    };
+  } elsif ($subcorpus =~ /^([0-9]+)mod([0-9]+)$/) {
+    my $item = $1;
+    my $basis = $2;
+    $subcorpsel = sub {
+      my $nr = shift;
+      my $res = ((($nr-1) % $basis) == $item);
+      $res = ! $res if $neg;
+      return $res;
+    };
+  } else {
+    die "Bad subcorpus specifier: $subcorpus";
+  }
+}
 
 
 # construct the corpus from a given descr
@@ -104,7 +138,15 @@ my $corppathname = interpret_descr($descr);
 # report corpus location or dump the whole corpus
 if ($dump) {
   my $hdl = my_open($corppathname);
-  print while <$hdl>;
+  my $nr = 0;
+  while (<$hdl>) {
+    $nr++;
+    if (!defined $subcorpsel) {
+      print;
+    } else {
+      print if $subcorpsel->($nr);
+    }
+  }
   close $hdl;
 } elsif ($sa_index) {
   # construct salm index an return the path to it

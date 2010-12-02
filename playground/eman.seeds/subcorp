@@ -1,0 +1,82 @@
+#!/bin/bash
+# eman seed for selection of a subcorpus
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+if [ -z "$CORPUS" ] \
+  || [ -z "$SUBSET" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$CORPUS to corpus name"
+  echo "  \$SUBSET to subset specifier, eg. head20k, 0mod10, 1mod10, .. 9 mod10"
+  echo "           or nothead20k, not0mod10"
+  echo "And optionally:"
+  echo "  \$OUTCORPNAME ... where to save the selected corpus instead of CORPNAME-set"
+  exit 1
+fi
+
+[ -z "OUTCORPNAME" ] \
+  || OUTCORPNAME=$CORPUS-$SUBSET
+
+cat > eman.vars << KONEC
+CORPUS=$CORPUS
+SUBSET=$SUBSET
+OUTCORPNAME=$OUTCORPNAME
+KONEC
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+srccorpdir=../augmented_corpora/$CORPUS
+[ -d $srccorpdir ] || die "Source corpus nonexistent: $srccorpdir"
+
+outcorpdir=../augmented_corpora/$OUTCORPNAME
+[ ! -e "$outcorpdir" ] || die "Won't overwrite $outcorpdir"
+
+mkdir $outcorpdir
+
+cat > eman.command << KONEC
+#!/bin/bash
+
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# now pass all files *except alignments* thtough augment --dump --subcorpus
+cd $srccorpdir || die "Failed to chdir to $srccorpdir"
+
+for f in *.info; do
+  lang=\${f//.info}
+  if [ \$(cat \$f) == "ali" ]; then
+    echo "Skipping corpus \$lang, it is alignment."
+  else
+    echo "Making subcorpus for lang \$lang"
+  
+    ../augment.pl $CORPUS/\$lang --dump --subcorpus="$SUBSET" \\
+    | gzip -c > ../$OUTCORPNAME/\$lang.gz \\
+    || die "Failed to create \$lang"
+  
+    cp \$f ../$OUTCORPNAME/\$f || die "Failed to create info file \$f"
+  
+    zcat ../$OUTCORPNAME/\$lang.gz | wc -l > ../$OUTCORPNAME/LINECOUNT \\
+    || die "Failed to construct LINECOUNT"
+  
+    for fact in \$lang.factors/*.gz; do
+      factor=\$(basename \${fact//.gz})
+      echo "Making subcorpus for factor \$factor of lang \$lang"
+      mkdir -p ../$OUTCORPNAME/\$lang.factors
+  
+      ../augment.pl $CORPUS/\$lang+\$factor --dump --subcorpus="$SUBSET" \\
+      | gzip -c > ../$OUTCORPNAME/\$lang.factors/\$factor.gz \\
+      || die "Failed to create factor \$factor"
+    done
+  fi
+done
+
+echo DONE > \$mydir/eman.status
+
+KONEC
