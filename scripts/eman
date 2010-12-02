@@ -17,6 +17,8 @@ use File::Spec;
 use Cwd;
 use Digest::MD5 qw(md5_hex);
 use Fcntl ':flock';
+use FindBin qw($Bin);
+my $eman = $Bin."/".basename($0); # full path to ourselves
 
 # command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
@@ -36,8 +38,10 @@ my %expand_abbrev = qw(
   users users
   reindex reindex
   redo redo
+  wait wait
 );
 
+my $wait_sleep = 3;
 my $startupwd = cwd();
 my $debug = 0;
 my $verbose = 0;
@@ -57,10 +61,15 @@ my $redo_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
-my $lockfile = relative_to_stepsdir(".eman.lock");
-my $indexfile = relative_to_stepsdir("eman.index");
-my $resultsfile = relative_to_stepsdir("eman.results");
-my $seedsdir = relative_to_stepsdir("eman.seeds");
+my $lockfile = ".eman.lock";
+my $indexfile = "eman.index";
+my $resultsfile = "eman.results";
+my $seedsdir = "eman.seeds";
+
+if ($sge && `which qsub 2>/dev/null` !~ /\//) {
+  print STDERR "Disabling SGE by default, failed to find qsub.\n";
+  $sge = 0;
+}
 
 my %options = (
   "help|h" => \$help,
@@ -128,6 +137,7 @@ if ((-e $indexfile && ! -w $indexfile) || ! -w '.') {
 # update md5 indices
 my $idx;
 
+my $oldwd = chdir_to_maindir();
 if ($cmd eq "reindex") {
   # do not load any saved values
 } else {
@@ -148,12 +158,14 @@ foreach my $s (@dirs) {
   print STDERR "$s: $idx->{$s}\n" if $debug;
 }
 saveidx($idx) if ! $readonly;
+chdir($oldwd) or die "Failed to chdir back to $oldwd";
 
 exit 0 if $cmd eq "reindex"; # the job has been done already
 
 
 ## handle all the various commands
 
+# the following commands are read-only
 if ($cmd eq "guess") {
   # just guessing step directories
   foreach my $key (@ARGV) {
@@ -196,6 +208,38 @@ if ($cmd eq "users") {
     }
   }
   exit 0;
+}
+
+if ($cmd eq "wait") {
+  mydie "usage: eman wait SPEC ..." if 0 == scalar @ARGV;
+  my %steps = map { my $s = guess_step($_); ($s, load_status($s)) } @ARGV;
+  # check if any steps have no chance 
+  my @no_chance = grep { $steps{$_} !~ /^(STARTING|RUNNING|DONE|FAILED)$/ }
+                  keys %steps;
+  if (0 < scalar @no_chance) {
+    print STDERR "Won't wait for these, not running:\n";
+    foreach my $s (@no_chance) {
+      print STDERR "  $s\t$steps{$s}\n";
+    }
+    $waserror = 1;
+  }
+  my @queue = grep { $steps{$_} =~ /^(STARTING|RUNNING)$/ } keys %steps;
+  print STDERR "Waiting for ".scalar(@queue)." jobs.\n";
+  while (0 < scalar @queue) {
+    sleep $wait_sleep;
+    my @newqueue = ();
+    foreach my $step (@queue) {
+      my $s = load_status($step);
+      if ($s !~ /^(STARTING|RUNNING|DONE|FAILED)$/ ) {
+        print STDERR "Got unexpected status: $step\t$s\n";
+        $waserror = 1;
+        next;
+      }
+      push @newqueue, $step if $s =~ /^(STARTING|RUNNING)$/;
+    }
+    @queue = @newqueue;
+  }
+  exit $waserror;
 }
 
 # the following commands don't work with readonly
@@ -260,10 +304,11 @@ if ($cmd eq "continue") {
   my $step = shift;
   mydie "usage: eman continue STEPDIR" if ! defined $step;
   my $s = guess_step($step); # happily guess the exact step
+  chdir_to_stepdir($s);
   my $stat = load_status($s);
   mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)." 
     if $stat ne "FAILED";
-  save("$s/eman.status", "PREPARED"); # fake our status
+  save("eman.status", "PREPARED"); # fake our status
   $waserror = ! submit($s);
   exit $waserror;
 }
@@ -680,11 +725,20 @@ sub submit {
   my $ok = 1;
   my $jid = undef;
   # XXX should split holdjids into holds (for sge) and active waiting loops
-  my @holds = defined $holdjids ? map {"-hold=$_"} @$holdjids : ();
+  my @sgeholds = ();
+  my @plainholds = ();
+  foreach my $jid (@$holdjids) {
+    if ($jid =~ /^[0-9]+$/) {
+      # this is SGE job id
+      push @sgeholds, "-hold=$jid";
+    } else {
+      push @plainholds, $jid;
+    }
+  }
 
-  my $oldholds = $ENV{"HOLDS"};
-  $oldholds ||= "";
-  my $holdsstr = join(" ", ($oldholds, @holds));
+  my $oldsgeholds = $ENV{"HOLDS"};
+  $oldsgeholds ||= "";
+  my $sgeholdsstr = join(" ", ($oldsgeholds, @sgeholds));
   
   # just to be sure
   quietsystem("chmod +x eman.command")
@@ -692,32 +746,41 @@ sub submit {
   if (! $sge) {
     # avoid sun grid engine
     # XXX must wait for running jobs
+    my $waitscript = "";
+    $waitscript = "$eman wait @plainholds; "
+      if 0 < scalar @plainholds;
 
-    save("eman.wrapcommand", 'echo Host: `hostname` ; echo PID: $$ ; ./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
+    save("eman.wrapcommand", 'echo Host:PID: `hostname`:$$ ; '.$waitscript.'./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
     $ok = safesystem("( nohup /bin/bash ./eman.wrapcommand > log 2>&1 & )");
-    my $pid = undef;
     if ($ok) {
       # get process id
-      my $hdl = my_open("log");
-      my $nl = 0;
-      while(<$hdl>) {
-        $nl++;
-        last if $nl > 10;
-        if (/^PID: ([0-9]+)$/) {
-          $pid = $1;
-          last;
+      my $now = time();
+      while (! defined $jid && time()-$now < 60) {
+        if (-e "log") {
+          my $hdl = my_open("log");
+          my $nl = 0;
+          while(<$hdl>) {
+            $nl++;
+            last if $nl > 10;
+            if (/^Host:PID: (.+)$/) {
+              $jid = $1;
+              last;
+            }
+          }
+          close $hdl;
         }
+        sleep 1;
       }
-      close $hdl;
-    }
-    if (defined $pid) {
-      $jid = `hostname`;
-      chomp $jid;
-      $jid .= ":$pid";
+      if (! defined $jid) {
+        $ok = 0;
+        print STDERR "Failed to get process id from the file log.\n";
+      }
     }
   } else {
     # use sge
-    $ok = safesystem("( qsubmit $holdsstr --jobname=log ./eman.command 2>&1 ) > log");
+    die "Unimplemented to wait for some non-sge jobs: @plainholds"
+      if 0 < scalar @plainholds;
+    $ok = safesystem("( qsubmit $sgeholdsstr --jobname=log ./eman.command 2>&1 ) > log");
     if ($ok) {
       # get job id
       my $hdl = my_open("log");
@@ -816,7 +879,7 @@ sub print_vars {
 sub print_log {
   my $prefix = shift;
   my $s = shift;
-  my $stepdir = relative_to_stepsdir($s);
+  my $stepdir = relative_to_maindir($s);
   my $logtext = `tail -n3 $stepdir/log.* 2> /dev/null`;
   chomp $logtext;
   foreach my $l (split /\n/, $logtext) {
@@ -827,8 +890,8 @@ sub print_log {
 sub traceback_to_recipe {
   # construct a recipe from a traceback
   my $step = shift;
-  mydie "Can't create traceback, $step nonexistent.\n"
-    if ! -e relative_to_stepsdir($step);
+  mydie "Can't create traceback, $step nonexistent."
+    if ! -e relative_to_maindir($step);
   my $recipe = { "name" => $step,
                  "vars" => [ split /\n/, load_vars($step) ],
                  "deps" => [],
@@ -895,10 +958,10 @@ sub mkdiruniq2 {
 
 
 
-sub relative_to_stepsdir {
+sub relative_to_maindir {
   my $fn = shift;
   if (-e "eman.index" || -d "eman.seeds") {
-    # assume we are in stepsdir
+    # assume we are in maindir
     return $fn;
   } elsif (-e "../eman.index" || -d "eman.seeds") {
     # assume we are in a dir of a step
@@ -912,9 +975,9 @@ sub relative_to_stepsdir {
 
 sub step_valid {
   my $step = shift;
-  return -d relative_to_stepsdir($step)
-    && -e relative_to_stepsdir("$step/eman.seed")
-    && -e relative_to_stepsdir("$step/eman.vars");
+  return -d relative_to_maindir($step)
+    && -e relative_to_maindir("$step/eman.seed")
+    && -e relative_to_maindir("$step/eman.vars");
 }
 
 sub get_steptype {
@@ -927,15 +990,15 @@ sub get_steptype {
 
 sub load_status {
   my $step = shift;
-  return try_load(relative_to_stepsdir("$step/eman.status")) || "NONEXISTENT";
+  return try_load(relative_to_maindir("$step/eman.status")) || "NONEXISTENT";
 }
 sub load_tag {
   my $step = shift;
-  return try_load(relative_to_stepsdir("$step/eman.tag"));
+  return try_load(relative_to_maindir("$step/eman.tag"));
 }
 sub load_depsarr {
   my $step = shift;
-  my $depsstr = try_load(relative_to_stepsdir("$step/eman.deps"));
+  my $depsstr = try_load(relative_to_maindir("$step/eman.deps"));
   my $depsarr;
   if (defined $depsstr) {
     my @deps = split /\n/, $depsstr;
@@ -952,11 +1015,11 @@ sub load_depsarr {
 }
 sub load_vars {
   my $step = shift;
-  return try_load(relative_to_stepsdir("$step/eman.vars"));
+  return try_load(relative_to_maindir("$step/eman.vars"));
 }
 sub load_jobid {
   my $step = shift;
-  return try_load(relative_to_stepsdir("$step/eman.jobid"));
+  return try_load(relative_to_maindir("$step/eman.jobid"));
 }
 
 sub canon_stepdir {
@@ -969,6 +1032,19 @@ sub canon_stepdir {
   return $s;
 }
 
+sub chdir_to_maindir {
+  die "../$seedsdir and ./$seedsdir exist, I'm confused."
+    if -e "../$seedsdir" && -e "./$seedsdir";
+  my $oldwd = cwd();
+  if (-e $seedsdir) {
+    # we're there, no action needed
+  } elsif (-e "../$seedsdir") {
+    chdir("../") or die "Failed to chdir to the main directory";
+  } else {
+    die "Neither ./$seedsdir nor ../$seedsdir exist. Can't guess our main dir.";
+  }
+  return $oldwd;
+}
 sub chdir_to_stepdir {
   my $stepdir = shift;
   die "../$stepdir and ./$stepdir exist, I'm confused."
@@ -1284,6 +1360,9 @@ eman, experiment manager
  #eman collect               # collect results of all experiments
   eman reindex               # re-create index of steps
 
+  eman wait SPEC ...         # block until the jobs are FAILED or DONE
+                             # die if neither FAILED nor DONE is reachable
+
 SPEC is a text snippet capable of identifying a step uniquely.
 You can even use '.' and '`pwd`' as SPEC.
 Commands marked with '#' are not yet implemented.
@@ -1299,7 +1378,7 @@ In the following:
  an experiment ... is a directed acyclic graph (DAG) of depending steps.
                    an experiment can be also called a workflow.
                    eman currently displays DAGs as trees, repeating
-		   shared steps
+                   shared steps
  a step seed   ... is a recipe to build individual steps
 
 =head2 Why Should You Use eman?
