@@ -66,10 +66,7 @@ my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
 my $seedsdir = "eman.seeds";
 
-if ($sge && `which qsub 2>/dev/null` !~ /\//) {
-  print STDERR "Disabling SGE by default, failed to find qsub.\n";
-  $sge = 0;
-}
+my $qsub_available = `which qsub 2>/dev/null` =~ /\//;
 
 my %options = (
   "help|h" => \$help,
@@ -748,6 +745,12 @@ sub submit {
   # just to be sure
   quietsystem("chmod +x eman.command")
     or print STDERR "Failed to ensure executable bit for eman.command in $s\n";
+
+  if ($sge && !$qsub_available) {
+    print STDERR "Disabling SGE by default, failed to find qsub.\n";
+    $sge = 0;
+  }
+
   if (! $sge) {
     # avoid sun grid engine
     # XXX must wait for running jobs
