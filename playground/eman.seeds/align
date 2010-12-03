@@ -98,7 +98,7 @@ if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
     echo "REMOVING BAD: ../augmented_corpora/$CORPUS/$OUTALILABEL.gz"
     rm ../augmented_corpora/$CORPUS/$OUTALILABEL.gz
   fi
-}
+fi
 
 if [ x1 == x$do_export ]; then
   cd ../augmented_corpora/$CORPUS
