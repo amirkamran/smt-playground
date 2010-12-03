@@ -307,6 +307,12 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/stem_factor.pl --stem=4 \
 	| gzip -c > $@
 
+%.factors/lcstem3.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	| $(STATMT)/scripts/stem_factor.pl --stem=3 \
+	| gzip -c > $@
+
 %.factors/devnorm3lcstem4.gz:
 	# augment.pl asks us to create corp $(CORP) lang $(LANG): $@
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
@@ -440,7 +446,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 	&& echo "ali" > $*_idali.info
 
 
-SRUNBLOCKS?=~bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
+SRUNBLOCKS?=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
 JOBS?=40
 SCENDIR=./prep-wmt10/
 
@@ -464,7 +470,7 @@ SCENDIR=./prep-wmt10/
 	exit 1
 
 # unsupervised truecasing
-TRDCTOOLS ?= ~/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
+TRDCTOOLS ?= /home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_corpora/
 
 # truecasing factors
 %.factors/utc.gz:
