@@ -65,15 +65,17 @@ for f in *.info; do
     zcat ../$OUTCORPNAME/\$lang.gz | wc -l > ../$OUTCORPNAME/LINECOUNT \\
     || die "Failed to construct LINECOUNT"
   
-    for fact in \$lang.factors/*.gz; do
-      factor=\$(basename \${fact//.gz})
-      echo "Making subcorpus for factor \$factor of lang \$lang"
-      mkdir -p ../$OUTCORPNAME/\$lang.factors
-  
-      ../augment.pl $CORPUS/\$lang+\$factor --dump --subcorpus="$SUBSET" \\
-      | gzip -c > ../$OUTCORPNAME/\$lang.factors/\$factor.gz \\
-      || die "Failed to create factor \$factor"
-    done
+    if [ -d \$lang.factors ] && [ \`ls \$lang.factors | wc -l\` ]; then
+      for fact in \$lang.factors/*.gz; do
+        factor=\$(basename \${fact//.gz})
+        echo "Making subcorpus for factor \$factor of lang \$lang"
+        mkdir -p ../$OUTCORPNAME/\$lang.factors
+    
+        ../augment.pl $CORPUS/\$lang+\$factor --dump --subcorpus="$SUBSET" \\
+        | gzip -c > ../$OUTCORPNAME/\$lang.factors/\$factor.gz \\
+        || die "Failed to create factor \$factor"
+      done
+    fi
   fi
 done
 
