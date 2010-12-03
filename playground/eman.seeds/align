@@ -37,6 +37,8 @@ OUTALILABEL=$OUTALILABEL
 ALISYM=$ALISYM
 KONEC
 
+echo $OUTALILABEL > eman.tag
+
 echo $BINARIES > eman.deps
 
 GIZAWRAPPER=../../scripts/gizawrapper.pl
