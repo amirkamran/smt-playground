@@ -16,7 +16,8 @@ use File::Path;
 use File::Spec;
 use Cwd;
 use Digest::MD5 qw(md5_hex);
-use Fcntl ':flock';
+use Fcntl qw(LOCK_EX LOCK_NB);
+use File::NFSLock;
 use FindBin qw($Bin);
 my $eman = $Bin."/".basename($0); # full path to ourselves
 
@@ -48,6 +49,7 @@ my $verbose = 0;
 my $manpage = 0;
 my $help = 0;
 my $list_options = 0;
+my $show_tree_in_traceback = 1;
 my $show_tag = 0;
 my $show_vars = 0;
 my $show_status = 0;
@@ -61,7 +63,6 @@ my $redo_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
-my $lockfile = ".eman.lock";
 my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
 my $seedsdir = "eman.seeds";
@@ -74,11 +75,13 @@ my %options = (
   "list-options" => \$list_options,
   "man" => \$manpage,
   "sge!" => \$sge, # not quite supported
+  "tree-in-traceback!" => \$show_tree_in_traceback,
   "tag!" => \$show_tag,
   "vars!" => \$show_vars,
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
+  "read-only!" => \$readonly,
   "redo=s@" => \$redo,
   "reuse=s@" => \$reuse,
   "all-redo!" => \$redo_all,
@@ -126,9 +129,17 @@ if ($list_options) {
   exit;
 }
 
-if ((-e $indexfile && ! -w $indexfile) || ! -w '.') {
+my $lock = undef;
+
+if ($readonly || (-e $indexfile && ! -w $indexfile) || ! -w '.') {
   $readonly = 1;
   print STDERR "Read-only mode.\n";
+} else {
+  # obtain lock for index file, keep it locked until we know
+  # the command is read-only
+  $lock = File::NFSLock->new($indexfile, LOCK_EX, 10, 30*60);
+  die "Failed to obtain lock for $indexfile, try --read-only."
+    if !defined $lock;
 }
 
 # update md5 indices
@@ -165,6 +176,7 @@ exit 0 if $cmd eq "reindex"; # the job has been done already
 # the following commands are read-only
 if ($cmd eq "guess") {
   # just guessing step directories
+  $lock->unlock() if defined $lock;
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
     print $step."\n";
@@ -174,18 +186,21 @@ if ($cmd eq "guess") {
 
 if ($cmd eq "list") {
   # listing steps of the given types
+  $lock->unlock() if defined $lock;
   $waserror = !list([@ARGV]);
   exit $waserror;
 }
 
 if ($cmd eq "status") {
   # listing steps of the given types including status
+  $lock->unlock() if defined $lock;
   $show_status = 1;
   $waserror = !list([@ARGV]);
   exit $waserror;
 }
 
 if ($cmd eq "traceback") {
+  $lock->unlock() if defined $lock;
   mydie "usage: eman traceback SPEC ..." if 0 == scalar @ARGV;
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
@@ -195,6 +210,7 @@ if ($cmd eq "traceback") {
 }
 
 if ($cmd eq "users") {
+  $lock->unlock() if defined $lock;
   mydie "usage: eman users SPEC ..." if 0 == scalar @ARGV;
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
@@ -208,6 +224,7 @@ if ($cmd eq "users") {
 }
 
 if ($cmd eq "wait") {
+  $lock->unlock() if defined $lock;
   mydie "usage: eman wait SPEC ..." if 0 == scalar @ARGV;
   my %steps = map { my $s = guess_step($_); ($s, load_status($s)) } @ARGV;
   # check if any steps have no chance 
@@ -357,6 +374,10 @@ if ($cmd eq "abolish") {
   save("eman.stat", "ABOLISHED");
   exit $waserror;
 }
+
+$lock->unlock() if defined $lock;
+exit $waserror;
+## end of main
 
 sub parse_recipe {
   # parse traceback output with vars into a recipe
@@ -915,20 +936,24 @@ sub traceback_to_recipe {
 sub traceback {
   my $prefix = shift;
   my $step = shift;
-  print "$prefix+- $step\n";
+
+  my $indent = $show_tree_in_traceback ? "+- " : "";
+  print "$prefix$indent$step\n";
   my @kws; # space-delimited keywords
-  if (defined $show_jobid) {
+  if ($show_jobid) {
     my $jid = load_jobid($step);
     push @kws, $jid if defined $jid && $jid ne "-";
   }
   push @kws, load_status($step) || "" if $show_status;
   push @kws, load_tag($step) || "" if $show_tag;
-  print "$prefix|  | Job: @kws\n";
-  print_vars("$prefix|  | ", $step) if $show_vars;
-  print_log("$prefix|  | ", $step) if $show_log;
+  $indent = $show_tree_in_traceback ? "|  | " : "";
+  print $prefix.$indent."Job: @kws\n" if 0 < scalar @kws;
+  print_vars($prefix.$indent, $step) if $show_vars;
+  print_log($prefix.$indent, $step) if $show_log;
   my $deps = load_depsarr($step);
+  $indent = $show_tree_in_traceback ? "|  " : "";
   foreach my $dep (@$deps) {
-    traceback("$prefix|  ", $dep);
+    traceback($prefix.$indent, $dep);
   }
 }
 
@@ -1152,21 +1177,15 @@ sub loadidx {
   # load the index file and hash it there and back
   my $idx;
   if (-e $indexfile) {
-    open(my $lock, '>>', $lockfile);
-    flock($lock, LOCK_EX);
     $idx = Load(load($indexfile)."\n"); # YAML to Load the string
-    close $lock;
   }
   return $idx;
 }
 sub saveidx {
   my $idx = shift;
-  open(my $lock, '>>', $lockfile);
-  flock($lock, LOCK_EX);
   my $h = my_save($indexfile);
   print $h YAML::Dump($idx);
   close $h;
-  close $lock;
 }
 
 sub get_hash_from_dir {
