@@ -100,7 +100,7 @@ if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
   fi
 fi
 
-if [ x1 == x$do_export ]; then
+if [ x1 == x\$do_export ]; then
   cd ../augmented_corpora/$CORPUS
   wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
     || die "Failed to save to augmented_corpora"
