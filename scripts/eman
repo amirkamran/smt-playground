@@ -380,7 +380,7 @@ if ($cmd eq "abolish") {
     }
   }
   save("eman.abolished", `date`);
-  save("eman.stat", "ABOLISHED");
+  save("eman.status", "ABOLISHED");
   exit $waserror;
 }
 
