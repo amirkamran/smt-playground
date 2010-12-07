@@ -395,42 +395,58 @@ sub parse_recipe {
   my $exact = "$cutprefix+- ";
   my $deeper = "$cutprefix|  +- ";
   my $shallower = substr($cutprefix, 0, -3);
-  if (! defined $lines->[0]
-    || ($shallower ne "" && $lines->[0] =~ /^\Q$shallower/)) {
-    print STDERR "Return at: $lines->[0]\n" if $debug;
-    return $recipe;
-  } elsif ($lines->[0] =~ /^\Q$deeper/) {
-    print STDERR "Deeper at: $lines->[0]\n" if $debug;
-    my $dep = parse_recipe($lines, $cutprefix."|  ");
-    push @{$recipe->{"deps"}}, $dep;
-    return parse_recipe($lines, $cutprefix, $recipe);
-  } elsif ($lines->[0] =~ /^\Q$exact\E([^ ]+)$/) {
-    my $name = $1;
-    print STDERR "Exact at: $lines->[0]\n" if $debug;
-    mydie "Bad recipe, got a name twice. Old: ".$recipe->{"name"}
-      .", New: ".$name
-      if defined $recipe->{"old"};
-    $recipe->{"name"} = $name;
-    $recipe->{"vars"} = [];
-    $recipe->{"deps"} = [];
-    shift @$lines;
-    my $tailexact = "$cutprefix|  | ";
-    while (defined $lines->[0] && $lines->[0] =~ /^\Q$tailexact\E(.*)/) {
-      my $line = $1;
-      my $thisline = shift @$lines;
-      next if $line =~ /^Job:/; # skip tag, jobid and other things
-      if ($line =~ /^[A-Za-z_0-9]+=/) {
-        # let's hope this is a variable
-        push @{$recipe->{"vars"}}, $line;
-      } else {
-        mydie "Bad recipe, strange line: $thisline";
+  while (defined $lines && defined $lines->[0]) {
+    if ($lines->[0] =~ /^\Q$exact\E([^ ]+)$/) {
+      if (defined $recipe->{"name"}) {
+        # this is actually one more dependency of our father, ie. our brother,
+	# not us. Return and have the father start the brother
+	last;
       }
+      my $name = $1;
+      print STDERR "$cutprefix:Exact at: $lines->[0]\n" if $debug;
+      $recipe->{"name"} = $name;
+      $recipe->{"vars"} = [];
+      $recipe->{"deps"} = [];
+      shift @$lines;
+      my $tailexact = "$cutprefix|  | ";
+      while (defined $lines->[0] && $lines->[0] =~ /^\Q$tailexact\E(.*)/) {
+        my $line = $1;
+        my $thisline = shift @$lines;
+        next if $line =~ /^Job:/; # skip tag, jobid and other things
+        if ($line =~ /^[A-Za-z_0-9]+=/) {
+          # let's hope this is a variable
+          push @{$recipe->{"vars"}}, $line;
+  	print STDERR "$cutprefix:    got var: $line\n" if $debug;
+        } else {
+          mydie "Bad recipe, strange line: $thisline";
+        }
+      }
+      next; # now read deps etc
+      # return parse_recipe($lines, $cutprefix, $recipe);
     }
-    return parse_recipe($lines, $cutprefix, $recipe);
-  } else {
+
+    if (defined $lines && defined $lines->[0]
+        && $lines->[0] =~ /^\Q$deeper/) {
+      # Delving deeper by one level
+      print STDERR "$cutprefix:Deeper at: $lines->[0]\n" if $debug;
+      my $dep = parse_recipe($lines, $cutprefix."|  ");
+      push @{$recipe->{"deps"}}, $dep;
+      print STDERR "$cutprefix:New dep for $recipe->{name}: $dep->{name}\n" if $debug;
+      print STDERR "$cutprefix:Deeper tail at: ".($lines->[0]||"EOF")."\n" if $debug;
+      next; # read further deps
+      # return parse_recipe($lines, $cutprefix, $recipe);
+    }
+    
+    if (! defined $lines->[0]
+      || $lines->[0] =~ /^(\|  )*\+- /) {
+      # Going shallower
+      print STDERR "$cutprefix:Return from $recipe->{name} at: ".($lines->[0]||"EOF")."\n" if $debug;
+      last;
+    }
+
     mydie "Bad recipe, unexpected line: $lines->[0]";
   }
-  die "Nonsense.";
+  return $recipe;
 }
 
 sub init_by_recipe {
@@ -1535,6 +1551,18 @@ eman stat `qstat | cut -c 1-8 | skip 2`
   # show status of all running/held jobs in SGE
   # the skip command is available here:
   #   http://www.cuni.cz/~obo/textutils/#skip
+
+=head1 COMMON PROBLEMS
+
+=head2 Outdated Index File
+
+If you run e.g. 'eman users ...', get a step directory, but subsequent eman
+commands fail to find it ("Failed to guess step from:..."), try running:
+
+  eman reindex
+
+The step may indeed be a zombie, a removed directory.
+
 
 =head1 WRITING SEEDS: CORE CONVENTIONS
 
