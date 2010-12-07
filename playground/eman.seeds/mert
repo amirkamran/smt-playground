@@ -122,7 +122,7 @@ echo Checking tune and eval corp sizes
 [ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
-reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
+../../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
   || die "Failed to cut factor 0 of evaluation.ref.0"
 
 
