@@ -141,8 +141,13 @@ wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \\
   || die "Failed to clone target corpus"
 cd ..
 
-wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
-  || die "Failed to clone alignment file"
+if [ ! -z "$ALISTEP" ]; then
+  wiseln $ALISTEP/alignment.gz alignment.custom.gz \
+    || die "Failed to clone alignment file"
+else
+  wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
+    || die "Failed to clone alignment file"
+fi
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
