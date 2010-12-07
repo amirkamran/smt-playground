@@ -33,6 +33,7 @@ my %expand_abbrev = qw(
   pr prepare
   prep prepare
   stat status
+  vars vars
   init init
   run run
   cont continue
@@ -195,6 +196,14 @@ if ($cmd eq "status") {
   # listing steps of the given types including status
   $lock->unlock() if defined $lock;
   $show_status = 1;
+  $waserror = !list([@ARGV]);
+  exit $waserror;
+}
+
+if ($cmd eq "vars") {
+  # listing steps of the given types including variables
+  $lock->unlock() if defined $lock;
+  $show_vars = 1;
   $waserror = !list([@ARGV]);
   exit $waserror;
 }
@@ -1394,6 +1403,7 @@ eman, experiment manager
 
   eman list STEPTYPE ...     # list all steps of the given type
   eman status SPEC/STEPTYPE  # like 'list --status', abbr. 'stat'
+  eman vars SPEC/STEPTYPE    # like 'list --vars'
   eman users SPEC ...        # list all steps that use the given step
   eman traceback SPEC ...    # show tree of the steps and predecessors
  #eman traceforward SPEC ... # show tree of the steps and successors
