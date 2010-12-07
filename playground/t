@@ -7,10 +7,14 @@ s=`eman guess "$1"`
 [ -d "$s" ] || die "Bad step specifier: $1"
 
 logf=`ls -t $s/log.o* 2>/dev/null | head -n1`
+warned=0
+while ! [ -e "$logf" ]; do
+  [ $warned == 1 ] || echo "Waiting for logfile for $s"
+  warned=1
+  sleep 1
+done
+
 if [ -e "$logf" ]; then
   echo Following $logf
   tail -f $logf
-else
-  echo "No log yet. Could wait for it but not implemented"
-  exit 1
 fi

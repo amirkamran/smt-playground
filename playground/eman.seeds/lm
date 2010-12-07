@@ -78,7 +78,7 @@ echo "=============================="
 mydir=\`pwd\`
 
 renice 10 \$\$
-function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 set -o pipefail
 
 export TMP=/mnt/h/tmp

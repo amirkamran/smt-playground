@@ -11,7 +11,7 @@ if [ -z "$TMSTEP" ] || [ -z "$LMS" ] \
   ; then
   echo "You must set: "
   echo "  \$TMSTEP to the extracted phrases"
-  echo "  \$LMS to factor:lmstep:::factor:lmstep:::factor:lmstep"
+  echo "  \$LMS to tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep"
   echo "And optionally:"
   echo "  \$RMSTEP to reordering models"
   echo "  \$BINARIES if you don't want to inherit them from TMSTEP"
