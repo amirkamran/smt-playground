@@ -90,18 +90,22 @@ if [ "$SKIP_IRSTLM" != yes ]; then
 fi
 
 
-echo "Extracting SALM"
-tar xzf ../../src/salm-src.tar.gz || die "Failed to extract salm"
-mv SALM salm-src || die "salm rename failed"
-cd salm-src/Distribution/Linux || die "chdir failed"
-make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ]
-cd ../../../bin || die "chdir back failed"
-ln -s ../salm-src/Bin/Linux/Index/IndexSA.O64 ./
-ln -s ../salm-src/Bin/Linux/Search/FrequencyOfNgrams.O64 ./
-# Check of indexer
-[ -e ../salm-src/Bin/Linux/Index/IndexSA.O64 ] || die "Final SALM check failed"
-cd \$mydir || die "Failed to chdir back"
-echo \$(pwd)/salm-src > salm.path
+if [ \$(uname -m) == "x86_64" ]; then
+  echo "Extracting SALM"
+  tar xzf ../../src/salm-src.tar.gz || die "Failed to extract salm"
+  mv SALM salm-src || die "salm rename failed"
+  cd salm-src/Distribution/Linux || die "chdir failed"
+  make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ]
+  cd ../../../bin || die "chdir back failed"
+  ln -s ../salm-src/Bin/Linux/Index/IndexSA.O64 ./
+  ln -s ../salm-src/Bin/Linux/Search/FrequencyOfNgrams.O64 ./
+  # Check of indexer
+  [ -e ../salm-src/Bin/Linux/Index/IndexSA.O64 ] || die "Final SALM check failed"
+  cd \$mydir || die "Failed to chdir back"
+  echo \$(pwd)/salm-src > salm.path
+else
+  echo "Not compiling SALM, compilation errors on i686"
+fi
 
 echo "Getting moses"
 if [ svn == svn ]; then
@@ -131,14 +135,19 @@ ln -s ../moses/scripts/training/symal/symal ../bin/
 
 cd \$mydir || die "Failed to chdir back"
 
-echo "Compiling filterpt"
-cd moses/sigtest-filter || die "Failed to chdir to filter-pt"
-make SALMDIR=\$(pwd)/../../salm-src FLAVOR=o64 \
-  || die "Failed to compile filterpt"
-cd ../../bin || die "Failed to chdir to bin"
-ln -s ../moses/sigtest-filter/filter-pt ./
-cd \$mydir || die "Failed to chdir back"
-echo \$(pwd)/moses/sigtest-filter > filterpt.path
+if [ \$(uname -m) == "x86_64" ]; then
+  echo "Compiling filterpt"
+  cd moses/sigtest-filter || die "Failed to chdir to filter-pt"
+  make SALMDIR=\$(pwd)/../../salm-src FLAVOR=o64 \
+    || die "Failed to compile filterpt"
+  cd ../../bin || die "Failed to chdir to bin"
+  ln -s ../moses/sigtest-filter/filter-pt ./
+  cd \$mydir || die "Failed to chdir back"
+  echo \$(pwd)/moses/sigtest-filter > filterpt.path
+else
+  echo "Not compiling filterpt, SALM needed but we did not compile it for i686"
+fi
+
 
 echo "Getting richextr"
 git clone git://moses-phrasetab.git.sourceforge.net/gitroot/moses-phrasetab/moses-phrasetab richextr || \
