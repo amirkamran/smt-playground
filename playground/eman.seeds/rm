@@ -112,7 +112,7 @@ wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
 cd ..
 
 if [ ! -z "$ALISTEP" ]; then
-  wiseln $ALISTEP/alignment.gz alignment.custom.gz \
+  wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
     || die "Failed to clone alignment file"
 else
   wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
