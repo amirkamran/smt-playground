@@ -47,6 +47,7 @@ GIZAWRAPPER=../../scripts/gizawrapper.pl
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
+[ -d ../augmented_corpora/$CORPUS ] || die "Can't find corpus $CORPUS"
 
 cat > eman.command << KONEC
 #!/bin/bash
