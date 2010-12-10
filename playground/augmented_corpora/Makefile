@@ -301,6 +301,18 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| $(STATMT)/scripts/strip_czech_lemma.pl \
 	| gzip -c > $@
 
+%.factors/lcnosuf2.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	| $(STATMT)/scripts/nosuf_factor.pl --cut=2 --minstem=3 \
+	| gzip -c > $@
+
+%.factors/lcnosuf3.gz:
+	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
+	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	| $(STATMT)/scripts/nosuf_factor.pl --cut=3 --minstem=3 \
+	| gzip -c > $@
+
 %.factors/lcstem4.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+lc \
