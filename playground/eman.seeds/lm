@@ -62,6 +62,15 @@ echo $CORP > var-CORP
 
 echo $BINARIES > eman.deps
 
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Run checks in the preparation phase
+[ -d ../augmented_corpora/$CORP ] || die "Can't find corpus $CORP"
+
+# Emit the main script to be used in the running phase
+
 KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`
 
 cat << KONEC > eman.command

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prepare a reordering model for moses
+# Prepare a generation model for moses
 
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
