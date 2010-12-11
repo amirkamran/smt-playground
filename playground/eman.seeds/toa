@@ -99,6 +99,43 @@ else
 fi
 
 
+# auxiliary script submitted for each chunk of input
+# run with args: lines_max index
+cat << KONEC > toa.job
+#!/bin/bash
+
+index_formatted=\`printf "%05d" \$QRUNCMD_JOBNUM\`
+
+# copy STDIN
+tempfile=/mnt/h/tmp/\`mktemp | xargs basename\`
+while read line; do
+  echo "\$line" >> \$tempfile;
+done;
+$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
+  filtered-for-eval\$index_formatted ./moses.abs.ini \$tempfile 2>&1 \\
+  || die "Failed to filter"
+
+# create a named pipe to redirect Moses output
+fifoname=\`mktemp\`
+rm \$fifoname
+mkfifo \$fifoname
+gzip -c <\$fifoname >evaluation\$index_formatted.opt.out.gz &
+
+$MOSESPARALLELIZER \\
+  ./moses \\
+  $MOSESFLAGS \\
+  -input-file \$tempfile \\
+  -config ./filtered-for-eval\$index_formatted/moses.ini \\
+  2>&1 >\$fifoname \\
+  | ../get_alignment.pl | gzip -c >alignment\$index_formatted.gz \\
+  || die "Failed to translate"
+
+rm \$fifoname
+rm \$tempfile
+KONEC
+
+chmod +x toa.job
+
 cat << KONEC > eman.command
 # This is the command to be run here
 echo "=============================="
@@ -126,39 +163,25 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval ./moses.abs.ini evaluation.in || die "Failed to filter"
+lines_max=100
+lines=\`wc -l evaluation.in\`
 
-# create a named pipe to redirect Moses output
-fifoname=`mktemp`
-rm \$fifoname
-mkfifo \$fifoname
-gzip -c <\$fifoname >evaluation.opt.out.gz &
+# times = ceiling(lines/lines_max)
+times=\$(( \$lines / \$lines_max + (1 && (\$lines % \$lines_max)) ))
 
-$MOSESPARALLELIZER \\
-  ./moses \\
-  $MOSESFLAGS \\
-  -input-file ./evaluation.in \\
-  -config ./filtered-for-eval/moses.ini \\
-2>&1 >\$fifoname \\
-| ../get_alignment.pl | gzip -c >alignments.gz \\
-|| die "Failed to translate"
+../qruncmd --jobs=\$times ./toa.job || die "Failed to filter and translate"
 
-rm \$fifoname
+ls alignment?*.gz | sort -n | xargs zcat | alignment
+ls evaluation?*.opt.out.gz | sort -n | xargs zcat | evaluation.opt.out
 
-echo "Detokenizing evaluation.opt.out"
-zcat evaluation.opt.out.gz \\
-| \$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
-| gzip -c \\
-> evaluation.opt.txt.gz \\
-  || die "Failed to detokenize"
+if [ \`wc -l < alignment\` -ne \$lines
+  || \`wc -l < evaluation.opt.out\` -ne \$lines ]; then
+  die "alignment or evaluation.opt.out have wrong number of lines"
+fi
 
-echo "You could prepare detailed output for manual inpection:"
-echo ./moses -input-file ./evaluation.in -config ./filtered-for-eval-opt/moses.ini \\
-  -verbose 3 \\
-  2>&1
-#  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
-#  | head -c 300k \\
-#  > evaluation.opt.verbose
+rm alignment?*.gz evaluation?*opt.out.gz
+gzip alignment
+gzip evaluation.opt.out
 
 echo DONE > \$mydir/eman.status
 
