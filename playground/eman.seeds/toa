@@ -165,7 +165,7 @@ mydir=\`pwd\`
 . /net/projects/SGE/user/sge_profile
 
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
@@ -177,13 +177,7 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-lines_max=100
-lines=\`wc -l < evaluation.in\`
-
-# times = ceiling(lines/lines_max)
-times=\$(( \$lines / \$lines_max + (1 && (\$lines % \$lines_max)) ))
-
-cat evaluation.in | ../qruncmd --jobs=\$times ./toa.job || die "Failed to filter and translate"
+cat evaluation.in | ../qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
 
 ls alignment?*.gz | sort -n | xargs zcat | alignment
 ls evaluation?*.opt.out.gz | sort -n | xargs zcat | evaluation.opt.out
