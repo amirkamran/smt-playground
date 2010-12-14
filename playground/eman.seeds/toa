@@ -179,11 +179,11 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 cat evaluation.in | ../qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
 
-ls alignment?*.gz | sort -n | xargs zcat | alignment
-ls evaluation?*.opt.out.gz | sort -n | xargs zcat | evaluation.opt.out
+ls alignment?*.gz | sort -n | xargs zcat > alignment
+ls evaluation?*.opt.out.gz | sort -n | xargs zcat > evaluation.opt.out
 
-if [ \`wc -l < alignment\` -ne \$lines
-  || \`wc -l < evaluation.opt.out\` -ne \$lines ]; then
+if [ \`wc -l < alignment\` -ne \$lines ] \\
+  || [ \`wc -l < evaluation.opt.out\` -ne \$lines ]; then
   die "alignment or evaluation.opt.out have wrong number of lines"
 fi
 
