@@ -48,6 +48,13 @@ MODELEXP=`cat ../$MERTEXP/info.modelexp`
 SAVEMODELEXP=$MODELEXP
 eval `cat ../$MODELEXP/eman.vars` || exit 1
 MODELEXP=$SAVEMODELEXP
+
+# hack to make toa look like align
+[ -z "ALISYM" ] || ALISYM=gdfa
+[ -z "OUTALILABEL" ] \
+  || OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+
+# XXX musim prohodit src a tgt aug?
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
 MERTEXP=$MERTEXP
@@ -56,6 +63,9 @@ MOSESFLAGS="$MOSESFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
 JOBS=$JOBS
 ITER=$ITER
+CORPUS=$TESTCORP-toa
+SRCALIAUG=$REFAUG
+TGTALIAUG=$SRCAUG
 KONEC
 echo $MODELEXP > ./info.modelexp
 echo $MERTEXP > info.mertexp
@@ -98,6 +108,10 @@ else
   MOSESPARALLELIZER="$MOSESPARALLEL $GRIDARGS -decoder "
 fi
 
+SRC_LANG=`echo $SRCAUG | cut -d+ -f1`
+SRC_FACT=`echo $SRCAUG | cut -d+ -f2- | tr '+' '|'`
+TGT_LANG=`echo $REFAUG | cut -d+ -f1`
+TGT_FACT=`echo $REFAUG | cut -d+ -f2- | tr '+' '|'`
 
 # auxiliary script submitted for each chunk of input
 # run with args: lines_max index
@@ -164,12 +178,12 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
 lines_max=100
-lines=\`wc -l evaluation.in\`
+lines=\`wc -l < evaluation.in\`
 
 # times = ceiling(lines/lines_max)
 times=\$(( \$lines / \$lines_max + (1 && (\$lines % \$lines_max)) ))
 
-../qruncmd --jobs=\$times ./toa.job || die "Failed to filter and translate"
+cat evaluation.in | ../qruncmd --jobs=\$times ./toa.job || die "Failed to filter and translate"
 
 ls alignment?*.gz | sort -n | xargs zcat | alignment
 ls evaluation?*.opt.out.gz | sort -n | xargs zcat | evaluation.opt.out
@@ -182,6 +196,15 @@ fi
 rm alignment?*.gz evaluation?*opt.out.gz
 gzip alignment
 gzip evaluation.opt.out
+
+mkdir ../augmented_corpora/$TESTCORP-toa
+wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa
+gzip -c < evaluation.in > ../augmented_corpora/$TESTCORP-toa/$SRC_LANG.gz
+wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
+wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
+echo $SRC_FACT >../augmented_corpora/$TESTCORP-toa/$SRC_LANG.info
+echo $TGT_FACT >../augmented_corpora/$TESTCORP-toa/$TGT_LANG.info
+echo ali > ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.info
 
 echo DONE > \$mydir/eman.status
 
