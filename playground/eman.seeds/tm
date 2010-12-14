@@ -5,7 +5,7 @@ set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 if [ -z "$DECODINGSTEPS" ] \
-  || [ -z "$SRCCORP" ] \
+  || ( [ -z "$SRCCORP" ] && [ -z "$ALISTEP" ] ) \
   || [ -z "$SRCAUG" ] \
   || [ -z "$TGTAUG" ] \
   || ( [ -z "$ALIAUG" ] && [ -z "$ALISTEP" ] ) \
@@ -13,7 +13,7 @@ if [ -z "$DECODINGSTEPS" ] \
   ; then
   echo "You must set: "
   echo "  \$BINARIES to the step containing compiled tools; inherited from ALISTEP"
-  echo "  \$SRCCORP to source corpus name"
+  echo "  \$SRCCORP to source corpus name, CORPUS from ALISTEP is used if omitted"
   echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
   echo "  \$SRCAUG to the string describing lang+factors of src corpus"
   echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
@@ -47,17 +47,17 @@ fi
 SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
 WORKSPACE="`pwd`/../$BINARIES/"
 
-# TGT and ALI corp default to srccorp
-[ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
-[ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
-
 # get ali corpus and aug from alistep
 if [ ! -z "$ALISTEP" ]; then
   ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
   ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
+  [ ! -z "$SRCCORP" ] || SRCCORP=$ALICORP # only set SRCCORP if it wasn't specified
   echo $ALISTEP >> eman.deps
 fi
 
+# TGT and ALI corp default to srccorp
+[ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
+[ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
 
 [ ! -z "$CUTOFF" ] || CUTOFF=0
 
