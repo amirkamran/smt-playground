@@ -7,22 +7,27 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if [ -z "$TMSTEP" ] || [ -z "$LMS" ] \
+if [ -z "$TMS" ] || [ -z "$LMS" ] \
   ; then
   echo "You must set: "
-  echo "  \$TMSTEP to the extracted phrases"
+  echo "  \$TMS to the extracted phrases, separate TMs with a colon"
   echo "  \$LMS to tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep"
   echo "And optionally:"
   echo "  \$RMSTEP to reordering models"
-  echo "  \$BINARIES if you don't want to inherit them from TMSTEP"
+  echo "  \$BINARIES if you don't want to inherit them from TMS"
   exit 1
 fi
 
-# Load variables from TMSTEP
-[ -e ../$TMSTEP/eman.vars ] || die "Bad translation model: $TMSTEP"
+# Load variables from TMS
+for tm in `echo $TMS | tr ':' ' '`; do
+  [ -e ../$tm/eman.vars ] || die "Bad translation model: $tm"
+done
+
 SAVEBINARIES=$BINARIES
 # inherit all variables
-source ../$TMSTEP/eman.vars
+for tm in `echo $TMS | tr ':' ' '`; do
+  source ../$tm/eman.vars
+done
 
 if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
   # inheriting, ignoring our SAVEBINARIES
@@ -54,7 +59,7 @@ fi
 
 cat > eman.vars << KONEC
 BINARIES=$BINARIES
-TMSTEP=$TMSTEP
+TMS=$TMS
 RMSTEP=$RMSTEP
 LMS=$LMS
 SRCCORP=$SRCCORP
@@ -72,7 +77,9 @@ KONEC
 echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
 
-echo $TMSTEP >> eman.deps
+for tm in `echo $TMS | tr ':' ' '`; do
+  echo $tm >> eman.deps
+done
 
 [ -z "$RMSTEP" ] || echo $RMSTEP >> eman.deps
 
@@ -90,7 +97,9 @@ for lm in `echo $LMS | sed 's/:::/ /g'`; do
 done
 i=$(($i-1))
 
-eval "cat ../$TMSTEP/eman.vars | grep 'THRESHOLD\|CUTOFF'"
+# XXX beru promenne z prvniho TM
+tm_first=`echo "$TMS" | cut -d: -f1`
+eval "cat ../$tm_first/eman.vars | grep 'THRESHOLD\|CUTOFF'"
 if [ ! -z "$THRESHOLD" ]; then
   SIGFILTERTAG=SIG$THRESHOLD"N"$CUTOFF
 fi
@@ -105,8 +114,6 @@ fi
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-
-mkdir -p model
 
 DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
@@ -131,12 +138,15 @@ renice 10 \$\$
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-## Cloning translation model
-cd model || die "Chdir failed"
-for f in ../../$TMSTEP/model/*gz ; do
-  wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
+## Clone the TMs
+i=0
+for tm in \`echo $TMS | tr ':' ' '\`; do
+  i=\$((\$i + 1))
+  for f in ../\$tm/model/*gz ; do
+    mkdir -p tm.\$i/model
+    wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
+  done
 done
-cd \$mydir || die "Chdir back failed"
 
 
 ## Cloning reordering model
@@ -183,7 +193,11 @@ i=\$((\$i-1))
 
 echo lmopts: \$lmopts
 
-\$SCRIPTS_ROOTDIR/training/train-model.perl \\
+i=0
+for tm in \`echo $TMS | tr ':' ' '\`; do
+  i=\$((\$i + 1))
+  cd tm.\$i/
+  \$SCRIPTS_ROOTDIR/training/train-model.perl \\
     --force-factored-filenames \\
     --first-step 9 --last-step 9 \\
     --root-dir . \\
@@ -195,8 +209,11 @@ echo lmopts: \$lmopts
     --reordering-factors $REORDFACTORS \\
     \$lmopts \\
     $DECRYPTEDSTEPS \\
-|| die "Failed to create moses.ini"
+  || die "Failed to create moses.ini"
+  cd \$mydir
+done
 
+# XXX chybi merge moses.ini
 
 echo DONE > \$mydir/eman.status
 
