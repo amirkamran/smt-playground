@@ -98,16 +98,6 @@ fi
 # for running this command, qsub is allowed, although we're going to submit jobs ourselves
 # echo "no" > qsub-allowed
 
-MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
-
-if [ $JOBS == 0 ]; then
-  GRIDARGS=""
-  MOSESPARALLELIZER=""
-else
-  GRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' -feed-decoder-via-stdin "
-  MOSESPARALLELIZER="$MOSESPARALLEL $GRIDARGS -decoder "
-fi
-
 SRC_LANG=`echo $SRCAUG | cut -d+ -f1`
 SRC_FACT=`echo $SRCAUG | cut -d+ -f2- | tr '+' '|'`
 TGT_LANG=`echo $REFAUG | cut -d+ -f1`
@@ -118,10 +108,17 @@ TGT_FACT=`echo $REFAUG | cut -d+ -f2- | tr '+' '|'`
 cat << KONEC > toa.job
 #!/bin/bash
 
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+mydir=`pwd`
+
+set -o pipefail
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
+
 index_formatted=\`printf "%05d" \$QRUNCMD_JOBNUM\`
 
 # copy STDIN
-tempfile=/mnt/h/tmp/\`mktemp | xargs basename\`
+tempfile=\$mydir/input\$index_formatted
 while read line; do
   echo "\$line" >> \$tempfile;
 done;
@@ -130,13 +127,11 @@ $SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
   || die "Failed to filter"
 
 # create a named pipe to redirect Moses output
-fifoname=\`mktemp\`
-rm \$fifoname
-mkfifo \$fifoname
+fifoname=/mnt/h/tmp/\`mktemp | xargs basename\`
+mkfifo \$fifoname || die "Failed to create named pipe"
 gzip -c <\$fifoname >evaluation\$index_formatted.opt.out.gz &
 
-$MOSESPARALLELIZER \\
-  ./moses \\
+./moses \\
   $MOSESFLAGS \\
   -input-file \$tempfile \\
   -config ./filtered-for-eval\$index_formatted/moses.ini \\
@@ -177,7 +172,7 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-cat evaluation.in | ../qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
+cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
 
 ls alignment?*.gz | sort -n | xargs zcat > alignment
 ls evaluation?*.opt.out.gz | sort -n | xargs zcat > evaluation.opt.out
@@ -187,7 +182,7 @@ if [ \`wc -l < alignment\` -ne \$lines ] \\
   die "alignment or evaluation.opt.out have wrong number of lines"
 fi
 
-rm alignment?*.gz evaluation?*opt.out.gz
+# rm alignment?*.gz evaluation?*opt.out.gz
 gzip alignment
 gzip evaluation.opt.out
 
