@@ -253,14 +253,10 @@ echo "Just a wait job for @launched_jobids"
 KONEC
 ;
   close $tmphold;
-#  my($out, $err, $exitcode)
-#    = saferun3((qw(qsub -j y -o /dev/null -e /dev/null -cwd -S /bin/bash),
-#        "-p", $opts{priority}, @opts,
-#        $tmphold, qw(>/dev/null 2>/dev/null)));
   my($out, $err, $exitcode)
-    = saferun3((qw(qsub -j y -cwd -S /bin/bash),
+    = saferun3((qw(qsub -j y -o /dev/null -e /dev/null -cwd -S /bin/bash),
         "-p", $opts{priority}, @opts,
-        $tmphold));
+        $tmphold, qw(>/dev/null 2>/dev/null)));
   die "Failed to submit the waiting job!" if $exitcode;
 } else {
   print STDERR "Jobs are now running. Check progress yourself.\n";
