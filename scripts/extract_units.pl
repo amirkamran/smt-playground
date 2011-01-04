@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # USAGE: ./extract_units.pl --language=cs|en \
-#                           --unit=anode|tnode \ 
+#                           --unit=anode|tnode|tpair \ 
 #                           --factors=<comma separated anode or tnode factors>
 # 
 # Factors can be specified by their names or positions (counted from 0).
@@ -10,7 +10,7 @@
 # anodes/tnodes of selected language. The nodes only contain requested
 # factors.
 # 
-# TODO: Also support output of pairs, forks and bunches
+# TODO: Also support output of forks and bunches
 #
 # Miroslav Tynovsky
 #
@@ -33,6 +33,7 @@ sub get_data {
 
     return ($unit eq 'anode') ? $line_parts[$order_of_part{a} + $offset]
          : ($unit eq 'tnode') ? $line_parts[$order_of_part{t} + $offset]
+         : ($unit eq 'tpair') ? $line_parts[$order_of_part{t} + $offset]
          : die "unknown unit or not implemented\n";
 
 }
@@ -52,8 +53,10 @@ sub get_factors {
     $i = 0; $order_of_factor{a}{$_} = $i++ for @a_factors;
     $i = 0; $order_of_factor{t}{$_} = $i++ for @t_factors;
 
-    #convert index or name of factor to index of factor
     my $tree = substr $unit, 0, 1;
+    if ($unit eq 'tpair') { push @factors, 'gov' }
+
+    #convert index or name of factor to index of factor
     return map { /\d+/ ? $_ : $order_of_factor{$tree}->{$_} } @factors;
 }
 
@@ -66,12 +69,26 @@ sub node {
     return join ' ', @tokens;
 }
 
+sub pair {
+    my ($data, @factors) = @_;
+    my @tokens  = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
+    pop @factors; #get rid of gov
+    my @pairs;
+    for my $t (@tokens) {
+        #print STDERR join('|', @$t), "\n";
+        next if $t->[-1] == 0; #root
+        my $gov = $tokens[ $t->[-1] - 1 ];
+        push @pairs, join '|', @$t[@factors], @$gov[@factors];
+    }
+    return join ' ', @pairs;
+}
+
 #============================================================================
 
 my %sub_for = (
     anode     => \&node,
     tnode     => \&node,
-    tpair     => sub {die "not implemented\n"},
+    tpair     => \&pair,
     tbunch    => sub {die "not implemented\n"},
     tbunchset => sub {die "not implemented\n"},
     tfork     => sub {die "not implemented\n"},
