@@ -131,7 +131,7 @@ fifoname=/mnt/h/tmp/\`mktemp | xargs basename\`
 mkfifo \$fifoname || die "Failed to create named pipe"
 gzip -c <\$fifoname >evaluation\$index_formatted.opt.out.gz &
 
-./moses \\
+./moses -v 2 \\
   $MOSESFLAGS \\
   -input-file \$tempfile \\
   -config ./filtered-for-eval\$index_formatted/moses.ini \\

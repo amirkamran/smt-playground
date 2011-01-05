@@ -213,7 +213,8 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
   cd \$mydir
 done
 
-# XXX chybi merge moses.ini
+mkdir model
+../../scripts/merge_moses_models.pl tm.*/model/moses.ini > ./model/moses.ini
 
 echo DONE > \$mydir/eman.status
 
