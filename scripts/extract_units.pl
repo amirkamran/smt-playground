@@ -76,9 +76,14 @@ sub pair {
     my @pairs;
     for my $t (@tokens) {
         #print STDERR join('|', @$t), "\n";
-        next if $t->[-1] == 0; #root
-        my $gov = $tokens[ $t->[-1] - 1 ];
-        push @pairs, join '|', @$t[@factors], @$gov[@factors];
+        my @gov;
+        if ($t->[-1] == 0) {
+            @gov = map {'-root-'} @factors;
+        }
+        else {
+            @gov = @{ $tokens[ $t->[-1] - 1 ] };
+        }
+        push @pairs, join '|', @$t[@factors], @gov[@factors];
     }
     return join ' ', @pairs;
 }
