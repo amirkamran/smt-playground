@@ -21,7 +21,7 @@ while (<>) {
     my $offset_src = 0;
     my $next_offset_tgt = 0;
     foreach (@phrases) {
-        $_ =~ m/\[[0-9]+\.\.([0-9]+)\]:(.+):([^:]*):[^:]+/;
+        $_ =~ m/\[([0-9]+)\.\.[0-9]+\]:(.+):([^:]*):[^:]+/;
         my @words = split(" ", $2);
         $offset_src = $1;
         $offset_tgt = $next_offset_tgt;
