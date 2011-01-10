@@ -7,10 +7,12 @@
 # Factors can be specified by their names or positions (counted from 0).
 #
 # DESCRIPTION: The script takes CzEng export format as input and outputs
-# anodes/tnodes of selected language. The nodes only contain requested
-# factors.
+# anodes/tnodes/apairs/tpairs/abunches/tbunches of selected language. Used
+# nodes only contain requested factors.
+# * pair: node that contains parent node in the last factor positions
+# * bunch: node that contains child nodes in the last factor positions
 # 
-# TODO: Also support output of forks and bunches
+# TODO: Also support output of forks
 #
 # Miroslav Tynovsky
 #
@@ -32,10 +34,12 @@ sub get_data {
     die "unknown language\n" if not defined $offset;
     my @line_parts = split /\t/, $line;
 
-    return ($unit eq 'anode') ? $line_parts[$order_of_part{a} + $offset]
-         : ($unit eq 'tnode') ? $line_parts[$order_of_part{t} + $offset]
-         : ($unit eq 'apair') ? $line_parts[$order_of_part{a} + $offset]
-         : ($unit eq 'tpair') ? $line_parts[$order_of_part{t} + $offset]
+    return ($unit eq 'anode')  ? $line_parts[$order_of_part{a} + $offset]
+         : ($unit eq 'tnode')  ? $line_parts[$order_of_part{t} + $offset]
+         : ($unit eq 'apair')  ? $line_parts[$order_of_part{a} + $offset]
+         : ($unit eq 'tpair')  ? $line_parts[$order_of_part{t} + $offset]
+         : ($unit eq 'abunch') ? $line_parts[$order_of_part{a} + $offset]
+         : ($unit eq 'tbunch') ? $line_parts[$order_of_part{t} + $offset]
          : die "unknown unit or not implemented\n";
 
 }
@@ -58,9 +62,19 @@ sub get_factors {
     my $tree = substr $unit, 0, 1;
     if ($unit eq 'apair') { push @factors, 'gov' }
     if ($unit eq 'tpair') { push @factors, 'gov' }
+    if ($unit eq 'abunch') { push @factors, 'gov' }
+    if ($unit eq 'tbunch') { push @factors, 'gov' }
 
     #convert index or name of factor to index of factor
-    return map { /\d+/ ? $_ : $order_of_factor{$tree}->{$_} } @factors;
+    my @factor_indexes;
+    
+    for my $f (@factors) { 
+        my $index = $f =~ /\d+/ ? $f : $order_of_factor{$tree}->{$f};
+        die "Unknown factor name: $f" if !defined($index);
+        push @factor_indexes, $index;
+    }
+
+    return @factor_indexes;
 }
 
 sub node {
@@ -75,19 +89,44 @@ sub node {
 sub pair {
     my ($data, @factors) = @_;
     my @tokens  = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
+    unshift @tokens, [ map {'-root-'} @factors]; #add technical root
+
+    # create pairs
     my @pairs;
     for my $t (@tokens) {
-        my @gov;
-        if ($t->[-1] == 0) {
-            @gov = map {'-root-'} @factors;
-        }
-        else {
-            @gov = @{ $tokens[ $t->[-1] - 1 ] };
-        }
-        # push nodes without last factor (artificially added gov)
-        push @pairs, join '|', @$t[0 .. $#factors-1], @gov[0 .. $#factors - 1];
+        next if $t->[0] eq '-root-';
+        my @gov = @{ $tokens[ $t->[-1] ] };
+        push @pairs, join '|', @$t[0 .. $#factors-1], @gov[0 .. $#factors-1];
     }
+
     return join ' ', @pairs;
+}
+
+sub bunch {
+    my ($data, @factors) = @_;
+    my @tokens = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
+    unshift @tokens, [ map {'-root-'} @factors ]; #add technical root
+    push @$_, [] for @tokens; #add arrays of children to be filled
+
+    # attach children
+    for my $t (@tokens) {
+        next if $t->[0] eq '-root-';
+        my $gov = $tokens[ $t->[-2] ];
+        push @{$gov->[-1]}, $t;
+    }
+    
+    # create bunches
+    my @bunches;
+    for my $t (@tokens) {
+        last if !$t;
+        my @bunch = @$t[0 .. $#factors-1];
+        for my $child ( @{$t->[-1]} ) {
+            push @bunch, @$child[0 .. $#factors-1];
+        }
+        push @bunches, join '|', @bunch;
+    }
+
+    return join ' ', @bunches;
 }
 
 #============================================================================
@@ -97,7 +136,8 @@ my %sub_for = (
     tnode     => \&node,
     apair     => \&pair,
     tpair     => \&pair,
-    tbunch    => sub {die "not implemented\n"},
+    abunch    => \&bunch,
+    tbunch    => \&bunch,
     tbunchset => sub {die "not implemented\n"},
     tfork     => sub {die "not implemented\n"},
     tforkset  => sub {die "not implemented\n"},
