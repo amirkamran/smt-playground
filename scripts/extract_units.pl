@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # USAGE: ./extract_units.pl --language=cs|en \
-#                           --unit=anode|tnode|tpair \ 
+#                           --unit=anode|tnode|apair|tpair \ 
 #                           --factors=<comma separated anode or tnode factors>
 # 
 # Factors can be specified by their names or positions (counted from 0).
@@ -19,6 +19,7 @@ use strict;
 use warnings;
 use utf8;
 use Getopt::Long qw( GetOptions );
+use Data::Dumper;
 
 sub get_data {
     my ($unit, $lang, $line) = @_;
@@ -33,6 +34,7 @@ sub get_data {
 
     return ($unit eq 'anode') ? $line_parts[$order_of_part{a} + $offset]
          : ($unit eq 'tnode') ? $line_parts[$order_of_part{t} + $offset]
+         : ($unit eq 'apair') ? $line_parts[$order_of_part{a} + $offset]
          : ($unit eq 'tpair') ? $line_parts[$order_of_part{t} + $offset]
          : die "unknown unit or not implemented\n";
 
@@ -54,6 +56,7 @@ sub get_factors {
     $i = 0; $order_of_factor{t}{$_} = $i++ for @t_factors;
 
     my $tree = substr $unit, 0, 1;
+    if ($unit eq 'apair') { push @factors, 'gov' }
     if ($unit eq 'tpair') { push @factors, 'gov' }
 
     #convert index or name of factor to index of factor
@@ -72,10 +75,8 @@ sub node {
 sub pair {
     my ($data, @factors) = @_;
     my @tokens  = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
-    pop @factors; #get rid of gov
     my @pairs;
     for my $t (@tokens) {
-        #print STDERR join('|', @$t), "\n";
         my @gov;
         if ($t->[-1] == 0) {
             @gov = map {'-root-'} @factors;
@@ -83,7 +84,8 @@ sub pair {
         else {
             @gov = @{ $tokens[ $t->[-1] - 1 ] };
         }
-        push @pairs, join '|', @$t[@factors], @gov[@factors];
+        # push nodes without last factor (artificially added gov)
+        push @pairs, join '|', @$t[0 .. $#factors-1], @gov[0 .. $#factors - 1];
     }
     return join ' ', @pairs;
 }
@@ -93,6 +95,7 @@ sub pair {
 my %sub_for = (
     anode     => \&node,
     tnode     => \&node,
+    apair     => \&pair,
     tpair     => \&pair,
     tbunch    => sub {die "not implemented\n"},
     tbunchset => sub {die "not implemented\n"},
