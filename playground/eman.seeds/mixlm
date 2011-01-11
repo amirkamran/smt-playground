@@ -128,7 +128,7 @@ echo "Got HELDOUTSOURCE: \$HELDOUTSOURCE"
 zcat heldout.text.gz > heldout.text
 
 echo Mixing LMS...
-\$WORKSPACE/moses/scripts/ems/support/interpolate-lm.perl \\
+\$SCRIPTS_ROOTDIR/ems/support/interpolate-lm.perl \\
   --tuning heldout.text \\
   --name corpus.lm \\
   --lm $FILELIST \\
