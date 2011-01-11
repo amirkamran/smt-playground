@@ -108,9 +108,9 @@ else
    || die "Failed to create \$CORPSOURCE.text-for-fngram.gz"
 fi
 
-wiseln \$CORPSOURCE corpus.text.gz \
+../../scripts/wiseln \$CORPSOURCE corpus.text.gz \
   || die "Failed to make local backup of corpus \$CORPSOURCE"
-wiseln "\$CORPSOURCE".text-for-fngram.gz corpus.text-for-fngram.gz \
+../../scripts/wiseln "\$CORPSOURCE".text-for-fngram.gz corpus.text-for-fngram.gz \
   || die "Failed to make local backup of \$CORPSOURCE.text-for-fngram.gz"
 
 # Convert it to the format of fngram-count

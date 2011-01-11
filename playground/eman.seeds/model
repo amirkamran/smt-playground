@@ -144,7 +144,7 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
   i=\$((\$i + 1))
   for f in ../\$tm/model/*gz ; do
     mkdir -p tm.\$i/model
-    wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
+    ../../scripts/wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
   done
 done
 
@@ -153,7 +153,7 @@ done
 if [ ! -z "$RMSTEP" ]; then
   cd model || die "Chdir failed"
   for f in ../../$RMSTEP/model/reordering-table*gz ; do
-    wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
+    ../../scripts/wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
   done
   cd \$mydir || die "Chdir back failed"
 fi
@@ -177,10 +177,10 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
   fi
 
   if [ \$lmsuffix == flm ]; then
-    wiseln ../\$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+    ../../scripts/wiseln ../\$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
       || die "Failed to link flm: ../\$lmstep/config.prepared.flm"
   else
-    wiseln ../\$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+    ../../scripts/wiseln ../\$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
       || die "Failed to link lm: ../\$lmstep/corpus.\$lmsuffix"
   fi
 

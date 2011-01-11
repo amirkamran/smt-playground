@@ -105,17 +105,17 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 mkdir corpus
 
 cd corpus
-wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
+../../scripts/wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
   || die "Failed to clone source corpus"
-wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
+../../scripts/wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
   || die "Failed to clone target corpus"
 cd ..
 
 if [ ! -z "$ALISTEP" ]; then
-  wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
+  ../../scripts/wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
     || die "Failed to clone alignment file"
 else
-  wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
+  ../../scripts/wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
     || die "Failed to clone alignment file"
 fi
 

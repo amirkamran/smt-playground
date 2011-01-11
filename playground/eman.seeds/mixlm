@@ -103,7 +103,7 @@ echo "=============================="
 mydir=\`pwd\`
 
 renice 10 \$\$
-function die() { echo "\$@" | tee \$mydir/FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 set -o pipefail
 
 export PATH=\$PATH:$BINDIR
@@ -122,7 +122,7 @@ echo "Got HELDOUTSOURCE: \$HELDOUTSOURCE"
 
 [ -s "\$HELDOUTSOURCE" ] || die "Failed to prepare heldout corpus";
 
-wiseln \$HELDOUTSOURCE heldout.text.gz \
+../../scripts/wiseln \$HELDOUTSOURCE heldout.text.gz \
   || die "Failed to make local backup of corpus \$HELDOUTSOURCE"
 
 zcat heldout.text.gz > heldout.text

@@ -1,0 +1,71 @@
+#!/bin/bash
+# Creates a copy (if size is small) or a symlink.
+# Additionaly, a description file is created to know exactly what was copied
+# And if hardlinks are supported, a hardlink is created too, to avoid deletion.
+
+src="$1"
+dst="$2"
+
+if [ -z "$src" ] || [ -z "$dst" ]; then
+  echo "usage: wiseln sourcefile targetname" >&2
+  echo " Makes a hard link, copy or a soft link for big files" >&2
+  exit 1
+fi
+
+if [ -e "$dst" ]; then
+  echo "Target file exists: $dst" >&2
+  exit 1
+fi
+
+if [ ! -e "$src" ]; then
+  echo "Source file does not exist: $src (WD: "`pwd`")" >&2
+  exit 1
+fi
+if [ ! -f "$src" ]; then
+  echo "Source file is not a regular file: $src" >&2
+  exit 1
+fi
+
+size=`du -b -D "$src" | cut -f1`
+resolvedsrc=`lnresolve --quiet --fully $src`
+
+echo "Info about the original source file:" > "$dst".info
+ls -l "$src" >> "$dst".info
+ls -l "$resolvedsrc" >> "$dst".info
+if [ "$size" -lt "10000000" ]; then
+  md5sum "$src" >> "$dst".info
+fi
+
+# Hard linking only if works, as a backup copy
+if ! ln "$resolvedsrc" "$dst".hardlink 2>/dev/null; then
+  echo "Failed to make backup .hardlink" >&2
+fi
+
+if [ "$size" -lt "200000" ]; then
+  if cp "$src" "$dst"; then
+    echo "Made a copy: $dst" >&2
+    exit 0
+  else
+    echo "Failed to make a copy to $dst" >&2
+    exit 1
+  fi
+fi
+
+if [ -h "$src" ]; then
+  echo "Resolving symlink $src." >&2
+  src=`lnresolve "$src"`
+fi
+
+## Converting to full pathname
+pwd=`pwd`
+src=`echo "$src" | sed "s:^\([^/]\):$pwd/\1:"`
+
+if ln -s "$src" "$dst"; then
+  echo "Made a symlink: $dst" >&2
+  exit 0
+else
+  echo "Failed to make a symlink to $dst" >&2
+  exit 1
+  fi
+fi
+

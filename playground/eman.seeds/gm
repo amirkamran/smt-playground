@@ -66,7 +66,7 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 mkdir corpus
 
 cd corpus
-wiseln \`../../augmented_corpora/augment.pl $GENCORP/$GENLANG+$SRCAUG+$TGTAUG\` corpus.gen.gz \
+../../scripts/wiseln \`../../augmented_corpora/augment.pl $GENCORP/$GENLANG+$SRCAUG+$TGTAUG\` corpus.gen.gz \
   || die "Failed to clone corpus"
 cd ..
 

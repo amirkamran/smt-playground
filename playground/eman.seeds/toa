@@ -77,7 +77,7 @@ echo $BINARIES >> eman.deps
 [ -z "$INIT_ONLY" ] || exit 0
 
 # clone some importnant executables
-wiseln $MOSESCMD ./moses || exit 1
+../../scripts/wiseln $MOSESCMD ./moses || exit 1
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
@@ -187,10 +187,10 @@ gzip alignment
 gzip evaluation.opt.out
 
 mkdir ../augmented_corpora/$TESTCORP-toa
-wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa
+../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa
 gzip -c < evaluation.in > ../augmented_corpora/$TESTCORP-toa/$SRC_LANG.gz
-wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
-wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
+../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
+../../scripts/wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
 echo $SRC_FACT >../augmented_corpora/$TESTCORP-toa/$SRC_LANG.info
 echo $TGT_FACT >../augmented_corpora/$TESTCORP-toa/$TGT_LANG.info
 echo ali > ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.info

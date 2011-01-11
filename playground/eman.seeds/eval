@@ -66,8 +66,8 @@ echo $BINARIES >> eman.deps
 [ -z "$INIT_ONLY" ] || exit 0
 
 # clone some importnant executables
-wiseln $MOSESCMD ./moses || exit 1
-wiseln $TESTBLEU ./testbleu || exit 1
+../../scripts/wiseln $MOSESCMD ./moses || exit 1
+../../scripts/wiseln $TESTBLEU ./testbleu || exit 1
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1

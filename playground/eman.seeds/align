@@ -66,7 +66,7 @@ echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
   ../augmented_corpora/augment.pl \$1 || die "Failed to prepare \$1"
-  wiseln \$(../augmented_corpora/augment.pl \$1) corpus.\$2.gz \
+  ../../scripts/wiseln \$(../augmented_corpora/augment.pl \$1) corpus.\$2.gz \
     || die "Failed to clone \$2 corpus \$1"
 }
 mkcorpus $CORPUS/$SRCALIAUG src
@@ -105,7 +105,7 @@ fi
 
 if [ x1 == x\$do_export ]; then
   cd ../augmented_corpora/$CORPUS
-  wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
+  ../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
     || die "Failed to save to augmented_corpora"
   echo ali > $OUTALILABEL.info
 fi

@@ -72,8 +72,8 @@ PHASE1TESTCORP=`cat ../$PHASE1MERT/eman.vars | grep TESTCORP | cut -d= -f2`
 
 
 # clone some importnant executables
-wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 
 ../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"

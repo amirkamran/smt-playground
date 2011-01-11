@@ -106,9 +106,9 @@ KONEC
 [ -z "$INIT_ONLY" ] || exit 0
 
 # clone some importnant executables
-wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
-wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+../../scripts/wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
+../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 
 ../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"

@@ -19,7 +19,6 @@ if [ -z "$CORP" ] \
   exit 1
 fi
 
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
 BINDIR="`pwd`../$BINARIES/bin/"
 
 if [ ! -f ../$BINARIES/srilm.path ]; then
@@ -93,7 +92,6 @@ set -o pipefail
 export TMP=/mnt/h/tmp
 
 export PATH=\$PATH:$BINDIR
-export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
 
@@ -107,7 +105,7 @@ echo "Got CORPSOURCE: \$CORPSOURCE"
 
 [ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
 
-wiseln \$CORPSOURCE corpus.text.gz \
+../../scripts/wiseln \$CORPSOURCE corpus.text.gz \
   || die "Failed to make local backup of corpus \$CORPSOURCE"
 
 echo Generating model from corpus...
