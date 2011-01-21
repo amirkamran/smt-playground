@@ -21,11 +21,6 @@ fi
 
 BINDIR="`pwd`../$BINARIES/bin/"
 
-if [ ! -f ../$BINARIES/srilm.path ]; then
-  echo "SRILM not found in $BINARIES"
-  exit 1
-fi
-
 SRILMDIR1="`cat ../$BINARIES/srilm.path`/bin/"
 SRILMDIR2="`cat ../$BINARIES/srilm.path`/bin/i686/"
 
@@ -64,6 +59,13 @@ echo $BINARIES > eman.deps
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
+
+
+if [ ! -f ../$BINARIES/srilm.path ]; then
+  echo "SRILM not found in $BINARIES"
+  exit 1
+fi
+
 
 # Run checks in the preparation phase
 [ -d ../augmented_corpora/$CORP ] || die "Can't find corpus $CORP"
