@@ -41,15 +41,18 @@ my %expand_abbrev = qw(
   reindex reindex
   redo redo
   wait wait
+  setvar setvar
 );
 
 my $wait_sleep = 3;
 my $startupwd = cwd();
 my $debug = 0;
+my $reindex = 0;
 my $verbose = 0;
 my $manpage = 0;
 my $help = 0;
 my $list_options = 0;
+my $assume_abolished_ok = 0;
 my $show_tree_in_traceback = 1;
 my $show_tag = 0;
 my $show_vars = 0;
@@ -76,6 +79,7 @@ my %options = (
   "list-options" => \$list_options,
   "man" => \$manpage,
   "sge!" => \$sge, # not quite supported
+  "assume-abolished-ok" => \$assume_abolished_ok, # for eman start
   "tree-in-traceback!" => \$show_tree_in_traceback,
   "tag!" => \$show_tag,
   "vars!" => \$show_vars,
@@ -87,6 +91,7 @@ my %options = (
   "reuse=s@" => \$reuse,
   "all-redo!" => \$redo_all,
   "start!" => \$do_start,
+  "reindex" => \$reindex,
 );
 GetOptions(%options) or exit 1;
 
@@ -147,14 +152,16 @@ if ($readonly || (-e $indexfile && ! -w $indexfile) || ! -w '.') {
 my $idx;
 
 my $oldwd = chdir_to_maindir();
-if ($cmd eq "reindex") {
+if ($cmd eq "reindex" || $reindex) {
   # do not load any saved values
 } else {
   $idx = loadidx();
 }
 my @dirs = glob("$dirprefix*.*.[0-9]*");
 foreach my $s (@dirs) {
-  next if defined $idx->{$s} && defined $idx->{$s."jid"};
+  next if defined $idx->{$s}; # && defined $idx->{$s."jid"};
+                              # now avoiding costly regeneration of metadata
+			      # use --reindex if you miss jobids
   next if ! step_valid($s);
   add_step_to_index($s);
   # mark that this step uses its deps
@@ -627,11 +634,12 @@ sub init {
 sub prepare {
   my $s = shift;
   my $status = load_status($s);
-  if ($status eq "PREPARED") {
+  if ($status =~ /^(PREPARED|DONE)$/
+    || $assume_abolished_ok && $status eq "ABOLISHED") {
     print STDERR "$s already prepared.\n";
     return 1;
   }
-  mydie "Only inited steps can be prepared"
+  mydie "Only inited steps can be prepared: $s is $status"
     if $status ne "INITED" && $status ne "PREPFAILED";
 
   my $prevdir = chdir_to_stepdir($s);
@@ -691,6 +699,7 @@ sub start {
       return 0 if !$aku; # propagate failure
       my $stat = load_status($this);
       return 1 if $stat =~ /^(PREPARED|DONE|RUNNING|STARTING)$|^WAITING/;
+      return 1 if $assume_abolished_ok && $stat eq "ABOLISHED";
       return prepare($this);
     },
     1, # seed value
@@ -707,7 +716,9 @@ sub start {
       my $this = shift;
       my $aku = shift;
       return 0 if !$aku; # propagate failure
-      return 1 if load_status($this) =~ /^(DONE|RUNNING|STARTING)$|^WAITING/;
+      my $stat = load_status($this);
+      return 1 if $stat =~ /^(DONE|RUNNING|STARTING)$|^WAITING/;
+      return 1 if $assume_abolished_ok && $stat eq "ABOLISHED";
 
       # convert each prerequisite name to jobid
       my @holds = ();
@@ -1160,7 +1171,7 @@ sub guess_step {
     }
     $step = guess_step_from_hashdate($dirs[0]) if 1==scalar @dirs;
   }
-  die "Failed to guess step from: $key" if !defined $step;
+  die "Failed to guess step from: $key\nTry --reindex." if !defined $step;
   return $step;
 }  
 
