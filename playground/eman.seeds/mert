@@ -105,12 +105,7 @@ KONEC
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-# clone some importnant executables
-../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-../../scripts/wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
-../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
-
-
+# create local copies of the corpora
 ../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"
 ../augmented_corpora/augment.pl --dump $DEVCORP/$REFAUG > tuning.ref.0 || die "tuning.ref"
 ../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
@@ -236,6 +231,11 @@ echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
 export MERTFLAGS="$MERTFLAGS"
 echo export MERTFLAGS="$MERTFLAGS"
+
+# clone some importnant executables
+../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+../../scripts/wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
+../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \

@@ -21,15 +21,15 @@ fi
 
 BINDIR="`pwd`../$BINARIES/bin/"
 
-SRILMDIR1="`cat ../$BINARIES/srilm.path`/bin/"
-SRILMDIR2="`cat ../$BINARIES/srilm.path`/bin/i686/"
+grep SKIP_SRILM=yes ../$BINARIES/eman.vars >/dev/null 2>/dev/null \
+  && die "\$BINARIES don't/won't include SRILM"
 
 if [ x$BINARIZE == xyes ]; then
-  if [ ! -f ../$BINARIES/irstlm.path ]; then
-    echo "Asking for LM binarization and IRSTLM not found in $BINARIES";
-    exit 1
-  fi
-  IRSTLMDIR="`cat ../$BINARIES/irstlm.path`/bin/"
+  grep SKIP_IRSTLM=yes ../$BINARIES/eman.vars >/dev/null 2>/dev/null \
+    && die "Asking for LM binarization but \$BINARIES don't/won't include IRSTLM"
+fi
+
+if [ x$BINARIZE == xyes ]; then
   lmtypetag=.blm
 else
   lmtypetag=
@@ -60,13 +60,6 @@ echo $BINARIES > eman.deps
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-
-if [ ! -f ../$BINARIES/srilm.path ]; then
-  echo "SRILM not found in $BINARIES"
-  exit 1
-fi
-
-
 # Run checks in the preparation phase
 [ -d ../augmented_corpora/$CORP ] || die "Can't find corpus $CORP"
 
@@ -95,12 +88,16 @@ export TMP=/mnt/h/tmp
 
 export PATH=\$PATH:$BINDIR
 
+SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
+SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
+IRSTLMDIR="\`cat ../$BINARIES/irstlm.path\`/bin/"
+
 export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
 
 echo "Using this ngram-count:"
-which ngram-count
+which ngram-count || die "No ngram-count"
 echo "Using this make-big-lm:"
-which make-big-lm
+which make-big-lm || die "No make-big-lm"
 
 CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
 echo "Got CORPSOURCE: \$CORPSOURCE"
