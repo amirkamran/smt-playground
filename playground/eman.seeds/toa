@@ -52,7 +52,7 @@ MODELEXP=$SAVEMODELEXP
 # hack to make toa look like align
 [ -z "ALISYM" ] || ALISYM=gdfa
 [ -z "OUTALILABEL" ] \
-  || OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+  || OUTALILABEL=$ALISYM-$(echo $REFAUG-$SRCAUG | tr '+.' '--')
 
 # XXX musim prohodit src a tgt aug?
 cat << KONEC > eman.vars
@@ -61,6 +61,8 @@ MERTEXP=$MERTEXP
 TESTCORP=$TESTCORP
 MOSESFLAGS="$MOSESFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
+OUTALILABEL="$OUTALILABEL"
+ALISYM="$ALISYM"
 JOBS=$JOBS
 ITER=$ITER
 CORPUS=$TESTCORP-toa
@@ -98,10 +100,10 @@ fi
 # for running this command, qsub is allowed, although we're going to submit jobs ourselves
 # echo "no" > qsub-allowed
 
-SRC_LANG=`echo $SRCAUG | cut -d+ -f1`
-SRC_FACT=`echo $SRCAUG | cut -d+ -f2- | tr '+' '|'`
-TGT_LANG=`echo $REFAUG | cut -d+ -f1`
-TGT_FACT=`echo $REFAUG | cut -d+ -f2- | tr '+' '|'`
+SRC_LANG="`echo $SRCAUG | cut -d+ -f1`"
+SRC_FACT="`echo $SRCAUG | cut -d+ -f2- | tr '+' '|'`"
+TGT_LANG="`echo $REFAUG | cut -d+ -f1`"
+TGT_FACT="`echo $REFAUG | cut -d+ -f2- | tr '+' '|'`"
 
 # auxiliary script submitted for each chunk of input
 # run with args: lines_max index
@@ -177,11 +179,6 @@ cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job
 ls alignment?*.gz | sort -n | xargs zcat > alignment
 ls evaluation?*.opt.out.gz | sort -n | xargs zcat > evaluation.opt.out
 
-if [ \`wc -l < alignment\` -ne \$lines ] \\
-  || [ \`wc -l < evaluation.opt.out\` -ne \$lines ]; then
-  die "alignment or evaluation.opt.out have wrong number of lines"
-fi
-
 # rm alignment?*.gz evaluation?*opt.out.gz
 gzip alignment
 gzip evaluation.opt.out
@@ -191,8 +188,8 @@ mkdir ../augmented_corpora/$TESTCORP-toa
 gzip -c < evaluation.in > ../augmented_corpora/$TESTCORP-toa/$SRC_LANG.gz
 ../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
 ../../scripts/wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
-echo $SRC_FACT >../augmented_corpora/$TESTCORP-toa/$SRC_LANG.info
-echo $TGT_FACT >../augmented_corpora/$TESTCORP-toa/$TGT_LANG.info
+echo "$SRC_FACT" >../augmented_corpora/$TESTCORP-toa/$SRC_LANG.info
+echo "$TGT_FACT" >../augmented_corpora/$TESTCORP-toa/$TGT_LANG.info
 echo ali > ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.info
 
 echo DONE > \$mydir/eman.status
