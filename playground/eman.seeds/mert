@@ -54,7 +54,7 @@ MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
-[ ! -z "$SEARCH" ] || SEARCH=beam
+[ ! -z "$SEARCH" ] || SEARCH=cube
 [ ! -z "$MERTPRG" ] || MERTPRG=mert
 
 
