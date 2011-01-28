@@ -114,10 +114,12 @@ export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 mydir=`pwd`
 
-set -o pipefail
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-
 index_formatted=\`printf "%05d" \$QRUNCMD_JOBNUM\`
+
+set -o pipefail
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/status\$index_formatted ; exit 1 ; }
+
+echo RUNNING > \$mydir/status\$index_formatted 
 
 # copy STDIN
 tempfile=\$mydir/input\$index_formatted
