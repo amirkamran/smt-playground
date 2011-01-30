@@ -92,7 +92,7 @@ SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
 SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
 IRSTLMDIR="\`cat ../$BINARIES/irstlm.path\`/bin/"
 
-export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$IRSTLMDIR:\$PATH
 
 echo "Using this ngram-count:"
 which ngram-count || die "No ngram-count"
