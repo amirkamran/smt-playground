@@ -142,10 +142,10 @@ cd corpus
 cd ..
 
 if [ ! -z "$ALISTEP" ]; then
-  ../../../scripts/wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
+  ../../scripts/wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
     || die "Failed to clone alignment file"
 else
-  ../../../scripts/wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
+  ../../scripts/wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
     || die "Failed to clone alignment file"
 fi
 
