@@ -186,7 +186,7 @@ gzip alignment
 gzip evaluation.opt.out
 
 mkdir ../augmented_corpora/$TESTCORP-toa
-../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa
+../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT
 gzip -c < evaluation.in > ../augmented_corpora/$TESTCORP-toa/$SRC_LANG.gz
 ../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
 ../../scripts/wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
