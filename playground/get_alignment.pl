@@ -10,6 +10,13 @@
 
 use strict;
 use warnings;
+use Getopt::Long;
+
+my $inverse = "";
+
+GetOptions(
+    "i|inverse" => \$inverse
+) or exit 1;
 
 while (<>) {
     if ($_ !~ m/^\[\[/) {
@@ -34,7 +41,11 @@ while (<>) {
             $_ =~ m/([0-9]+)-([0-9]+)/;
             my $src = $1 + $offset_src;
             my $tgt = $2 + $offset_tgt;
-            print "$src-$tgt ";
+            if ($inverse) {
+                print "$tgt-$src ";
+            } else {
+                print "$src-$tgt ";
+            }
         }
     }
     print "\n";

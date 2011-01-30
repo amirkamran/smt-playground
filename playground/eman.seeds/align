@@ -105,7 +105,7 @@ fi
 
 if [ x1 == x\$do_export ]; then
   cd ../augmented_corpora/$CORPUS
-  ../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
+  ../../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
     || die "Failed to save to augmented_corpora"
   echo ali > $OUTALILABEL.info
 fi

@@ -140,7 +140,7 @@ gzip -c <\$fifoname >evaluation\$index_formatted.opt.out.gz &
   -input-file \$tempfile \\
   -config ./filtered-for-eval\$index_formatted/moses.ini \\
   2>&1 >\$fifoname \\
-  | ../get_alignment.pl | gzip -c >alignment\$index_formatted.gz \\
+  | ../get_alignment.pl --inverse | gzip -c >alignment\$index_formatted.gz \\
   || die "Failed to translate"
 
 rm \$fifoname
