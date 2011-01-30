@@ -180,10 +180,9 @@ cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job
 
 ls alignment?*.gz | sort -n | xargs zcat > alignment
 ls evaluation?*.opt.out.gz | sort -n | xargs zcat > evaluation.opt.out
-
-# rm alignment?*.gz evaluation?*opt.out.gz
+sed 's/ $//' < evaluation.opt.out | gzip -c > evaluation.opt.out.gz # fix Moses output for augmented coprora
+rm evaluation.opt.out
 gzip alignment
-gzip evaluation.opt.out
 
 mkdir ../augmented_corpora/$TESTCORP-toa
 ../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT
