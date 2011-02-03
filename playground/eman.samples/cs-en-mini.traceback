@@ -1,0 +1,71 @@
++- s.mert.687f8141.20110104-1158
+|  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  | MODELSTEP=s.model.a2d49ad3.20110104-1158
+|  | DEVCORP=sample-cs-en-mini-dev
+|  | TESTCORP=sample-cs-en-mini-test
+|  | SRCAUG=cs+lc
+|  | REFAUG=en+lc
+|  | SEARCH=beam
+|  | MERTFLAGS=""
+|  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
+|  | MOSESFLAGS=""
+|  | SERIAL=
+|  | STACK=
+|  | MERTPRG=mert
+|  | ZMERTMETRIC=""
+|  | ZMERTSEMPOSSOURCE=
+|  | ZMERTSEMPOSBLEUWEIGHTS=
+|  | ZMERTFLAGS=""
+|  | TMT_ROOT=
+|  +- s.model.a2d49ad3.20110104-1158
+|  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  | TMS=s.tm.3e9f5afb.20110104-1158
+|  |  | RMSTEP=
+|  |  | LMS=0:s.lm.ce9f36b6.20110104-1158
+|  |  | SRCCORP=sample-cs-en-mini-train
+|  |  | TGTCORP=sample-cs-en-mini-train
+|  |  | ALISTEP=s.align.336b51cf.20110104-1158
+|  |  | ALICORP=sample-cs-en-mini-train
+|  |  | SRCAUG=cs+lc
+|  |  | TGTAUG=en+lc
+|  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
+|  |  | DECODINGSTEPS=t0-0
+|  |  | REORDERING=distance
+|  |  | REORDFACTORS=0-0
+|  |  +- s.tm.3e9f5afb.20110104-1158
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | SRCCORP=sample-cs-en-mini-train
+|  |  |  | TGTCORP=sample-cs-en-mini-train
+|  |  |  | ALICORP=sample-cs-en-mini-train
+|  |  |  | SRCAUG=cs+lc
+|  |  |  | TGTAUG=en+lc
+|  |  |  | ALISTEP=s.align.336b51cf.20110104-1158
+|  |  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | REORDERING=distance
+|  |  |  | REORDFACTORS=0-0
+|  |  |  | TRAININGFLAGS=""
+|  |  |  | CUTOFF=0
+|  |  |  | THRESHOLD=
+|  |  |  +- s.align.336b51cf.20110104-1158
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | CORPUS=sample-cs-en-mini-train
+|  |  |  |  | SRCALIAUG=cs+lcstem4
+|  |  |  |  | TGTALIAUG=en+lcstem4
+|  |  |  |  | OUTALILABEL=gdfa-cs-lcstem4-en-lcstem4
+|  |  |  |  | ALISYM=gdfa
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=
+|  |  +- s.lm.ce9f36b6.20110104-1158
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | CORP=sample-cs-en-mini-train
+|  |  |  | CORPAUG=en+lc
+|  |  |  | ORDER=5
+|  |  |  | BINARIZE=
+|  |  |  | PARTS=1
+|  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SKIP_SRILM=
+|  |  |  |  | SKIP_IRSTLM=

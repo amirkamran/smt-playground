@@ -1,0 +1,27 @@
+#!/bin/bash
+# eman seed for checking out tectomt
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+cat > eman.vars << KONEC
+TMT_ROOT=$(basename $(pwd))
+KONEC
+
+cat > eman.command << KONEC
+#!/bin/bash
+
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo FAILED > \$mydir/eman.status ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+svn co https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk tectomt || die "Checkout failed"
+cd tectomt || die "Failed to chdir to the just checkouted tectomt"
+ln -s /net/projects/tectomt_shared/ share || die "Share failed"
+
+echo DONE > \$mydir/eman.status
+
+KONEC

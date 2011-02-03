@@ -457,8 +457,8 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 	| gzip > $*_idali.gz \
 	&& echo "ali" > $*_idali.info
 
-
-SRUNBLOCKS?=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2/tools/srunblocks_streaming/srunblocks
+TMTROOT?=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2
+SRUNBLOCKS?=$(TMTROOT)/tools/srunblocks_streaming/srunblocks
 JOBS?=40
 SCENDIR=./prep-wmt10/
 

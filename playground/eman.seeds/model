@@ -214,7 +214,8 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
 done
 
 mkdir model
-../../scripts/merge_moses_models.pl tm.*/model/moses.ini > ./model/moses.ini
+../../scripts/merge_moses_models.pl tm.*/model/moses.ini > ./model/moses.ini \
+  || die "Merge moses.ini failed"
 
 echo DONE > \$mydir/eman.status
 
