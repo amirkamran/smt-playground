@@ -789,7 +789,7 @@ sub submit {
   foreach my $jid (@$holdjids) {
     if ($jid =~ /^[0-9]+$/) {
       # this is SGE job id
-      push @sgeholds, "-hold=$jid";
+      push @sgeholds, "-hold_jid $jid";
     } else {
       push @plainholds, $jid;
     }
@@ -847,7 +847,7 @@ sub submit {
     # use sge
     die "Unimplemented to wait for some non-sge jobs: @plainholds"
       if 0 < scalar @plainholds;
-    $ok = safesystem("( qsubmit $sgeholdsstr --jobname=log ./eman.command 2>&1 ) > log");
+    $ok = safesystem("( qsub -hard -l mnth_free=15g -j y -S /bin/bash -C '' -cwd $sgeholdsstr -N log -l h_stack=30M ./eman.command 2>&1 ) > log");
     if ($ok) {
       # get job id
       my $hdl = my_open("log");
