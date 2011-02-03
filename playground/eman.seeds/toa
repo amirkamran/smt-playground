@@ -130,20 +130,15 @@ $SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
   filtered-for-eval\$index_formatted ./moses.abs.ini \$tempfile 2>&1 \\
   || die "Failed to filter"
 
-# create a named pipe to redirect Moses output
-fifoname=/mnt/h/tmp/\`mktemp | xargs basename\`
-mkfifo \$fifoname || die "Failed to create named pipe"
-gzip -c <\$fifoname >evaluation\$index_formatted.opt.out.gz &
-
-./moses -v 2 -search-algorithm 1 \\
+./moses \\
+  -search-algorithm 1 \\
+  -alignment-output-file alignment\$index_formatted \\
   $MOSESFLAGS \\
   -input-file \$tempfile \\
   -config ./filtered-for-eval\$index_formatted/moses.ini \\
-  2>&1 >\$fifoname \\
-  | ../get_alignment.pl --inverse | gzip -c >alignment\$index_formatted.gz \\
+  | gzip -c > evaluation\$index_formatted.opt.out.gz \\
   || die "Failed to translate"
 
-rm \$fifoname
 rm \$tempfile
 KONEC
 
@@ -178,11 +173,8 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
 
-ls alignment?*.gz | sort -n | xargs zcat > alignment
-ls evaluation?*.opt.out.gz | sort -n | xargs zcat > evaluation.opt.out
-sed 's/ $//' < evaluation.opt.out | gzip -c > evaluation.opt.out.gz # fix Moses output for augmented coprora
-rm evaluation.opt.out
-gzip alignment
+ls alignment?* | sort -n | xargs cat | sed 's/ $//' | gzip -c > alignment.gz
+ls evaluation?*.opt.out.gz | sort -n | xargs zcat | sed 's/ $//' | gzip -c > evaluation.opt.out.gz
 
 mkdir ../augmented_corpora/$TESTCORP-toa
 ../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT
