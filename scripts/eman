@@ -46,6 +46,7 @@ my %expand_abbrev = qw(
   redo redo
   wait wait
   setvar setvar
+  fail fail
 );
 
 my $wait_sleep = 3;
@@ -375,24 +376,38 @@ if ($command eq "redo") {
   exit $waserror;
 }
 
+if ($command eq "fail") {
+  mydie "usage: eman fail SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "FAILED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
 
 
 if ($cmd eq "abolish") {
-  my $step = shift;
-  mydie "usage: eman abolish STEPDIR ..." if ! defined $step;
-  my $s = canon_stepdir($step); # abolish is pickier wrt to input
-  chdir_to_stepdir($s);
-  for my $f (glob("*")) {
-    next if $f =~ /^eman\./;
-    next if $f =~ /^log\./;
-    if (-d $f) {
-      rmtree($f) or $waserror = 1;
-    } else {
-      unlink($f) or $waserror = 1;
+  mydie "usage: eman abolish STEPDIR ..." if 0 == scalar @ARGV;
+  foreach my $step (@ARGV) {
+    my $s = canon_stepdir($step);
+      # abolish is pickier wrt to input, so no guessing
+    chdir_to_stepdir($s);
+    for my $f (glob("*")) {
+      next if $f =~ /^eman\./;
+      next if $f =~ /^log\./;
+      if (-d $f) {
+        rmtree($f) or $waserror = 1;
+      } else {
+        unlink($f) or $waserror = 1;
+      }
     }
+    save("eman.abolished", `date`);
+    save("eman.status", "ABOLISHED");
+    chdir_to_maindir();
   }
-  save("eman.abolished", `date`);
-  save("eman.status", "ABOLISHED");
   exit $waserror;
 }
 
@@ -823,7 +838,7 @@ sub submit {
     # avoid sun grid engine
     # XXX must wait for running jobs
     my $waitscript = "";
-    $waitscript = "$eman wait @plainholds; "
+    $waitscript = "$eman --reindex wait @plainholds; "
       if 0 < scalar @plainholds;
 
     save("eman.wrapcommand", 'echo Host:PID: `hostname`:$$ ; '.$waitscript.'./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
