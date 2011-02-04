@@ -55,7 +55,6 @@
 |  |  |  |  | OUTALILABEL=gdfa-cs-lcstem4-en-lcstem4
 |  |  |  |  | ALISYM=gdfa
 |  |  |  |  +- s.binaries.8f30116d.20101129-1913
-|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
 |  |  |  |  |  | SKIP_SRILM=
 |  |  |  |  |  | SKIP_IRSTLM=
 |  |  +- s.lm.ce9f36b6.20110104-1158
@@ -66,6 +65,5 @@
 |  |  |  | BINARIZE=
 |  |  |  | PARTS=1
 |  |  |  +- s.binaries.8f30116d.20101129-1913
-|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
 |  |  |  |  | SKIP_SRILM=
 |  |  |  |  | SKIP_IRSTLM=

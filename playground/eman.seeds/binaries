@@ -8,10 +8,13 @@ function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 cat > eman.vars << KONEC
-BINARIES=$(basename $(pwd))
 SKIP_SRILM=$SKIP_SRILM
 SKIP_IRSTLM=$SKIP_IRSTLM
 KONEC
+
+# BINARIES=$(basename $(pwd))
+# Previously, we also included BINARIES among the vars, but the self-referencing
+# often confuses eman in many ways.
 
 if [ ! -z "$INIT_ONLY" ]; then
   echo "## Making sure you accept sourceforge's SSL certificate."
