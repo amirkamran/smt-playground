@@ -72,10 +72,15 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d \$tempdir ] || tempdir=/tmp
+  # the default
+
 $GIZAWRAPPER \
   corpus.src.gz corpus.tgt.gz \
   --lfactors=0 --rfactors=0 \
-  --tempdir=/mnt/h/tmp \
+  --tempdir=\$tempdir \
   --bindir=../$BINARIES/bin \
   --dirsym=$ALISYM \
   --drop-bad-lines \
