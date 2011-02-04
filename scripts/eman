@@ -47,6 +47,7 @@ my %expand_abbrev = qw(
   wait wait
   setvar setvar
   fail fail
+  dups duplicates
 );
 
 my $wait_sleep = 3;
@@ -218,6 +219,13 @@ if ($cmd eq "vars") {
   $lock->unlock() if defined $lock;
   $show_vars = 1;
   $waserror = !list([@ARGV]);
+  exit $waserror;
+}
+
+if ($cmd eq "duplicates") {
+  # listing steps with identical variables
+  $lock->unlock() if defined $lock;
+  $waserror = !list_duplicates();
   exit $waserror;
 }
 
@@ -904,6 +912,29 @@ sub submit {
   return $ok;
 }
 
+sub list_duplicates {
+  my $waserror = 0;
+
+  my %hashcount; # how many different steps have the same hash
+  my %share_hash; # the steps themselves
+  foreach my $s (keys %$idx) {
+    next if $s !~ /\Q$dirprefix\E([^\.]+)\..*/;
+      # this is not a step
+    my $hash = $idx->{$s};
+    push @{$share_hash{$hash}}, $s;
+    $hashcount{$hash} ++;
+  }
+
+  foreach my $hash (sort {$hashcount{$a} <=> $hashcount{$b}}
+                    grep { $hashcount{$_} > 1 }
+		    keys %hashcount) {
+    print "\n";
+    my $ok = list($share_hash{$hash});
+    $waserror = 1 if !$ok;
+  }
+  return $waserror;
+}
+
 sub list {
   my $args = shift;
   # listing steps of the given types
@@ -1445,6 +1476,7 @@ eman, experiment manager
   eman users SPEC ...        # list all steps that use the given step
   eman traceback SPEC ...    # show tree of the steps and predecessors
  #eman traceforward SPEC ... # show tree of the steps and successors
+  eman duplicates            # show groups of 2+ steps having same vars
     --tag --vars --status    #   include relevant information
     --log --jobid            #   and the tail of the log or SGE job ID
   
