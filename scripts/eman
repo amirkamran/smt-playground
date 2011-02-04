@@ -4,6 +4,10 @@
 # More info: 'eman --help' or 'eman --man'
 #
 # Ondrej Bojar, bojar@ufal.mff.cuni.cz
+#
+# BUGS: now already excluding dir self name from hash,
+#       should be also removing the exp's old name before renaming
+#       should include env vars in vars when cloning from scenario
 
 use strict;
 use warnings;
@@ -76,6 +80,7 @@ my $qsub_available = undef;
 my %options = (
   "help|h" => \$help,
   "verbose|v" => \$verbose,
+  "debug" => \$debug,
   "list-options" => \$list_options,
   "man" => \$manpage,
   "sge!" => \$sge, # not quite supported
@@ -526,8 +531,12 @@ sub init_by_recipe {
 
   # check if such a step exists already
   my $knownstep;
-  my $hash = get_hash_from_vars_deps(\@newvars, \@newdeps);
-  # print "CHECKING $hash\n";
+  my $hash = get_hash_from_vars_deps($recipe->{"name"}, \@newvars, \@newdeps);
+  if ($debug) {
+    print STDERR "CHECKING $hash:\n";
+    print STDERR join("\n", @newvars)."\n";
+    print STDERR join("\n", @newdeps)."\n";
+  }
   if (defined $idx->{$hash}
       && -d $idx->{$hash}
       && step_valid($idx->{$hash})
@@ -1228,17 +1237,20 @@ sub get_hash_from_dir {
   my $exp = shift;
 
   my @vars = split /\n/, load($exp."/eman.vars");
-  my @deps = split /\n/, load($exp."/eman.deps");
-  #print "HASH: @vars @deps\n";
-  #return md5_hex(sort @vars, sort @deps);
-  return md5_hex(sort @vars);
+  #my @deps = split /\n/, load($exp."/eman.deps");
+  return get_hash_from_vars_deps($exp, \@vars, undef);
 }
 sub get_hash_from_vars_deps {
+  my $name = shift;
   my $vars = shift;
   my $deps = shift;
   #print "HASH: @$vars @$deps\n";
   #return md5_hex(sort @$vars, sort @$deps);
-  return md5_hex(sort @$vars);
+  # avoid considering the name of ourselves significant in content check
+  my @usevars = @$vars;
+  @usevars = map  {s/$name/---SELF---/g; $_} @usevars;
+  print STDERR "NAME $name, USEVARS: @usevars\n" if $debug;
+  return md5_hex(sort @usevars);
 }
 
 sub all_steps {
