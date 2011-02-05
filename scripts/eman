@@ -305,10 +305,14 @@ if ($cmd eq "clone") {
     my $srcstep = guess_step($step); # happily guess the exact step
     my $srcvarsstr = load_vars($srcstep);
     # decide which vars should be cloned
-    # (do not clone those set in the environment)
+    # for vars that are already defined in the environment, use the value
+    # from the environment, not the scenario
     my @srcvars = split /\n/, $srcvarsstr;
-    my @usevars = grep { my ($varname, undef) = split /=/, $_, 2;
-                         ! defined $ENV{$varname} } @srcvars;
+    my @usevars = map { my ($varname, $val) = split /=/, $_, 2;
+                        defined $ENV{$varname}
+                          ? "$varname=$ENV{$varname}" # prefer environment
+                          : $_; # use the value from the scenario
+                      } @srcvars;
     my $news = init(get_steptype($srcstep), \@usevars, $srcstep);
     $waserror = 1 if ! defined $news;
     $waserror = ! start($news) if defined $news && $do_start;
@@ -545,12 +549,11 @@ sub init_by_recipe {
     } ( @$oldvars );
   # print "VARSAFT: @newvars\n";
   # env. vars override the recipe (for usecases like V=x eman redo)
-  # we do that by deleting such vars from the recipe, seed will get them
-  # from the environment
-  # (this causes a bug with reusing: an identical model will get created
-  # because we don't recognize it), TODO
-  @newvars = grep { my ($varname, undef) = split /=/, $_, 2;
-                    ! defined $ENV{$varname} } @newvars;
+  @newvars = map { my ($varname, $val) = split /=/, $_, 2;
+                   defined $ENV{$varname}
+                     ? "$varname=$ENV{$varname}" # prefer environment
+                     : $_; # use the value from the scenario
+                 } @newvars;
 
   # check if such a step exists already
   my $knownstep;
@@ -1253,7 +1256,7 @@ sub guess_step_from_hashdate {
 sub add_step_to_index {
   my $s = shift;
   my $hash = get_hash_from_dir($s);
-  # print STDERR "ADDED: $s  -> $hash\n";
+  print STDERR "ADDED: $s  -> $hash\n" if $debug;
   $idx->{$s} = $hash;
   $idx->{$hash} = $s;
   my $jid = load_jobid($s);
