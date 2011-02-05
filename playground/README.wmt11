@@ -1,0 +1,32 @@
+TODO:
+
+- ngram -lm X.lm -prune 0.000001 -write-lm Y.lm
+  ... pridej to jako mezikrok, s.prlm...
+
+- irstlm instead of srilm
+  ... ale jen, jestli taky umi interpolovat LM
+  ... jako s.irstlm...
+- quantize LM?
+- surely gzip LM and use kenlm instead of any other
+
+- urcite tokenizovat na kazde zmene typu znaku, i "*prices"
+  (overit, jak chybna tokenizace skodi tectomt)
+
+- zapojit http://kheafield.com/code/mt/filter.html
+  ...jenze to nepujde pro faktorovy preklad...
+  ...leda bych delal jen jednokrokove, vyslednou frazovou tabulku oriznul na
+  prislusny faktor a spojil frazove tabulky vic variant vstupu
+  ...to asi za pokus stejne stoji
+
+- remove control chars from webcoll (nikdo jiny je nema)
+  \1-grams:
+  -6.615762       ^B      -0.01012795
+  -6.875236       ^C      -0.01264139
+  -7.61396        ^D      -0.007390684
+  -7.948863       ^G      -0.007415341
+  -8.238807       ^K      -0.007415307
+  -8.238807       ^O      -0.007413293
+  -6.578352       ^_      -0.008551767
+  -2.907703       !       -1.501431
+  -4.456016       "       -0.5745671
+
