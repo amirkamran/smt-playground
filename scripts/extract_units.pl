@@ -1,8 +1,9 @@
 #!/usr/bin/env perl
 
 # USAGE: ./extract_units.pl --language=cs|en \
-#                           --unit=anode|tnode|apair|tpair \ 
+#                           --unit=anode|tnode|apair|tpair|abunch|tbunch \ 
 #                           --factors=<comma separated anode or tnode factors>
+#                           --gov-factors=<factors of gov if different>
 # 
 # Factors can be specified by their names or positions (counted from 0).
 #
@@ -12,8 +13,6 @@
 # * pair: node that contains parent node in the last factor positions
 # * bunch: node that contains child nodes in the last factor positions
 # 
-# TODO: Also support output of forks
-#
 # Miroslav Tynovsky
 #
 
@@ -74,54 +73,64 @@ sub get_factors {
         push @factor_indexes, $index;
     }
 
-    return @factor_indexes;
+    return \@factor_indexes;
 }
 
 sub node {
-    my ($data, @factors) = @_;
+    my ($data, $factors, undef) = @_; #intentionally ignore third argument
     my @tokens = split / /, $data;
     for my $t (@tokens) {
-        $t = join '|', (split /\|/, $t)[@factors];
+        $t = join '|', (split /\|/, $t)[@$factors];
     }
     return join ' ', @tokens;
 }
 
 sub pair {
-    my ($data, @factors) = @_;
-    my @tokens  = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
-    unshift @tokens, [ map {'-root-'} @factors]; #add technical root
+    my ($data, $factors, $gov_factors) = @_;
+    my @tokens     = map { [ split /\|/, $_ ] }
+                        split / /, node($data, $factors);
+    my @gov_tokens = map { [ split /\|/, $_ ] }
+                        split / /, node($data, $gov_factors);
+    unshift @gov_tokens, [ map {'-root-'} @$gov_factors]; #add technical root
 
     # create pairs
+    my $last_factor = scalar(@$factors) - 2; #omit technical gov
+    my $last_gov = scalar(@$gov_factors) - 2;
     my @pairs;
     for my $t (@tokens) {
-        next if $t->[0] eq '-root-';
-        my @gov = @{ $tokens[ $t->[-1] ] };
-        push @pairs, join '|', @$t[0 .. $#factors-1], @gov[0 .. $#factors-1];
+        my @gov = @{ $gov_tokens[ $t->[-1] ] };
+        push @pairs, join '|', @$t[0 .. $last_factor], @gov[0 .. $last_gov];
     }
 
     return join ' ', @pairs;
 }
 
 sub bunch {
-    my ($data, @factors) = @_;
-    my @tokens = map { [ split /\|/, $_ ] } split / /, node($data, @factors);
-    unshift @tokens, [ map {'-root-'} @factors ]; #add technical root
-    push @$_, [] for @tokens; #add arrays of children to be filled
+    my ($data, $factors, $gov_factors) = @_;
+    my @tokens     = map { [ split /\|/, $_ ] }
+                        split / /, node($data, $factors);
+    my @gov_tokens = map { [ split /\|/, $_ ] }
+                        split / /, node($data, $gov_factors);
+
+    unshift @gov_tokens, [ map {'-root-'} @$gov_factors ]; #add technical root
+    push @$_, [] for @gov_tokens; #add arrays of children to be filled
 
     # attach children
     for my $t (@tokens) {
         next if $t->[0] eq '-root-';
-        my $gov = $tokens[ $t->[-2] ];
+        my $gov = $gov_tokens[ $t->[-2] ];
         push @{$gov->[-1]}, $t;
     }
     
     # create bunches
+    my $last_factor = scalar(@$factors) - 2; #omit technical gov
+    my $last_gov = scalar(@$gov_factors) - 2;
     my @bunches;
-    for my $t (@tokens) {
+    for my $t (@gov_tokens) {
         last if !$t;
-        my @bunch = @$t[0 .. $#factors-1];
+        my @bunch = @$t[0 .. $last_gov];
         for my $child ( @{$t->[-1]} ) {
-            push @bunch, @$child[0 .. $#factors-1];
+            push @bunch, @$child[0 .. $last_factor];
         }
         push @bunches, join '|', @bunch;
     }
@@ -139,26 +148,28 @@ my %sub_for = (
     abunch    => \&bunch,
     tbunch    => \&bunch,
     tbunchset => sub {die "not implemented\n"},
-    tfork     => sub {die "not implemented\n"},
-    tforkset  => sub {die "not implemented\n"},
 );
 
-my ($lang, @factors, $unit);
+my ($lang, @factors, @gov_factors, $unit);
 GetOptions(
-        'language=s' => \$lang,
-        'factors=s'  => \@factors,
-        'unit=s'     => \$unit,
+        'language=s'     => \$lang,
+        'factors=s'      => \@factors,
+        'gov-factors=s'  => \@gov_factors,
+        'unit=s'         => \$unit,
 );
 die "mandatory parameter language not set" if !defined($lang);
 die "mandatory parameter unit not set"     if !defined($unit);
 die "mandatory parameter factors not set"  if !@factors;
 
+# allow multiple appearances with multiple comma separated values
+@factors     = split /,/, join(',', @factors);
+@gov_factors = split /,/, join(',', @gov_factors);
 
-@factors = split /,/, join(',', @factors); # allow multiple appearances with 
-                                           # multiple comma separated values
+if (!@gov_factors) { @gov_factors = @factors }
 
 while (<>) {
     print $sub_for{$unit}->( get_data($unit, $lang, $_), 
-                             get_factors($unit, @factors) ), "\n";
+                             get_factors($unit, @factors),
+                             get_factors($unit, @gov_factors) ), "\n";
 }
 
