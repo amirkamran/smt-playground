@@ -47,6 +47,7 @@ my %expand_abbrev = qw(
   wait wait
   setvar setvar
   fail fail
+  outdate outdate
   dups duplicates
 );
 
@@ -258,7 +259,8 @@ if ($cmd eq "wait") {
   mydie "usage: eman wait SPEC ..." if 0 == scalar @ARGV;
   my %steps = map { my $s = guess_step($_); ($s, load_status($s)) } @ARGV;
   # check if any steps have no chance 
-  my @no_chance = grep { $steps{$_} !~ /^(STARTING|RUNNING|DONE|FAILED)$/ }
+  my @no_chance = grep { $steps{$_}
+                         !~ /^(STARTING|RUNNING|DONE|FAILED|OUTDATED)$/ }
                   keys %steps;
   if (0 < scalar @no_chance) {
     print STDERR "Won't wait for these, not running:\n";
@@ -274,7 +276,7 @@ if ($cmd eq "wait") {
     my @newqueue = ();
     foreach my $step (@queue) {
       my $s = load_status($step);
-      if ($s !~ /^(STARTING|RUNNING|DONE|FAILED)$/ ) {
+      if ($s !~ /^(STARTING|RUNNING|DONE|FAILED|OUTDATED)$/ ) {
         print STDERR "Got unexpected status: $step\t$s\n";
         $waserror = 1;
         next;
@@ -394,6 +396,17 @@ if ($command eq "fail") {
     my $step = guess_step($key);
     chdir_to_stepdir($step);
     save("eman.status", "FAILED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
+if ($command eq "outdate") {
+  mydie "usage: eman outdate SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "OUTDATED");
     chdir_to_maindir();
   }
   exit $waserror;
@@ -576,7 +589,8 @@ sub init_by_recipe {
   # redo if wanted
   $knownstep = undef
     if defined $knownstep
-    && ($redo{$knownstep} || load_status($knownstep) =~ /FAILED|NONEXISTENT/);
+    && ($redo{$knownstep}
+        || load_status($knownstep) =~ /FAILED|NONEXISTENT|OUTDATED/);
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
     # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
@@ -584,6 +598,7 @@ sub init_by_recipe {
   } else {
     # init a new step using the vars
     my $steptype = get_steptype($recipe->{"name"});
+    print STDERR "Initing new step: $steptype\n";
     my $newstep = init($steptype, \@newvars, $recipe->{"name"});
     # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
     return $newstep;
@@ -712,7 +727,7 @@ sub start {
                    my $aku = shift;
                    return 0 if !$aku; # propagate failure
                    my $stat = load_status($this);
-                   if ($stat =~ /FAILED/ || $stat eq "NONEXISTENT") {
+                   if ($stat =~ /FAILED|OUTDATED/ || $stat eq "NONEXISTENT") {
                      return 0;
                    } else {
                      return 1;
@@ -1600,6 +1615,7 @@ The following statuses are recognized:
   FAILED             ... the run failed
   DONE               ... the run succeeded
   ABOLISHED          ... has just vars, deps but no more content
+  OUTDATED           ... you can manually set this to prevent reuse
 
 =head1 STEP AND EXPERIMENT CLONING
 
