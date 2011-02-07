@@ -1,0 +1,149 @@
++- s.2step.751d0d74.20100930-1119
+|  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  | PHASE1MERT=s.mert.371fabdb.20100223-1748
+|  | PHASE2MERT=s.mert.252aef71.20100220-1350
+|  | TESTCORP=sample-en-cs-twostep-test
+|  | SRCAUG=en+stc
+|  | REFAUG=cs+stc
+|  | SEARCH=cube
+|  | MOSESFLAGS=""
+|  | GRIDFLAGS=" -hard -l mf=30g "
+|  | SERIAL=
+|  | STACK=
+|  +- s.mert.371fabdb.20100223-1748
+|  |  | MODELSTEP=s.model.3f1bca62.20100223-1748
+|  |  | DEVCORP=sample-en-cs-twostep-dev
+|  |  | TESTCORP=sample-en-cs-twostep-test
+|  |  | SRCAUG=en+stc
+|  |  | REFAUG=cs+pluslemma2
+|  |  | SEARCH=cube
+|  |  | MERTFLAGS=""
+|  |  | MOSESFLAGS=""
+|  |  | SERIAL=
+|  |  | STACK=
+|  |  | MERTPRG=mert
+|  |  | ZMERTMETRIC=""
+|  |  | ZMERTSEMPOSSOURCE=
+|  |  | TMT_ROOT=
+|  |  +- s.model.3f1bca62.20100223-1748
+|  |  |  | TMS=s.tm.69f9b510.20100223-1748
+|  |  |  | RMEXP=s.rm.d3b83241.20100223-1622
+|  |  |  | LMS=0:s.lm.8f75775f.20100223-1155
+|  |  |  | SRCCORP=sample-en-cs-twostep-train
+|  |  |  | TGTCORP=sample-en-cs-twostep-train
+|  |  |  | ALICORP=sample-en-cs-twostep-train
+|  |  |  | SRCAUG=en+stc
+|  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  | ALIAUG=en-lemma-cs-lemma-gdfa
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | REORDERING=orientation-bidirectional-fe
+|  |  |  | REORDFACTORS=0-0
+|  |  |  +- s.tm.69f9b510.20100223-1748
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SRCCORP=sample-en-cs-twostep-train
+|  |  |  |  | TGTCORP=sample-en-cs-twostep-train
+|  |  |  |  | SRCAUG=en+stc
+|  |  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  |  | ALISTEP=s.align.336b51cf.20110104-1158
+|  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  | REORDERING=orientation-bidirectional-fe
+|  |  |  |  | REORDFACTORS=0-0
+|  |  |  |  | TRAININGFLAGS=""
+|  |  |  |  | CUTOFF=30
+|  |  |  |  | THRESHOLD=a+e
+|  |  |  |  +- s.align.336b51cf.20110104-1158
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | CORPUS=sample-en-cs-twostep-train
+|  |  |  |  |  | SRCALIAUG=cs+lemma
+|  |  |  |  |  | TGTALIAUG=en+lemma
+|  |  |  |  |  | OUTALILABEL=en-lemma-cs-lemma-gdfa
+|  |  |  |  |  | ALISYM=gdfa
+|  |  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  |  | SKIP_IRSTLM=
+|  |  |  +- s.rm.d3b83241.20100223-1622
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SRCCORP=sample-en-cs-twostep-train
+|  |  |  |  | TGTCORP=sample-en-cs-twostep-train
+|  |  |  |  | ALICORP=sample-en-cs-twostep-train
+|  |  |  |  | SRCAUG=en+stc
+|  |  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  |  | ALIAUG=en-lemma-cs-lemma-gdfa
+|  |  |  |  | REORDERING=orientation-bidirectional-fe
+|  |  |  |  | REORDFACTORS=0-0
+|  |  |  |  +- s.align.336b51cf.20110104-1158
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | CORPUS=sample-en-cs-twostep-train
+|  |  |  |  |  | SRCALIAUG=cs+lemma
+|  |  |  |  |  | TGTALIAUG=en+lemma
+|  |  |  |  |  | OUTALILABEL=en-lemma-cs-lemma-gdfa
+|  |  |  |  |  | ALISYM=gdfa
+|  |  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  |  | SKIP_IRSTLM=
+|  |  |  +- s.lm.8f75775f.20100223-1155
+|  |  |  |  | CORP=sample-en-cs-twostep-monotrain
+|  |  |  |  | CORPAUG=cs+pluslemma2
+|  |  |  |  | ORDER=3
+|  |  |  |  | BINARIZE=no
+|  |  |  |  | PARTS=1
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=
+|  +- s.mert.252aef71.20100220-1350
+|  |  | MODELSTEP=s.model.fa514d22.20100220-1350
+|  |  | DEVCORP=sample-en-cs-twostep-dev
+|  |  | TESTCORP=sample-en-cs-twostep-test
+|  |  | SRCAUG=cs+pluslemma2
+|  |  | REFAUG=cs+stc
+|  |  | SEARCH=cube
+|  |  | MERTFLAGS=""
+|  |  | MOSESFLAGS="-dl 0"
+|  |  | SERIAL=
+|  |  | STACK=
+|  |  | MERTPRG=mert
+|  |  | ZMERTMETRIC=
+|  |  | ZMERTSEMPOSSOURCE=
+|  |  | TMT_ROOT=
+|  |  +- s.model.fa514d22.20100220-1350
+|  |  |  | TMS=s.tm.26dd0318.20100220-1350
+|  |  |  | RMEXP=
+|  |  |  | LMS=0:s.lm.c85e9a01.20100220-1345
+|  |  |  | SRCCORP=sample-en-cs-twostep-monotrain
+|  |  |  | TGTCORP=sample-en-cs-twostep-monotrain
+|  |  |  | ALICORP=sample-en-cs-twostep-monotrain
+|  |  |  | SRCAUG=cs+pluslemma2
+|  |  |  | TGTAUG=cs+stc
+|  |  |  | ALIAUG=cs_idali
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | REORDERING=distance
+|  |  |  | REORDFACTORS=0-0
+|  |  |  +- s.tm.26dd0318.20100220-1350
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SRCCORP=sample-en-cs-twostep-monotrain
+|  |  |  |  | TGTCORP=sample-en-cs-twostep-monotrain
+|  |  |  |  | ALICORP=sample-en-cs-twostep-monotrain
+|  |  |  |  | SRCAUG=cs+pluslemma2
+|  |  |  |  | TGTAUG=cs+stc
+|  |  |  |  | ALIAUG=cs_idali
+|  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  | REORDERING=distance
+|  |  |  |  | REORDFACTORS=0-0
+|  |  |  |  | TRAININGFLAGS="-max-phrase-length 1"
+|  |  |  |  | CUTOFF=0
+|  |  |  |  | THRESHOLD=
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=
+|  |  |  +- s.lm.c85e9a01.20100220-1345
+|  |  |  |  | CORP=sample-en-cs-twostep-monotrain
+|  |  |  |  | CORPAUG=cs+stc
+|  |  |  |  | ORDER=3
+|  |  |  |  | BINARIZE=no
+|  |  |  |  | PARTS=1
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=

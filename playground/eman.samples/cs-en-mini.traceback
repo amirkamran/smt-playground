@@ -5,7 +5,7 @@
 |  | TESTCORP=sample-cs-en-mini-test
 |  | SRCAUG=cs+lc
 |  | REFAUG=en+lc
-|  | SEARCH=beam
+|  | SEARCH=cube
 |  | MERTFLAGS=""
 |  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
 |  | MOSESFLAGS=""
