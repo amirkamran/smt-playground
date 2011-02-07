@@ -71,10 +71,6 @@ PHASE1TESTCORP=`cat ../$PHASE1MERT/eman.vars | grep TESTCORP | cut -d= -f2`
 [ ! -z "$PHASE1TESTCORP" ] || die "Missed PHASE1TESTCORP"
 
 
-# clone some importnant executables
-../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
-
 
 ../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
 ../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
@@ -142,6 +138,10 @@ phase2dir=../$PHASE2MERT
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
+
+# clone some important executables
+../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 if [ $PHASE1TESTCORP == $TESTCORP ]; then
   echo "No need to translate first step, reuse output from $PHASE1MERT"
