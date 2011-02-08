@@ -1,5 +1,11 @@
 TODO:
 
+- data krom czengu09 a wmt10
+  ceskenoviny stahuje se: /export/home/bojar/diplomka/umc/devel/collected-data/ceskenoviny
+  czechnews   hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/czechnews-aktualne.cz/hunalign.ctxclean.gz
+  ted    hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/ted.com/plaintexts.txt.gz
+  ec.europa.eu
+
 - ngram -lm X.lm -prune 0.000001 -write-lm Y.lm
   ... pridej to jako mezikrok, s.prlm...
 
@@ -12,11 +18,20 @@ TODO:
 - urcite tokenizovat na kazde zmene typu znaku, i "*prices"
   (overit, jak chybna tokenizace skodi tectomt)
 
+- Zasadni chyby, ktere musim priste opravit:
+...v lematu je obcas |, ktera neni escapovana.
+málo|málo-3_^(málo_|_pøíd._jm.,_pø._byl_málo_dùsledný)
+napr. radka 7479 v souboru /a/merkur3/TMP/bojar/wmt10/playground/exp.lm.c87ea9c1.20101027-1556/../augmented_corpora/wmt10mono2/csNm.gz
+
+Musim rozdelovat pomlckova slova.
+
 - zapojit http://kheafield.com/code/mt/filter.html
   ...jenze to nepujde pro faktorovy preklad...
   ...leda bych delal jen jednokrokove, vyslednou frazovou tabulku oriznul na
   prislusny faktor a spojil frazove tabulky vic variant vstupu
   ...to asi za pokus stejne stoji
+
+
 
 - remove control chars from webcoll (nikdo jiny je nema)
   \1-grams:
@@ -30,3 +45,7 @@ TODO:
   -2.907703       !       -1.501431
   -4.456016       "       -0.5745671
 
+- chyba v detokenizeru, ale jen nekdy
+  „Já jsem navrhoval, aby se dohodly na mír se Sýrií výhradně na základě stažení z golanských výšin,“ varoval.
+  „Vím dobře, co Syřané budou muset vzdát, aby získal golanských výšin.
+  Budou muset vzdát svůj současný vztah s Íránem, budou muset vzdát svůj vztah k (shi-ite hnutí Hizballáh); budou muset vzdát pokračující podporu poskytují k terorismu (shi-ite hnutí Hamas), (teroristické sítě Al - Káida) a džihádu (svaté válce) v Iráku, “řekl premiér.
