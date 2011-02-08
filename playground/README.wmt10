@@ -1801,6 +1801,18 @@ Pripravim podklad pro Alese Tamchynu a sebe:
 
   vim qj.data/revtrans-small-concat-shuf.anot
 
+velka data:
+bleu      	TM       	LM       	mert
+14.92±0.48	         	         	f829f803.20100301-1548 large baseline, unfactored
+14.73±0.49	para+mono	para+mono	0248de0f.20101012-2343 factored
+          	?        	?        	exp.mert.546a6792.20101012-1857
+14.89±0.51	para+mono	para+mono	d5f8cc72.20101013-1144 podle largebaseline
+
+Print annotations using: quickjudge --print large-revtrans-baseline
+Now edit:
+  vim qj.data/large-revtrans-baseline.anot
+
+
 Featury pro EMS:
 - najit podobny pokus
 - historie odvozovani pokusu (jako git, ale je problem s tim, ze commit zmeny je jednak 'cele konfigurace' a jednak jednotlivych kroku)
@@ -1834,3 +1846,11 @@ Dosud mam totiz jediny pokus na velkych datech: exp.eval.41e9f74c.20101001-2157,
 
 Musim zkusit prekladat a pritom rovnou exportovat alignment! A tim prelozit celych tech 12M.
 
+2010-10-27
+
+Zasadni chyby, ktere musim priste opravit:
+...v lematu je obcas |, ktera neni escapovana.
+málo|málo-3_^(málo_|_pøíd._jm.,_pø._byl_málo_dùsledný)
+napr. radka 7479 v souboru /a/merkur3/TMP/bojar/wmt10/playground/exp.lm.c87ea9c1.20101027-1556/../augmented_corpora/wmt10mono2/csNm.gz
+
+Musim rozdelovat pomlckova slova.

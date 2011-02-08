@@ -11,6 +11,89 @@ my @scans = (
     "", "Just a delimiter line",
     "", 4, " ", " nic ", "nic", 0, $beautify, ],
   [
+    "Faust cs->en",
+    "",
+    # required
+    "
+    faust-csen
+    ",
+    # forbidden
+    "
+    PRUNE
+    200k-2200
+    ",
+    1,
+    # rows
+    "
+    dev([-a-z0-9]+)
+    ",
+    # cols
+    "
+    f^(clean[0-9]|orig[0-9])(?!.*TEST)
+    ",
+    # sort
+    "enN\\+",
+    0, # verbose
+    $beautify,
+  ],
+  [
+    "Faust en->cs",
+    "",
+    # required
+    "
+    faust-encs
+    ",
+    # forbidden
+    "
+    PRUNE
+    200k-2200
+    ",
+    1,
+    # rows
+    "
+    dev([-a-z0-9]+)
+    ",
+    # cols
+    "
+    f^(clean[0-9]|orig[0-9])(?!.*TEST)
+    ",
+    # sort
+    "enN\\+",
+    0, # verbose
+    $beautify,
+  ],
+  [
+    "Faust en->cs PRUNING",
+    "",
+    # required
+    "
+    faust-encs
+    ",
+    # forbidden
+    "
+    200k-2200
+    ",
+    1,
+    # rows
+    "
+    dev([-a-z0-9]+)
+    f^(clean[0-9]|orig[0-9])(?!.*TEST)
+    ",
+    # cols
+    "
+    PRUNE([0-9]+)
+    \\.6-sri\\.
+    ",
+    # sort
+    "enN\\+",
+    0, # verbose
+    $beautify,
+    "/", # collect conflicting occs
+  ],
+  [ "---------------------------------------",
+    "", "Following are wmt10",
+    "", 4, " ", " nic ", "nic", 0, $beautify, ],
+  [
     "To English",
     "",
     # required
