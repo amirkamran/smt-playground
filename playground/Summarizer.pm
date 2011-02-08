@@ -45,13 +45,14 @@ sub collect_tokens {
   #   u ... uniq, ignore repetitive occurrences of the token
   #   c ... uniq -c, count repetitive occurrences of the token
   #   i ... insensitive, ignore case # not yet implemented
+  #   f ... first occurrence only, don't collect all
   my $self = shift;
   my $origtokenre = shift;
   my $line = shift;
   my @out = ();
 
   # remove flags from origtokenre
-  $origtokenre =~ s/^([uic])\^//;
+  $origtokenre =~ s/^([uicf])\^//;
   my $flags = $1;
 
   while ($line =~ /$origtokenre/) {
@@ -70,9 +71,13 @@ sub collect_tokens {
     push @out, (defined $self->{tokenmap}->{$tokenre} ? $self->{tokenmap}->{$tokenre} : $tokenre);
   }
 
-  if ($flags =~ /u/) {
+  if ($flags =~ /f/) {
     return () if 0 == scalar @out;
     return $out[0];
+  } elsif ($flags =~ /u/) {
+    return () if 0 == scalar @out;
+    my %uniq = map { ($_, 1) } @out;
+    return sort {$a cmp $b} keys %uniq;
   } elsif ($flags =~ /c/) {
     return () if 0 == scalar @out;
     return ( scalar(@out)."*".$out[0] );
