@@ -17,13 +17,17 @@ TODO:
 
 - urcite tokenizovat na kazde zmene typu znaku, i "*prices"
   (overit, jak chybna tokenizace skodi tectomt)
+  ...snad opraveno
 
 - Zasadni chyby, ktere musim priste opravit:
-...v lematu je obcas |, ktera neni escapovana.
-málo|málo-3_^(málo_|_pøíd._jm.,_pø._byl_málo_dùsledný)
-napr. radka 7479 v souboru /a/merkur3/TMP/bojar/wmt10/playground/exp.lm.c87ea9c1.20101027-1556/../augmented_corpora/wmt10mono2/csNm.gz
+  ...v lematu je obcas |, ktera neni escapovana.
+  málo|málo-3_^(málo_|_pøíd._jm.,_pø._byl_málo_dùsledný)
+  napr. radka 7479 v souboru /a/merkur3/TMP/bojar/wmt10/playground/exp.lm.c87ea9c1.20101027-1556/../augmented_corpora/wmt10mono2/csNm.gz
+  ... snad opraveno, rozhodne nejde zreprodukovat
 
-Musim rozdelovat pomlckova slova.
+- Musim rozdelovat pomlckova slova.
+  ...az v exportnim formatu
+  ...a taky rozdelovat 33letý, 2krát, 34,3Kč, 23kg, 12km, zkratka [[:digit:]]+[[:alpha:]]+
 
 - zapojit http://kheafield.com/code/mt/filter.html
   ...jenze to nepujde pro faktorovy preklad...
