@@ -20,7 +20,7 @@ if [ -z "$MERTEXP" ] \
   exit 1
 fi
 
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
 MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
 [[ -d ../exp.mert.$MERTEXP ]] && MERTEXP=exp.mert.$MERTEXP
