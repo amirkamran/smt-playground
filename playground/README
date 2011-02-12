@@ -25,13 +25,22 @@ sample corpora are in augmented_corpora.
   # the SKIP_IRSTLM is currently needed because our seed binaries
   # uses no longer supported source of Irst LM, to be fixed
 
-
 * Sample Two-Step Translation
 
   The following command will start a sample two-step translation:
 
   SKIP_IRSTLM=yes eman clone --start \
     < eman.samples/en-cs-twostep-sample.traceback
+  # the SKIP_IRSTLM is currently needed because our seed binaries
+  # uses no longer supported source of Irst LM, to be fixed
+
+* Sample Reverse-Self-Training Scenario
+
+  The following command will start a sample reverse self-training
+  experiment:
+
+  SKIP_IRSTLM=yes eman clone --start \
+    < eman.samples/en-cs-revtrain-sample.traceback
   # the SKIP_IRSTLM is currently needed because our seed binaries
   # uses no longer supported source of Irst LM, to be fixed
 

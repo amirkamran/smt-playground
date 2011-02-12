@@ -1,0 +1,185 @@
++- s.mert.1ca6aef0.20110210-2148
+|  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  | MODELSTEP=s.model.7e45858a.20110201-1336
+|  | DEVCORP=sample-en-cs-revtrain-dev
+|  | TESTCORP=sample-en-cs-revtrain-test
+|  | SRCAUG=en+lc
+|  | REFAUG=cs+lc
+|  | SEARCH=cube
+|  | MERTFLAGS=""
+|  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
+|  | MOSESFLAGS=""
+|  | SERIAL=
+|  | STACK=
+|  | MERTPRG=mert
+|  | ZMERTMETRIC=""
+|  | ZMERTSEMPOSSOURCE=
+|  | ZMERTSEMPOSBLEUWEIGHTS=
+|  | ZMERTFLAGS=""
+|  | TMT_ROOT=
+|  +- s.model.7e45858a.20110201-1336
+|  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  | TMS=s.tm.f64a6d09.20110201-1336:s.tm.e397e662.20110201-1335
+|  |  | RMSTEP=
+|  |  | LMS=0:s.lm.0db37564.20110201-1336:::0:s.lm.59a04a0a.20110201-1335
+|  |  | SRCCORP=sample-en-cs-revtrain-train
+|  |  | TGTCORP=sample-en-cs-revtrain-train
+|  |  | ALISTEP=s.align.8cabba71.20110201-1335
+|  |  | ALICORP=sample-en-cs-revtrain-train
+|  |  | SRCAUG=en+lc
+|  |  | TGTAUG=cs+lc
+|  |  | ALIAUG=gdfa-en-lcstem4-cs-lcstem4
+|  |  | DECODINGSTEPS=t0-0
+|  |  | REORDERING=distance
+|  |  | REORDFACTORS=0-0
+|  |  +- s.tm.f64a6d09.20110201-1336
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | SRCCORP=sample-en-cs-revtrain-monotrain-toa
+|  |  |  | TGTCORP=sample-en-cs-revtrain-monotrain-toa
+|  |  |  | ALICORP=sample-en-cs-revtrain-monotrain-toa
+|  |  |  | SRCAUG=en+lc
+|  |  |  | TGTAUG=cs+lc
+|  |  |  | ALISTEP=s.toa.d4d65a25.20110201-1336
+|  |  |  | ALIAUG="gdfa-en-lc-cs-lc-lcnosuf3"
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | REORDERING=distance
+|  |  |  | REORDFACTORS=0-0
+|  |  |  | TRAININGFLAGS=""
+|  |  |  | CUTOFF=0
+|  |  |  | THRESHOLD=
+|  |  |  +- s.toa.d4d65a25.20110201-1336
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | MERTEXP=s.mert.29bcbbca.20110201-1336
+|  |  |  |  | TESTCORP=sample-en-cs-revtrain-monotrain
+|  |  |  |  | MOSESFLAGS=""
+|  |  |  |  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
+|  |  |  |  | OUTALILABEL="gdfa-en-lc-cs-lc-lcnosuf3"
+|  |  |  |  | ALISYM="gdfa"
+|  |  |  |  | JOBS=10
+|  |  |  |  | ITER=
+|  |  |  |  | CORPUS=sample-en-cs-revtrain-monotrain-toa
+|  |  |  |  | SRCALIAUG=en+lc
+|  |  |  |  | TGTALIAUG=cs+lc+lcnosuf3
+|  |  |  |  +- s.mert.29bcbbca.20110201-1336
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | MODELSTEP=s.model.eec35dde.20110201-1336
+|  |  |  |  |  | DEVCORP=sample-en-cs-revtrain-dev
+|  |  |  |  |  | TESTCORP=sample-en-cs-revtrain-test
+|  |  |  |  |  | SRCAUG=cs+lc+lcnosuf3
+|  |  |  |  |  | REFAUG=en+lc
+|  |  |  |  |  | SEARCH=cube
+|  |  |  |  |  | MERTFLAGS=""
+|  |  |  |  |  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
+|  |  |  |  |  | MOSESFLAGS=""
+|  |  |  |  |  | SERIAL=
+|  |  |  |  |  | STACK=
+|  |  |  |  |  | MERTPRG=mert
+|  |  |  |  |  | ZMERTMETRIC=""
+|  |  |  |  |  | ZMERTSEMPOSSOURCE=
+|  |  |  |  |  | ZMERTSEMPOSBLEUWEIGHTS=
+|  |  |  |  |  | ZMERTFLAGS=""
+|  |  |  |  |  | TMT_ROOT=
+|  |  |  |  |  +- s.model.eec35dde.20110201-1336
+|  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  | TMS=s.tm.abfe3323.20110201-1336
+|  |  |  |  |  |  | RMSTEP=
+|  |  |  |  |  |  | LMS=0:s.lm.0a9057f1.20110201-1336
+|  |  |  |  |  |  | SRCCORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  | TGTCORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  | ALISTEP=s.align.ec103654.20110201-1336
+|  |  |  |  |  |  | ALICORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  | SRCAUG=cs+lc+lcnosuf3
+|  |  |  |  |  |  | TGTAUG=en+lc
+|  |  |  |  |  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
+|  |  |  |  |  |  | DECODINGSTEPS=t0-0At1-0
+|  |  |  |  |  |  | REORDERING=distance
+|  |  |  |  |  |  | REORDFACTORS=0-0
+|  |  |  |  |  |  +- s.tm.abfe3323.20110201-1336
+|  |  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  | SRCCORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  |  | TGTCORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  |  | ALICORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  |  | SRCAUG=cs+lc+lcnosuf3
+|  |  |  |  |  |  |  | TGTAUG=en+lc
+|  |  |  |  |  |  |  | ALISTEP=s.align.ec103654.20110201-1336
+|  |  |  |  |  |  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
+|  |  |  |  |  |  |  | DECODINGSTEPS=t0-0At1-0
+|  |  |  |  |  |  |  | REORDERING=distance
+|  |  |  |  |  |  |  | REORDFACTORS=0-0
+|  |  |  |  |  |  |  | TRAININGFLAGS=""
+|  |  |  |  |  |  |  | CUTOFF=0
+|  |  |  |  |  |  |  | THRESHOLD=
+|  |  |  |  |  |  |  +- s.align.ec103654.20110201-1336
+|  |  |  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  |  | CORPUS=sample-en-cs-revtrain-train
+|  |  |  |  |  |  |  |  | SRCALIAUG=cs+lcstem4
+|  |  |  |  |  |  |  |  | TGTALIAUG=en+lcstem4
+|  |  |  |  |  |  |  |  | OUTALILABEL=gdfa-cs-lcstem4-en-lcstem4
+|  |  |  |  |  |  |  |  | ALISYM=gdfa
+|  |  |  |  |  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  |  |  |  |  | SKIP_IRSTLM=
+|  |  |  |  |  |  +- s.lm.0a9057f1.20110201-1336
+|  |  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  | CORP=sample-en-cs-revtrain-train
+|  |  |  |  |  |  |  | CORPAUG=en+lc
+|  |  |  |  |  |  |  | ORDER=5
+|  |  |  |  |  |  |  | BINARIZE=
+|  |  |  |  |  |  |  | PARTS=1
+|  |  |  |  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  |  |  |  | SKIP_IRSTLM=
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=
+|  |  +- s.tm.e397e662.20110201-1335
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | SRCCORP=sample-en-cs-revtrain-train
+|  |  |  | TGTCORP=sample-en-cs-revtrain-train
+|  |  |  | ALICORP=sample-en-cs-revtrain-train
+|  |  |  | SRCAUG=en+lc
+|  |  |  | TGTAUG=cs+lc
+|  |  |  | ALISTEP=s.align.8cabba71.20110201-1335
+|  |  |  | ALIAUG=gdfa-en-lcstem4-cs-lcstem4
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | REORDERING=distance
+|  |  |  | REORDFACTORS=0-0
+|  |  |  | TRAININGFLAGS=""
+|  |  |  | CUTOFF=0
+|  |  |  | THRESHOLD=
+|  |  |  +- s.align.8cabba71.20110201-1335
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | CORPUS=sample-en-cs-revtrain-train
+|  |  |  |  | SRCALIAUG=en+lcstem4
+|  |  |  |  | TGTALIAUG=cs+lcstem4
+|  |  |  |  | OUTALILABEL=gdfa-en-lcstem4-cs-lcstem4
+|  |  |  |  | ALISYM=gdfa
+|  |  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  |  | SKIP_SRILM=
+|  |  |  |  |  | SKIP_IRSTLM=
+|  |  +- s.lm.0db37564.20110201-1336
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | CORP=sample-en-cs-revtrain-monotrain
+|  |  |  | CORPAUG=cs+lc
+|  |  |  | ORDER=5
+|  |  |  | BINARIZE=
+|  |  |  | PARTS=1
+|  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SKIP_SRILM=
+|  |  |  |  | SKIP_IRSTLM=
+|  |  +- s.lm.59a04a0a.20110201-1335
+|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  | CORP=sample-en-cs-revtrain-train
+|  |  |  | CORPAUG=cs+lc
+|  |  |  | ORDER=5
+|  |  |  | BINARIZE=
+|  |  |  | PARTS=1
+|  |  |  +- s.binaries.8f30116d.20101129-1913
+|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  |  |  | SKIP_SRILM=
+|  |  |  |  | SKIP_IRSTLM=
