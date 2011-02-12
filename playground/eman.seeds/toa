@@ -173,8 +173,8 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
 
-ls alignment?* | sort -n | xargs cat | sed 's/ $//' | gzip -c > alignment.gz
-ls evaluation?*.opt.out.gz | sort -n | xargs zcat | sed 's/ $//' | gzip -c > evaluation.opt.out.gz
+ls alignment0* | sort -n | xargs cat | sed 's/ $//' | gzip -c > alignment.gz
+ls evaluation0*.opt.out.gz | sort -n | xargs zcat | sed 's/ $//' | gzip -c > evaluation.opt.out.gz
 
 mkdir ../augmented_corpora/$TESTCORP-toa
 ../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT
