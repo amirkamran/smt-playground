@@ -457,10 +457,10 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 	| gzip > $*_idali.gz \
 	&& echo "ali" > $*_idali.info
 
-TMTROOT?=/home/bojar/diplomka/granty/emplus/wmt10/playground/workspace.20091113-2336/tmt2
+TMTROOT?=/home/bojar/diplomka/granty/emplus/wmt11/playground/s.tectomt.37453b1c.20110201-1501/tectomt
 SRUNBLOCKS?=$(TMTROOT)/tools/srunblocks_streaming/srunblocks
 JOBS?=40
-SCENDIR=./prep-wmt10/
+SCENDIR=./prep-wmt11/
 
 %.gz.generate_language:
 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)

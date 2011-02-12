@@ -1,0 +1,14 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
+Normalize_plaintext::Czech
+
+SCzechW_to_SCzechM::Tokenize
+SCzechW_to_SCzechM::TagMorce
+
+#SCzechM_to_SCzechN::SVM_ne_recognizer
+#SCzechM_to_SCzechN::Geo_ne_recognizer
+#SCzechM_to_SCzechN::Embed_instances
+
+Print::Factored
+  TMT_PARAM_PRINT_FACTORED=SCzechM
+  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output
+  TMT_PARAM_PRINT_FACTORED_FLAGS=join_spaced_numbers:escape_space

@@ -4,9 +4,9 @@ use strict;
 use Getopt::Long;
 
 my $dryrun = 0;
-my $target = "analyze";
+my $target = "plaintext";
 GetOptions(
-  "n" => \$dryrun,
+  "n|dry-run" => \$dryrun,
   "target=s" => \$target,
 ) or exit 1;
 
@@ -16,22 +16,20 @@ while (<>) {
   my $line = $_;
   s/ *\t */\t/g;
   s/^ *| *$//g;
-  my ($outcorpname, $langs, $scentype, $sectionre, $domainre, $comment)
+  my ($outcorpname, $langs, $sectionre, $domainre, $comment)
     = split /\t/;
   foreach my $langnames (split /,/, $langs) {
-    my ($lang, $outlangname) = split /:/, $langnames;
-    $outlangname = $lang if ! defined $outlangname;
-    if (-e "../$outcorpname/$outlangname.gz" ) {
-      print STDERR "Skipped existing ../$outcorpname/$outlangname.gz\n";
+    my ($lang, $colidx) = split /:/, $langnames;
+    if (-e "../$outcorpname/$lang.gz" ) {
+      print STDERR "Skipped existing ../$outcorpname/$lang.gz\n";
       next;
     }
     $ENV{"OUTCORPNAME"} = $outcorpname;
-    $ENV{"ANOTLANG"} = $lang;
-    $ENV{"OUTLANG"} = $outlangname;
-    $ENV{"SCENTYPE"} = $scentype;
+    $ENV{"OUTLANGNAME"} = $lang;
     $ENV{"FILENAMERE"} = $sectionre;
     $ENV{"COLUMNRE"} = $domainre;
-    foreach my $varname(qw(OUTCORPNAME ANOTLANG OUTLANG SCENTYPE FILENAMERE COLUMNRE)) {
+    $ENV{"COLIDX"} = $colidx;
+    foreach my $varname(qw(OUTCORPNAME OUTLANGNAME FILENAMERE COLUMNRE COLIDX)) {
       print STDERR "$varname: $ENV{$varname}\n";
     }
     my $dryrunarg = $dryrun ? "-n" : "";
