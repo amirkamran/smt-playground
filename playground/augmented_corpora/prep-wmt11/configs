@@ -16,8 +16,7 @@ czeng09-na	cs:3,en:2	/[0-8][0-9]	^navajo	# navajo
 emea	cs:2,en:1	emea	.
 ted	cs:2,en:1	ted.com	.
 #aktualne	cs:3,en:2	czechnews-aktualne.c jeste vadne
-ps	cs:1	training/news-commentary-v6.cs-en.cs.gz
-ps	en:1	training/news-commentary-v6.cs-en.en.gz
+ps	cs:2,en:1	cleaned/ps	.
 				
 monoeuroparl	cs:1	monolingual/europarl	.
 mononews07	cs:1	monolingual/news.2007.cs.shuffled.gz
