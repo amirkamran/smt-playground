@@ -22,6 +22,7 @@ my $qruncmd = $FindBin::Bin."/".$FindBin::Script;
 my $default_jobs = 5;
 my %opts = (
   attempts => 1,
+  verbose => 0,
   debug => 0,
   sync => 0,
   mem=> undef,
@@ -34,7 +35,6 @@ my %opts = (
   "input-file" => undef, # optional; to make sure we don't wait for stdin
   help => 0,
   join => 1,
-  fan => 0,
   tmp => "/mnt/h/tmp", # used to store stdin/combined file
                        # inputs for slaves always go to ./
   picksection => undef, # used by slaves to pick section start:length
@@ -48,6 +48,7 @@ GetOptions(\%opts,
   "tmp=s",
   "attempts=i",
   "debug",
+  "verbose",
   "jobs|j=i",
   "splits=i",
   "split-to-size=i",
@@ -57,7 +58,6 @@ GetOptions(\%opts,
   "priority|p=i",
   "mem|m=s",
   "join!",
-  "fan"
 ) or exit 1;
 
 if (defined $opts{picksection}) {
@@ -93,11 +93,12 @@ Options:
   --sync ... wait for all jobs to finish
   --join ... join stdouts (implies --sync, stdouts not included in the logs)
              (job outputs, until joined, are gzipped)
-  --fan  ... shuffle input lines by giving consecutive lines to different jobs
 Options passed to SGE:
   --priority=-200   ... scheduling priority
   --mem=10g         ... -l mf, how much memory should be 'reserved' for the job
                         (job is delayed, until enough memory)
+No longer supported:
+  --fan  ... shuffle input lines by giving consecutive lines to different jobs
 ";
   exit $badusage;
 }
@@ -357,7 +358,7 @@ attempt=1
 error=1
 while [ \$error == 1 ] && [ \$attempt -le $opts{attempts} ]; do
   echo "==== ATTEMPT \$attempt out of $opts{attempts}"
-  echo "==== Running brunblocks:"
+  echo "==== Running command:"
   echo '$cmdbq'
   echo "===="
   if $cmd; then
@@ -465,7 +466,7 @@ KONEC
 }
 
 sub saferun3 {
-   print STDERR "Executing: @_\n";
+ print STDERR "Executing: @_\n" if $opts{'verbose'};
   my($wtr, $rdr, $err);
   my $pid = open3($wtr, $rdr, $err, @_);
   close($wtr);
@@ -494,7 +495,7 @@ sub saferun3 {
 
 
 sub safesystem {
-  # print STDERR "Executing: @_\n";
+  print STDERR "Executing: @_\n" if $opts{'verbose'};
   system(@_);
   if ($? == -1) {
       print STDERR "Failed to execute: @_\n  $!\n";
@@ -577,4 +578,4 @@ sub humantimediff {
   return $out;
 }
 
-# Copyright 2008-2010 Ondrej Bojar
+# Copyright 2008-2011 Ondrej Bojar
