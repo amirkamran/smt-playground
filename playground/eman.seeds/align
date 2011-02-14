@@ -37,7 +37,7 @@ OUTALILABEL=$OUTALILABEL
 ALISYM=$ALISYM
 KONEC
 
-echo $OUTALILABEL > eman.tag
+echo $CORPUS.$OUTALILABEL > eman.tag
 
 echo $BINARIES > eman.deps
 

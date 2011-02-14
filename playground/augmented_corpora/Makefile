@@ -446,6 +446,18 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 
 # Language generation rules:
 
+%T1.gz.generate_language:
+	# Further re-tokenization 1
+	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
+	inlang=`echo $(LANG) | sed 's/T1//'` ; \
+	set -o pipefail ; \
+	qruncmd --jobs=$(JOBS) --join --jobname=$*T1.gz \
+	    " ../../scripts/further-tokenize-factored.pl " \
+	    --input-file=`$(AUGMENT) $(CORP)/$$inlang` \
+	    --promise-linecount=`cat $(CORP)/LINECOUNT` \
+	| gzip > $*T1.gz \
+	&& cp $(CORP)/$$inlang.info $*T1.info
+
 %_idali.gz.generate_language:
 	# $(AUGMENT) asks us to create language $(LANG) of corpus $(CORP)
 	inlang=`echo $(LANG) | sed 's/_idali//'` ; \
@@ -467,7 +479,7 @@ SCENDIR=./prep-wmt11/
 	[ -e $(SCENDIR)/$(LANG).vars ]
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
-	qruncmd --jobs=$(JOBS) --join --jobname=$*.gz \
+	qruncmd --jobs=$(JOBS) $(QRUNCMDFLAGS) --join --jobname=$*.gz \
 	    "export PML_COMPILE=0; \
 	       $(SRUNBLOCKS) --errorlevel=FATAL $$srunblocksflags \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \

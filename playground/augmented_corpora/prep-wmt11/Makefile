@@ -12,13 +12,43 @@ all:
 	# download and clean plaintexts of the devsets
 	make dev.plaintext cleaned/ps.gz
 	./make_all_configs.pl < configs
+	# Also manually run:
+	#   make ../webcoll
+	#   make ../syn200x
+	# And once all plaintexts are ready, these are the analysis commands:
+	#   make runall
+	#   make joinedpara
 
+PARACONSTRAIN=czeng09-ne czeng09-eu czeng09-fi czeng09-na czeng09-su czeng09-te czeng09-we ps
+PARAEXTRA=emea ted
+PARACORP=wmt08 wmt09 wmt10 $(PARACONSTRAIN)
+MONOCORP=monops monoeuroparl mononews07 mononews08 mononews09 mononews10 mononews11 webcoll syn200x
+runall:
+	@for c in $(PARACORP); do \
+	  for l in csNm enNm csNmT1 enNmT1; do \
+	    echo ../augment.pl $$c/$$l ; \
+	  done ; \
+	done
+	@for c in $(MONOCORP); do \
+	  for l in csNm csNmT1; do \
+	    echo ../augment.pl $$c/$$l ; \
+	  done ; \
+	done
 
-justwmtdevs: plaintext.wmt10dev
-	cd .. \
-	&& for d in wmt102.test*; do zcat $$d/cs_txt.gz | wc -l > $$d/LINECOUNT; done \
-	&& for d in wmt102.test*; do echo untok > $$d/cs_txt.info; done \
-	&& for d in wmt102.test*; do echo untok > $$d/en_txt.info; done
+joinedpara:
+	@for l in csNmT1 enNmT1; do \
+	  echo ../augment.pl $$(echo $(PARACONSTRAIN) $(PARAEXTRA) | tr ' ' +)/$$l; \
+	  echo ../augment.pl $$(echo $(PARACONSTRAIN) | tr ' ' +)/$$l ; \
+	done
+
+# Outdated
+# justwmtdevs: plaintext.wmt10dev
+# 	cd .. \
+# 	&& for d in wmt102.test*; do zcat $$d/cs_txt.gz | wc -l > $$d/LINECOUNT; done \
+# 	&& for d in wmt102.test*; do echo untok > $$d/cs_txt.info; done \
+# 	&& for d in wmt102.test*; do echo untok > $$d/en_txt.info; done
+
+# Some big corpora are created using custom rules
 
 ../webcoll:
 	# create plaintext of webcoll monolingual czech texts
@@ -49,24 +79,11 @@ justwmtdevs: plaintext.wmt10dev
 	| gzip -c >> $@/cs_unseg.gz
 	# now segment
 	qruncmd --jobname=synsegment --jobs=$(JOBS) \
-	    '$(SRUNBLOCKS) SCzechW_to_SCzechM::TextSeg_tokenizer_and_segmenter --store-input-to=document czech_source_text czech_source_sentence --allow-many-output-bundles --errorlevel FATAL' \
+	    '$(SRUNBLOCKS) SCzechW_to_SCzechM::TextSeg_tokenizer_and_segmenter --store-input-to=document czech_source_text czech_source_sentence --allow-many-output-bundles --errorlevel FATAL | ./fix_whitespace.pl ' \
 	    $@/cs_unseg.gz \
 	| gzip -c > $@/cs_txt.gz
 	echo untokenized > $@/cs_txt.info
 	zcat $@/cs_txt.gz | wc -l > $@/LINECOUNT
-
-
-analyze.%: configs.% make_all_configs.pl
-	./make_all_configs.pl < $<
-	touch $@
-
-copy_plaintexts: dev.plaintext
-	for y in 08 09; do \
-	  for l in cs en; do \
-	    cp $</news-test20$$y.$$l.gz ../wmt102.test$$y/$$l"PLAIN".gz \
-	        || exit 1 ; \
-	  done ; \
-	done
 
 CZENG09PLAINTEXTSDIR=/net/data/czeng09-public-release/data-plaintext/
 
@@ -178,6 +195,7 @@ dumplines:
 	| grep '$(COLUMNRE)'
 
 
+# Peparation of plaintexts for WMT devsets
 dev.tgz:
 	wget http://www.statmt.org/wmt11/dev.tgz
 test.tgz:

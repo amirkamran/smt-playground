@@ -8,6 +8,9 @@ cat > eman.vars << KONEC
 TMT_ROOT=$(basename $(pwd))
 KONEC
 
+# ufal's preferred tempdir
+defaulttempdir=/mnt/h/tmp
+
 cat > eman.command << KONEC
 #!/bin/bash
 
@@ -21,6 +24,12 @@ ulimit -c 1 # core files limited to 1 byte
 svn co https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk tectomt || die "Checkout failed"
 cd tectomt || die "Failed to chdir to the just checkouted tectomt"
 ln -s /net/projects/tectomt_shared/ share || die "Share failed"
+
+if [ -e $defaulttempdir ] ; then
+  ln -s $defaulttempdir tmp || die "Failed to symlink $defaulttempdir"
+else
+  ln -s /tmp tmp || die "Failed to symlink /tmp"
+fi
 
 echo DONE > \$mydir/eman.status
 

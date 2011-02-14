@@ -2,7 +2,9 @@ TODO:
 
 - data krom czengu09 a wmt10
   ceskenoviny stahuje se: /export/home/bojar/diplomka/umc/devel/collected-data/ceskenoviny
+  ... ale linked pairs nenaslo nic noveho :-(
   czechnews   hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/czechnews-aktualne.cz/hunalign.ctxclean.gz
+  ... nutne potrebuji filtrovat :-(
   ted    hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/ted.com/plaintexts.txt.gz
   ec.europa.eu
 
