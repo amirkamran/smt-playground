@@ -80,13 +80,28 @@ my $seedsdir = "eman.seeds";
 
 my $qsub_available = undef;
 
+# qsub flags we interpret
+my $queue = undef;
+my $priority = -100; # use a lower priority by default
+my $exclude_comp = undef; # exclude a single computer
+my $mem = undef; # informative memory requirements
+my $disk = undef; # informative temp disk requirements
+my $time = undef; # time limit
+my @limits = ();  # other custom limits
+# the 'environment' used to interpret qsub flags
+my $env = "ufal"; # SGE environment (used for option mapping)
+my $hostname = `hostname`;
+if ($hostname =~ /^cluster-cn-/i) {
+  $env = "rwth";
+}
+
 my %options = (
   "help|h" => \$help,
   "verbose|v" => \$verbose,
   "debug" => \$debug,
   "list-options" => \$list_options,
   "man" => \$manpage,
-  "sge!" => \$sge, # not quite supported
+  "sge!" => \$sge,
   "assume-abolished-ok" => \$assume_abolished_ok, # for eman start
   "tree-in-traceback!" => \$show_tree_in_traceback,
   "tag!" => \$show_tag,
@@ -100,6 +115,13 @@ my %options = (
   "all-redo!" => \$redo_all,
   "start!" => \$do_start,
   "reindex" => \$reindex,
+  "queue=s"=>\$queue,
+  "priority=i"=>\$priority,
+  "exclude-comp=s"=>\$exclude_comp,
+  "mem=s"=>\$mem, # set e.g. to 10m or 4g
+  "disk=s"=>\$disk, # format: 10g
+  "time=s"=>\$time, # format: hh:mm:ss
+  "limit|l=s@"=>\@limits, # format, e.g.: h_stack=30M
 );
 GetOptions(%options) or exit 1;
 
@@ -897,7 +919,44 @@ sub submit {
     # use sge
     die "Unimplemented to wait for some non-sge jobs: @plainholds"
       if 0 < scalar @plainholds;
-    $ok = safesystem("( qsub -hard -l mnth_free=15g -j y -S /bin/bash -C '' -cwd $sgeholdsstr -N log -l h_stack=30M ./eman.command 2>&1 ) > log");
+
+    my @opts = ("-hard");
+    push @opts, ("-j", "y");
+    push @opts, ("-cwd");
+    push @opts, ("-S", "/bin/bash");
+    push @opts, ("-p", $priority);
+    # interpret SGE options
+    if (defined $queue) {
+      push @opts, ("-q", $queue);
+    }
+    if (defined $exclude_comp) {
+      die "Cannot use --queue and --exclude-comp at the same time"
+        if defined $queue;
+      push @opts, ("-q", "*@*&!$exclude_comp");
+    }
+    if (defined $time) {
+      push @opts, ('-l', "h_rt=".$time);
+    }
+    if (defined $mem) {
+      if ($env eq "rwth") {
+        push @opts, ('-l', "h_vmem=".$mem);
+      } else {
+        # UFAL setup
+        push @opts, ('-l', "mf=".$mem);
+      }
+    }
+    if (defined $disk) {
+      if ($env eq "rwth") {
+        die "Unsupported --disk at rwth.";
+      } else {
+        # UFAL setup
+        push @opts, ('-l', "mnthf=".$disk);
+      }
+    }
+    # add all other directives --limit
+    push @opts, map {('-l', $_)} @limits;
+
+    $ok = safesystem("( qsub  -C '' $sgeholdsstr -N log @opts ./eman.command 2>&1 ) > log");
     if ($ok) {
       # get job id
       my $hdl = my_open("log");
