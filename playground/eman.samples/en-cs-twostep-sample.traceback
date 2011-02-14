@@ -15,7 +15,7 @@
 |  |  | DEVCORP=sample-en-cs-twostep-dev
 |  |  | TESTCORP=sample-en-cs-twostep-test
 |  |  | SRCAUG=en+stc
-|  |  | REFAUG=cs+pluslemma2
+|  |  | REFAUG=cs+pluslemma
 |  |  | SEARCH=cube
 |  |  | MERTFLAGS=""
 |  |  | MOSESFLAGS=""
@@ -33,7 +33,7 @@
 |  |  |  | TGTCORP=sample-en-cs-twostep-train
 |  |  |  | ALICORP=sample-en-cs-twostep-train
 |  |  |  | SRCAUG=en+stc
-|  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  | TGTAUG=cs+pluslemma
 |  |  |  | ALIAUG=en-lemma-cs-lemma-gdfa
 |  |  |  | DECODINGSTEPS=t0-0
 |  |  |  | REORDERING=orientation-bidirectional-fe
@@ -43,7 +43,7 @@
 |  |  |  |  | SRCCORP=sample-en-cs-twostep-train
 |  |  |  |  | TGTCORP=sample-en-cs-twostep-train
 |  |  |  |  | SRCAUG=en+stc
-|  |  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  |  | TGTAUG=cs+pluslemma
 |  |  |  |  | ALISTEP=s.align.336b51cf.20110104-1158
 |  |  |  |  | DECODINGSTEPS=t0-0
 |  |  |  |  | REORDERING=orientation-bidirectional-fe
@@ -67,7 +67,7 @@
 |  |  |  |  | TGTCORP=sample-en-cs-twostep-train
 |  |  |  |  | ALICORP=sample-en-cs-twostep-train
 |  |  |  |  | SRCAUG=en+stc
-|  |  |  |  | TGTAUG=cs+pluslemma2
+|  |  |  |  | TGTAUG=cs+pluslemma
 |  |  |  |  | ALIAUG=en-lemma-cs-lemma-gdfa
 |  |  |  |  | REORDERING=orientation-bidirectional-fe
 |  |  |  |  | REORDFACTORS=0-0
@@ -83,7 +83,7 @@
 |  |  |  |  |  |  | SKIP_IRSTLM=
 |  |  |  +- s.lm.8f75775f.20100223-1155
 |  |  |  |  | CORP=sample-en-cs-twostep-monotrain
-|  |  |  |  | CORPAUG=cs+pluslemma2
+|  |  |  |  | CORPAUG=cs+pluslemma
 |  |  |  |  | ORDER=3
 |  |  |  |  | BINARIZE=no
 |  |  |  |  | PARTS=1
@@ -95,7 +95,7 @@
 |  |  | MODELSTEP=s.model.fa514d22.20100220-1350
 |  |  | DEVCORP=sample-en-cs-twostep-dev
 |  |  | TESTCORP=sample-en-cs-twostep-test
-|  |  | SRCAUG=cs+pluslemma2
+|  |  | SRCAUG=cs+pluslemma
 |  |  | REFAUG=cs+stc
 |  |  | SEARCH=cube
 |  |  | MERTFLAGS=""
@@ -113,7 +113,7 @@
 |  |  |  | SRCCORP=sample-en-cs-twostep-monotrain
 |  |  |  | TGTCORP=sample-en-cs-twostep-monotrain
 |  |  |  | ALICORP=sample-en-cs-twostep-monotrain
-|  |  |  | SRCAUG=cs+pluslemma2
+|  |  |  | SRCAUG=cs+pluslemma
 |  |  |  | TGTAUG=cs+stc
 |  |  |  | ALIAUG=cs_idali
 |  |  |  | DECODINGSTEPS=t0-0
@@ -124,7 +124,7 @@
 |  |  |  |  | SRCCORP=sample-en-cs-twostep-monotrain
 |  |  |  |  | TGTCORP=sample-en-cs-twostep-monotrain
 |  |  |  |  | ALICORP=sample-en-cs-twostep-monotrain
-|  |  |  |  | SRCAUG=cs+pluslemma2
+|  |  |  |  | SRCAUG=cs+pluslemma
 |  |  |  |  | TGTAUG=cs+stc
 |  |  |  |  | ALIAUG=cs_idali
 |  |  |  |  | DECODINGSTEPS=t0-0
