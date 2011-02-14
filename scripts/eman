@@ -50,6 +50,7 @@ my %expand_abbrev = qw(
   fail fail
   outdate outdate
   dups duplicates
+  guess guess
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -1737,6 +1738,19 @@ commands fail to find it ("Failed to guess step from:..."), try running:
 
 The step may indeed be a zombie, a removed directory.
 
+=head2 Multiple Step Instances, Some Failed, Some OK
+
+It can happen that a step fails but a second try succeeds. Eman ends up with
+two directories: s.test.123 DONE and s.test.456 FAILED. If this step is used in
+a scenario and you redo the scenario, eman may accidentally prefer to use the
+failed s.test.456 and redo this failed step. Ultimately, this leads to low
+reuse and unnecessary duplication of steps, most DONE and some FAILED.
+
+To avoid the problem, use 'eman dups' every now and then and completely remove
+(not just abolish) bad instances of experiments.
+
+Ultimately, eman should have a preference when cloning: use oldest successful
+experiment.
 
 =head1 WRITING SEEDS: CORE CONVENTIONS
 
