@@ -51,6 +51,10 @@ my %expand_abbrev = qw(
   outdate outdate
   dups duplicates
 );
+# all expanded names are also allowed:
+foreach my $val (values %expand_abbrev) {
+  $expand_abbrev{$val} = $val;
+}
 
 my $wait_sleep = 3;
 my $startupwd = cwd();
