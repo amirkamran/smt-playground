@@ -80,7 +80,7 @@ echo Checking eval corp size
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || exit 1
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
-if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
+if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
        -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
   echo "Defaulting to 'en' as the targetlang for detokenizer."
   TARGETLAN_FOR_DETOKENIZER=en
@@ -139,7 +139,7 @@ $MOSESPARALLELIZER \\
    || die "Failed to translate"
 
 echo "Detokenizing evaluation.opt.out"
-\$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+\$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
 < evaluation.opt.out > evaluation.opt.txt \\
   || die "Failed to detokenize"
 

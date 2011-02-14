@@ -80,7 +80,7 @@ echo Checking tune and eval corp sizes
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
-if ! echo "test" | $SCRIPTS_ROOTDIR/recaser/detokenizer.perl \
+if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
        -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
   echo "Defaulting to 'en' as the targetlang for detokenizer."
   TARGETLAN_FOR_DETOKENIZER=en
@@ -208,7 +208,7 @@ echo "Final BLEU:"
   || die "BLEU of evaluation.opt.out set failed"
 
 echo "Detokenizing evaluation.opt.out"
-\$SCRIPTS_ROOTDIR/recaser/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+\$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
   < evaluation.opt.out > evaluation.opt.txt
 
 echo DONE > \$mydir/eman.status

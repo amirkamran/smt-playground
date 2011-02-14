@@ -289,7 +289,7 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 	| sed 's/\([^ ]\)[^ ]*/\1/g' \
 	| gzip -c > $@
 
-%.factors/pluslemma2.gz:
+%.factors/pluslemma.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
 	./augment.pl --dump $(CORP)/$(LANG)+form+lemma+tag \
 	| $(STATMT)/scripts/construct_improved_czech_lemma.pl \
