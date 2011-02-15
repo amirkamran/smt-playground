@@ -7,11 +7,11 @@ function die() {
 }
 set -o pipefail
 
-[ ! -z "$1" ] || die "usage: $0 exp-identifier"
+[ ! -z "$1" ] || die "usage: $0 step-identifier"
 
-e=`manager.pl --guess $1`
+e=`eman guess $1`
 
-[ -d $e ] || die "Not an experiment: $e"
+[ -d $e ] || die "Not a step: $e"
 
 cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
 

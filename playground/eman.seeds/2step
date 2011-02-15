@@ -125,8 +125,10 @@ echo "=============================="
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
+mydir=\`pwd\`
+
 set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 renice 10 \$\$
 

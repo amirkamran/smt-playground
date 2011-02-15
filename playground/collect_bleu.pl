@@ -11,16 +11,16 @@ binmode STDOUT, ":utf8";
 
 my %collect_info = ();
 
-foreach my $path (bsd_glob("exp.*/BLEU.*"), bsd_glob("exp.*/SemPOS*")) {
+foreach my $path (bsd_glob("s.*/BLEU.*"), bsd_glob("s.*/SemPOS*")) {
   my ($dir, $fn) = split /\//, $path;
   next if -l $dir; # ignore symlinks
   my $devsize = linecount($dir."/tuning.ref.0");
   my $esize = linecount($dir."/evaluation.in");
   my $dirtag = "$dir<dev$devsize><eval$esize>";
 
-  $dirtag =~ s/^exp\.mert\.//;
-  $dirtag =~ s/^exp\.eval\.//;
-  $dirtag =~ s/^exp\.2step\.//;
+  $dirtag =~ s/^s\.mert\.//;
+  $dirtag =~ s/^s\.eval\.//;
+  $dirtag =~ s/^s\.2step\.//;
   my $bleu = pickbleu($path);
   my $bleutype = $fn;
   print "$dirtag\t$bleutype\t$bleu\n";
@@ -28,16 +28,16 @@ foreach my $path (bsd_glob("exp.*/BLEU.*"), bsd_glob("exp.*/SemPOS*")) {
   # remember to check status of this dir later
   $collect_info{$dir} = $dirtag;
 }
-foreach my $path (bsd_glob("exp.*/evaluation.in")) {
+foreach my $path (bsd_glob("s.*/evaluation.in")) {
   my ($dir, $fn) = split /\//, $path;
   next if -l $dir; # ignore symlinks
   my $devsize = linecount($dir."/tuning.ref.0");
   my $esize = linecount($dir."/evaluation.in");
   my $dirtag = "$dir<dev$devsize><eval$esize>";
 
-  $dirtag =~ s/^exp\.mert\.//;
-  $dirtag =~ s/^exp\.eval\.//;
-  $dirtag =~ s/^exp\.2step\.//;
+  $dirtag =~ s/^s\.mert\.//;
+  $dirtag =~ s/^s\.eval\.//;
+  $dirtag =~ s/^s\.2step\.//;
   $collect_info{$dir} = $dirtag;
 }
 
@@ -45,7 +45,7 @@ my @collect_info = sort keys %collect_info;
 if (0 < scalar @collect_info) {
   # print the tags
   foreach my $dir (@collect_info) {
-    my $tag = firstline($dir."/TAG");
+    my $tag = firstline($dir."/eman.tag");
     print "$collect_info{$dir}\tTAG\t$tag\n" if defined $tag;
   }
 
