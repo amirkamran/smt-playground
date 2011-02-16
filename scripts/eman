@@ -1741,13 +1741,16 @@ The step may indeed be a zombie, a removed directory.
 =head2 Multiple Step Instances, Some Failed, Some OK
 
 It can happen that a step fails but a second try succeeds. Eman ends up with
-two directories: s.test.123 DONE and s.test.456 FAILED. If this step is used in
+two directories: s.test.123 DONE and s.test.456 FAILED. If either of these two step instances is used in
 a scenario and you redo the scenario, eman may accidentally prefer to use the
-failed s.test.456 and redo this failed step. Ultimately, this leads to low
-reuse and unnecessary duplication of steps, most DONE and some FAILED.
+failed s.test.456 instead of the good one and redo it. Ultimately, this leads
+to low reuse and unnecessary duplication of steps, most DONE and some FAILED.
 
-To avoid the problem, use 'eman dups' every now and then and completely remove
-(not just abolish) bad instances of experiments.
+To reduce the problem, use 'eman dups' every now and then and completely remove
+(not just abolish or outdate) bad instances of experiments.
+
+To avoid the problem when doing a clone, use
+  --reuse=s.the-step-you-want-to-reuse
 
 Ultimately, eman should have a preference when cloning: use oldest successful
 experiment.
