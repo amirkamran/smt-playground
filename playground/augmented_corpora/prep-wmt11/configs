@@ -17,6 +17,9 @@ emea	cs:2,en:1	emea	.
 ted	cs:2,en:1	ted.com	.
 #aktualne	cs:3,en:2	czechnews-aktualne.c jeste vadne
 ps	cs:2,en:1	cleaned/ps	.
+
+europarl	cs:1	training/europarl-v6.cs-en.cs
+europarl	en:1	training/europarl-v6.cs-en.en
 				
 monoeuroparl	cs:1	monolingual/europarl	.
 mononews07	cs:1	monolingual/news.2007.cs.shuffled.gz

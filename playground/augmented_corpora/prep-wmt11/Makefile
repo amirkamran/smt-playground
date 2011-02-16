@@ -10,7 +10,7 @@ SHELL=/bin/bash
 
 all:
 	# download and clean plaintexts of the devsets
-	make dev.plaintext cleaned/ps.gz
+	make dev.plaintext cleaned/ps.gz cleaned/europarl.gz
 	./make_all_configs.pl < configs
 	# Also manually run:
 	#   make ../webcoll
@@ -19,7 +19,7 @@ all:
 	#   make runall
 	#   make joinedpara
 
-PARACONSTRAIN=czeng09-ne czeng09-eu czeng09-fi czeng09-na czeng09-su czeng09-te czeng09-we ps
+PARACONSTRAIN=czeng09-ne czeng09-eu czeng09-fi czeng09-na czeng09-su czeng09-te czeng09-we ps europarl
 PARAEXTRA=emea ted
 PARACORP=wmt08 wmt09 wmt10 $(PARACONSTRAIN)
 MONOCORP=monops monoeuroparl mononews07 mononews08 mononews09 mononews10 mononews11 webcoll syn200x
@@ -128,6 +128,18 @@ cleaned/ps.gz:
 	  /net/data/WMT11/training/news-commentary-v6.cs-en.en.gz \
 	  /net/data/WMT11/training/news-commentary-v6.cs-en.cs.gz \
 	| grep -v 'Ã¡\|Ã©' \
+	| ./fix_whitespace.pl \
+	| grep -v '^ *	\|	 *$$' \
+	| gzip -c \
+	> $@
+
+cleaned/europarl.gz:
+	# removing Greek and nonparallel sentences
+	mkdir -p cleaned
+	ziplines --item-delim='\t' \
+	  /net/data/WMT11/training/europarl-v6.cs-en.en.gz \
+	  /net/data/WMT11/training/europarl-v6.cs-en.cs.gz \
+	| grep -v '[αάβδεηιίκλμνόπρσςτυ][αάβδεηιίκλμνόπρσςτυ][αάβδεηιίκλμνόπρσςτυ][αάβδεηιίκλμνόπρσςτυ]' \
 	| ./fix_whitespace.pl \
 	| grep -v '^ *	\|	 *$$' \
 	| gzip -c \

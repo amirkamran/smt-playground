@@ -17,6 +17,11 @@ Moses. Other step types will be gradually added.
 Some sample complex setups are prepared in eman.samples and the corresponding
 sample corpora are in augmented_corpora.
 
+All the sample setups rely on some code available in Sourceforge SVN. To establish authenticated connection, please run (just once) first:
+
+  eman init binaries
+  # and press 'p' for permanently accepting Sourceforge's certificate
+
 * Baseline Phrase-Based Translation
 
   The following command will start a sample phrase-based translation:
