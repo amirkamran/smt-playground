@@ -15,7 +15,8 @@ if [ -z "$MERTEXP" ] \
   echo "and optionally"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$GRIDFLAGS to any further flags"
-  echo "  \$JOBS to number of jobs or 0 for serial"
+  echo "  \$JOBS to number of jobs" # or 0 for serial"
+  echo "  \$CHUNKSIZE to the size of translated chunks in lines"
   echo "  \$ITER to the ITER-th BEST at... (will use run(ITER+1).moses.ini)"
   exit 1
 fi
@@ -30,7 +31,8 @@ if [[ ! -d ../$MERTEXP ]]; then
   exit 1
 fi
 
-JOBS=${JOBS:-10}
+JOBS=${JOBS:-20}
+CHUNKSIZE=${CHUNKSIZE:-10000}
 
 if [ ! -z "$ITER" ]; then
   iterprefix=run$(($ITER+1)).
@@ -175,7 +177,7 @@ fi
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-cat evaluation.in | ../../scripts/qruncmd -jobs=30 -split-to-size=5000 ./toa.job || die "Failed to filter and translate"
+cat evaluation.in | ../../scripts/qruncmd -jobs=$JOBS -split-to-size=$CHUNKSIZE ./toa.job || die "Failed to filter and translate"
 
 ls alignment0* | sort -n | xargs cat | sed 's/ $//' | sed -r 's/([0-9]+)-([0-9]+)/\2-\1/g' | gzip -c > alignment.gz
 ls evaluation0*.opt.out.gz | sort -n | xargs zcat | sed 's/ $//' | gzip -c > evaluation.opt.out.gz
@@ -187,6 +189,10 @@ fi
 rm status0*
 
 # rm alignment0* evaluation0*.opt.out.gz
+
+if [ -d ../augmented_corpora/$TESTCORP-toa ]; then
+  die "Won't overwrite existing directory ../augmented_corpora/$TESTCORP-toa"
+fi
 
 mkdir ../augmented_corpora/$TESTCORP-toa
 ../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT

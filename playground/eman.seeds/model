@@ -79,6 +79,7 @@ echo $TGTAUG > var-TGTAUG
 
 for tm in `echo $TMS | tr ':' ' '`; do
   echo $tm >> eman.deps
+  tmtag=$tmtag"TM"`cat ../$tm/eman.tag`
 done
 
 [ -z "$RMSTEP" ] || echo $RMSTEP >> eman.deps
@@ -88,8 +89,8 @@ i=1
 for lm in `echo $LMS | sed 's/:::/ /g'`; do
   eval `makearg --delim=: $lm factor lmstep lmtype`
   echo $lmstep >> eman.deps
-  # default to sri
-  lmtypetag=${lmtype:-sri}
+  # default to kenlm
+  lmtypetag=${lmtype:-ken}
   order=`cat ../$lmstep/var-ORDER` || die "Missing: ../$lmstep/var-ORDER"
   i=$(($i+1))
   factor=`echo $factor | sed 'y/\,/+/'`
@@ -105,9 +106,9 @@ if [ ! -z "$THRESHOLD" ]; then
 fi
 
 if [ $SRCCORP == $TGTCORP ] ; then
-  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
 else
-  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
 fi
 
 
@@ -172,7 +173,7 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
     numericlmtype=7
     lmsuffix=flm
   else    
-    numericlmtype=0
+    numericlmtype=8
     lmsuffix=lm
   fi
 
