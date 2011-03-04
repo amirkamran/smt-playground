@@ -889,8 +889,15 @@ sub submit {
   quietsystem("chmod +x eman.command")
     or print STDERR "Failed to ensure executable bit for eman.command in $s\n";
 
-  $qsub_available = `which qsub 2>/dev/null` =~ /\//
-    if !defined $qsub_available;
+  if (!defined $qsub_available) {
+    $qsub_available = `which qsub 2>/dev/null` =~ /\//;
+      # check if there is such an executable at all
+    if ($qsub_available) {
+      # check whether it is SGE qsub or PBS qsub
+      my $sgeversion = `qsub -help nonexistent-file 2>&1 | grep SGE 2>/dev/null`;
+      $qsub_available = 0 if $sgeversion !~ /SGE/;
+    }
+  }
   if ($sge && !$qsub_available) {
     print STDERR "Disabling SGE by default, failed to find qsub.\n";
     $sge = 0;
