@@ -16,7 +16,7 @@ if [ -z "$FULLLM" ] \
   exit 1
 fi
 
-echo $LM > eman.deps
+echo $FULLLM > eman.deps
 
 if [ -z "$BINARIES" ] ; then
   eval `cat ../$FULLLM/eman.vars | grep '^BINARIES='`
@@ -46,7 +46,7 @@ PRUNESTRING="${PRUNESTRING}1"
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-cat << KONEC > eman.commad
+cat << KONEC > eman.command
 # This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
