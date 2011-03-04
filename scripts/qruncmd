@@ -132,7 +132,7 @@ my $tempfile_to_delete = undef;
 my @launched_jobids = ();
 my $tempoutdir = undef;
 
-if (defined $opts{"continue"}) {
+if ($opts{"continue"}) {
   my $assume_line_for_line = $opts{"promise-line-for-line"};
   # the input argument must be a the tempdir
   $tempoutdir = $incmd;
