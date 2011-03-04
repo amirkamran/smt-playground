@@ -13,6 +13,7 @@ use strict;
 use warnings;
 use YAML;
 use Carp;
+use Term::ANSIColor;
 use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
@@ -74,6 +75,7 @@ my $show_log = 0;
 my $show_jobid = 0;
 my $sge = 1;
 my $do_start = 0;
+my $subst = undef;
 my $redo = undef;
 my $reuse = undef;
 my $redo_all = 0;
@@ -116,6 +118,7 @@ my %options = (
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
   "read-only!" => \$readonly,
+  "s|subst=s@" => \$subst,
   "redo=s@" => \$redo,
   "reuse=s@" => \$reuse,
   "all-redo!" => \$redo_all,
@@ -133,6 +136,13 @@ GetOptions(%options) or exit 1;
 
 my %redo = map { (guess_step($_),1) } @$redo if defined $redo;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
+
+# colorize regex outputs if substituting and output is terminal
+my $hicolor = color("on_yellow");
+my $uncolor = color("reset");
+$subst = [ map {s/([^\/])\//$1\/$hicolor/;
+                s/\/([^\/]*$)/$uncolor\/$1/; $_;} @$subst]
+  if defined $subst && -t STDOUT;
 
 my $command = shift;
 my $cmd = recognize_command($command);
@@ -173,9 +183,11 @@ if ($list_options) {
 
 my $lock = undef;
 
-if ($readonly || (-e $indexfile && ! -w $indexfile) || ! -w '.') {
+my $autoreadonly = ( !$reindex && $cmd eq "traceback" ); # for "tb | clone"
+if ($readonly || $autoreadonly
+    || (-e $indexfile && ! -w $indexfile) || ! -w '.') {
   $readonly = 1;
-  print STDERR "Read-only mode.\n";
+  print STDERR "Read-only mode.\n" if !$autoreadonly;
 } else {
   # obtain lock for index file, keep it locked until we know
   # the command is read-only
@@ -197,7 +209,7 @@ my @dirs = glob("$dirprefix*.*.[0-9]*");
 foreach my $s (@dirs) {
   next if defined $idx->{$s}; # && defined $idx->{$s."jid"};
                               # now avoiding costly regeneration of metadata
-			      # use --reindex if you miss jobids
+                              # use --reindex if you miss jobids
   next if ! step_valid($s);
   add_step_to_index($s);
   # mark that this step uses its deps
@@ -269,6 +281,8 @@ if ($cmd eq "duplicates") {
 if ($cmd eq "traceback") {
   $lock->unlock() if defined $lock;
   mydie "usage: eman traceback SPEC ..." if 0 == scalar @ARGV;
+  $show_vars = 1 if defined $subst;
+    # so that there is something to substitute
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
     traceback("", $step);
@@ -496,8 +510,8 @@ sub parse_recipe {
     if ($lines->[0] =~ /^\Q$exact\E([^ ]+)$/) {
       if (defined $recipe->{"name"}) {
         # this is actually one more dependency of our father, ie. our brother,
-	# not us. Return and have the father start the brother
-	last;
+        # not us. Return and have the father start the brother
+        last;
       }
       my $name = $1;
       print STDERR "$cutprefix:Exact at: $lines->[0]\n" if $debug;
@@ -513,7 +527,7 @@ sub parse_recipe {
         if ($line =~ /^[A-Za-z_0-9]+=/) {
           # let's hope this is a variable
           push @{$recipe->{"vars"}}, $line;
-  	print STDERR "$cutprefix:    got var: $line\n" if $debug;
+        print STDERR "$cutprefix:    got var: $line\n" if $debug;
         } else {
           mydie "Bad recipe, strange line: $thisline";
         }
@@ -1025,7 +1039,7 @@ sub list_duplicates {
 
   foreach my $hash (sort {$hashcount{$a} <=> $hashcount{$b}}
                     grep { $hashcount{$_} > 1 }
-		    keys %hashcount) {
+                    keys %hashcount) {
     print "\n";
     my $ok = list($share_hash{$hash});
     $waserror = 1 if !$ok;
@@ -1093,6 +1107,12 @@ sub print_vars {
   my $v = load_vars($s);
   return if !defined $v;
   foreach my $l (split /\n/, $v) {
+    # perform substitutions, if defined
+    if (defined $subst) {
+      foreach my $s (@$subst) {
+        eval '$l =~ s'.$s;
+      }
+    }
     print "$prefix$l\n";
   }
 }
@@ -1576,6 +1596,9 @@ eman, experiment manager
   eman tag SPEC/STEPTYPE     # like 'list --tag'
   eman users SPEC ...        # list all steps that use the given step
   eman traceback SPEC ...    # show tree of the steps and predecessors
+    -s /foo/bar/             #   and modify vars; can be repeated
+                             #   implies --vars
+                             #   highlights diff if to terminal
  #eman traceforward SPEC ... # show tree of the steps and successors
   eman duplicates            # show groups of 2+ steps having same vars
     --tag --vars --status    #   include relevant information
@@ -1720,7 +1743,10 @@ naturally requires to clone the subsequent steps as well.
 
 =head1 USAGE PATTERNS
 
-eman traceback --vars SPEC | sed 's/.../.../' | eman clone
+eman traceback SPEC -s '/.../.../'
+  # preview the experiment with some vars replaced
+
+eman traceback SPEC -s '/.../.../' | eman clone
   # clone the whole subtree of steps replacing some vars
 
 VAR=x eman redo SPEC
