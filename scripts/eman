@@ -96,6 +96,7 @@ my $mem = undef; # informative memory requirements
 my $disk = undef; # informative temp disk requirements
 my $time = undef; # time limit
 my @limits = ();  # other custom limits
+my @userholds = (); # SGE jobids to wait for
 # the 'environment' used to interpret qsub flags
 my $env = "ufal"; # SGE environment (used for option mapping)
 my $hostname = `hostname`;
@@ -131,6 +132,7 @@ my %options = (
   "disk=s"=>\$disk, # format: 10g
   "time=s"=>\$time, # format: hh:mm:ss
   "limit|l=s@"=>\@limits, # format, e.g.: h_stack=30M
+  "hold=s@"=>\@userholds, # format: 123456
 );
 GetOptions(%options) or exit 1;
 
@@ -990,6 +992,8 @@ sub submit {
     }
     # add all other directives --limit
     push @opts, map {('-l', $_)} @limits;
+    # add all job holds
+    push @opts, map {('-hold_jid', $_)} @userholds;
 
     $ok = safesystem("( qsub  -C '' $sgeholdsstr -N log @opts ./eman.command 2>&1 ) > log");
     if ($ok) {
