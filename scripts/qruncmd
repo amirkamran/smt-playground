@@ -10,12 +10,13 @@ binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
 use File::Temp qw/tempdir tempfile/;
-use Getopt::Long;
+use Getopt::Long qw/GetOptionsFromArray/;
 use IPC::Open3;
 use IPC::Open2;
 use File::Path;
 use File::Basename;
 use FindBin;
+use YAML;
 
 my $qruncmd = $FindBin::Bin."/".$FindBin::Script;
 
@@ -38,10 +39,13 @@ my %opts = (
   tmp => "/mnt/h/tmp", # used to store stdin/combined file
                        # inputs for slaves always go to ./
   picksection => undef, # used by slaves to pick section start:length
+  "continue" => 0, # continue failed bits
+  "promise-line-for-line" => 0, # assume partial outputs can be reused
 );
 
-
-GetOptions(\%opts,
+my @ORIGARGV = @ARGV;
+  # stored to save in infofile if restart were needed
+my @optionspec = (
   "picksection=s",
   "promise-linecount=i",
   "input-file=s",
@@ -58,9 +62,13 @@ GetOptions(\%opts,
   "priority|p=i",
   "mem|m=s",
   "join!",
-) or exit 1;
+  "continue",
+  "promise-line-for-line",
+);
+GetOptions(\%opts, @optionspec) or exit 1;
 
 if (defined $opts{picksection}) {
+  # special mode, used by slaves
   my ($start, $uselines) = split /:/, $opts{picksection};
   my $nr = 0;
   my $inf = shift;
@@ -75,7 +83,6 @@ if (defined $opts{picksection}) {
 }
 
 my $badusage = 0;
-
 my $incmd = shift;
 
 $badusage = 1 if !defined $incmd;
@@ -88,11 +95,16 @@ Options:
   --jobs=N  ... default is $default_jobs
   --splits=M  ... use M>N to avoid flooding cluster: at most N 1/M-sized jobs
                   will run in parallel
-  --split-to-size=L ... like --splits but specifying avg. number of lines per
-                        split wished
+  --split-to-size=L  ... like --splits but specifying avg. number of lines per
+                         split wished
   --sync ... wait for all jobs to finish
   --join ... join stdouts (implies --sync, stdouts not included in the logs)
              (job outputs, until joined, are gzipped)
+Continue failed runs: $0 --continue tempdir
+  --continue[=lines] ... continue failed jobs from the  given directory
+                         Use --continue=lines to reuse existing partial outputs
+                         assuming the command preserves the number of lines.
+                         Probably incompatible with --splits so far.
 Options passed to SGE:
   --priority=-200   ... scheduling priority
   --mem=10g         ... -l mf, how much memory should be 'reserved' for the job
@@ -110,120 +122,198 @@ my $pwd = `pwd`; chomp $pwd;
 
 my $starttime = time();
 
-# get/construct a file with all inputs
+# vars describing the input file
 my $totlines = 0;
 my $infile = undef;
 my $tempfile_to_delete = undef;
-if (0 == scalar @ARGV && !defined $opts{"input-file"}) {
-  # copy stdin to a temp file, serve it
-  $opts{sync} = 1; # wait to delete tempfile when all jobs are done
-  my $tmph;
-  ($tmph, $infile) = tempfile(
-    '.qruncmd-temp-XXXXXXXX',
-    DIR => $pwd,
-  );
-  binmode($tmph, ":utf8");
-  $tempfile_to_delete = $infile;
-  print STDERR "Storing stdin to $infile\n";
-  # read input, copy to file
-  while (<>) {
-    $totlines++;
-    print $tmph $_;
-  }
-  print STDERR "Stored $totlines lines\n";
-  close $tmph;
-} else {
-  # serve directly arg1 but get number of lines first
-  $infile = shift;
-  die "Conflicting input files specified: ".$opts{"input-file"}." vs. $infile"
-    if defined $opts{"input-file"} && defined $infile
-      && $opts{"input-file"} ne $infile;
-  $infile = $opts{"input-file"} if ! defined $infile;
-  if (defined $opts{"promise-linecount"}) {
-    $totlines = $opts{"promise-linecount"};
-  } else {
-    print STDERR "Counting lines of $infile.\n";
-    my $hdl = my_open($infile);
-    $totlines++ while <$hdl>;
-    close $hdl;
-  }
-  print STDERR "Will process $totlines lines of $infile.\n";
-}
 
-if (0 == $totlines) {
-  print STDERR "No lines to process.\n";
-  exit 0;
-}
-
-if (!defined $opts{splits}) {
-  if (defined $opts{"split-to-size"}) {
-    $opts{splits} = int($totlines / $opts{"split-to-size"});
-  } else {
-    $opts{splits} = $opts{jobs};
-  }
-}
-
-
-# print STDERR "Will run cmd on ".(scalar @lines)." lines in $opts{jobs} jobs\n";
-
-
-$opts{splits} = $totlines if $totlines < $opts{splits};
-
-my @starts;
-my @lengths;
-if (0 == $opts{splits}) {
-  # with 0 jobs, there is just one stream of input lines
-  $starts[0] = 1;
-  $lengths[0] = $totlines;
-} else {
-#   # split the lines
-#   if ($opts{fan}) {
-#     # split the lines as cards are given to people
-#     my $i=0;
-#     while (0 < scalar @lines) {
-#       my $line = shift @lines;
-#       push @{$splitlists[$i % $opts{splits}]}, $line;
-#       $i++;
-#     }
-#   } else {
-    # split the lines into N contiguous blocks
-    my $minlength = int($totlines / $opts{splits});
-    my $extralines = $totlines - $opts{splits}*int($totlines / $opts{splits});
-    my $pos = 1;
-    foreach my $i (1..$opts{splits}) {
-      my $n = $minlength+($extralines>0?1:0);
-      $starts[$i-1] = $pos;
-      $lengths[$i-1] = $n;
-      $extralines-- if $extralines>0;
-      $pos += $n;
-#     }
-  }
-}
-
-my $tempoutdir = undef;
-if ($opts{join}) {
-  # create a temp directory for all the outputs
-  $tempoutdir = tempdir(
-    '.qruncmd-temp-XXXXXXXX',
-    DIR => $pwd,
-  );
-}
 
 my @launched_jobids = ();
-if (0 == $opts{jobs}) {
-  start_job(1, $starts[0], $lengths[0]);
-} else {
-  my @waitfor = (); # the queue to avoid more than --jobs jobs
-  foreach my $i (1..$opts{splits}) {
-    my $waitslot = $i % $opts{jobs};
-    my $mayhold = $waitfor[$waitslot];
+my $tempoutdir = undef;
 
-    my $jobid = start_job($i, $starts[$i-1], $lengths[$i-1], $mayhold);
-    print STDERR "Launched job $i ($jobid) for $lengths[$i-1] lines starting at $starts[$i-1]";
+if (defined $opts{"continue"}) {
+  my $assume_line_for_line = $opts{"promise-line-for-line"};
+  # the input argument must be a the tempdir
+  $tempoutdir = $incmd;
+  die "Not a directory: $tempoutdir" if ! -d $tempoutdir;
+  print STDERR "Trying to continue jobs from: $tempoutdir\n";
+  my $infostring = load($tempoutdir."/info")."\n";
+  my $info = YAML::Load($infostring);
+  $incmd = $info->{"incommand"};
+  $infile = $info->{"infile"};
+  die "Lost input file: $infile"
+    if ! -e $infile;
+  my $origargv = $info->{"argv"};
+  # interpret old cmdline arguments
+  GetOptionsFromArray($origargv, \%opts, @optionspec)
+    or die "Failed to interpret old ARGV: @$origargv";
+  # check individual jobs
+  $opts{"splits"} = $info->{"splits"};
+  my @starts = @{$info->{"starts"}};
+  my @lengths = @{$info->{"lengths"}};
+  foreach my $i (1..$opts{splits}) {
+    # check if the job failed or not
+    if (-e "$tempoutdir/out.$i.ok") {
+      print STDERR "Job $i finished. Skipping.\n";
+      next;
+    }
+    # remove the last (assuming unfinished) line from the output
+    my $linesok = 0;
+    my $appendoutput = 0;
+    if ($assume_line_for_line) {
+      my $ihdl = my_open("$tempoutdir/out.$i.gz");
+      my $ohdl = my_save("$tempoutdir/out-so-far.$i.gz");
+      my $lastline = undef;
+      while (<$ihdl>) {
+        if (defined $lastline) {
+          print $ohdl $lastline;
+          $linesok ++;
+        }
+        $lastline = $_;
+      }
+      close $ihdl;
+      close $ohdl;
+      if ($linesok > 0) {
+        safesystem("mv $tempoutdir/out-so-far.$i.gz $tempoutdir/out.$i.gz")
+          or die "Failed to move tempoutputfile $tempoutdir/out-so-far.$i.gz";
+        $appendoutput = 1;
+      }
+    }
+    my $mayhold = undef;
+    my $start = $starts[$i-1] + $linesok;
+    my $len = $lengths[$i-1] - $linesok;
+    my $jobid = start_job($i, $start, $len, $mayhold, $appendoutput);
+    print STDERR "Launched job $i ($jobid) for $len lines starting at $start";
     print STDERR ", will wait for $mayhold" if defined $mayhold;
     print STDERR "\n";
     push @launched_jobids, $jobid;
-    $waitfor[$waitslot] = $jobid;
+    #$waitfor[$waitslot] = $jobid;
+  }
+} else {
+  # regular startup of jobs
+
+  # get/construct a file with all inputs
+  if (0 == scalar @ARGV && !defined $opts{"input-file"}) {
+    # copy stdin to a temp file, serve it
+    $opts{sync} = 1; # wait to delete tempfile when all jobs are done
+    my $tmph;
+    ($tmph, $infile) = tempfile(
+      '.qruncmd-temp-XXXXXXXX',
+      DIR => $pwd,
+    );
+    binmode($tmph, ":utf8");
+    $tempfile_to_delete = $infile;
+    print STDERR "Storing stdin to $infile\n";
+    # read input, copy to file
+    while (<>) {
+      $totlines++;
+      print $tmph $_;
+    }
+    print STDERR "Stored $totlines lines\n";
+    close $tmph;
+  } else {
+    # serve directly arg1 but get number of lines first
+    $infile = shift;
+    die "Conflicting input files specified: ".$opts{"input-file"}." vs. $infile"
+      if defined $opts{"input-file"} && defined $infile
+        && $opts{"input-file"} ne $infile;
+    $infile = $opts{"input-file"} if ! defined $infile;
+    if (defined $opts{"promise-linecount"}) {
+      $totlines = $opts{"promise-linecount"};
+    } else {
+      print STDERR "Counting lines of $infile.\n";
+      my $hdl = my_open($infile);
+      $totlines++ while <$hdl>;
+      close $hdl;
+    }
+    print STDERR "Will process $totlines lines of $infile.\n";
+  }
+  
+  if (0 == $totlines) {
+    print STDERR "No lines to process.\n";
+    exit 0;
+  }
+  
+  if (!defined $opts{splits}) {
+    if (defined $opts{"split-to-size"}) {
+      $opts{splits} = int($totlines / $opts{"split-to-size"});
+    } else {
+      $opts{splits} = $opts{jobs};
+    }
+  }
+  
+  
+  # print STDERR "Will run cmd on ".(scalar @lines)
+  #   ." lines in $opts{jobs} jobs\n";
+  
+  
+  $opts{splits} = $totlines if $totlines < $opts{splits};
+  
+  my @starts;
+  my @lengths;
+  if (0 == $opts{splits}) {
+    # with 0 jobs, there is just one stream of input lines
+    $starts[0] = 1;
+    $lengths[0] = $totlines;
+  } else {
+  #   # split the lines
+  #   if ($opts{fan}) {
+  #     # split the lines as cards are given to people
+  #     my $i=0;
+  #     while (0 < scalar @lines) {
+  #       my $line = shift @lines;
+  #       push @{$splitlists[$i % $opts{splits}]}, $line;
+  #       $i++;
+  #     }
+  #   } else {
+      # split the lines into N contiguous blocks
+      my $minlength = int($totlines / $opts{splits});
+      my $extralines = $totlines - $opts{splits}*int($totlines / $opts{splits});
+      my $pos = 1;
+      foreach my $i (1..$opts{splits}) {
+        my $n = $minlength+($extralines>0?1:0);
+        $starts[$i-1] = $pos;
+        $lengths[$i-1] = $n;
+        $extralines-- if $extralines>0;
+        $pos += $n;
+  #     }
+    }
+  }
+  
+  if ($opts{join}) {
+    # create a temp directory for all the outputs
+    $tempoutdir = tempdir(
+      '.qruncmd-temp-XXXXXXXX',
+      DIR => $pwd,
+    );
+    # store the command there
+    save($tempoutdir."/info",
+      YAML::Dump( {
+        "incommand" => $incmd,
+        "infile" => $infile,
+        "splits" => $opts{"splits"},
+        "starts" => \@starts,
+        "lengths" => \@lengths,
+        "argv" => \@ORIGARGV,
+      }));
+    print "TEMPDIR: $tempoutdir\n";
+  }
+  
+  if (0 == $opts{jobs}) {
+    start_job(1, $starts[0], $lengths[0]);
+  } else {
+    my @waitfor = (); # the queue to avoid more than --jobs jobs
+    foreach my $i (1..$opts{splits}) {
+      my $waitslot = $i % $opts{jobs};
+      my $mayhold = $waitfor[$waitslot];
+  
+      my $jobid = start_job($i, $starts[$i-1], $lengths[$i-1], $mayhold);
+      print STDERR "Launched job $i ($jobid) for $lengths[$i-1] lines starting at $starts[$i-1]";
+      print STDERR ", will wait for $mayhold" if defined $mayhold;
+      print STDERR "\n";
+      push @launched_jobids, $jobid;
+      $waitfor[$waitslot] = $jobid;
+    }
   }
 }
 
@@ -278,7 +368,7 @@ if ($opts{join}) {
       $err++;
     }
   }
-  if ($err) {
+  if ($err || $opts{'debug'}) {
     print STDERR "$err jobs failed. Their output has been ignored.\n";
     print STDERR "Leaving outputs directory intact, delete yourself:\n   $tempoutdir\n";
     print STDERR "Leaving temp input file intact, delete yourself:\n   $tempfile_to_delete\n"
@@ -302,6 +392,7 @@ sub start_job {
   my $startat = shift;
   my $linecount = shift;
   my $mayhold = shift;
+  my $append = shift;
 
   my $tmpscript = new File::Temp(
     DIR => $pwd,
@@ -316,7 +407,8 @@ sub start_job {
   my $mayechotempoutdir = "";
   my $maytouchokfile = "";
   if (defined $tempoutdir) {
-    $cmd .= "\\\n| gzip -c > $tempoutdir/out.$jobnum.gz";
+    my $redirect = $append ? ">>" : ">";
+    $cmd .= "\\\n| gzip -c $redirect $tempoutdir/out.$jobnum.gz";
     $mayechotempoutdir = "echo '== TempOutFile:   $tempoutdir/out.$jobnum'";
     $maytouchokfile = "touch $tempoutdir/out.$jobnum.ok";
   }
@@ -513,6 +605,24 @@ sub safesystem {
   }
 }
 
+sub load {
+  my $f = shift;
+  my $h = my_open($f);
+  my $o = "";
+  $o .= $_ while (<$h>);
+  close $h if $f ne "-";
+  chomp $o;
+  return $o;
+}
+sub save {
+  my $f = shift;
+  my $data = shift;
+  my $h = my_save($f);
+  print $h $data;
+  print $h "\n" if $data ne "" && $data !~ /\n$/m;
+  close $h;
+}
+
 sub my_open {
   my $f = shift;
   die "Not found: $f" if ! -e $f;
@@ -567,8 +677,8 @@ sub humantimediff {
       $min -= $hours*60;
       if ($hours >= 24) {
         my $days = int($hours/24);
-	$hours -= $days*24;
-	$out .= $days."d";
+        $hours -= $days*24;
+        $out .= $days."d";
       }
       $out .= $hours."h";
     }
