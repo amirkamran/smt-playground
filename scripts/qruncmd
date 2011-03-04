@@ -297,7 +297,7 @@ if ($opts{"continue"}) {
         "lengths" => \@lengths,
         "argv" => \@ORIGARGV,
       }));
-    print "TEMPDIR: $tempoutdir\n";
+    print STDERR "TEMPDIR: $tempoutdir\n";
   }
   
   if (0 == $opts{jobs}) {
