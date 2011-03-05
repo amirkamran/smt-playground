@@ -1719,7 +1719,7 @@ The following statuses are recognized:
   PREPARED           ... prepared using 'eman prepare'
   PREPFAILED         ... 'eman prepare' failed
   WAITING: ...       ... submitted by 'eman start', prereqs still run
-                         (not supported yet)
+                         (not used; waiting jobs are marked 'running')
   STARTING           ... just before 'running'
   RUNNING            ... running
   FAILED             ... the run failed
@@ -1763,6 +1763,18 @@ eman stat `qstat | cut -c 1-8 | skip 2`
   # show status of all running/held jobs in SGE
   # the skip command is available here:
   #   http://www.cuni.cz/~obo/textutils/#skip
+
+=head2 If a Cluster Node Completely Dies
+
+A cluster node completely dies when (your) job takes too much RAM. Assuming
+2472256 is the SGE job ID of the failed (but still allegedly running) job, this
+is probably what you want to do:
+
+  qdel 2472256                         # remove it from the cluster
+  eman fail 2472256                    # mark it FAILED for eman
+  eman redo 2472256 --start --mem 20g  # re-run it with some more memory
+
+
 
 =head1 COMMON PROBLEMS
 
