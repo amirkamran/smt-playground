@@ -32,4 +32,4 @@
 ../augment.pl mononews11/csNm
 ../augment.pl monops/csNm
 ../augment.pl webcoll/csNm
-# ../augment.pl syn200x/csNm
+../augment.pl syn200x/csNm

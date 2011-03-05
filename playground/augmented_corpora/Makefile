@@ -479,7 +479,9 @@ SCENDIR=./prep-wmt11/
 	[ -e $(SCENDIR)/$(LANG).vars ]
 	set -o pipefail ; \
 	. $(SCENDIR)/$(LANG).vars ; \
-	qruncmd --jobs=$(JOBS) $(QRUNCMDFLAGS) --join --jobname=$*.gz \
+	echo $$qruncmdflags ; \
+	qruncmd --jobs=$(JOBS) $(QRUNCMDFLAGS) $$qruncmdflags \
+	  --join --jobname=$*.gz \
 	    "export PML_COMPILE=0; \
 	       $(SRUNBLOCKS) --errorlevel=FATAL $$srunblocksflags \
 	       $(SCENDIR)/$$scenname.scen $$inattr $$outattr" \
