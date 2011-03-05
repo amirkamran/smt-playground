@@ -27,6 +27,12 @@ my %opts = (
   debug => 0,
   sync => 0,
   mem=> undef,
+  disk=> undef,
+  "time"=> undef,
+  limits=> [],
+  hold=> [],
+  queue=> undef,
+  "exclude-comp"=> undef,
   priority => -100, # qrunblocks uses a lower priority by default
   jobs => $default_jobs,
   splits => undef,
@@ -61,6 +67,12 @@ my @optionspec = (
   "sync|s",
   "priority|p=i",
   "mem|m=s",
+  "queue=s",
+  "exclude-comp=s",
+  "disk=s", # format: 10g
+  "time=s", # format: hh:mm:ss
+  "limit|l=s@", # format, e.g.: h_stack=30M
+  "hold=s@", # format: 123456
   "join!",
   "continue",
   "promise-line-for-line",
@@ -331,8 +343,22 @@ if ($opts{sync} || $opts{join}) {
     push @opts, ('-hard', '-l', "mf=".$opts{mem});
   }
   push @opts, qw(-sync yes);
-  push @opts, map { -hold_jid => $_ } @waitfor_jobids;
+  push @opts, map { -hold_jid => $_ } (@waitfor_jobids, @{$opts{"hold"}});
   push @opts, (-q => $opts{queue}) if $opts{queue};
+  if (defined $opts{"exclude-comp"}) {
+    die "Cannot use --queue and --exclude-comp at the same time"
+      if defined $opts{"queue"};
+    push @opts, ("-q", "*@*&!".$opts{"exclude-comp"});
+  }
+  if (defined $opts{"time"}) {
+    push @opts, ('-l', "h_rt=".$opts{"time"});
+  }
+  if (defined $opts{"disk"}) {
+    # UFAL setup
+    push @opts, ('-l', "mnthf=".$opts{"disk"});
+  }
+  # add all other directives --limit
+  push @opts, map {('-l', $_)} @{$opts{"limit"}};
   
   # qsub execution
   my $tmphold = new File::Temp(
