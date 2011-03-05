@@ -628,21 +628,42 @@ sub init_by_recipe {
     print STDERR join("\n", @newvars)."\n";
     print STDERR join("\n", @newdeps)."\n";
   }
-  if (defined $idx->{$hash}
-      && -d $idx->{$hash}
-      && step_valid($idx->{$hash})
-      ) {
-    $knownstep = $idx->{$hash};
-  }
+  # find suitable known step
   $redo{$recipe->{"name"}}=1 if $redo_all;
     # --all-redo forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
+  my $knownsteps = $idx->{$hash};
+  my $knownstep_ctime;
+  if (defined $knownsteps) {
+    my @usable = ();
+    foreach my $k (@$knownsteps) {
+      if ($redo{$k}) {
+        # an explicit wish to redo this step, ignore all other usable ones
+        @usable = ();
+        $knownstep = undef;
+        last;
+      }
+      if (-d $k && step_valid($k)
+        && load_status($k) !~ /FAILED|NONEXISTENT|OUTDATED|ABOLISHED/
+        ) {
+        push @usable, $k;
+        my $this_ctime = -C $k;
+        # of all the usable, select the oldest
+        if (!defined $knownstep || $knownstep_ctime > $this_ctime) {
+          $knownstep_ctime = $this_ctime;
+          $knownstep = $k;
+        }
+      } else {
+        print STDERR "Ignoring unusable $k\n" if $verbose;
+      }
+    }
+
+    if (1<scalar(@usable)) {
+      print STDERR "Selecting $knownstep of all the usable: @usable\n"
+        if $verbose;
+    }
+  }
   
-  # redo if wanted
-  $knownstep = undef
-    if defined $knownstep
-    && ($redo{$knownstep}
-        || load_status($knownstep) =~ /FAILED|NONEXISTENT|OUTDATED/);
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
     # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
@@ -927,6 +948,7 @@ sub submit {
       if 0 < scalar @plainholds;
 
     save("eman.wrapcommand", 'echo Host:PID: `hostname`:$$ ; '.$waitscript.'./eman.command 2>&1; echo PID: $$ > eman.wrapcommand.done');
+    save("eman.status", "RUNNING"); # set status before starting to avoid race
     $ok = safesystem("( nohup /bin/bash ./eman.wrapcommand > log 2>&1 & )");
     if ($ok) {
       # get process id
@@ -995,6 +1017,7 @@ sub submit {
     # add all job holds
     push @opts, map {('-hold_jid', $_)} @userholds;
 
+    save("eman.status", "RUNNING"); # set status before starting to avoid race
     $ok = safesystem("( qsub  -C '' $sgeholdsstr -N log @opts ./eman.command 2>&1 ) > log");
     if ($ok) {
       # get job id
@@ -1020,7 +1043,6 @@ sub submit {
 
   if ($ok) {
     print STDERR "Step $s submitted as job $jid\n";
-    save("eman.status", "RUNNING");
   } else {
     save("eman.status", "FAILED");
   }
@@ -1379,7 +1401,12 @@ sub add_step_to_index {
   my $hash = get_hash_from_dir($s);
   print STDERR "ADDED: $s  -> $hash\n" if $debug;
   $idx->{$s} = $hash;
-  $idx->{$hash} = $s;
+  # multiple steps can have the same hash, so the hash is mapped to a list
+  if (defined $idx->{$hash}) {
+    push @{$idx->{$hash}}, $s;
+  } else {
+    $idx->{$hash} = [$s];
+  }
   my $jid = load_jobid($s);
   # also store jobid, if available
   if (defined $jid) {
