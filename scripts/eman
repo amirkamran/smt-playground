@@ -76,9 +76,9 @@ my $show_jobid = 0;
 my $sge = 1;
 my $do_start = 0;
 my $subst = undef;
-my $redo = undef;
+my $avoid = undef;
 my $reuse = undef;
-my $redo_all = 0;
+my $avoid_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
@@ -120,9 +120,9 @@ my %options = (
   "log!" => \$show_log,
   "read-only!" => \$readonly,
   "s|subst=s@" => \$subst,
-  "redo=s@" => \$redo,
+  "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
-  "all-redo!" => \$redo_all,
+  "all-avoid!" => \$avoid_all,
   "start!" => \$do_start,
   "reindex" => \$reindex,
   "queue=s"=>\$queue,
@@ -136,7 +136,7 @@ my %options = (
 );
 GetOptions(%options) or exit 1;
 
-my %redo = map { (guess_step($_),1) } @$redo if defined $redo;
+my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
 
 # colorize regex outputs if substituting and output is terminal
@@ -567,7 +567,7 @@ sub init_by_recipe {
   #      $recipe = { "name"=>'s.type.abcdef.2010',
   #                  "vars"=>['X=x', 'Y=y'], "deps"=>[recipe1, recipe2]}
   # initializes a fresh tree using the variables and dependences
-  # we attempt to reuse existing steps unless they failed or are '--redo'ed
+  # we attempt to reuse existing steps unless they failed or are '--avoid'ed
   my $recipe = shift;
   my $depmap = shift;
   confess "implementation error: undef depmap" if !defined $depmap;
@@ -629,18 +629,21 @@ sub init_by_recipe {
     print STDERR join("\n", @newdeps)."\n";
   }
   # find suitable known step
-  $redo{$recipe->{"name"}}=1 if $redo_all;
-    # --all-redo forbids reusing *input* steps
+  $avoid{$recipe->{"name"}}=1 if $avoid_all;
+    # --all-avoid forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
   my $knownsteps = $idx->{$hash};
   my $knownstep_ctime;
   if (defined $knownsteps) {
     my @usable = ();
     foreach my $k (@$knownsteps) {
-      if ($redo{$k}) {
-        # an explicit wish to redo this step, ignore all other usable ones
-        @usable = ();
-        $knownstep = undef;
+      next if $avoid{$k};
+        # an explicit wish to ignore this step
+      if ($reuse{$k}) {
+        # an explicit wish to use this step, ignore all other options
+        print STDERR "Forced to reuse $k\n" if $verbose;
+        @usable = ($k);
+        $knownstep = $k;
         last;
       }
       if (-d $k && step_valid($k)
@@ -649,7 +652,7 @@ sub init_by_recipe {
         push @usable, $k;
         my $this_ctime = -C $k;
         # of all the usable, select the oldest
-        if (!defined $knownstep || $knownstep_ctime > $this_ctime) {
+        if (!defined $knownstep || $knownstep_ctime < $this_ctime) {
           $knownstep_ctime = $this_ctime;
           $knownstep = $k;
         }
@@ -1605,11 +1608,9 @@ eman, experiment manager
   eman clone < traceback     # create step by cloning incl. predecessors
   eman redo SPEC             # equals 'eman tb --vars SPEC | eman clone'
                              # good predecessors are reused by default
-    --redo=SPEC              #   don't reuse the given step in the clone
-    --reuse=SPEC             #   do reuse the given step (incl. predecessors)
-                             #   takes precedence over --redo and --all-redo
-    --all-redo               #   recreate all steps unconditionally
-                             #   redo --redo is possible
+    --reuse=SPEC             #   reuse the given step (incl. predecs.)
+    --avoid=SPEC             #   don't reuse the given step in the clone
+    --all-avoid              #   avoid all input steps
     --start                  # after init/clone/redo, submit to queue
   
   eman prepare SPEC          # prepare inited step
@@ -1641,7 +1642,7 @@ eman, experiment manager
   eman reindex               # re-create index of steps
 
   eman wait SPEC ...         # block until the jobs are FAILED or DONE
-                             # die if neither FAILED nor DONE is reachable
+                             # die if FAILED nor DONE is reachable
 
 SPEC is a text snippet capable of identifying a step uniquely.
 You can even use '.' and '`pwd`' as SPEC.
@@ -1816,20 +1817,19 @@ The step may indeed be a zombie, a removed directory.
 
 =head2 Multiple Step Instances, Some Failed, Some OK
 
-It can happen that a step fails but a second try succeeds. Eman ends up with
-two directories: s.test.123 DONE and s.test.456 FAILED. If either of these two step instances is used in
-a scenario and you redo the scenario, eman may accidentally prefer to use the
-failed s.test.456 instead of the good one and redo it. Ultimately, this leads
-to low reuse and unnecessary duplication of steps, most DONE and some FAILED.
+By cloning, you can easily end up with several instances of the same step (i.e.
+two distinct step directories with identical variables). Sometimes, some of the instances may be even failed and some may be finished successfully.
 
-To reduce the problem, use 'eman dups' every now and then and completely remove
-(not just abolish or outdate) bad instances of experiments.
+When such a step is
+further used in an experiment, and you clone the experiment, eman will
+automatically use the oldest plausible instance (FAILED, OUTDATED and ABOLISHED
+instances are not considered plausible).
 
-To avoid the problem when doing a clone, use
-  --reuse=s.the-step-you-want-to-reuse
+To pick a specific instance of a step manually (including implausible
+instances), use --reuse. To avoid some instances, use --avoid.
 
-Ultimately, eman should have a preference when cloning: use oldest successful
-experiment.
+You may wish to use 'eman dups' every now and then to get rid (or abolish) some of the unused instances.
+
 
 =head1 WRITING SEEDS: CORE CONVENTIONS
 
@@ -1974,6 +1974,6 @@ Dryad.
 
 Ondrej Bojar <obo@matfyz.cz>
 
-Copyright 2010 Ondrej Bojar, All rights reserved.
+Copyright 2010, 2011 Ondrej Bojar, All rights reserved.
 
 =cut
