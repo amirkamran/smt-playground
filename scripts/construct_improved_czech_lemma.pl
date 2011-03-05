@@ -24,16 +24,16 @@ while (<>) {
     # print STDERR "$tok:  $form   $lemma    $tag\n";
     my $out;
     if ($tag =~ /^[ZP]/ || $lemma =~ /^(být|mít)($|[^[:alpha]])/) {
-      $out = substr($tag, 1, 1).".".lc($form);
+      $out = "F".substr($tag, 1, 1)."+".lc($form);
     } elsif ($tag =~ /^R...(.)/) {
       my $case = $1;
       $lemma =~ s/(.)[-;`_].*/$1/;
-      $out = $lemma."+$case";
+      $out = "L"."R".$case."+".$lemma;
     } else {
       my $subposneggradnum = substr($tag, 1, 1).substr($tag, 3, 1)
                       .substr($tag, 10, 1).substr($tag, 9, 1);
       $lemma =~ s/(.)[-;`_].*/$1/;
-      $out = $subposneggradnum.".".$lemma;
+      $out = "L".$subposneggradnum."+".$lemma;
     }
     push @out, $out;
   }

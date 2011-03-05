@@ -50,11 +50,13 @@ for (@section_names) {
         case "input-factors"    { merge_output_once($_); }
         case "mapping"          { merge_concat($_); }
         case "ttable-file"      { merge_concat($_); }
+        case "generation-file"  { merge_concat($_); }
         case "lmodel-file"      { merge_output_once($_); }
         case "ttable-limit"     { merge_output_once($_); }
         case "weight-d"         { merge_output_once($_); }
         case "weight-l"         { merge_output_once($_); } 
         case "weight-t"         { merge_concat($_); }
+        case "weight-generation"{ merge_concat($_); }
         case "weight-w"         { merge_output_once($_); }
         case "distortion-limit" { merge_output_once($_); }
         else {
