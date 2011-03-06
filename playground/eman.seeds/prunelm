@@ -32,7 +32,7 @@ echo $CORP > var-CORP
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
 FULLLM=$FULLLM
-PRUNELM=$PRUNELM
+LMPRUNE=$LMPRUNE
 KONEC
 
 echo "PRUNELM-$FULLLM:$LMPRUNE" > eman.tag
@@ -57,6 +57,8 @@ echo "=============================="
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
+mydir=\`pwd\`
+
 renice 10 \$\$
 function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 set -o pipefail
@@ -75,7 +77,7 @@ ngram -lm ../$FULLLM/corpus.lm \\
   -write-lm ./corpus.lm \\
   || die "Failed to prune LM"
 
-echo DONE > eman.status
+echo DONE > \$mydir/eman.status
 
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
