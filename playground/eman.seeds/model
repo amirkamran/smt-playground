@@ -181,6 +181,10 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
     ../../scripts/wiseln ../\$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
       || die "Failed to link flm: ../\$lmstep/config.prepared.flm"
   else
+    if [ -e ../\$lmstep/corpus.\$lmsuffix.gz ] ; then
+      # prefer gzipped, kenlm (8) supports this
+      lmsuffix=\$lmsuffix.gz
+    fi
     ../../scripts/wiseln ../\$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
       || die "Failed to link lm: ../\$lmstep/corpus.\$lmsuffix"
   fi

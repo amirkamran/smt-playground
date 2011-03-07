@@ -39,9 +39,9 @@ echo "PRUNELM-$FULLLM:$LMPRUNE" > eman.tag
 
 PRUNESTRING="0."
 for i in `seq $(($LMPRUNE - 1))` ; do
-  PRUNESTRING="0$PRUNESTRING"
+  PRUNESTRING="$PRUNESTRING"0
 done
-PRUNESTRING="${PRUNESTRING}1"
+PRUNESTRING="$PRUNESTRING"1
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
