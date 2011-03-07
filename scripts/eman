@@ -511,27 +511,42 @@ sub collect {
   my $outh = my_save($resultsfile);
   my $ok = 1;
   my $got;
+  my %knowntag; # a cache of tags
   foreach my $line (split /\n/, $resconf) {
-    my ($name, $glob, $regex) = map { s/^ +//; s/ +$//; $_ } split /\t/, $line;
+    my ($name, $glob, $regexorcmd) = map { s/^ +//; s/ +$//; $_ }
+                                     split /\t/, $line;
     my @files = glob($glob);
     # print STDERR "$name ($glob):\n";
     # print STDERR join("\n", @files);
     # print STDERR "\n\n";
     foreach my $f (@files) {
       my $step = $f; $step =~ s/\/.*//;
-      my $cont = load($f);
-      if ($cont =~ /$regex/) {
-        my $res = $1;
-        if (defined $got->{$step}->{$name} && $got->{$step}->{$name} ne $res) {
-          print STDERR "$f:Conflicting result for $name:"
-            ." $res vs. previous $got->{$step}->{$name}\n";
-          $ok = 0;
+      my $res = undef;
+      if ($regexorcmd =~ /^CMD: *(.*)/) {
+        $res = `cat $f | $1`;
+        chomp $res;
+        $res =~ s/\n+/ /;
+      } else {
+        my $cont = load($f);
+        if ($cont =~ /$regexorcmd/) {
+          $res = $1;
         } else {
-          $got->{$step}->{$name} = $res;
+          print STDERR "$f:Missed result for $name, no match of /$regexorcmd/";
+          $ok = 0;
+          next;
         }
-        my $tag = load("$step/eman.tag");
-        print $outh $step, "\t", $name, "\t", $res, "\t", $tag, "\n";
       }
+      if (defined $got->{$step}->{$name} && $got->{$step}->{$name} ne $res) {
+        print STDERR "$f:Conflicting result for $name:"
+          ." $res vs. previous $got->{$step}->{$name}\n";
+        $ok = 0;
+      } else {
+        $got->{$step}->{$name} = $res;
+      }
+      my $tag = $knowntag{$step};
+      $tag = load("$step/eman.tag") if !defined $knowntag{$step};
+      $knowntag{$step} = $tag;
+      print $outh $step, "\t", $name, "\t", $res, "\t", $tag, "\n";
     }
   }
   close $outh;
