@@ -122,7 +122,7 @@ my %options = (
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
-  "read-only!" => \$readonly,
+  "read-only|readonly!" => \$readonly,
   "s|subst=s@" => \$subst,
   "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
@@ -544,7 +544,10 @@ sub collect {
         $got->{$step}->{$name} = $res;
       }
       my $tag = $knowntag{$step};
-      $tag = load("$step/eman.tag") if !defined $knowntag{$step};
+      if (!defined $knowntag{$step}) {
+        $tag = load("$step/eman.tag");
+        print $outh $step, "\t", "TAG", "\t", $tag, "\n"; # emit also tag
+      }
       $knowntag{$step} = $tag;
       print $outh $step, "\t", $name, "\t", $res, "\t", $tag, "\n";
     }
