@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -CSAD
 # eman, experiment manager
 #
 # More info: 'eman --help' or 'eman --man'
@@ -52,6 +52,7 @@ my %expand_abbrev = qw(
   outdate outdate
   dups duplicates
   guess guess
+  collect collect
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -85,6 +86,7 @@ my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 my $dirprefix = "s."; # stands for 'step'
 my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
+my $resultsconffile = "eman.results.conf";
 my $seedsdir = "eman.seeds";
 
 my $qsub_available = undef;
@@ -243,6 +245,13 @@ if ($cmd eq "guess") {
     print $step."\n";
   }
   exit 0;
+}
+
+if ($cmd eq "collect") {
+  # collecting results from all experiments
+  $lock->unlock() if defined $lock;
+  $waserror = !collect();
+  exit $waserror;
 }
 
 if ($cmd eq "list") {
@@ -495,6 +504,39 @@ if ($cmd eq "abolish") {
 $lock->unlock() if defined $lock;
 exit $waserror;
 ## end of main
+
+sub collect {
+  # collect results from all experiments
+  my $resconf = load($resultsconffile);
+  my $outh = my_save($resultsfile);
+  my $ok = 1;
+  my $got;
+  foreach my $line (split /\n/, $resconf) {
+    my ($name, $glob, $regex) = map { s/^ +//; s/ +$//; $_ } split /\t/, $line;
+    my @files = glob($glob);
+    # print STDERR "$name ($glob):\n";
+    # print STDERR join("\n", @files);
+    # print STDERR "\n\n";
+    foreach my $f (@files) {
+      my $step = $f; $step =~ s/\/.*//;
+      my $cont = load($f);
+      if ($cont =~ /$regex/) {
+        my $res = $1;
+        if (defined $got->{$step}->{$name} && $got->{$step}->{$name} ne $res) {
+          print STDERR "$f:Conflicting result for $name:"
+            ." $res vs. previous $got->{$step}->{$name}\n";
+          $ok = 0;
+        } else {
+          $got->{$step}->{$name} = $res;
+        }
+        my $tag = load("$step/eman.tag");
+        print $outh $step, "\t", $name, "\t", $res, "\t", $tag, "\n";
+      }
+    }
+  }
+  close $outh;
+  return $ok;
+}
 
 sub parse_recipe {
   # parse traceback output with vars into a recipe
@@ -1363,8 +1405,7 @@ sub guess_step {
     
     print STDERR scalar(@resultsmatches)." matches in results file\n" if $debug;
     if (1==scalar @resultsmatches) {
-      my $f = field($resultsmatches[0], 1);
-      $f =~ s/\<.*//;
+      my $f = field($resultsmatches[0], 0);
       $step = guess_step_from_hashdate($f);
     }
   }
@@ -1597,6 +1638,14 @@ sub quietsystem {
   }
 }
 
+sub field {
+  my $l = shift;
+  my $i = shift;
+  chomp $l;
+  my @f = split /\t/, $l;
+  return $f[$i];
+}
+
 
 __END__
 
@@ -1642,7 +1691,7 @@ eman, experiment manager
   
   eman abolish SPEC ...      # destroy all step files except
                              #   metadata => can still be cloned
- #eman collect               # collect results of all experiments
+  eman collect               # collect results of all experiments
   eman reindex               # re-create index of steps
 
   eman wait SPEC ...         # block until the jobs are FAILED or DONE
@@ -1703,6 +1752,7 @@ In the directory containing all your steps, eman uses the following files:
 
  #eman.seeds         ... the directory of all step seeds
   eman.index         ... index of steps for quick check for identities
+ #eman.results.conf  ... name wildcard pattern and regex to extract result
   eman.results       ... collected results from all steps
 
 Again, you are responsible for providing the items marked '#'.
