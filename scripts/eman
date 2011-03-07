@@ -65,6 +65,7 @@ my $reindex = 0;
 my $verbose = 0;
 my $manpage = 0;
 my $help = 0;
+my $colorize = undef; # surely colorize output
 my $list_options = 0;
 my $assume_abolished_ok = 0;
 my $show_tree_in_traceback = 1;
@@ -111,6 +112,7 @@ my %options = (
   "list-options" => \$list_options,
   "man" => \$manpage,
   "sge!" => \$sge,
+  "colorize!" => \$colorize,
   "assume-abolished-ok" => \$assume_abolished_ok, # for eman start
   "tree-in-traceback!" => \$show_tree_in_traceback,
   "tag!" => \$show_tag,
@@ -139,12 +141,13 @@ GetOptions(%options) or exit 1;
 my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
 
-# colorize regex outputs if substituting and output is terminal
-my $hicolor = color("on_yellow");
-my $uncolor = color("reset");
-$subst = [ map {s/([^\/])\//$1\/$hicolor/;
-                s/\/([^\/]*$)/$uncolor\/$1/; $_;} @$subst]
-  if defined $subst && -t STDOUT;
+# colorize regex outputs if substituting and output is terminal (or wished)
+if ($colorize || (!defined $colorize && -t STDOUT)) {
+  my $hicolor = color("on_yellow");
+  my $uncolor = color("reset");
+  $subst = [ map {s/([^\/])\//$1\/$hicolor/;
+                  s/\/([^\/]*$)/$uncolor\/$1/; $_;} @$subst];
+}
 
 my $command = shift;
 my $cmd = recognize_command($command);
