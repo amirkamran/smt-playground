@@ -1397,17 +1397,26 @@ sub guess_step {
     my $resultstext = load($resultsfile);
     
     my @resultsmatches = grep { /$key/ } split /\n/, $resultstext;
-    if (1<scalar(@resultsmatches)) {
+    my $step_to_text;
+    foreach my $l (@resultsmatches) {
+      my ($step, $rest) = split /\t/, $l, 2;
+      if (defined $step_to_text->{$step}) {
+        push @{$step_to_text->{$step}}, $rest;
+      } else {
+        $step_to_text->{$step} = [ $rest ];
+      }
+    }
+
+    my @steps = keys %$step_to_text;
+    if (1<scalar(@steps)) {
       print STDERR "Ambiguous in results file: $key:\n";
-      print STDERR join("", map { "  $_\n" } @resultsmatches);
+      foreach my $s (@steps) {
+        print STDERR "$s:\n";
+        print STDERR join("", map { "  $_\n" } @{$step_to_text->{$s}});
+      }
       exit 1;
     }
-    
-    print STDERR scalar(@resultsmatches)." matches in results file\n" if $debug;
-    if (1==scalar @resultsmatches) {
-      my $f = field($resultsmatches[0], 0);
-      $step = guess_step_from_hashdate($f);
-    }
+    $step = $steps[0]; # pick the first and only
   }
   if (!defined $step) {
     # guess from dir listing
