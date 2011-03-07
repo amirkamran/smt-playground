@@ -77,6 +77,8 @@ ngram -lm ../$FULLLM/corpus.lm \\
   -write-lm ./corpus.lm \\
   || die "Failed to prune LM"
 
+gzip corpus.lm || die "Gzip failed"
+
 echo DONE > \$mydir/eman.status
 
 echo "=============================="

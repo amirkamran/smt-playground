@@ -136,6 +136,8 @@ echo Mixing LMS...
   --tempdir=$TMP \\
   || die "Mixing models failed"
 
+gzip corpus.lm || die "Gzip failed"
+
 if [ x$BINARIZE == xyes ]; then
   $IRSTLMDIR/compile-lm corpus.lm corpus.blm \\
   || die "Binarization FAILED"

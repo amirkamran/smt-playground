@@ -77,3 +77,13 @@ s.prunelm.b85bf31a.20110306-2323/eman.vars	LMPRUNE=6
  24M 2011-03-06 23:32 s.prunelm.b85bf31a.20110306-2323/corpus.lm.gz
 
 BUG: pruning z toho udela trigram!
+
+
+2011-03-07
+
+chci udelat velky pokus s 2step, at je co kombinovat
+Uz si chystam obri LM pro prvni krok:
+  s.mixlm.b0750a3f.20110307-1003
+
+Hlavni pokus se pak bude delat takto:
+  eman tb 64dc010f.20110214-2122 -s /czeng09-ne/cz+czeng09-eu+czeng09-fi+czeng09-na+czeng09-su+czeng09-te+czeng09-we+ps/

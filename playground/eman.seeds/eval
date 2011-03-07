@@ -2,12 +2,11 @@
 
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
-if [ -z "$MERTEXP" ] \
-|| [ -z "$BINARIES" ] \
+if [ -z "$MERTSTEP" ] \
 || [ -z "$TESTCORP" ]; then
   echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$MERTEXP to the directory that contains the model, incl. all files, the optimized ini will be used"
+  echo "  \$BINARIES to the step containing compiled tools (inheritable from mertstep"
+  echo "  \$MERTSTEP to the directory that contains the model, incl. all files, the optimized ini will be used"
   echo "  \$TESTCORP to the corpus for evaluation"
   echo "and optionally"
   echo "  \$REFAUG to override reference annotation used during mert"
@@ -18,15 +17,18 @@ if [ -z "$MERTEXP" ] \
   exit 1
 fi
 
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
+[[ -d ../s.mert.$MERTSTEP ]] && MERTSTEP=s.mert.$MERTSTEP
 
-[[ -d ../exp.mert.$MERTEXP ]] && MERTEXP=exp.mert.$MERTEXP
-
-if [[ ! -d ../$MERTEXP ]]; then
-  echo "Experiment not found: $MERTEXP"
+if [[ ! -d ../$MERTSTEP ]]; then
+  echo "Experiment not found: $MERTSTEP"
   exit 1
 fi
+
+# load inherited/inheritable binaries and gridflags
+INHER_BINARIES=`cat ../$MERTSTEP/eman.vars | grep ^BINARIES | cut -d= -f2-`
+INHER_GRIDFLAGS=`cat ../$MERTSTEP/eman.vars | grep ^GRIDFLAGS | cut -d= -f2- | sed 's/^"//; s/"$//'`
+
+[ -z "$GRIDFLAGS" ] && GRIDFLAGS=$INHER_GRIDFLAGS
 
 JOBS=${JOBS:-10}
 
@@ -35,20 +37,20 @@ if [ ! -z "$ITER" ]; then
   itertag=ITER$ITER
 fi
 
-echo `cat ../$MERTEXP/eman.tag`"$itertag"TEST$TESTCORP > eman.tag
+echo `cat ../$MERTSTEP/eman.tag`"$itertag"TEST$TESTCORP > eman.tag
 
 if [ -z "$REFAUG" ]; then
-  eval `cat ../$MERTEXP/eman.vars | grep 'REFAUG='`
+  eval `cat ../$MERTSTEP/eman.vars | grep 'REFAUG='`
   echo "Inheriting REFAUG: $REFAUG"
 fi
 
-MODELEXP=`cat ../$MERTEXP/info.modelexp`
+MODELEXP=`cat ../$MERTSTEP/info.modelexp`
 SAVEMODELEXP=$MODELEXP
 eval `cat ../$MODELEXP/eman.vars` || exit 1
 MODELEXP=$SAVEMODELEXP
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
-MERTEXP=$MERTEXP
+MERTSTEP=$MERTSTEP
 TESTCORP=$TESTCORP
 REFAUG=$REFAUG
 MOSESFLAGS="$MOSESFLAGS"
@@ -57,10 +59,23 @@ JOBS=$JOBS
 ITER=$ITER
 KONEC
 echo $MODELEXP > ./info.modelexp
-echo $MERTEXP > info.mertexp
+echo $MERTSTEP > info.mertstep
 
-echo $MERTEXP > ./eman.deps
-echo $BINARIES >> eman.deps
+echo $MERTSTEP > ./eman.deps
+
+if [ -z "$BINARIES" ] || [ "$INHER_BINARIES" == "$BINARIES" ]; then
+  # inherit binarie
+  BINARIES=$INHER_BINARIES
+  # inherited binaries don't belong to our dependencies, we
+  # hope our predecessor has them as a dependence
+else
+  # put BINARIES to our deps as well
+  echo $BINARIES >> eman.deps
+fi
+
+SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
+MOSESCMD="`pwd`/../$BINARIES/bin/moses"
+
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -124,7 +139,7 @@ echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
   --symlink \\
-  ../$MERTEXP/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
+  ../$MERTSTEP/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
@@ -134,6 +149,7 @@ $MOSESPARALLELIZER \\
   ./moses \\
   $MOSESFLAGS \\
   -input-file ./evaluation.in \\
+  -alignment-output-file ./evaluation.ali \\
   -config ./filtered-for-eval/moses.ini \\
   > evaluation.opt.out \\
    || die "Failed to translate"

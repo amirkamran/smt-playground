@@ -278,6 +278,7 @@ echo "Detokenizing evaluation.opt.out"
 
 $MOSESPARALLELIZER \\
   ./moses -input-file ./evaluation.in \\
+  -alignment-output-file ./evaluation.ali \\
   -config ./filtered-for-eval-std/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
