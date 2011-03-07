@@ -431,6 +431,7 @@ if ($command eq "redo") {
   my $step = shift;
   mydie "usage: eman redo STEPDIR" if ! defined $step;
   my $s = guess_step($step); # happily guess the exact step
+  $avoid{$s} = 1; # assume the main experiment is to be redone anyway
   my $recipe = traceback_to_recipe($s);
   my $depmap = {};
   my $newtopstep = init_by_recipe($recipe, $depmap);
@@ -1780,12 +1781,14 @@ naturally requires to clone the subsequent steps as well.
 
 eman traceback SPEC -s '/.../.../'
   # preview the experiment with some vars replaced
+  # append "--colorize | less" to preview 
 
 eman traceback SPEC -s '/.../.../' | eman clone
   # clone the whole subtree of steps replacing some vars
 
 VAR=x eman redo SPEC
-  # clone the whole subtree replacing VAR with some new value x
+  # clone the top step (and unusable predecessors) replacing VAR
+  # with some new value x
 
 eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
   # clean up, i.e. remove all content files of all failing steps
