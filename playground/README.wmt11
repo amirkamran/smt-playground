@@ -77,6 +77,7 @@ s.prunelm.b85bf31a.20110306-2323/eman.vars	LMPRUNE=6
  24M 2011-03-06 23:32 s.prunelm.b85bf31a.20110306-2323/corpus.lm.gz
 
 BUG: pruning z toho udela trigram!
+...opraveno. prunelm 20110306 jsou jeste vadne, 20110307 jsou jiz dobre
 
 
 2011-03-07
@@ -84,6 +85,23 @@ BUG: pruning z toho udela trigram!
 chci udelat velky pokus s 2step, at je co kombinovat
 Uz si chystam obri LM pro prvni krok:
   s.mixlm.b0750a3f.20110307-1003
+  a ten mensi: s.mixlm.482453fe.20110307-1008
+
+A take si chystam tm pro ten druhy krok:
+  s.tm.a0ec916c.20110307-1051
 
 Hlavni pokus se pak bude delat takto:
   eman tb 64dc010f.20110214-2122 -s /czeng09-ne/cz+czeng09-eu+czeng09-fi+czeng09-na+czeng09-su+czeng09-te+czeng09-we+ps/
+
+
+
+Zkousim -unk: s.lm.2b2e088b.20110307-1040, a pak bych to mel porovnat s
+pokusem, ktery ten puvodni s.lm.b7b01f66.20110305-0027 pouziva.
+...
+2011-03-07 16.51 jsem jich spustil celou serii
+
+
+
+2011-03-07
+
+toa: pripravuju zakladni reverzni preklad: s.mert.c8aa3cd6.20110307-1337

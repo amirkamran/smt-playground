@@ -1,5 +1,7 @@
 au BufNewFile,BufRead *bleu* so hilite
 
+au BufNewFile,BufRead *results* set noet
+
 
 au BufNewFile,BufRead *bleu*,modelstat,mertstat,evalstat set nowrap
 au BufNewFile,BufRead *bleu*,modelstat,mertstat,evalstat set ts=1

@@ -16,6 +16,7 @@ if [ -z "$CORP" ] \
   echo "And optionally: "
   echo "  \$PARTS to number of parts to use when building a huge lm"
   echo "  \$BINARIZE=yes to binarize the model"
+  echo "  \$LMFLAGS='-unk' to various flags for ngram-count"
   exit 1
 fi
 
@@ -49,6 +50,7 @@ CORPAUG=$CORPAUG
 ORDER=$ORDER
 BINARIZE=$BINARIZE
 PARTS=$PARTS
+LMFLAGS="$LMFLAGS"
 KONEC
 
 echo $ORDER > var-ORDER
@@ -113,12 +115,14 @@ if [ $PARTS == 1 ]; then
   if zcat corpus.text.gz | ngram-count -order $ORDER \\
     -text - \\
     -lm corpus.lm \\
+    $LMFLAGS \\
     -interpolate -kndiscount; then
     echo "Succeeded."
   else
     echo Second attempt, skip bigrams in knsmoothing
     zcat corpus.text.gz | ngram-count -order $ORDER \\
       -text - \\
+      $LMFLAGS \\
       -lm corpus.lm \\
       -interpolate $KNDISCOUNTSFROMTHREE \\
     || die "ngram-count FAILED even with bigrams not knsmoothed"
@@ -133,6 +137,7 @@ else
   echo Making batch counts
   make-batch-counts \$tempdir/filelist 1 zcat \$tempdir \\
     -order $ORDER \\
+    $LMFLAGS \\
     -interpolate -kndiscount \\
     || die "make-batch-counts FAILED"
 
@@ -143,6 +148,7 @@ else
   make-big-lm -read \$tempdir/*.ngrams.gz \\
     -name \$tempdir/biglm \\
     -order $ORDER \\
+    $LMFLAGS \\
     -interpolate -kndiscount \\
     -lm \`pwd\`/corpus.lm \\
     || die "make-big-lm FAILED"

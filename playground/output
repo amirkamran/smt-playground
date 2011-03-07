@@ -12,7 +12,7 @@ suffix="$2"
 
 [ ! -z "$suffix" ] || suffix=opt.txt
 
-e=`manager.pl --guess $1`
+e=`eman guess $1`
 
 [ -d $e ] || die "Not an experiment: $e"
 

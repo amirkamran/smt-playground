@@ -19,19 +19,14 @@ mertdetails:
 	> $@
 
 bleu:
-	./collect_bleu.pl \
-	| grep -v 'Processing [0-9]* sentences\|Evaluating candidate translations' \
-	| grep -v '^$$' \
-	| sed 's/BLEU.run\([0-9]*\)	/BLEU.run	\1:/' \
-	| grp --keys=1,2 --items=COLLECT3 \
-	| numsort a1 \
-	| list2tab 1 2 3 '?' \
-	| headline --prepend 'Mert or Eval' \
-	| transpose | numsort a1 | transpose \
-	| tt --utf8 \
-	> $@.`./sitename`
+	eman collect
+	cp eman.results $@.`./sitename`
 	cat $@.* \
-	| recut 1,4,5,6,8,7,3 \
+	| numsort a2,a1 \
+	| list2tab 1 2 3 \
+	| sed '1s/^/Step/' \
+	| sed 's/s.2step.//; s/s.mert.//; s/s.eval.//; s/s.toa.//' \
+	| recut 2,1,5,6,4,3 \
 	| numsort --skip=1 n1 \
 	| tt --utf8 \
 	> $@

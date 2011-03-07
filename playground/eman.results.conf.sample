@@ -1,0 +1,4 @@
+BLEU	*/BLEU.opt	BLEU\s*=\s*([^\s,]+)
+BLEUstd	*/BLEU.std	BLEU\s*=\s*([^\s,]+)
+devSnts	*/tuning.in	CMD: wc -l
+tstSnts	*/evaluation.in	CMD: wc -l

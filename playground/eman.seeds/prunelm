@@ -74,6 +74,7 @@ which ngram || die "No ngram"
 echo "Pruning the language model..."
 ngram -lm ../$FULLLM/corpus.lm \\
   -prune $PRUNESTRING \\
+  -order $ORDER \\
   -write-lm ./corpus.lm \\
   || die "Failed to prune LM"
 
