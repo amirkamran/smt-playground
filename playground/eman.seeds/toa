@@ -115,9 +115,8 @@ echo RUNNING > \$mydir/status\$index_formatted
 
 # copy STDIN
 tempfile="/mnt/h/tmp/\`mktemp | xargs basename\`"
-while read -r line; do
-  echo "\$line" >> \$tempfile;
-done;
+cat > \$tempfile;
+
 $SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
   filtered-for-eval\$index_formatted ./moses.abs.ini \$tempfile 2>&1 \\
   || die "Failed to filter"
