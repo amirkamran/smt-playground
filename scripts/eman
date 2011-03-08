@@ -295,7 +295,7 @@ if ($cmd eq "duplicates") {
 if ($cmd eq "traceback") {
   $lock->unlock() if defined $lock;
   mydie "usage: eman traceback SPEC ..." if 0 == scalar @ARGV;
-  $show_vars = 1 if defined $subst;
+  $show_vars = 1 if defined $subst && scalar (@$subst) > 0;
     # so that there is something to substitute
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
