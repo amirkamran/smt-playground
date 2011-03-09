@@ -3,6 +3,7 @@
 # Accepted vars:
 #   SKIP_SRILM=yes
 #   SKIP_IRSTLM=yes
+#   SKIP_SALM=yes
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -10,6 +11,7 @@ set -o pipefail  # safer pipes
 cat > eman.vars << KONEC
 SKIP_SRILM=$SKIP_SRILM
 SKIP_IRSTLM=$SKIP_IRSTLM
+SKIP_SALM=$SKIP_SALM
 KONEC
 
 # BINARIES=$(basename $(pwd))
@@ -98,7 +100,7 @@ if [ "$SKIP_IRSTLM" != yes ]; then
 fi
 
 
-if [ \$(uname -m) == "x86_64" ]; then
+if [ "$SKIP_SALM" != yes ] && [ \$(uname -m) == "x86_64" ]; then
   echo "Extracting SALM"
   tar xzf ../../src/salm-src.tar.gz || die "Failed to extract salm"
   mv SALM salm-src || die "salm rename failed"
@@ -143,7 +145,7 @@ ln -s ../moses/scripts/training/symal/symal ../bin/
 
 cd \$mydir || die "Failed to chdir back"
 
-if [ \$(uname -m) == "x86_64" ]; then
+if [ "$SKIP_SALM" != yes ] && [ \$(uname -m) == "x86_64" ]; then
   echo "Compiling filterpt"
   cd moses/sigtest-filter || die "Failed to chdir to filter-pt"
   make SALMDIR=\$(pwd)/../../salm-src FLAVOR=o64 \
