@@ -51,7 +51,6 @@ fi
 SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
 MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
-SCORENBEST=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/scorenbest.asm
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
 [ ! -z "$SEARCH" ] || SEARCH=cube
@@ -178,7 +177,6 @@ $ZMERTMOSES \
 KONEC
 ;;
 mert)
-  #--obo-scorenbest=\`pwd\`/scorenbest
   cat << KONEC > command.mert
 $MERTMOSES \
   --working-dir=mert-tuning \\
@@ -234,8 +232,9 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
 ../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-../../scripts/wiseln $SCORENBEST ./scorenbest || die "Failed to clone scorenbest"
-../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+if [ -e $TESTBLEU ]; then
+  ../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+fi
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
@@ -265,8 +264,10 @@ $MOSESPARALLELIZER \\
 
 echo "Tuned BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-./testbleu evaluation.ref.0.factor0 < evaluation.opt.out | tee BLEU.opt \\
-  || die "BLEU of evaluation.opt.out set failed"
+if [ -e ./testbleu ]; then
+  ./testbleu evaluation.ref.0.factor0 < evaluation.opt.out | tee BLEU.opt \\
+    || die "BLEU of evaluation.opt.out set failed"
+fi
 
 echo "Detokenizing evaluation.opt.out"
 \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
@@ -287,8 +288,10 @@ $MOSESPARALLELIZER \\
 
 echo "Default BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.std.out | tee BLEU.std
-./testbleu evaluation.ref.0 < evaluation.std.out | tee BLEU.std \\
-  || die "BLEU of evaluation.std.out set failed"
+if [ -e ./testbleu ]; then
+  ./testbleu evaluation.ref.0 < evaluation.std.out | tee BLEU.std \\
+    || die "BLEU of evaluation.std.out set failed"
+fi
 
 echo "Detokenizing evaluation.std.out"
 \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
