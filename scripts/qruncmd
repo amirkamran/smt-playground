@@ -339,26 +339,8 @@ if ($opts{sync} || $opts{join}) {
     $opts{jobname} =~ s/\//_/g;
     push @opts, ('-N', "W".$opts{jobname});
   }
-  if (defined $opts{mem}) {
-    push @opts, ('-hard', '-l', "mf=".$opts{mem});
-  }
   push @opts, qw(-sync yes);
   push @opts, map { -hold_jid => $_ } (@waitfor_jobids, @{$opts{"hold"}});
-  push @opts, (-q => $opts{queue}) if $opts{queue};
-  if (defined $opts{"exclude-comp"}) {
-    die "Cannot use --queue and --exclude-comp at the same time"
-      if defined $opts{"queue"};
-    push @opts, ("-q", "*@*&!".$opts{"exclude-comp"});
-  }
-  if (defined $opts{"time"}) {
-    push @opts, ('-l', "h_rt=".$opts{"time"});
-  }
-  if (defined $opts{"disk"}) {
-    # UFAL setup
-    push @opts, ('-l', "mnthf=".$opts{"disk"});
-  }
-  # add all other directives --limit
-  push @opts, map {('-l', $_)} @{$opts{"limit"}};
   
   # qsub execution
   my $tmphold = new File::Temp(
@@ -564,6 +546,23 @@ KONEC
   # push @opts, map { -hold_jid => $_ } @{$opts{holds}};
   push @opts, (-q => $opts{queue}) if $opts{queue};
   push @opts, ('-hold_jid', $mayhold) if defined $mayhold;
+  if (defined $opts{mem}) {
+    push @opts, ('-hard', '-l', "mf=".$opts{mem}, '-l', 'h_vmem='.$opts{mem});
+  }
+  if (defined $opts{"exclude-comp"}) {
+    die "Cannot use --queue and --exclude-comp at the same time"
+      if defined $opts{"queue"};
+    push @opts, ("-q", "*@*&!".$opts{"exclude-comp"});
+  }
+  if (defined $opts{"time"}) {
+    push @opts, ('-l', "h_rt=".$opts{"time"});
+  }
+  if (defined $opts{"disk"}) {
+    # UFAL setup
+    push @opts, ('-l', "mnthf=".$opts{"disk"});
+  }
+  # add all other directives --limit
+  push @opts, map {('-l', $_)} @{$opts{"limit"}};
   
   if (0 == $opts{jobs}) {
     # just run locally
