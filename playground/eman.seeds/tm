@@ -164,7 +164,10 @@ fi
 
 mkdir model
 
-tempdir=\`mktemp -d /mnt/h/tmp/exp.model.XXXXXX\`
+maintempdir=/mnt/h/tmp
+[ -d \$maintempdir ] || maintempdir=/tmp
+
+tempdir=\`mktemp -d \$maintempdir/exp.model.XXXXXX\`
 echo "COPYING SELF TO TEMPDIR: \$tempdir"
 rsync -avz --exclude 'log*' --exclude '*.hardlink' * \$tempdir/ \\
   || die "Failed to rsync"
