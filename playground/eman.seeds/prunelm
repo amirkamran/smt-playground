@@ -71,8 +71,17 @@ export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 echo "Using this ngram:"
 which ngram || die "No ngram"
 
+if [ -e ../$FULLLM/corpus.lm.gz ]; then
+  inlmstream="zcat ../$FULLLM/corpus.lm.gz"
+elif [ -e ../$FULLLM/corpus.lm ]; then
+  inlmstream="cat ../$FULLLM/corpus.lm"
+else
+  die "Can't read input file: ../$FULLLM/corpus.lm"
+fi
+
 echo "Pruning the language model..."
-ngram -lm ../$FULLLM/corpus.lm \\
+eval \$inlmstream \\
+| ngram -lm - \\
   -prune $PRUNESTRING \\
   -order $ORDER \\
   -write-lm ./corpus.lm \\
