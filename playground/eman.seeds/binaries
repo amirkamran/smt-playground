@@ -39,6 +39,7 @@ ulimit -c 1 # core files limited to 1 byte
 
 tar xzf ../../src/giza-pp-v1.0.5.tar.gz || die "giza-pp missing"
 cd giza-pp || die "Failed to chdir to giza-pp"
+patch -p1 < ../../../src/giza-pp-v1.0.5.patch || die "Failed to patch GIZA"
 cd GIZA++-v2 && make && make snt2cooc.out && cd ../ || die "GIZA failed"
 cd mkcls-v2 && make && cd ../ || die "mkcls failed"
 cd ../ || die "chdir back after giza-pp failed"
