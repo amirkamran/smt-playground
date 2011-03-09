@@ -1,0 +1,19 @@
+diff -ru giza-pp-orig/GIZA++-v2/file_spec.h giza-pp-patched/GIZA++-v2/file_spec.h
+--- giza-pp-orig/GIZA++-v2/file_spec.h	2010-10-31 23:51:54.000000001 +0100
++++ giza-pp-patched/GIZA++-v2/file_spec.h	2011-03-09 10:57:00.000000001 +0100
+@@ -37,13 +37,13 @@
+   struct tm *local;
+   time_t t;
+   char *user;
+-  char time_stmp[17];
++  char time_stmp[19];
+   char *file_spec = 0;
+   
+   t = time(NULL);
+   local = localtime(&t);
+   
+-  sprintf(time_stmp, "%02d-%02d-%02d.%02d%02d%02d.", local->tm_year, 
++  sprintf(time_stmp, "%04d-%02d-%02d.%02d%02d%02d.", local->tm_year, 
+ 	  (local->tm_mon + 1), local->tm_mday, local->tm_hour, 
+ 	  local->tm_min, local->tm_sec);
+   user = getenv("USER");
