@@ -470,6 +470,8 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 	&& echo "ali" > $*_idali.info
 
 TMTROOT?=/home/bojar/diplomka/granty/emplus/wmt11/playground/s.tectomt.37453b1c.20110201-1501/tectomt
+# pouzil pro WMT11 csN[am] a enNm
+#TMTROOT?=/home/bojar/diplomka/granty/emplus/wmt11/playground/s.tectomt.022e1202.20110309-1622/tectomt
 SRUNBLOCKS?=$(TMTROOT)/tools/srunblocks_streaming/srunblocks
 JOBS?=40
 SCENDIR=./prep-wmt11/

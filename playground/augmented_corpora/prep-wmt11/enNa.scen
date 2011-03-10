@@ -1,0 +1,76 @@
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
+Normalize_plaintext::English
+SEnglishW_to_SEnglishM::Tokenization # David's better than SEnglishW_to_SEnglishM::Penn_style_tokenization
+SEnglishW_to_SEnglishM::Normalize_forms
+SEnglishW_to_SEnglishM::Fix_tokenization
+SEnglishW_to_SEnglishM::TagMorce
+SEnglishW_to_SEnglishM::Fix_mtags
+SEnglishW_to_SEnglishM::Lemmatize_mtree
+
+# SEnglishM_to_SEnglishN::Stanford_named_entities TMT_PARAM_NER_EN_MODEL=ner-eng-ie.crf-3-all2008.ser.gz
+# SEnglishM_to_SEnglishN::Distinguish_personal_names
+
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=25
+SxxM_to_SxxA::Clone_atree LANGUAGE=English
+
+#SEnglishM_to_SEnglishA::McD_parser TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2_0.1.model
+SEnglishM_to_SEnglishA::McD_parser TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2_0.01.model
+
+SEnglishM_to_SEnglishA::Fill_is_member_from_deprel
+SEnglishM_to_SEnglishA::Fix_tags_after_parse
+
+#SEnglishM_to_SEnglishA::McD_parser REPARSE=1 TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2_0.1.model
+SEnglishM_to_SEnglishA::McD_parser REPARSE=1 TMT_PARAM_MCD_EN_MODEL=conll_mcd_order2_0.01.model
+
+SEnglishM_to_SEnglishA::Fill_is_member_from_deprel
+
+SEnglishM_to_SEnglishA::Fix_McD_topology
+SEnglishM_to_SEnglishA::Fix_nominal_groups
+
+SEnglishM_to_SEnglishA::Fix_is_member
+SEnglishM_to_SEnglishA::Fix_atree
+SEnglishM_to_SEnglishA::Fix_multiword_prep_and_conj
+SEnglishM_to_SEnglishA::Fix_dicendi_verbs
+SEnglishM_to_SEnglishA::Fill_afun_AuxCP_Coord
+SEnglishM_to_SEnglishA::Fill_afun
+
+SEnglishM_to_SEnglishA::Check_afun
+
+# further up to T-layer
+SEnglishA_to_SEnglishT::Mark_edges_to_collapse
+SEnglishA_to_SEnglishT::Mark_edges_to_collapse_neg
+SxxA_to_SxxT::Build_ttree                    LANGUAGE=English
+SxxA_to_SxxT::Fill_is_member                 LANGUAGE=English
+SEnglishA_to_SEnglishT::Move_aux_from_coord_to_members
+#SEnglishA_to_SEnglishT::Mark_named_entities TMT_PARAM_NER_EN_MODEL=ner-eng-ie.crf-3-all2008.ser.gz # This block is superceded by SEnglishM_to_SEnglishN::Stanford_named_entities
+SEnglishA_to_SEnglishT::Fix_tlemmas
+SEnglishA_to_SEnglishT::Assign_coap_functors
+SEnglishA_to_SEnglishT::Fix_either_or
+SEnglishA_to_SEnglishT::Fix_is_member
+SEnglishA_to_SEnglishT::Mark_clause_heads
+SEnglishA_to_SEnglishT::Mark_passives
+
+#SEnglishA_to_SEnglishT::Avoid_space_in_tlemmas # not needed, now handled in TBLa2t_phaseFx
+SEnglishA_to_SEnglishT::TBLa2t_phaseFx
+
+SEnglishA_to_SEnglishT::Mark_infin
+SEnglishA_to_SEnglishT::Mark_relclause_heads
+SEnglishA_to_SEnglishT::Mark_relclause_coref
+SEnglishA_to_SEnglishT::Mark_dsp_root
+SEnglishA_to_SEnglishT::Mark_parentheses
+SEnglishA_to_SEnglishT::Recompute_deepord
+SEnglishA_to_SEnglishT::Assign_nodetype
+SEnglishA_to_SEnglishT::Assign_grammatemes
+SEnglishA_to_SEnglishT::Detect_formeme
+SEnglishA_to_SEnglishT::Rehang_shared_attr
+SEnglishA_to_SEnglishT::Detect_voice
+SEnglishA_to_SEnglishT::Fix_imperatives
+SEnglishA_to_SEnglishT::Fill_is_name_of_person
+SEnglishA_to_SEnglishT::Fill_gender_of_person
+SEnglishA_to_SEnglishT::Add_cor_act
+SEnglishA_to_SEnglishT::Find_text_coref
+Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
+Print::Factored
+  TMT_PARAM_PRINT_FACTORED=SEnglishAT
+  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output
+  TMT_PARAM_PRINT_FACTORED_FLAGS=join_spaced_numbers:escape_space
