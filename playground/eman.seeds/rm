@@ -105,9 +105,9 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 mkdir corpus
 
 cd corpus
-../../scripts/wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
+../../../scripts/wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
   || die "Failed to clone source corpus"
-../../scripts/wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
+../../../scripts/wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
   || die "Failed to clone target corpus"
 cd ..
 
