@@ -145,6 +145,38 @@ cleaned/europarl.gz:
 	| gzip -c \
 	> $@
 
+cleaned/journal.gz:
+	# selecting usable sentences of eujournal
+	mkdir -p cleaned
+	zcat /net/tmp/bojar/official-journal/hunaligned.singlepass.gz \
+	| ~bojar/diplomka/umc/devel/tools/cleaning/clean_after_hunalignwrapper.pl \
+	    --max-words=60 \
+	| grep '^1-1	' \
+	| gzip -c \
+	> $@
+
+cleaned/ecnews.gz:
+	# selecting usable sentences of news at ec.europa.eu
+	mkdir -p cleaned
+	zcat /net/me/merkur2/ufallabhome/galuscakova/umc/news-ec-europa-eu/aligned_corpora.txt.gz \
+	| ~bojar/diplomka/umc/devel/tools/cleaning/clean_after_hunalignwrapper.pl \
+	    --max-words=60 \
+	| gzip -c \
+	> $@
+	
+cleaned/ecweb.gz:
+	# selecting usable sentences of the website ec.europa.eu
+	# fixing some chars: Š<9f>
+	mkdir -p cleaned
+	cat /net/me/merkur2/ufallabhome/galuscakova/umc/ec-europa-eu/corpora_cs_en_version1.txt \
+	| ~bojar/diplomka/umc/devel/tools/cleaning/clean_after_hunalignwrapper.pl \
+	    --max-words=60 \
+	| sed 's/â<82>¬  EUR   â<80>¦//g' \
+	| perl -CSAD -pne 's/\xe2\x82\x{00ac}/\x{20ac}/g; s/\xed\x82 / /g; s/\xad//g; s/\x{160}\x{9f}/\x{015f}/g; s/\xe2\x80\xa2/-/g; s/\xe2\x80\x94/-/g; s/\xe2\x80\xa6/|/g; s/\xe2\x80\x91/-/g; s/\xe2\x{20ac}\x{160}\x93/\x{201c}/g; s/\xe2\x{20ac}\xef\xbf\xbd/\x{201d}/g;$$_' \
+	| gzip -c \
+	> $@
+	
+
 .PHONY: plaintext
 plaintext:
 	# avoid overwriting old
