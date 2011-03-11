@@ -23,6 +23,8 @@ europarl	en:1	training/europarl-v6.cs-en.en
 
 ecnews	cs:3,en:4	cleaned/ecnews	.
 ecweb	cs:3,en:4	cleaned/ecweb	.
+jolists	cs:1,en:2	cleaned/jolists	.
+journal	cs:3,en:4	cleaned/journal	.
 
 monoeuroparl	cs:1	monolingual/europarl	.
 mononews07	cs:1	monolingual/news.2007.cs.shuffled.gz
