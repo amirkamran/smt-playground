@@ -20,7 +20,10 @@ ps	cs:2,en:1	cleaned/ps	.
 
 europarl	cs:1	training/europarl-v6.cs-en.cs
 europarl	en:1	training/europarl-v6.cs-en.en
-				
+
+ecnews	cs:3,en:4	cleaned/ecnews	.
+ecweb	cs:3,en:4	cleaned/ecweb	.
+
 monoeuroparl	cs:1	monolingual/europarl	.
 mononews07	cs:1	monolingual/news.2007.cs.shuffled.gz
 mononews08	cs:1	monolingual/news.2008.cs.shuffled.gz
@@ -36,4 +39,4 @@ wmt09	cs:1	news-test2009.cs.gz
 wmt09	en:1	news-test2009.en.gz
 wmt10	cs:1	news-test2010.cs.gz
 wmt10	en:1	news-test2010.en.gz
-				
+

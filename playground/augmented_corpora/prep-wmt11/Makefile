@@ -10,7 +10,8 @@ SHELL=/bin/bash
 
 all:
 	# download and clean plaintexts of the devsets
-	make dev.plaintext cleaned/ps.gz cleaned/europarl.gz
+	make dev.plaintext cleaned/ps.gz cleaned/europarl.gz cleaned/ecweb.gz \
+	  cleaned/ecnews.gz cleaned/journal.gz
 	./make_all_configs.pl < configs
 	# Also manually run:
 	#   make ../webcoll
@@ -152,6 +153,21 @@ cleaned/journal.gz:
 	| ~bojar/diplomka/umc/devel/tools/cleaning/clean_after_hunalignwrapper.pl \
 	    --max-words=60 \
 	| grep '^1-1	' \
+	| gzip -c \
+	> $@
+
+cleaned/jolists.gz:
+	# selecting usable sentences of eujournal list-like texts
+	mkdir -p cleaned
+	cat /net/me/merkur2/ufallabhome/galuscakova/umc/journal/aligned_lists \
+	| sort -u \
+	| grep -v '^[	0-9 [:punct:]]*$$' \
+	| grep -v '	[0-9 [:punct:]]*$$' \
+	| grep -v '^[0-9 [:punct:]]*	' \
+	| sed 's/   */ /g' \
+	| sed 's/^  *//g' \
+	| sed 's/  *$$//g' \
+	| sed 's/ *	 */	/' \
 	| gzip -c \
 	> $@
 
