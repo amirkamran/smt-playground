@@ -12,6 +12,7 @@ cat > eman.vars << KONEC
 SKIP_SRILM=$SKIP_SRILM
 SKIP_IRSTLM=$SKIP_IRSTLM
 SKIP_SALM=$SKIP_SALM
+WITH_RICHEXTR=$WITH_RICHEXTR
 KONEC
 
 # BINARIES=$(basename $(pwd))
@@ -158,15 +159,16 @@ else
   echo "Not compiling filterpt, SALM needed but we did not compile it for i686"
 fi
 
-
-echo "Getting richextr"
-git clone git://moses-phrasetab.git.sourceforge.net/gitroot/moses-phrasetab/moses-phrasetab richextr || \
-  die "Failed to clone richextr Git repository"
-cd richextr || die "Failed to chdir to richextr"
-./autogen.sh || die "Failed to configure richextr"
-make -j 4 || die "Failed to compile richextr"
-ln -s ../richextr/src/richextr ../bin/
-
+if [ "$WITH_RICHEXTR" == yes ]; then
+  echo "Getting richextr"
+  git clone git://moses-phrasetab.git.sourceforge.net/gitroot/moses-phrasetab/moses-phrasetab richextr || \
+    die "Failed to clone richextr Git repository"
+  cd richextr || die "Failed to chdir to richextr"
+  ./autogen.sh || die "Failed to configure richextr"
+  make -j 4 || die "Failed to compile richextr"
+  ln -s ../richextr/src/richextr ../bin/
+fi
+  
 echo DONE > \$mydir/eman.status
 
 KONEC
