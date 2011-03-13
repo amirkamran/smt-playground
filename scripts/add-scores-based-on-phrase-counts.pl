@@ -1,17 +1,25 @@
 #!/usr/bin/perl -w
 
 # Adds new scores based on counts of phrases in phrase table.
-# 
-# a) geometric-mean-log
-# s(phr) = log(g-mean(c(e), c(f)))
 #
-# b) counts-log
-# s1(phr) = log(c(e))
-# s2(phr) = log(c(f))
+# phr ... phrase pair
+# Ce ... count of target part of the phrase pair
+# Cf ... count of source part of the phrase pair.
 #
-# c) both of above above scores
+# a) --geometric-mean-log=N
+# s(phr) = log(sqrt(Ce*Cf))
+# N = log basement
 #
-# Log basement may be also specified (default is 2).
+# b) --counts-log=N
+# s1(phr) = log(Ce)
+# s2(phr) = log(Cf)
+# N = log basement
+#
+# c) --threshold=N
+# s(phr) = exp(1) if (Ce <= N) and (Cf <= N)
+#          exp(0) otherwise
+#
+# Any combination of a), b) and c) is also allowed.
 
 use strict;
 use warnings;
@@ -23,27 +31,28 @@ binmode(STDOUT, ":utf8");
 
 sub usage_string
 {
-    print STDERR "Usage: $0 [--geometric-mean-log] [--counts-log] [--log-base N] < phrase-table > modified-phrase-table\n";
-    print STDERR "       geometric-mean-log: score0(Ce, Cf) = log(sqrt(Ce * Cf))\n";
-    print STDERR "       counts-log: score1(Ce, Cf) = log(Ce), score2(Ce, Cf) = log(Cf)\n";
-    print STDERR "       log-base: determines the base of logarithm in formulas above.\n";
+    print STDERR "Usage: $0 [--geometric-mean-log=N] [--counts-log=N] [--threshold=N] < phrase-table > modified-phrase-table\n";
+    print STDERR "       geometric-mean-log: score(Ce, Cf) = log(sqrt(Ce * Cf)), N determines log basement.\n";
+    print STDERR "       counts-log: score1(Ce, Cf) = log(Ce), score2(Ce, Cf) = log(Cf), N determines log basement.\n";
+    print STDERR "       threshold: score(Ce, Cf) = exp(1) if (Ce <= N) && (Cf <= N), exp(0) otherwise.\n";
 }
 
 system("renice 19 $$ > /dev/null");
 
-my ($gm_log, $counts_log);
-my $log_base = 2;
+my $gm_log = 0;
+my $counts_log = 0;
+my $threshold = 0;
 
 if ( !GetOptions(
-        "geometric-mean-log" => \$gm_log,
-        "counts-log" => \$counts_log,
-        "log-base=i" => \$log_base
+        "geometric-mean-log=i" => \$gm_log,
+        "counts-log=i" => \$counts_log,
+        "threshold=i" => \$threshold
 	)
 ) {
 		die(usage_string());
 }
 
-if ( !$gm_log and !$counts_log ) {
+if ( !$gm_log and !$counts_log and !$threshold ) {
 		die(usage_string());
 }
 
@@ -72,6 +81,12 @@ sub counts_log {
     return sprintf '%f %f', my_log($e_count, $base), my_log($f_count, $base);
 }
 
+# Score 3 counter.
+sub threshold {
+	my ($threshold, $e_count, $f_count) = @_;
+	return sprintf '%f', exp(($e_count <= $threshold) and ($f_count <= $threshold));
+}
+
 # Processing...
 
 while (<>) {
@@ -87,10 +102,13 @@ while (<>) {
 	my $additional_scores = '';
 
 	if ( $gm_log ) {
-		$additional_scores .= gm_log($log_base, $e_count, $f_count) . ' ';
+		$additional_scores .= gm_log($gm_log, $e_count, $f_count) . ' ';
 	}
 	if ( $counts_log ) {
-		$additional_scores .= counts_log($log_base, $e_count, $f_count) . ' ';
+		$additional_scores .= counts_log($counts_log, $e_count, $f_count) . ' ';
+	}
+	if ( $threshold ) {
+		$additional_scores .= threshold($threshold, $e_count, $f_count) . ' ';
 	}
 
 	print join ($joiner, $f_phrase, $e_phrase, $scores . $additional_scores, $alignment, $counts) . "\n";
