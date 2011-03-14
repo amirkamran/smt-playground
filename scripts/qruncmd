@@ -191,6 +191,10 @@ if ($opts{"continue"}) {
           or die "Failed to move tempoutputfile $tempoutdir/out-so-far.$i.gz";
         $appendoutput = 1;
       }
+    } else {
+      # at least backup the partial output in case the user was so stupid
+      # to forget --promise-line-for-line but he realizes this later...
+      safesystem("mv $tempoutdir/out.$i.gz $tempoutdir/out.$i.bkup.gz");
     }
     my $mayhold = undef;
     my $start = $starts[$i-1] + $linesok;
