@@ -1,0 +1,106 @@
+#!/bin/bash
+# Alters existing moses translation model by adding additional scores to phrase
+# table (rescoring).
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+if [ -z "$TMSTEP" ] \
+  || [ -z "$RSCFLAGS" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$TMSTEP to the step containing translation model you want to alter"
+  echo "  \$RSCFLAGS to flags for rescorer, eg. \"--counts-log=2\""
+  echo "And optionally:"
+  exit 1
+fi
+
+# put TM to our deps
+echo $TMSTEP > eman.deps
+
+# Copy all vars.
+source ../$TMSTEP/eman.vars || die "Missing ../$TMSTEP/eman.vars"
+
+cat << KONEC > eman.vars
+BINARIES=$BINARIES
+SRCCORP=$SRCCORP
+TGTCORP=$TGTCORP
+ALICORP=$ALICORP
+SRCAUG=$SRCAUG
+TGTAUG=$TGTAUG
+ALISTEP=$ALISTEP
+ALIAUG=$ALIAUG
+DECODINGSTEPS=$DECODINGSTEPS
+TMSTEP=$TMSTEP
+RSCFLAGS="$RSCFLAGS"
+KONEC
+
+echo $SRCAUG > var-SRCAUG
+echo $TGTAUG > var-TGTAUG
+
+SCOREADDER=../../scripts/add-scores-based-on-phrase-counts.pl
+[ -x $SCOREADDER ] || die "Missing: $SCOREADDER"
+# When feed with empty input, script prints out the number of scores that *would* be added.
+$SCOREADDER $RSCFLAGS < /dev/null > var-SCRADDED
+
+flagstag=`echo $RSCFLAGS | tr ' ' ':'`
+echo "RSCTM.$flagstag.TMSTEP.$TMSTEP" > eman.tag
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat << KONEC > eman.command
+#!/bin/bash
+
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+
+mydir=\`pwd\`
+
+set -o pipefail
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
+
+renice 10 \$\$
+
+mkdir corpus
+
+cd corpus
+../../../scripts/wiseln ../../$TMSTEP/corpus/corpus.src.gz corpus.src.gz \\
+  || die "Failed to clone source corpus"
+../../../scripts/wiseln ../../$TMSTEP/corpus/corpus.tgt.gz corpus.tgt.gz \\
+  || die "Failed to clone target corpus"
+cd ..
+
+../../scripts/wiseln ../$TMSTEP/alignment.custom.gz alignment.custom.gz \\
+ || die "Failed to clone alignment file"
+
+mkdir model
+cd model
+
+# Copy lexical tables.
+for lt in \`ls ../../$TMSTEP/model/lex.*\`; do
+	../../../scripts/wiseln \$lt \`basename \$lt\` \\
+  	|| die "Failed to clone lexical table file \$lt"
+done
+
+# Alter translation tables.
+for pt in \`ls ../../$TMSTEP/model/phrase-table.*.gz\`; do
+	gunzip -c < \$pt | ../../../scripts/add-scores-based-on-phrase-counts.pl $RSCFLAGS | gzip -c > \`basename \$pt\` \\
+	|| die "Failed to rescore phrase table \$pt"
+done
+
+cd \$mydir
+
+echo DONE > \$mydir/eman.status
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+

@@ -31,10 +31,11 @@ binmode(STDOUT, ":utf8");
 
 sub usage_string
 {
-    print STDERR "Usage: $0 [--geometric-mean-log=N] [--counts-log=N] [--threshold=N] < phrase-table > modified-phrase-table\n";
+    print STDERR "Usage: $0 [--geometric-mean-log=N] [--counts-log=N] [--threshold=N] [--dump-scores-count] < phrase-table > modified-phrase-table\n";
     print STDERR "       geometric-mean-log: score(Ce, Cf) = log(sqrt(Ce * Cf)), N determines log basement.\n";
     print STDERR "       counts-log: score1(Ce, Cf) = log(Ce), score2(Ce, Cf) = log(Cf), N determines log basement.\n";
     print STDERR "       threshold: score(Ce, Cf) = exp(1) if (Ce <= N) && (Cf <= N), exp(0) otherwise.\n";
+    print STDERR "       Note: if no input is given, script only prints out the number of scores that would be added to phrase table.\n";
 }
 
 system("renice 19 $$ > /dev/null");
@@ -89,7 +90,11 @@ sub threshold {
 
 # Processing...
 
+my $no_input = 1;
+
 while (<>) {
+
+	$no_input = 0;
 
 	my $line = $_;
 	
@@ -112,5 +117,13 @@ while (<>) {
 	}
 
 	print join ($joiner, $f_phrase, $e_phrase, $scores . $additional_scores, $alignment, $counts) . "\n";
+}
+
+if ( $no_input ) {
+	my $scores_count = 0;
+	$scores_count += 1 if $gm_log;
+	$scores_count += 2 if $counts_log;
+	$scores_count += 1 if $threshold;
+	print $scores_count;
 }
 

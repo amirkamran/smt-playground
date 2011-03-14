@@ -216,6 +216,16 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
     \$lmopts \\
     $DECRYPTEDSTEPS \\
   || die "Failed to create moses.ini"
+  if [ -e ../../\$tm/var-SCRADDED ]; then
+	cd model
+	# Some scores has been added to TM -> add corresponding weights to moses.ini.
+	WEIGHTS_ADDER=../../../tools/alter-moses-ini-ttable-weights.pl
+	[ -x \$WEIGHTS_ADDER ] || die "Missing: \$WEIGHTS_ADDER"
+	cp ./moses.ini ./moses.ini.copy || die "Copy of moses.ini failed"
+	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat ../../../\$tm/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
+	rm ./moses.ini.copy
+	cd ..
+  fi
   cd \$mydir
 done
 
