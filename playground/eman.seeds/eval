@@ -149,7 +149,7 @@ $MOSESPARALLELIZER \\
   ./moses \\
   $MOSESFLAGS \\
   -input-file ./evaluation.in \\
-  -alignment-output-file ./evaluation.ali \\
+  -alignment-output-file ./evaluation.opt.ali \\
   -config ./filtered-for-eval/moses.ini \\
   > evaluation.opt.out \\
    || die "Failed to translate"

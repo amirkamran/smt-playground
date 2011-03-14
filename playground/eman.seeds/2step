@@ -30,7 +30,7 @@ fi
 SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
 MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
-[ ! -z "$SEARCH" ] || SEARCH=beam
+[ ! -z "$SEARCH" ] || SEARCH=cube
 
 [ ! -z "$TESTCORP" ] || eval `cat ../$PHASE1MERT/eman.vars | grep TESTCORP`
 
@@ -148,6 +148,7 @@ echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 if [ $PHASE1TESTCORP == $TESTCORP ]; then
   echo "No need to translate first step, reuse output from $PHASE1MERT"
   cp \$phase1dir/evaluation.opt.out ./evaluation.mid
+  cp \$phase1dir/evaluation.opt.ali ./evaluation.mid.ali
 else
   echo "Will translate evaluation.in with $PHASE1MERT"
 
@@ -171,6 +172,7 @@ else
 
   $MOSESPARALLELIZER \\
     -input-file ./evaluation.in \\
+    -alignment-output-file ./evaluation.mid.ali \\
     -config ./filtered-for-phase1/moses.ini \\
     | sed 's/^ *//' \\
     | sed 's/ *$//' \\
@@ -198,6 +200,7 @@ cd ..
 
 $MOSESPARALLELIZER \\
   -input-file ./evaluation.mid \\
+  -alignment-output-file ./evaluation.opt.ali \\
   -config ./filtered-for-phase2/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
