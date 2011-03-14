@@ -1200,8 +1200,8 @@ sub print_vars {
   my $v = load_vars($s);
   return if !defined $v;
   foreach my $l (split /\n/, $v) {
-    # perform substitutions, if defined
-    if (defined $subst) {
+    # perform substitutions, if defined and step not reused
+    if (defined $subst && ! $reuse{$s}) {
       foreach my $s (@$subst) {
         eval '$l =~ s'.$s;
       }
@@ -1250,9 +1250,16 @@ sub traceback {
   push @kws, load_tag($step) || "" if $show_tag;
   $indent = $show_tree_in_traceback ? "|  | " : "";
   print $prefix.$indent."Job: @kws\n" if 0 < scalar @kws;
+  my $deps = load_depsarr($step);
+  # if this step is reused, all deps are also reused
+  # (this is useful in 'tb -s')
+  if ($reuse{$step}) {
+    foreach my $dep (@$deps) {
+      $reuse{$dep} = 1;
+    }
+  }
   print_vars($prefix.$indent, $step) if $show_vars;
   print_log($prefix.$indent, $step) if $show_log;
-  my $deps = load_depsarr($step);
   $indent = $show_tree_in_traceback ? "|  " : "";
   foreach my $dep (@$deps) {
     traceback($prefix.$indent, $dep);
