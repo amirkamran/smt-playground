@@ -19,7 +19,7 @@ mertdetails:
 	> $@
 
 bleu:
-	eman collect
+	eman --read-only collect
 	cp eman.results $@.`./sitename`
 	cat $@.* \
 	| numsort a2,a1 \

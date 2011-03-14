@@ -16,7 +16,8 @@ e=`eman guess $1`
 perl -i~ -pe 's/^(.*(clone_moses|absolutize_moses|wiseln.*(moses|scorenbest|testbleu)))/# $1/; s/(mert-moses.pl)/$1 --continue/;' $e/eman.command \
 || die "Failed to modify eman.command"
 
-rm -rf $e/mert-tuning/filtered
+#rm -rf $e/mert-tuning/filtered
+# no longer need to remove the filtered...
 
 echo "Now check $e/eman.command and start it over:"
 echo "  eman continue $e"

@@ -1,0 +1,10 @@
+#!/bin/bash
+# zips outputs from several steps
+
+for s in "$@"; do \
+  outs="$outs "`./output $s`
+done
+if [ $# -ge 2 ]; then
+  maydelim=--delim
+fi
+ziplines $maydelim $outs | less -S
