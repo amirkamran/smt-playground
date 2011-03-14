@@ -51,6 +51,7 @@ for (@section_names) {
         case "mapping"          { merge_concat($_); }
         case "ttable-file"      { merge_concat($_); }
         case "generation-file"  { merge_concat($_); }
+        case "distortion-file"  { merge_concat($_); }
         case "lmodel-file"      { merge_output_once($_); }
         case "ttable-limit"     { merge_output_once($_); }
         case "weight-d"         { merge_output_once($_); }

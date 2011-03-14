@@ -250,7 +250,8 @@ fi
 `cat command.mert`
 
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
+[ -e filtered-for-eval-opt ] \
+|| \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
   ./mert-tuning/moses.ini evaluation.in \\
   || die "Filter for eval failed"
 

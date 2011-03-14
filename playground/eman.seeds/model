@@ -152,9 +152,10 @@ done
 
 ## Cloning reordering model
 if [ ! -z "$RMSTEP" ]; then
-  cd model || die "Chdir failed"
-  for f in ../../$RMSTEP/model/reordering-table*gz ; do
-    ../../scripts/wiseln \$f ./\`basename \$f\` || die "Failed to clone \$f"
+  cd tm.1/model || die "Failed to implant reordmodel to tm.1"
+  for f in ../../../$RMSTEP/model/reordering-table*gz ; do
+    ../../../../scripts/wiseln \$f ./\`basename \$f\` \\
+      || die "Failed to clone \$f"
   done
   cd \$mydir || die "Chdir back failed"
 fi

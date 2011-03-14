@@ -1,14 +1,65 @@
+BUGS:
+v augmented_corpora/ je *2509135, kvuli kteremu selhal jolists/enNa, musim nejak hacknout downgrade... (druhy stejny 2509111)
+a 'journal' ma taky problem ve 2 jobech: 2509185 a 2509200
+
+FINALTODO:
+
+largest
+
+enNmT1+stc+tag/formeme
+
+csNmT1+tag?
+
+orbife
+...pro 17.09 jsem si rm uz spustil: s.rm.2e19e225.20110312-2310
+   ... a ted ho testuju v realu: s.mert.7a28c302.20110313-0116
+...a pro en+tag tento: s.rm.b4c0198e.20110312-2310
+   OVERENO, ZE SE VUBEC NELISI, cili na DECODING STEPS nesejde
+...jeste to bude chtit ty obrovske, az dojede alignment
+   zdehle: s.rm.2852aeb8.20110313-0137
+   a k nemu rovnou mert: s.mert.50d06baa.20110313-0137
+   Rozhodne or-bi-fe pomohlo: 17.50±0.58 50d06baa.20110313-0137 aktualni nejlepsi
+   Pobil i dosavadniho viteze 2step: 17.40±0.60 dff1e30c.20110312-0126
+   ... jenze 2step s reorderingem nutno delat jinak...
+
+Pripravuju orbife pro 17.40: s.rm.9172eafe.20110313-2114
+  -> mert: s.2step.d8cdc978.20110313-2121 ... skutecne nejlepsi! 17.59±0.57
+A pro obri s.2step.90d36c36.20110313-2109: s.rm.ccaa8f1e.20110313-2117
+  -> mert: s.2step.bfc103a2.20110313-2123
+
+
+kombinace
+- rev (nutno rucne opravit!)
+    zatim 16.25±0.54 23188f2a.20110310-1619
+    spis ale asi tento: s.mert.a649d624.20110314-0821?
+    nebo hlavne na vetsich datech...
+- chart
+- 2step (s anglickym tagem/formemem?) zatim 17.59±0.57
+    ale chystame v obrich datech: s.2step.90d36c36.20110313-2109
+    a specialne s reorderingem: s.2step.bfc103a2.20110313-2123
+- straight, zatim 17.50±0.58 50d06baa.20110313-0137
+    jeste dost mozna zdroj/cil tag!
+    drivejsi kandidat: 17.24±0.58
+- news-only?
+- tecto?
+
+depfix Davida Marecka
+
+przywara phrfilt
+
+
 TODO:
 
 - data krom czengu09 a wmt10
   ceskenoviny stahuje se: /export/home/bojar/diplomka/umc/devel/collected-data/ceskenoviny
   ... ale linked pairs nenaslo nic noveho :-(
   czechnews   hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/czechnews-aktualne.cz/hunalign.ctxclean.gz
-  ... nutne potrebuji filtrovat :-(
+  ... nutne potrebuji filtrovat :-(  --> Zkousim prosit Petru Galuscakovou
   ted    hotovo: /export/home/bojar/diplomka/umc/devel/collected-data/ted.com/plaintexts.txt.gz
   ec.europa.eu      ... pripravuje Petra Galuscakova
-    a to hned dvema zpusoby
+    a to hned dvema zpusoby, oboji hotovo
   official-journal  ... pripravuje Petra Galuscakova
+    oboji hotovo
 
 - ngram -lm X.lm -prune 0.000001 -write-lm Y.lm
   ... pridej to jako mezikrok, s.prlm...
@@ -97,9 +148,34 @@ A take si chystam tm pro ten druhy krok:
   s.tm.5e1b855c.20110308-2338
    ... napoprve neudelal idali, tak ho delam rucne:
    LANG=csNm_idali CORP=mononews07+mononews08+mononews09+mononews10+mononews11+monops+syn200x+webcoll AUGMENT=./augment.pl nohup nice make mononews07+mononews08+mononews09+mononews10+mononews11+monops+syn200x+webcoll/csNm_idali.gz.generate_language
+   ...havaroval na prilis dlouho radku, zkousim znovu:
+      s.tm.acb9be63.20110310-1111  -> uspech, ale bohuzel neni zalozen na T1!
+     OPRAVA: s.tm.e1577200.20110310-1842 (asi zase havaruje na idali)
 
 Hlavni pokus se pak bude delat takto:
   eman tb 64dc010f.20110214-2122 -s /czeng09-ne/cz+czeng09-eu+czeng09-fi+czeng09-na+czeng09-su+czeng09-te+czeng09-we+ps/
+
+...no, je to trochu slozitejsi...
+Druhy krok bude tento: s.mert.94216af2.20110310-1851, uz jsem ho spustil.
+  ... ten vysel nesmirne vtipne, mluvi nespisovne :-)
+  ... zde nahradni druhy krok: s.mert.3dbefd2c.20110311-2350, uz bezi
+  a schvalne zkusim i ten nespisovnej: s.mert.453f5b99.20110312-0001 ... vysel bohuzel spisovne
+    a jeste nespisovnejsi: s.mert.9cb4aaa0.20110312-0003 ... ANO, ten je nespisovnej
+
+Spojovaci bude tento: 64dc010f.20110214-2122, ale spojit se musi rucne.
+...a na ten prvni krok kaslu rovnou, protoze mi chybi T1...
+
+Radeji si pripravim prvni krok s T1:
+--zalozen na 7982c03f.20110307-1515
+-- by mel byt s.mert.b4d6cde6.20110310-1905, prave bezi -> hotovo
+
+cili: step1: s.mert.b4d6cde6.20110310-1905 (nebo jeste vetsi?)
+      step2:
+        nespisovne: s.mert.9cb4aaa0.20110312-0003
+	  -> s.2step.62cc7123.20110312-0125
+	spisovne: s.mert.3dbefd2c.20110311-2350
+	  -> s.2step.dff1e30c.20110312-0126
+
 
 
 
@@ -115,6 +191,9 @@ Hmm. tak velkemu pokusu to ublizilo:
   chtelo by to prevzit vahy z toho lepsiho a zkusit je dat tomu horsimu
 ...tak ne uplne. Zahada. I v tom 17.09 je v prunelm a mixlm <unk>. To znamena,
    ze ho to tam dodava samo. Pak ale bohuzel nejak ten mert neco zkazil...
+   ten 15.91 zkousim spustit proste znovu: s.mert.c9812b83.20110310-1053
+a vyslo neradostnych: 15.97±0.55 c9812b83.20110310-1053
+  ... takze zkusim znovu ten 17.09: s.mert.c3ab8a07.20110310-1420
 
 
 
@@ -123,12 +202,36 @@ Hmm. tak velkemu pokusu to ublizilo:
 toa: pripravuju zakladni reverzni preklad: s.mert.c8aa3cd6.20110307-1337
 toa pro mononews11 bezi, neco havarovalo, budu muset restartnout:
   s.toa.7c1f1bd4.20110308-1448
+  ... rucne dokonceno, vznikl korpus mononews11-toa
+  ... a z nej delam tm: s.tm.d5d92f00.20110310-1043
+  ... hotovo! Cili spoustim mert: s.mert.29123845.20110310-1328 => 10.25±0.41
+  ... a take spoustim velky mert: s.mert.1dbf7979.20110310-1337
+
+  Byl problem s merge-moses-model, dela spatne alternativni cesty. Cili zde
+  bude kontrast spravne udelanych pokusu:
+s.mert.792e642b.20110310-1550	maly
+s.mert.23188f2a.20110310-1619	velky   ... jenze pouziva -unk!
+
+Konecne zkusim pripravit revselftr plne porovnatelne s 17.09:
+./difexp s.mert.6910c617.20110314-0043 17.09±0.55
+A takto z nej udelas jeden s vetsim tao korpusem:
+  eman tb s.mert.6910c617.20110314-0043 -s /mononews11-toa/toanews1011/ -s /gdfa-enNmT1-stc-csNmT1-stc-lemma/toa-ali/
+  ---> s.mert.b90a3540.20110314-0125
 
 toa pro mononews10 nejakymuplne podivnym zpusobem havarovalo:
   s.toa.e34a1f32.20110308-1450
   Locking and writing /a/merkur3/TMP/bojar/wmt11/playground/s.toa.e34a1f32.20110308-1450/../augmented_corpora/mononews10/combinations/csNmT1+stc+1.gz
   gzip: stdout: Input/output error
   ...zde nahrada: s.toa.bc2bfc48.20110308-2155
+  ...to ted musim rucne navazat, protoze zase trosku havarovala...
+...udelal jsem to naprosto rucne, vysledkem je korpus:
+   mononews10uniq-toa a v nem csNm, enNm a toa-ali
+   ... kde jsem pokazil poradi alignmentu...
+
+nejlepsi by ted mel dopadnout s.mert.daa440a5.20110314-1024
+  - toa bere z mono11 i mono10
+
+take spoustim toa pro mononews09: s.toa.426abbd6.20110314-0007
 
 
 2011-03-08
@@ -155,3 +258,39 @@ s.combmert:
 
 s.combeval:
   s.combmert ... odtud vezme vahy
+
+
+2011-03-11
+
+David Marecek mi doporucil svuj depfix. Vysledky se ale zdaji smisene, nekdy to zkazi dobrou vec:
+
+Takto jsem to spustil
+
+cd /home/bojar/diplomka/granty/emplus/wmt11/playground/s.tectomt.dcbfacf0.20110311-1142/tectomt/personal/marecek/depfix
+make all SOURCE_TEXT=~bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/evaluation.in TARGET_TEXT=~bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/evaluation.opt.txt REFERENCE_TEXT=~bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/evaluation.ref.0 WORKDIR=~bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/depfix_workdir
+
+A takto okem provnal vysledky:
+vimdiff /home/bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/depfix_workdir/output.txt ~bojar/diplomka/granty/emplus/wmt11/playground/s.mert.7982c03f.20110307-1515/evaluation.opt.txt
+
+David prosi, at to urcite poslu... Minimalne jako porovnavaci variantu.
+
+
+
+
+
+2011-03-11
+
+pripravuju maximalni paralelni data
+a prislusny lm z paralelnich:
+s.mixlm.4812ea2a.20110311-2309
+
+a zde zrejme mert z maximalnich dat, kde jsem ovsem nepouzil maximalni mixlm: s.mert.0b485c1b.20110311-2338
+
+
+2011-03-12
+
+formeme dopadl lepe nez tag:
+12.05±0.45 b3588e56.20110312-0117
+11.87±0.44 802533bc.20110307-1651
+
+zkousim taky (velky) 2step, kde prvni krok pouziva zdrojovy tag
