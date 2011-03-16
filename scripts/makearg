@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+# Synopsis: 
+# In Makefile, type:
+#  goal.%.foo:
+#       eval `makearg $*` ;\
+#	echo $$arg1 $$arg2
+#
+# or
+#
+#  goal.%.foo:
+#       eval `makearg $* name class` ;\
+#	echo $$name $$class
+
+use strict;
+use Getopt::Long;
+
+my $delim = ",";
+GetOptions(
+  "delim=s" => \$delim,
+);
+
+my $data = shift;
+
+die "usage!" if !$data;
+
+my @args = split /$delim/, $data;
+my @varnames = @ARGV; # shift @varnames; # just to drop $0
+
+# give names to unnamed args
+for(my $i = scalar @varnames; $i < scalar @args; $i++) {
+  $varnames[$i] = "arg".($i+1);
+}
+
+print join("; ",
+  map {
+    s/"/"'"'"/g;
+    "$varnames[$_]=\"$args[$_]\""
+  } (0..$#varnames))."\n";
+

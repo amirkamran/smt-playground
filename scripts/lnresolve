@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+# given a symlink prints the target
+# with --fully repeats the procedure
+
+use strict;
+use Getopt::Long;
+
+my $fully = 0;
+my $quiet = 0;
+GetOptions(
+  "fully" => \$fully,
+  "quiet" => \$quiet,
+);
+
+while (my $f = shift) {
+  my $name = resolve($f);
+  if (!defined $name) {
+    if ($quiet) {
+      $name = $f if !defined $name;
+    } else {
+      die "$f is not a symlink";
+    }
+  }
+  print "$name\n";
+}
+
+sub resolve {
+  my $f = shift;
+  return undef if ! -l $f;
+  my $targ_from_lnk = readlink($f) or die "Can't lstat $f";
+  my $targ = ensure_relative_from_origin($targ_from_lnk, $f);
+  # print STDERR "$f   ---> $targ_from_lnk  ---> $targ\n";
+
+  if ($fully) {
+    my $newtarg = resolve($targ);
+    $targ = $newtarg if defined $newtarg;
+  }
+  return $targ;
+}
+
+sub ensure_relative_from_origin {
+  my $target = shift;
+  my $originfile = shift;
+  return $target if $target =~ /^\/|^~/; # the target path is absolute already
+  $originfile =~ s/[^\/]*$//;
+  my $prefix = ($originfile eq "" ? "" : $originfile."/");
+  return simplify_path($prefix.$target);
+}
+
+
+sub simplify_path {
+  my $path = shift;
+  my $lastpath = "";
+  while ($lastpath ne $path) {
+    $lastpath = $path;
+    $path =~ s/\/+/\//g;
+    $path =~ s/(\/\.)+\//\//g;
+    $path =~ s/\/[^\/]+(?<!\/\.\.)\/\.\.\//\//g;
+    $path =~ s/^[^\/]+(?<!\/\.\.)\/\.\.\///g;
+  }
+  return $path;
+}
