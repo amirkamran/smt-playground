@@ -121,14 +121,15 @@ sub print_bilang {
 
   my %seccovered = ();
   # mark all secondary words that are covered by (the covered) source words
+  # avoid covering the same secondary word in more than one (the first) segment
   foreach my $seg (@$segments) {
     my $srccovered = $seg->{"srccovered"};
     next if ! defined $srccovered;
     my %seccovered_by_this_span = ();
     foreach my $srcw (@$srccovered) {
       foreach my $secw (keys %{$sec->{'src2hyp'}->{$srcw}}) {
+        $seccovered_by_this_span{$secw} = 1 if !$seccovered{$secw};
         $seccovered{$secw} = 1;
-        $seccovered_by_this_span{$secw} = 1;
       }
     }
     $seg->{"seccovered"} = [ sort keys %seccovered_by_this_span ];
