@@ -28,6 +28,7 @@ use strict;
 use Getopt::Long;
 
 my $verbose = 0;
+my $tokenize_at_underscore = 0; # accept multi_token bilang input
 my $eps = "*EPS*"; # Moses notation for epsilon
 my $apriori_weights = undef; # each primary system can be given a weight based
                              # on it's performance on a separate set
@@ -47,6 +48,8 @@ GetOptions(
   "apriori-weights=s" => \$apriori_weights, # provide as probs, not log(p)
   "mangle-indicators=s" => \$mangle_indicators,
   "weight-domain=s" => \$weight_domain,
+  "tokenize-at-underscore" => \$tokenize_at_underscore,
+    # and also unescape underscore
 ) or exit 1;
 
 my $nSystems = shift;
@@ -256,21 +259,68 @@ while (!eof(STDIN)) {
     # walk all columns in the current cn
     my @amortized_primary_weights = @unused_primary_weights;
     $amortized_primary_weights[$s] = $cumul_mangler->(1)/scalar(@$cn);
-    # this system gets 1/length of its cn, so that it adds up to 1
+      # this system gets 1/length of its cn, so that it adds up to 1
     foreach my $column (@$cn) {
-      my $targetnode = $sid;
-      $sid++;
-      foreach my $arc (@$column) {
-        my $token = shift @$arc;
-        my $voting_weight = shift @$arc;
-        print "$sourcenode $targetnode $token "
-          .join(",", ($unused_apriori_weight,
-                      $voting_weight,
-                      @amortized_primary_weights,
-                      @$arc,   # weights in arc are already mangled
-                     ))
-          ."\n";
+      my $targetnode;
+      if ($tokenize_at_underscore) {
+        # see how many nodes do the paths need, split multiword tokens
+        my $tottokens = 0;
+        foreach my $arc (@$column) {
+          my $origtoken = $arc->[0];
+          my @tokens = split /_/, $origtoken;
+          $tottokens += scalar @tokens;
+          $arc->[0] = [ @tokens ];
+        }
+        # now all paths connect to the same target node, so we share that
+        # node. How many intermediate nodes do we need?
+        my $intermednodes = $tottokens - scalar(@$column);
+        $targetnode = $sid + $intermednodes;
+        foreach my $arc (@$column) {
+          my $tokens = shift @$arc;
+          my $voting_weight = shift @$arc;
+          my $pathsourcenode = $sourcenode;
+          my @path_amortized_primary_weights = @amortized_primary_weights;
+          $path_amortized_primary_weights[$s] /= scalar(@$tokens);
+          for(my $i=0; $i<@$tokens; $i++) {
+            my $token = $tokens->[$i];
+            $token =~ s/&underscore;/_/g;
+            $token =~ s/&dollar;/\$/g;
+            my $pathtargnode;
+            if ($i == scalar(@$tokens)-1) {
+              # last edge on this path
+              $pathtargnode = $targetnode;
+            } else {
+              # a new node
+              $pathtargnode = $sid;
+              $sid++;
+            }
+            print "$pathsourcenode $pathtargnode $token "
+              .join(",", ($unused_apriori_weight,
+                          $voting_weight,
+                          @path_amortized_primary_weights,
+                          @$arc,   # weights in arc are already mangled
+                         ))
+              ."\n";
+            $pathsourcenode = $pathtargnode;
+          }
+        }
+      } else {
+        $targetnode = $sid;
+        foreach my $arc (@$column) {
+          my $token = shift @$arc;
+          $token =~ s/&underscore;/_/g;
+          $token =~ s/&dollar;/\$/g;
+          my $voting_weight = shift @$arc;
+          print "$sourcenode $targetnode $token "
+            .join(",", ($unused_apriori_weight,
+                        $voting_weight,
+                        @amortized_primary_weights,
+                        @$arc,   # weights in arc are already mangled
+                       ))
+            ."\n";
+        }
       }
+      $sid++;
       $sourcenode = $targetnode;
     }
     print "$sourcenode\n"; # this is a final node
