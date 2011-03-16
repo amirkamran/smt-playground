@@ -44,7 +44,8 @@ SCOREADDER=../../scripts/add-scores-based-on-phrase-counts.pl
 $SCOREADDER $RSCFLAGS < /dev/null > var-SCRADDED
 
 flagstag=`echo $RSCFLAGS | tr ' ' ':'`
-echo "RSCTM.$flagstag.TMSTEP.$TMSTEP" > eman.tag
+tmtag=`cat ../$TMSTEP/eman.tag`
+echo "RSCTM.$flagstag.$tmtag" > eman.tag
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
