@@ -51,6 +51,9 @@ fi
 SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
 MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
+[ ! -z "$JOBS" ] || JOBS=15
+[ $JOBS == 0 ] && SERIAL=yes
+
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
 [ ! -z "$SEARCH" ] || SEARCH=cube
@@ -134,8 +137,6 @@ ZMERTMOSES="\$SCRIPTS_ROOTDIR/training/zmert-moses.pl"
 if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
-
-[ ! -z "$JOBS" ] || JOBS=15
 
 if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
