@@ -24,6 +24,7 @@ if [ -z "$PHASE1MERT" ] \
   echo "  \$SERIAL to yes to disable qsub"
   echo "  \$STACK to stacksize"
   echo "  \$TAGPREF to tag prefix"
+  echo "  \$POSTPROC to pipe of commands, e.g. ../tools/remove_pluslemma_prefixes.pl"
   exit 1
 fi
 
@@ -62,6 +63,7 @@ MOSESFLAGS="$MOSESFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
 SERIAL=$SERIAL
 STACK=$STACK
+POSTPROC="$POSTPROC"
 KONEC
 
 # Stop here if we are just initing ourselves
@@ -204,8 +206,16 @@ $MOSESPARALLELIZER \\
   -config ./filtered-for-phase2/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
-  > evaluation.opt.out \\
+  > evaluation.opt.before-postproc \\
    || die "Translation of phase 2 failed"
+
+if [ -z "$POSTPROC" ]; then
+  cp evaluation.opt.before-postproc evaluation.opt.out
+else
+  cat evaluation.opt.before-postproc \
+  | $POSTPROC \\
+  > evaluation.opt.out
+fi
 
 echo "Final BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
