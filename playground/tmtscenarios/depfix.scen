@@ -1,0 +1,21 @@
+# Dependency-based agreement fixes by David Marecek
+
+#SCzechW_to_SCzechM::Tokenize
+SCzechW_to_SCzechM::Tokenize_at_whitespace_only
+
+SCzechW_to_SCzechM::TagMorce
+SxxM_to_SxxA::Clone_atree LANGUAGE=Czech
+#SCzechM_to_SCzechA::McD_parser
+SCzechM_to_SCzechA::McD_parser_local TMT_PARAM_MCD_CZ_MODEL=pdt20_train_autTag_golden_latin2_pruned_0.10.model
+SCzechM_to_SCzechA::Fix_atree_after_McD
+SCzechM_to_SCzechA::Fix_is_member
+SxxA_to_TxxA::Clone_atree LANGUAGE=Czech
+SCzechA_to_TCzechA::Fix_agreement
+
+Print::Factored
+  TMT_PARAM_PRINT_FACTORED=TCzechA
+  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output
+  TMT_PARAM_PRINT_FACTORED_FLAGS=join_spaced_numbers:escape_space
+
+#TCzechA_to_TCzechW::Detokenize
+#Print::Czech_target_sentence

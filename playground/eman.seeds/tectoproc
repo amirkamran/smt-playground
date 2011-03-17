@@ -1,0 +1,123 @@
+#!/bin/bash
+# eman seed for processing a file through tectomt
+
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+set -o pipefail
+
+if [ -z "$TECTOMT" ] || [ -z "$SRCSTEP" ] \
+  || [ -z "$SCEN" ] \
+  ; then
+  echo "You must set: "
+  echo "  \$BINARIES to the dir of executables"
+  echo "  \$TECTOMT to a tectomt step"
+  echo "  \$SRCSTEP to the step with your input 'evaluation.opt.out'"
+  echo "  \$SCEN to the scenario file"
+  echo "  \$INATTR to the srunblocks input attribute"
+  echo "  \$OUTATTR to the srunblocks output attribute"
+  echo "and optionally"
+  echo "  \$JOBS to qruncmd jobs"
+  echo "  \$SRUNBLOCKSFLAGS to srunblocks parameters"
+  echo "  \$TAGPREF to tag prefix"
+  exit 1
+fi
+
+SRCSTEPTAG=`cat ../$SRCSTEP/eman.tag`
+echo $TAGPREF"tmt"$SRCSTEPTAG > eman.tag
+
+TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
+
+cat << KONEC > eman.vars
+BINARIES=$BINARIES
+TECTOMT=$TECTOMT
+SRCSTEP=$SRCSTEP
+SCEN=$SCEN
+INATTR=$INATTR
+OUTATTR=$OUTATTR
+SRUNBLOCKSFLAGS=$SRUNBLOCKSFLAGS
+TARGETLAN_FOR_DETOKENIZER=cs
+KONEC
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+[ ! -z "$JOBS" ] || JOBS=10
+
+cp $SCEN scenfile.scen || die "Failed to copy $SCEN"
+
+if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
+       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+  echo "Defaulting to 'en' as the targetlang for detokenizer."
+  TARGETLAN_FOR_DETOKENIZER=en
+fi
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+
+# init grid environment
+. /net/projects/SGE/user/sge_profile
+
+mydir=\`pwd\`
+
+export SCRIPTS_ROOTDIR="\`pwd\`/../$BINARIES/moses/scripts"
+
+set -o pipefail
+function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
+
+renice 10 \$\$
+
+# core files limited to 1 byte
+ulimit -c 1
+
+# clone some importnant executables
+../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+
+cp ../$SRCSTEP/evaluation.opt.out ./evaluation.in \\
+  || die "Failed to get ../$SRCSTEP/evaluation.opt.out"
+cp ../$SRCSTEP/evaluation.ref.0 ./ \\
+  || die "Failed to get ../$SRCSTEP/evaluation.ref.0"
+
+#echo Checking tune and eval corp sizes
+[ \$(wc -l < evaluation.in) -gt 0 ] || die "Empty evaluation.in"
+[ \$(wc -l < evaluation.in) == \$(wc -l < evaluation.ref.0) ] || die "Mismatching evaluation.ref.0"
+
+../../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
+  || die "Failed to cut factor 0 of evaluation.ref.0"
+
+
+qruncmd --queue=all.q --jobs=$JOBS "\\
+  ../$TECTOMT/tectomt/tools/srunblocks_streaming/srunblocks \\
+    scenfile.scen $INATTR $OUTATTR $SRUNBLOCKSFLAGS \\
+  " evaluation.in \\
+> evaluation.opt.out.allfactors \\
+|| die "Processing failed"
+
+../../scripts/reduce_factors.pl 0 < evaluation.opt.out.allfactors \\
+> evaluation.opt.out \\
+  || die "Failed to cut factor 0 of evaluation.opt.out.allfactors"
+
+echo "Tuned BLEU:"
+#\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
+./testbleu evaluation.ref.0.factor0 < evaluation.opt.out | tee BLEU.opt \\
+  || die "BLEU of evaluation.opt.out set failed"
+
+echo "Detokenizing evaluation.opt.out"
+\$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+  < evaluation.opt.out > evaluation.opt.txt
+
+echo DONE > \$mydir/eman.status
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
+if [ "$RUN" == "yes" ]; then
+  sh eman.command
+fi
