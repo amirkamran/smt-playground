@@ -42,3 +42,7 @@ wmt09	en:1	news-test2009.en.gz
 wmt10	cs:1	news-test2010.cs.gz
 wmt10	en:1	news-test2010.en.gz
 
+wmt11	cs:1	news-test2011.cs.gz
+wmt11	en:1	news-test2011.en.gz
+wmt11raw	cs:1	news-test2011raw.cs.gz
+wmt11raw	en:1	news-test2011raw.en.gz

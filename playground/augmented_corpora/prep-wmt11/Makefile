@@ -260,16 +260,17 @@ dev.tgz:
 	wget http://www.statmt.org/wmt11/dev.tgz
 test.tgz:
 	wget http://www.statmt.org/wmt11/test.tgz
-dev: dev.tgz
-	#test.tgz
+dev: dev.tgz test.tgz
 	tar xzfv dev.tgz
-	#tar xzfv test.tgz
-	#mv test/* dev/
+	xzf test.tgz
+	mv test/raw/news* dev/
+	mv test/news* dev/
 	oldrename news news- dev/news[^-]*
+	rename 's/2011-src\.(..)\.raw/2011raw-src.$$1/' dev/news*raw*
 
 dev.plaintext: dev
 	mkdir -p $@
-	for f in dev/*-src.{cz,en}.sgm; do \
+	for f in dev/*-src.{cz,cs,en}.sgm; do \
 	  bn=`basename $$f | sed 's/cz/cs/; s/-src//;'`; \
 	  pickre --pick --re='<seg.*?>\s*(.*?)\s*</seg>' \
 	    < $$f \
@@ -281,7 +282,7 @@ dev.plaintext: dev
 
 wmt10dev: dev.plaintext
 	mkdir -p $@
-	for s in test2008 test2009 syscomb2009 test2010; do \
+	for s in test2008 test2009 syscomb2009 test2010 test2011 test2011raw; do \
 	  paste <(zcat $</news-$$s.en.gz)  <(zcat $</news-$$s.cs.gz) \
 	  | prefix --tab $$s \
 	  | gzip -c \
