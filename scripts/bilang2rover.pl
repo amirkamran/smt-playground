@@ -27,6 +27,7 @@
 use strict;
 use Getopt::Long;
 
+my $featset = "apriori,voting,sentlevel,arclevel,primarcs,primwords";
 my $verbose = 0;
 my $tokenize_at_underscore = 0; # accept multi_token bilang input
 my $eps = "*EPS*"; # Moses notation for epsilon

@@ -159,7 +159,8 @@ sub print_bilang {
     my @selected_secwords = (); # will include also the attached ones
     if (defined $seccovered) {
       foreach my $secw (@$seccovered) {
-        push @selected_secwords, @{$emit_at[$secw]};
+        push @selected_secwords, @{$emit_at[$secw]}
+          if defined $emit_at[$secw];
       }
     }
 

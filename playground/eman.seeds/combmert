@@ -175,6 +175,11 @@ ulimit -c 1
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
+SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
+SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
+  # for ngram-count
+
 export MERTFLAGS="$MERTFLAGS"
 echo export MERTFLAGS="$MERTFLAGS"
 
@@ -187,22 +192,39 @@ echo export MERTFLAGS="$MERTFLAGS"
   ../$TARGMODEL/model/moses.ini \
   || die "Failed to clone ../$TARGMODEL/model/moses.ini"
 
-## We're using irstlm, change the lmodel-file type:
-# ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
+# Construct empty-phrasetable
+echo -n "void ||| void ||| 0.0" \
+| ../$BINARIES/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
+    -out empty-phrasetable
 
-
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
-
-# Construct the lattice from the hypotheses
+# Construct the lattice from the hypotheses and the corpus
 sid=1
+rm -f hypcorpus.text
 for s in \`cat systems\`; do
-  paste ../$s/evaluation.opt.out ../\$s/evaluation.opt.ali \
-  | gzip -c \
-  > system.\$sid.outali.gz \
+  paste ../\$s/evaluation.opt.out ../\$s/evaluation.opt.ali \\
+  | gzip -c \\
+  > system.\$sid.outali.gz \\
   || die "Failed to get output or ali from \$s"
+  cat ../\$s/evaluation.opt.out \\
+  >> hypcorpus.text \\
+  || die "Failed to append hypcorpus.text"
   sid=\$((\$sid+1))
 done
 
+gzip hypcorpus.text || die "Failed to gzip hypcorpus.text"
+
+# Construct hyplm
+HYPORDER=3
+zcat hypcorpus.text.gz | ngram-count -order \$HYPORDER \\
+  -text - \\
+  -lm hypcorpus.lm \\
+  $LMFLAGS \\
+  -interpolate -kndiscount \\
+|| die "Failed to prepare hypcorpus.lm"
+
+gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
+
+# create the input lattice as FSA
 ../../scripts/make_bilang_for_syscomb.pl tuning.in system.*.outali.gz \
 | gzip -c \
 > tuning.bilang.gz \
@@ -214,9 +236,20 @@ zcat tuning.bilang.gz \
 | gzip -c \
 > tuning.fsa.gz
 
+
 # guess link parameter count
 linkparams=\$(zcat tuning.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
-DECODERFLAGS=" -link-param-count \$linkparams \$DECODERFLAGS "
+
+mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
+../tools/fix_moses_ini_for_syscomb.pl empty-phrasetable \\
+  hypcorpus.lm.gz \$HYPORDER \\
+  --link-param-count=\$linkparams \\
+  < moses.orig.ini > moses.ini \\
+|| die "Failed to modify moses.ini"
+
+
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
+
 
 zcat tuning.fsa.gz \
 | \$SCRIPTS_ROOTDIR/generic/fsa2plf.pl \
@@ -227,8 +260,9 @@ zcat tuning.fsa.gz \
 
 #--obo-scorenbest=\`pwd\`/scorenbest
 $MERTMOSES \
-  --working-dir=mert-tuning \\
+  --no-filter-phrase-table \\
   --inputtype=2 \\
+  --working-dir=mert-tuning \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
