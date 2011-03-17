@@ -20,6 +20,7 @@ if [ -z "$SYSTEMS" ] || [ -z "$DEVCORP" ] \
   echo "  \$SRCAUG to the source lang+factors"
   echo "  \$REFAUG to the target (reference) lang+factors"
   echo "and optionally"
+  echo "  \$BILANGFLAGS to things like --featset=arclevel,primarcs"
   echo "  \$SEARCH to beam or cube"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$MERTFLAGS to any further flags"
@@ -92,6 +93,7 @@ TESTCORP=$TESTCORP
 SRCAUG=$SRCAUG
 REFAUG=$REFAUG
 SEARCH=$SEARCH
+BILANGFLAGS="$BILANGFLAGS"
 MERTFLAGS="$MERTFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
 MOSESFLAGS="$MOSESFLAGS"
@@ -230,10 +232,11 @@ gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
 > tuning.bilang.gz \
 || die "Failed to make bilang"
 
-zcat tuning.bilang.gz \
-| ../../scripts/bilang2rover.pl $numsystems \
-    --tokenize-at-underscore \
-| gzip -c \
+zcat tuning.bilang.gz \\
+| ../../scripts/bilang2rover.pl $numsystems \\
+    --tokenize-at-underscore \\
+    $BILANGFLAGS \\
+| gzip -c \\
 > tuning.fsa.gz
 
 

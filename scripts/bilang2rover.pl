@@ -46,6 +46,7 @@ my $weight_domain = "prob";
     #    log     ...> should be log(p), indicators are just 0/1
     #    neglog  ...> should be -log(p), indicators are just -0/-1
 GetOptions(
+  "featset|feature-set=s" => \$featset,
   "apriori-weights=s" => \$apriori_weights, # provide as probs, not log(p)
   "mangle-indicators=s" => \$mangle_indicators,
   "weight-domain=s" => \$weight_domain,
@@ -55,6 +56,8 @@ GetOptions(
 
 my $nSystems = shift;
 die "usage: $0 num-of-Systems < bilang > att" if !defined $nSystems;
+
+my @wished_feats = split /,/, $featset;
 
 my @apriori_weights;
 if (defined $apriori_weights) {
@@ -216,8 +219,15 @@ while (!eof(STDIN)) {
         my $prob = $arcs->{$t} / $totarcs;
         my $primary_arc = ( $t eq $token_produced_by_primary ? 1 : 0 );
         my $primary_word = ( $t ne $eps && $t eq $token_produced_by_primary ? 1 : 0 );
-        push @$outarcs, [ $t, $prob_mangler->($prob),
-          map {$ind_mangler->($_)} (@arclevel_w_zeroes, $primary_arc, $primary_word) ];
+        push @$outarcs, [ $t,
+                          $prob_mangler->($prob), # voting weight
+                           "arclevel" =>
+                             [ map {$ind_mangler->($_)} (@arclevel_w_zeroes) ],
+                           "primarcs" =>
+                             [ $ind_mangler->($primary_arc) ],
+                           "primwords" =>
+                             [ $ind_mangler->($primary_word) ],
+                        ];
       }
       push @$detcn, $outarcs;
     }
@@ -246,13 +256,21 @@ while (!eof(STDIN)) {
   my $zeroweights = ",0" x ($nSystems+1); # the extra weight for overall voting
   foreach my $s (0 .. $nSystems-1) {
     print "0 $sid $eps "
-      .join(",", ($prob_mangler->($apriori_weights[$s]),
-                  $unused_voting_weight,
-                  @unused_primary_weights,
-                  @unused_word_weights,
-                  $unused_primary_arc,
-                  $unused_primary_word,
-                  ))
+      .make_feats({
+         "apriori" => [ $prob_mangler->($apriori_weights[$s]) ],
+         "voting" => [ $unused_voting_weight ],
+         "sentlevel" => [ @unused_primary_weights ],
+         "arclevel" => [ @unused_word_weights ],
+         "primarcs" => [ $unused_primary_arc ],
+         "primwords" => [ $unused_primary_word ]
+       })
+#       .join(",", ($prob_mangler->($apriori_weights[$s]),
+#                   $unused_voting_weight,
+#                   @unused_primary_weights,
+#                   @unused_word_weights,
+#                   $unused_primary_arc,
+#                   $unused_primary_word,
+#                   ))
       ."\n";
     my $sourcenode = $sid;
     $sid++;
@@ -296,11 +314,12 @@ while (!eof(STDIN)) {
               $sid++;
             }
             print "$pathsourcenode $pathtargnode $token "
-              .join(",", ($unused_apriori_weight,
-                          $voting_weight,
-                          @path_amortized_primary_weights,
-                          @$arc,   # weights in arc are already mangled
-                         ))
+              .make_feats({
+                 "apriori" => [ $unused_apriori_weight ],
+                 "voting" => [ $voting_weight ],
+                 "sentlevel" => [ @path_amortized_primary_weights ],
+                 @$arc  # covers arclevel, primarcs, primwords
+               })
               ."\n";
             $pathsourcenode = $pathtargnode;
           }
@@ -313,11 +332,12 @@ while (!eof(STDIN)) {
           $token =~ s/&dollar;/\$/g;
           my $voting_weight = shift @$arc;
           print "$sourcenode $targetnode $token "
-            .join(",", ($unused_apriori_weight,
-                        $voting_weight,
-                        @amortized_primary_weights,
-                        @$arc,   # weights in arc are already mangled
-                       ))
+            .make_feats({
+               "apriori" => [ $unused_apriori_weight ],
+               "voting" => [ $voting_weight ],
+               "sentlevel" => [ @amortized_primary_weights ],
+               @$arc  # covers arclevel, primarcs, primwords
+             })
             ."\n";
         }
       }
@@ -328,4 +348,15 @@ while (!eof(STDIN)) {
   }
   print "\n";
 
+}
+
+sub make_feats {
+  my $feats = shift;
+
+  my @out = ();
+  foreach my $f (@wished_feats) {
+    die "Unknown feature $f" if !defined $feats->{$f};
+    push @out, @{$feats->{$f}};
+  }
+  return join(",", @out);
 }
