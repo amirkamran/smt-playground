@@ -25,7 +25,7 @@ bleu:
 	| numsort a2,a1 \
 	| list2tab 1 2 3 \
 	| sed '1s/^/Step/' \
-	| sed 's/s.2step.//; s/s.mert.//; s/s.eval.//; s/s.toa.//' \
+	| sed 's/s.2step.//; s/s.mert.//; s/s.eval.//; s/s.toa.//; s/s.combmert.//' \
 	| recut 2,1,5,6,4,3 \
 	| numsort --skip=1 n1 \
 	| tt --utf8 \

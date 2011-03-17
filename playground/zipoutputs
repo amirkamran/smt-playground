@@ -7,4 +7,4 @@ done
 if [ $# -ge 2 ]; then
   maydelim=--delim
 fi
-ziplines $maydelim $outs | less -S
+ziplines --diff-only $maydelim $outs | less -S

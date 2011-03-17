@@ -4,6 +4,7 @@
 # Usage see below.
 
 use strict;
+use Carp;
 use File::Basename;
 use File::Temp qw/tempdir/;
 use File::Path;
@@ -354,7 +355,7 @@ sub interpret_descr {
     $lang = $2;
     $facts = undef; # all default factors
   } else {
-    die "Bad descr format: $descr";
+   confess "Bad descr format: $descr";
   }
   
   print STDERR "augment.pl: Interpreting descr $descr\n";

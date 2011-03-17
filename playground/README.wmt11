@@ -31,17 +31,47 @@ A pro obri s.2step.90d36c36.20110313-2109: s.rm.ccaa8f1e.20110313-2117
 kombinace
 - rev (nutno rucne opravit!)
     zatim 16.25±0.54 23188f2a.20110310-1619
-    spis ale asi tento: s.mert.a649d624.20110314-0821?
+    spis ale asi tento: 17.18±0.60 s.mert.a649d624.20110314-0821?
+                        jeste zkusim pridat reord
+			s.mert.9edfee5c.20110315-1519
+      ... uz bezi, ale *neni* constraint kvuli sun200x a webcoll
+          constraint bude tento: 16.35±0.57 s.mert.ba213fab.20110314-1953
     nebo hlavne na vetsich datech...
+ ==>  s vetsim toa uz jede: 17.03±0.58 s.mert.5f685f3b.20110314-2303 (unconstr a bez rm)
+     PRIPRAVUJU PRO COMB: s.eval.590077a9.20110317-1904
+	  mel bych spustit taky jeden kontrastni, bez toa
+	     zdehle: 16.86±0.56 s.mert.c765d205.20110315-1431
+	     16.86±0.56 vs 17.03±0.58 je spravedlive, rev vitezi
+        s vetsim toa ale constr: 16.32±0.55 s.mert.763ba009.20110315-1437
+	  a k nemu kontrast baseline: 16.80±0.54 s.mert.c5f0cfd8.20110316-0120
 - chart
-- 2step (s anglickym tagem/formemem?) zatim 17.59±0.57
-    ale chystame v obrich datech: s.2step.90d36c36.20110313-2109
-    a specialne s reorderingem: s.2step.bfc103a2.20110313-2123
-- straight, zatim 17.50±0.58 50d06baa.20110313-0137
+- 2step (s anglickym tagem/formemem?) zatim 17.59±0.57 d8cdc978.20110313-2121
+                               (OFIC: 17.98±0.55 ed73b6ac.20110314-1241)
+    ale chystame v obrich datech: 17.45±0.62 s.2step.587dea22.20110314-1546
+ ==>a specialne s reorderingem: 17.51±0.56 s.2step.beb8df86.20110314-1544
+     OFIC: s.2step.536a2f87.20110317-2245
+     PRIPRAVUJU PRO COMB: s.2step.764485a2.20110317-1627
+    prvni pohled na prvnich par vet potvrzuje BLEU...
+    druhy pohled na par vet v hilidiff dava prednost 17.51 pred 17.59!
+    !!! NUTNO RUCNE OPRAVIT UNK2step, napr. L @ - - - +
+    melo by to resit pridani POSTPROC=../tools/remove_pluslemma_prefixes.pl
+      do 2stepu: prvni pokus s.2step.4fdb81a2.20110317-1553
+- ==> straight, zatim 17.50±0.58 50d06baa.20110313-0137
+      PRIPRAVUJU PRO COMB: s.eval.8e40675c.20110317-1632
+                   oficialni eval: 18.33±0.64 s.eval.1b59c51e.20110314-1611
     jeste dost mozna zdroj/cil tag!
+      zdroj tag (stredni data): 17.09±0.59 1db3d71c.20110312-0116
+      PRIPRAVUJU PRO COMB: s.eval.94d4193d.20110317-1913
+        ?? proc je horsi nez 17.24±0.58 nebo 17.50±0.58
+   ??>   zdroj tag (velka data): s.mert.49bb6e43.20110317-1909
+	a zde s formemem: s.mert.100f559a.20110317-2104
     drivejsi kandidat: 17.24±0.58
 - news-only?
 - tecto?
+
+PRVNI COMB: s.combmert.99dda235.20110317-1922
+  havaroval, asi vadi lex reord...
+  s.combmert.1cfb1eaa.20110317-2131
 
 depfix Davida Marecka
 
@@ -199,7 +229,7 @@ a vyslo neradostnych: 15.97±0.55 c9812b83.20110310-1053
 
 2011-03-07
 
-toa: pripravuju zakladni reverzni preklad: s.mert.c8aa3cd6.20110307-1337
+toa: pripravuju zakladni reverzni preklad: 20.15±0.55 s.mert.c8aa3cd6.20110307-1337
 toa pro mononews11 bezi, neco havarovalo, budu muset restartnout:
   s.toa.7c1f1bd4.20110308-1448
   ... rucne dokonceno, vznikl korpus mononews11-toa
@@ -294,3 +324,65 @@ formeme dopadl lepe nez tag:
 11.87±0.44 802533bc.20110307-1651
 
 zkousim taky (velky) 2step, kde prvni krok pouziva zdrojovy tag
+
+
+2011-03-14
+
+kombinace nebude tak snadna. musim udelat shlukovani podle zdrojovych slov a
+pak vyrabet lattice jinak, dovolit viceslovne uzly v CN.
+
+Takto to testuju:
+
+cd /a/merkur3/TMP/bojar/wmt11/playground/s.mert.50d06baa.20110313-0137
+../../scripts/make_bilang_for_syscomb.pl evaluation.in <(ziplines --item='\t' evaluation.opt.out evaluation.opt.ali )  <(ziplines --item='\t' ../s.mert.f1560fee.20110312-0115/evaluation.opt.out ../s.mert.f1560fee.20110312-0115/evaluation.ali ) 2>&1 | less
+
+
+
+2011-03-16
+
+krasny priklad na nafukovani spanu: the Nobel Peace Prize
+s.mert.ba213fab.20110314-1953
+Rucne jsem vyznacil useky primarni hyp:
+
+   Barack * - - - - - - - - - - - - - 
+    Obama - * - - - - - - - - - - - - 
+  becomes - - * * - - - - - - - - - - 
+      the - - - - * - - - - - - - - - 
+   fourth - - - - * - - - - - - - - - 
+ american - - - - - * - - - - - - - - 
+president - - - - - - * - - - - - - - 
+       to - - - - - - - - * - - - - - 
+  receive - - - - - - - - - * - - - - 
+      the - - - - - - - - - - * - - - 
+    Nobel - - - - - - - - - - * - * - 
+    Peace - - - - - - - - - - - - - * 
+    Prize -|-|- -|-|-|-|-|-|-|- * -?-    otaznik znaci, ze nevim, jestli chci
+          Barack  čtvrtým aby Nobelovu
+            Obama   americkým   cenu
+              se      prezidentem za
+                stane   ,   získali mír
+
+Algoritmus konstrukce lattice:
+1. rozdel skeleton na nejkratsi mozne useky konzistentni s alignmentem ke zdroji.
+   - poznamenavej si, ktera zdrojova slova do ktereho useku patri
+2. vezmi sekundarni hypotezu: 
+   - vyznac si nepripojena slova, pripoj je "pred" nejblizsi dalsi pripojene
+   - projdi useky skeletonu a za kazdy vyplivni prislusna slova sekundarni hyp.
+
+Takto to testuju:
+
+cd s.mert.ba213fab.20110314-1953
+d=s.mert.763ba009.20110315-1437; c=s.mert.50d06baa.20110313-0137; ../../scripts/make_bilang_for_syscomb.pl evaluation.in <(ziplines --item='\t' evaluation.opt.out evaluation.opt.ali )  <(ziplines --item='\t' ../$c/evaluation.opt.out ../$c/evaluation.opt.ali )  <(ziplines --item='\t' ../$d/evaluation.opt.out ../$d/evaluation.opt.ali ) 2>&1 | ../../scripts/bilang2rover.pl 3 --tokenize-at-underscor
+
+
+2011-03-17
+
+uz mam snad i seed, ktery projde i preparem:
+SYSTEMS=s.2step.587dea22.20110314-1546:::s.mert.ba213fab.20110314-1953:::s.mert.c765d205.20110315-1431 TARGMODEL=s.model.835b3a67.20110305-2055 DEVCORP=wmt10 TESTCORP=wmt08 REFAUG=csNmT1+stc SRCAUG=enNmT1+stc eman init combmert
+
+Posledni dopadl takto:
+s.combmert.48812626.20110317-0136
+
+Can't use an undefined value as an ARRAY reference at ../../scripts/make_bilang_for_syscomb.pl line 162.
+Failed to make bilang
+
