@@ -47,13 +47,16 @@ for lmexp in ${LMS//:/ }; do
   [ -d ../$lmexp ] || die "Not found: $lmexp"
   thisorder=`cat ../$lmexp/var-ORDER`
   thisaug=`cat ../$lmexp/eman.vars | grep CORPAUG | cut -d= -f2`
+  thisfile=../$lmexp/corpus.lm
+  [ -e $thisfile ] || thisfile=$thisfile.gz
+  [ -e $thisfile ] || die "Not a valid lm: $lmexp, corpus.lm(.gz) missing"
   if [ $first == 1 ] ; then
-    FILELIST=../$lmexp/corpus.lm
+    FILELIST=$thisfile
     NAMELIST=`cat ../$lmexp/var-CORP`
     first=0
   else
     # extend the filelists
-    FILELIST=$FILELIST,../$lmexp/corpus.lm
+    FILELIST=$FILELIST,$thisfile
     NAMELIST=$NAMELIST++`cat ../$lmexp/var-CORP`
   fi
   if [ -z "$ORDER" ] ; then
