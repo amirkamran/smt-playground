@@ -202,7 +202,7 @@ cd ..
 
 $MOSESPARALLELIZER \\
   -input-file ./evaluation.mid \\
-  -alignment-output-file ./evaluation.opt.ali \\
+  -alignment-output-file ./evaluation.2nd.ali \\
   -config ./filtered-for-phase2/moses.ini \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
@@ -216,6 +216,12 @@ else
   | $POSTPROC \\
   > evaluation.opt.out
 fi
+
+# assuming the postprocess preserves token count
+paste evaluation.mid.ali evaluation.2nd.ali \\
+| ../../scripts/join_ali.pl \\
+> evaluation.opt.ali
+
 
 echo "Final BLEU:"
 #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
