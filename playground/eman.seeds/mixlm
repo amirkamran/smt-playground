@@ -47,16 +47,11 @@ for lmexp in ${LMS//:/ }; do
   [ -d ../$lmexp ] || die "Not found: $lmexp"
   thisorder=`cat ../$lmexp/var-ORDER`
   thisaug=`cat ../$lmexp/eman.vars | grep CORPAUG | cut -d= -f2`
-  thisfile=../$lmexp/corpus.lm
-  [ -e $thisfile ] || thisfile=$thisfile.gz
-  [ -e $thisfile ] || die "Not a valid lm: $lmexp, corpus.lm(.gz) missing"
   if [ $first == 1 ] ; then
-    FILELIST=$thisfile
     NAMELIST=`cat ../$lmexp/var-CORP`
     first=0
   else
-    # extend the filelists
-    FILELIST=$FILELIST,$thisfile
+    # extend the list
     NAMELIST=$NAMELIST++`cat ../$lmexp/var-CORP`
   fi
   if [ -z "$ORDER" ] ; then
@@ -130,11 +125,27 @@ echo "Got HELDOUTSOURCE: \$HELDOUTSOURCE"
 
 zcat heldout.text.gz > heldout.text
 
+first=1
+for lmexp in ${LMS//:/ }; do
+  thisfile=../\$lmexp/corpus.lm
+  [ -e \$thisfile ] || thisfile=\$thisfile.gz
+  [ -e \$thisfile ] || die "Not a valid lm: \$lmexp, corpus.lm(.gz) missing"
+  if [ \$first == 1 ] ; then
+    FILELIST=\$thisfile
+    first=0
+  else
+    # extend the lists
+    FILELIST=\$FILELIST,\$thisfile
+  fi
+done
+
+echo Prepared filelist: \$FILELIST
+
 echo Mixing LMS...
 \$SCRIPTS_ROOTDIR/ems/support/interpolate-lm.perl \\
   --tuning heldout.text \\
   --name corpus.lm \\
-  --lm $FILELIST \\
+  --lm \$FILELIST \\
   --srilm=$SRILMDIR2 \\
   --tempdir=$TMP \\
   || die "Mixing models failed"
