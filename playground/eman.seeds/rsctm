@@ -6,12 +6,14 @@ set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 if [ -z "$TMSTEP" ] \
-  || [ -z "$RSCFLAGS" ] \
   ; then
   echo "You must set: "
   echo "  \$TMSTEP to the step containing translation model you want to alter"
+  echo "And for cooc-marking:"
   echo "  \$RSCFLAGS to flags for rescorer, eg. \"--counts-log=2\""
-  echo "And optionally:"
+  echo "And for sigfiltering:"
+  echo "  \$THRESHOLD to a+e, a-e of a number (see moses/sigtest-filter)"
+  echo "  \$CUTOFF to phrase-table cutoff"
   exit 1
 fi
 
@@ -19,7 +21,12 @@ fi
 echo $TMSTEP > eman.deps
 
 # Copy all vars.
+SAVETHRESHOLD=$THRESHOLD
+SAVECUTOFF=$CUTOFF
 source ../$TMSTEP/eman.vars || die "Missing ../$TMSTEP/eman.vars"
+# Restore our cutoff
+THRESHOLD=$SAVETHRESHOLD
+CUTOFF=$SAVECUTOFF
 
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
@@ -33,15 +40,23 @@ ALIAUG=$ALIAUG
 DECODINGSTEPS=$DECODINGSTEPS
 TMSTEP=$TMSTEP
 RSCFLAGS="$RSCFLAGS"
+THRESHOLD=$THRESHOLD
+CUTOFF=$CUTOFF
 KONEC
+
+WORKSPACE="`pwd`/../$BINARIES/"
 
 echo $SRCAUG > var-SRCAUG
 echo $TGTAUG > var-TGTAUG
 
 SCOREADDER=../../scripts/add-scores-based-on-phrase-counts.pl
 [ -x $SCOREADDER ] || die "Missing: $SCOREADDER"
-# When feed with empty input, script prints out the number of scores that *would* be added.
-$SCOREADDER $RSCFLAGS < /dev/null > var-SCRADDED
+# When fed with empty input, script prints out the number of scores that *would* be added.
+if [ ! -z "$RSCFLAGS" ]; then
+  $SCOREADDER $RSCFLAGS < /dev/null > var-SCRADDED
+else
+  echo 0 > var-SCRADDED
+fi
 
 flagstag=`echo $RSCFLAGS | tr ' ' ':'`
 tmtag=`cat ../$TMSTEP/eman.tag`
@@ -90,9 +105,24 @@ done
 
 # Alter translation tables.
 for pt in \`ls ../../$TMSTEP/model/phrase-table.*.gz\`; do
-	gunzip -c < \$pt | ../../../scripts/add-scores-based-on-phrase-counts.pl $RSCFLAGS | gzip -c > \`basename \$pt\` \\
-	|| die "Failed to rescore phrase table \$pt"
+    if [ -z "$RSCFLAGS" ]; then
+      ../../../scripts/wiseln \$pt \`basename \$pt\` \\
+      || die "Failed to clone ttable"
+    else
+	  gunzip -c < \$pt \\
+      | ../../../scripts/add-scores-based-on-phrase-counts.pl $RSCFLAGS \\
+      | gzip -c > \`basename \$pt\` \\
+	  || die "Failed to rescore phrase table \$pt"
+    fi
 done
+
+$WORKSPACE/../tools/filter-several-phrasetables.pl \\
+        --srccorp=$SRCCORP --srcaug=$SRCAUG \\
+        --tgtcorp=$TGTCORP --tgtaug=$TGTAUG \\
+        --cutoff=$CUTOFF --threshold=$THRESHOLD \\
+        --workspace=$WORKSPACE \\
+        ./phrase-table.*.gz \\
+|| die "Sigfilter failed"
 
 cd \$mydir
 
