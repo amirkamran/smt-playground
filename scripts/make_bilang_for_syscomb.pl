@@ -11,6 +11,7 @@
 
 use strict;
 use Carp;
+use Clone qw(clone);
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
@@ -19,6 +20,15 @@ binmode(STDERR, ":utf8");
 use Getopt::Long;
 
 my $verbose = 0;
+my $force_similar_alignment = 0;
+  # if two linked words are followed by two identical words
+my $cautious = 0;  # require also the linked words to be identical
+
+GetOptions(
+  "verbose" => \$verbose,
+  "cautious" => \$cautious,
+  "force-similar-alignment" => \$force_similar_alignment,
+) or exit 1;
 
 my $srcf = shift;
 die "usage: $0 src hyp+ali1 hyp+ali2"
@@ -55,9 +65,79 @@ for(my $i=0; $i<$lines; $i++) {
       next if $sec == $prim;
       my $s = $hyps[$sec]->[$i];
 
-      print_bilang($p, $s, $srcs[$i], $segments);
+      my $use_s = $s;
+      $use_s = force_similar_alignment($p, $s) if $force_similar_alignment;
+
+      print_bilang($p, $use_s, $srcs[$i], $segments);
     }
   }
+}
+
+sub force_similar_alignment {
+  my $prim = shift;
+  my $sec = shift;
+
+  my @primwords = @{$prim->{'w'}};
+  my @secwords = @{$sec->{'w'}};
+
+  # modify alignments of sec to match the alignments of prim
+  # if words match with prim
+  my $out = clone($sec);
+  my %needpairs = ();
+  # first collect all pairs of prim-sec words via src alignments
+  for (my $p=0; $p < @primwords; $p++) {
+    foreach my $src (keys %{$prim->{'hyp2src'}}) {
+      foreach my $s (keys %{$sec->{'src2hyp'}}) {
+        next if $cautious && $primwords[$p] ne $secwords[$s];
+        my $p2 = $p+1;
+        my $s2 = $s+1;
+        $needpairs{"$p-$s"} = 1
+          if defined $primwords[$p2] && defined $secwords[$s2]
+            && $primwords[$p2] eq $secwords[$s2]
+            || !defined $primwords[$p2] && ! defined $secwords[$s2];
+        print "$primwords[$p] should match $secwords[$s]\n"
+          if $needpairs{"$p-$s"} && $verbose;
+      }
+    }
+  }
+  my @q = keys %needpairs;
+  my $dirty = 0;
+  my %seen = ();
+  while (scalar(@q) > 0) {
+    my $pair = shift @q;
+    next if $seen{$pair};
+    $seen{$pair} = 1;
+    my ($p, $s) = split /-/, $pair;
+    # clean hyp -to- src only:
+    $out->{'hyp2src'}->{$s} = clone($prim->{'hyp2src'}->{$p});
+    print "NEW src words linked to $s $secwords[$s]: "
+      .join(" ", keys %{$out->{'hyp2src'}->{$s}})."\n"
+      if $verbose;
+    $dirty = 1;
+    # should push any new pairs onto the queue
+    # XXX
+  }
+  if ($dirty) {
+    # need to fix src2hyp as well
+    my $newsrc2hyp = undef;
+    foreach my $s (keys %{$out->{'hyp2src'}}) {
+      foreach my $src (keys %{$out->{'hyp2src'}->{$s}}) {
+        $newsrc2hyp->{$src}->{$s} = 1;
+        print "NEW: $s $secwords[$s] links to srcword $src\n" if $verbose;
+      }
+    }
+    $out->{'src2hyp'} = $newsrc2hyp;
+
+    if ($verbose) {
+      foreach my $s (keys %{$sec->{'hyp2src'}}) {
+        foreach my $src (keys %{$sec->{'hyp2src'}->{$s}}) {
+          print "OLD: $s $secwords[$s] links to srcword $src\n";
+        }
+      }
+    }
+
+  }
+  return $out;
 }
 
 sub segment_primary_consistently_with_src {

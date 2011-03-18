@@ -20,7 +20,9 @@ if [ -z "$SYSTEMS" ] || [ -z "$DEVCORP" ] \
   echo "  \$SRCAUG to the source lang+factors"
   echo "  \$REFAUG to the target (reference) lang+factors"
   echo "and optionally"
-  echo "  \$BILANGFLAGS to things like --featset=arclevel,primarcs"
+  echo "  \$BILANGFLAGS to things like --featset=arclevel,primarcs for bilang2rover"
+  echo "  \$MAKEBFLAGS to things like --force-similar-alignment for make_bilang_for_syscomb"
+  echo "  \$HYPLMORDER to something different from 3"
   echo "  \$SEARCH to beam or cube"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$MERTFLAGS to any further flags"
@@ -38,6 +40,7 @@ echo $TAGPREF$SYSTEMS"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
 
 sid=1
 rm -f systems
+rm -f eman.deps
 for s in `echo $SYSTEMS | sed 's/:::/ /g'`; do
   echo Including system $sid: $s
   echo $s >> systems
@@ -81,6 +84,7 @@ TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 [ ! -z "$SEARCH" ] || SEARCH=cube
 
 [ ! -z "$JOBS" ] || JOBS=15
+[ ! -z "$HYPLMORDER" ] || HYPLMORDER=3
 
 [ $JOBS == 0 ] && SERIAL=yes
 
@@ -92,8 +96,10 @@ DEVCORP=$DEVCORP
 TESTCORP=$TESTCORP
 SRCAUG=$SRCAUG
 REFAUG=$REFAUG
+HYPLMORDER=$HYPLMORDER
 SEARCH=$SEARCH
 BILANGFLAGS="$BILANGFLAGS"
+MAKEBFLAGS="$MAKEBFLAGS"
 MERTFLAGS="$MERTFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
 MOSESFLAGS="$MOSESFLAGS"
@@ -216,20 +222,29 @@ done
 gzip hypcorpus.text || die "Failed to gzip hypcorpus.text"
 
 # Construct hyplm
-HYPORDER=3
-zcat hypcorpus.text.gz | ngram-count -order \$HYPORDER \\
-  -text - \\
-  -lm hypcorpus.lm \\
-  $LMFLAGS \\
-  -interpolate -kndiscount \\
-|| die "Failed to prepare hypcorpus.lm"
+if zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
+    -text - \\
+    -lm hypcorpus.lm \\
+    $LMFLAGS \\
+    -interpolate -kndiscount; then
+  echo "hypcorpus.lm succeeded with knsmooth"
+else
+  zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
+    -text - \\
+    -lm hypcorpus.lm \\
+    $LMFLAGS \\
+    -interpolate \\
+  || die "Failed to prepare hypcorpus.lm"
+fi
 
 gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
 
+echo "Creating bilang (flags: $MAKEBFLAGS)"
 # create the input lattice as FSA
-../../scripts/make_bilang_for_syscomb.pl tuning.in system.*.outali.gz \
-| gzip -c \
-> tuning.bilang.gz \
+../../scripts/make_bilang_for_syscomb.pl tuning.in system.*.outali.gz \\
+    $MAKEBFLAGS \\
+| gzip -c \\
+> tuning.bilang.gz \\
 || die "Failed to make bilang"
 
 zcat tuning.bilang.gz \\
@@ -245,7 +260,7 @@ linkparams=\$(zcat tuning.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
 
 mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 ../tools/fix_moses_ini_for_syscomb.pl empty-phrasetable \\
-  hypcorpus.lm.gz \$HYPORDER \\
+  hypcorpus.lm.gz \$HYPLMORDER \\
   --link-param-count=\$linkparams \\
   < moses.orig.ini > moses.ini \\
 || die "Failed to modify moses.ini"
@@ -256,17 +271,17 @@ mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 
 zcat tuning.fsa.gz \
 | \$SCRIPTS_ROOTDIR/generic/fsa2plf.pl \
-> tuning.in
+> tuning.fsa.in
 
-[ \`wc -l < tuning.in\` == \`wc -l < tuning.ref.0\` ] \
-  || die "Mismatching tuning.ref.0 and tuning.in"
+[ \`wc -l < tuning.fsa.in\` == \`wc -l < tuning.ref.0\` ] \
+  || die "Mismatching tuning.ref.0 and tuning.fsa.in"
 
 #--obo-scorenbest=\`pwd\`/scorenbest
 $MERTMOSES \
   --no-filter-phrase-table \\
   --inputtype=2 \\
   --working-dir=mert-tuning \\
-  \`pwd\`/tuning.in \\
+  \`pwd\`/tuning.fsa.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
