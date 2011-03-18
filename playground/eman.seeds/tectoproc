@@ -26,6 +26,10 @@ echo $TAGPREF"tmt"$SRCSTEPTAG > eman.tag
 
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
+echo $SRCSTEP > eman.deps
+echo $TECTOMT >> eman.deps
+echo $BINARIES >> eman.deps
+
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
 TECTOMT=$TECTOMT
