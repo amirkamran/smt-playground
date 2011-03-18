@@ -42,6 +42,7 @@ kombinace
 	  mel bych spustit taky jeden kontrastni, bez toa
 	     zdehle: 16.86±0.56 s.mert.c765d205.20110315-1431
 	     16.86±0.56 vs 17.03±0.58 je spravedlive, rev vitezi
+	     500 kdy je 16 v lepsi shode s ref, 600 kdy je 17 v lepsi shode
         s vetsim toa ale constr: 16.32±0.55 s.mert.763ba009.20110315-1437
 	  a k nemu kontrast baseline: 16.80±0.54 s.mert.c5f0cfd8.20110316-0120
 - chart
@@ -49,7 +50,7 @@ kombinace
                                (OFIC: 17.98±0.55 ed73b6ac.20110314-1241)
     ale chystame v obrich datech: 17.45±0.62 s.2step.587dea22.20110314-1546
  ==>a specialne s reorderingem: 17.51±0.56 s.2step.beb8df86.20110314-1544
-     OFIC: s.2step.536a2f87.20110317-2245
+     OFIC: 18.07±0.57 s.2step.536a2f87.20110317-2245
      PRIPRAVUJU PRO COMB: s.2step.764485a2.20110317-1627
     prvni pohled na prvnich par vet potvrzuje BLEU...
     druhy pohled na par vet v hilidiff dava prednost 17.51 pred 17.59!
@@ -63,8 +64,9 @@ kombinace
       zdroj tag (stredni data): 17.09±0.59 1db3d71c.20110312-0116
       PRIPRAVUJU PRO COMB: s.eval.94d4193d.20110317-1913
         ?? proc je horsi nez 17.24±0.58 nebo 17.50±0.58
-   ??>   zdroj tag (velka data): s.mert.49bb6e43.20110317-1909
-	a zde s formemem: s.mert.100f559a.20110317-2104
+   ??>   zdroj tag (velka data): 17.55±0.59 s.mert.49bb6e43.20110317-1909
+            OFIC: 18.02±0.56 s.eval.20257008.20110318-1139
+	a zde s formemem: s.mert.100f559a.20110317-2104 (nedobehly parsery)
     drivejsi kandidat: 17.24±0.58
 - news-only?
 - tecto?
@@ -73,9 +75,55 @@ PRVNI COMB: s.combmert.99dda235.20110317-1922
   havaroval, asi vadi lex reord...
   s.combmert.1cfb1eaa.20110317-2131
 
+snad zacina byt nadeje
+Pripravuju si taky taglm: s.mixlm.7514131a.20110318-1922
+
+
+ODESLAT:
+
+bojar-marecek: 2step+fix:
+  primary: 18.10±0.57 s.tectoproc.2b4b9074.20110318-1059	OK, ma i reord
+    vylepseni s filt: s.tectoproc.bee1bb43.20110318-1513
+  contrast (no fix) 18.07±0.57 536a2f87.20110317-2245
+  contrast (direct) 18.33±0.64 6777764d.20110317-1427
+
+tamchyna-bojar: mono
+  jsou to analogie k 16.86±0.56 vs 17.03±0.58 je spravedlive, rev vitezi
+  primary: 17.81±0.62 s.eval.95727b5d.20110318-1107	nema reord, constr para, SYN
+  contrast (no rev)  17.54±0.53 s.eval.eb998db2.20110318-1105
+  (obema chybi reordering)
+
+bojar:
+  cs->en:
+    primary: 21.18±0.58 s.eval.8c0bd511.20110318-1140	nema reord
+    (jeste zkousim uplnou ptakovinu, pluslemma misto lemmatu:
+      s.mert.50b53a16.20110318-1115)
+
+  en->cs
+    primary: 18.33±0.64 6777764d.20110317-1427	OK, ma reord, just data
+    ?przywara? s.eval.440a7504.20110318-0114
+    ?sigfilt? s.eval.dba272eb.20110318-1430
+            a jeste jiny: s.eval.67377db6.20110318-1503
+
+
 depfix Davida Marecka
+... smisene vysledky, viz tectoproc
 
 przywara phrfilt
+... prave jsem spustil 17.42±0.57 s.mert.dc491977.20110318-0113
+    kontrast: 17.50±0.58 50d06baa.20110313-0137, ktery je zakladem 18.33±0.64
+    Rucni hodnoceni stejne nejasne:
+    14:16 tauri4 playground$./qj phrfilt 17.42±0.57 50d06baa.20110313-0137 | tt
+    The evaluation called phrfilt already exists, interpreting:
+    Executing: /home/bojar/bin//quickjudge --print qj.data/phrfilt 2>/dev/null | cut
+    Mark            Count   Tag
+    *               9       sys1, 17.42±0.57
+    *               8       sys2, 50d06baa.20110313-0137
+    equally-wrong   5       sys2, 50d06baa.20110313-0137
+    equally-wrong   5       sys1, 17.42±0.57
+    equally-fine    4       sys1, 17.42±0.57
+    equally-fine    4       sys2, 50d06baa.20110313-0137
+
 
 
 TODO:
@@ -386,3 +434,12 @@ s.combmert.48812626.20110317-0136
 Can't use an undefined value as an ARRAY reference at ../../scripts/make_bilang_for_syscomb.pl line 162.
 Failed to make bilang
 
+2011-03-18
+
+spravedlive srovnani 2stepu, ktery jeden pracuje i se zdrojovym tagem a druhy ne:
+
+./difexp dff1e30c.20110312-0126 006f1412.20110314-1052
+
+Velmi zajimave je, ze ten s nizsim BLEU ma vic vet, v nichz lepe trefuje referenci:
+
+./hilidiff dff1e30c.20110312-0126 006f1412.20110314-1052 | pickre --pick --re=' diff=([-0-9]*)' | cut -f1 | see | numsort 2

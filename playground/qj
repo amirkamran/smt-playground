@@ -72,7 +72,7 @@ foreach my $tagrun (@tags) {
     $thisouttxt = load_file("$dir/$tagrun.txt.gz");
   } else {
     my ($tag, $run) = split /\//, $tagrun;
-    my ($dirname, $errmsg, $exitcode) = saferun3("./manager.pl --guess $tag");
+    my ($dirname, $errmsg, $exitcode) = saferun3("eman guess $tag");
     chomp $dirname;
     $info = $dirname;
     die "Failed to guess exp from tag $tag: $errmsg"
