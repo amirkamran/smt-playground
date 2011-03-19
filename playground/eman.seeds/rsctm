@@ -20,6 +20,8 @@ fi
 # put TM to our deps
 echo $TMSTEP > eman.deps
 
+[ ! -z "$CUTOFF" ] || CUTOFF=0
+
 # Copy all vars.
 SAVETHRESHOLD=$THRESHOLD
 SAVECUTOFF=$CUTOFF
