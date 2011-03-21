@@ -2,8 +2,6 @@
 # This script was provided by organizers of WMT2011 shared task.
 # Modified by Dan Zeman (better UTF8 enforcement).
 # However, the essential part (what exactly gets normalized and how) is unchanged, i.e. compatible with what the organizers do.
-# Usage:   normalize-punctuation.pl language < input > output
-# Example: normalize-punctuation.pl cs < newstest2011.mysystem.cs > newstest2011.mysystem.normalized.cs
 
 use strict;
 use utf8;
@@ -12,7 +10,18 @@ binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
+sub usage
+{
+    print STDERR ("Usage:   normalize-punctuation.pl language < input > output\n");
+    print STDERR ("Example: normalize-punctuation.pl cs < newstest2011.mysystem.cs > newstest2011.mysystem.normalized.cs\n");
+}
+
 my ($language) = @ARGV;
+if(!defined($language))
+{
+    usage();
+    die("Missing language code.\n");
+}
 
 while(<STDIN>) {
     s/\r//g;
