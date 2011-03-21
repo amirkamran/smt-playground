@@ -7,10 +7,11 @@ use Switch;
 use Cwd('abs_path');
 use Getopt::Long;
 
-my ($verbose, $append_unknown);
+my ($verbose, $append_unknown, $no_concat_lms);
 
 die usage() if ! GetOptions(
     "append-unknown" => \$append_unknown,
+    "no-concat-lms" => \$no_concat_lms,
     "verbose|v" => \$verbose);
 
 die usage() if ! @ARGV;
@@ -45,14 +46,12 @@ print "\n";
 for (@section_names) {
     switch ($_) {
         # TODO cover all sections
-        # XXX lmodel-file and weight-l should be concatenated, this is a quick
-        # fix for merging in eman seed model to work
         case "input-factors"    { merge_output_once($_); }
-        case "mapping"          { merge_concat($_); }
+        case "mapping"          { merge_mapping($_); }
         case "ttable-file"      { merge_concat($_); }
         case "generation-file"  { merge_concat($_); }
+        case "lmodel-file"      { $no_concat_lms ? merge_output_once($_) : merge_concat($_); }
         case "distortion-file"  { merge_concat($_); }
-        case "lmodel-file"      { merge_output_once($_); }
         case "ttable-limit"     { merge_output_once($_); }
         case "weight-d"         { merge_output_once($_); }
         case "weight-l"         { merge_output_once($_); } 
@@ -82,6 +81,24 @@ sub warn_missing_section
     } else {
         return 1;
     }
+}
+
+sub merge_mapping
+{
+    my $section = shift;
+    print "[$section]\n";
+    my $start_with = 0;
+    for my $filename (@filenames) {
+        print "# ", abs_path($filename), "\n" if $verbose;
+        warn_missing_section($section, $filename);
+        my $lines = scalar @{ $sections{$section}{$filename} };
+        for my $line (@{ $sections{$section}{$filename} }) {
+            my @tokens = split " ", $line;
+            print(($start_with + $tokens[0]) . " " . $tokens[1] . " " . ($start_with + $tokens[2]) . "\n");
+        }
+        $start_with += $lines;
+    }
+    print "\n";
 }
 
 sub merge_concat
@@ -137,6 +154,7 @@ sub usage
     return "Usage: ./merge_moses_models.pl [options] file [file] [file] ...\n" .
         "Options:\n" .
         "-verbose|-v        Verbose output\n" .
-        "-append-unknown    Merge unknown sections by appending\n"; 
+        "-append-unknown    Merge unknown sections by appending\n" .
+        "-no-concat-lms     Do not concatenate lmodel-file sections, print only the first\n";
 }
 
