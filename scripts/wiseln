@@ -6,6 +6,10 @@
 src="$1"
 dst="$2"
 
+if [ -z "`which lnresolve`" ]; then # make sure we have lnresolve
+  export PATH="$PATH:$(cd `dirname $0` && pwd)"
+fi
+
 if [ -z "$src" ] || [ -z "$dst" ]; then
   echo "usage: wiseln sourcefile targetname" >&2
   echo " Makes a hard link, copy or a soft link for big files" >&2

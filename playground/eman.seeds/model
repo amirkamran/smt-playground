@@ -87,7 +87,7 @@ done
 ## Create the tag based on LMs
 i=1
 for lm in `echo $LMS | sed 's/:::/ /g'`; do
-  eval `makearg --delim=: $lm factor lmstep lmtype`
+  eval `../../scripts/makearg --delim=: $lm factor lmstep lmtype`
   echo $lmstep >> eman.deps
   # default to kenlm
   lmtypetag=${lmtype:-ken}
@@ -165,7 +165,7 @@ fi
 echo "Cloning LMs"
 i=1
 for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
-  eval \`makearg --delim=: \$lm factor lmstep lmtype\`
+  eval \`../../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
   echo "Cloning lm from \$lmstep, using lmtype \$lmtype"
   if [ x\$lmtype == xblm ]; then
     numericlmtype=1

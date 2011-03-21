@@ -63,7 +63,7 @@ flmcfgfile=../flmconfigs/configs/$FLMCONFIG.flm
 
 [ -e $flmcfgfile ] || die "Failed to find $flmcfgfile"
 
-eval `makearg --delim=- $DIR srclan tgtlan`
+eval `../../scripts/makearg --delim=- $DIR srclan tgtlan`
 
 cp $flmcfgfile config.orig.flm \
   || die "Failed to create a local copy of the config file"
