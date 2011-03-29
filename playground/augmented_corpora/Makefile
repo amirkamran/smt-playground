@@ -11,7 +11,7 @@ STATMT ?= ../..
 PLAYGROUND ?= $(STATMT)/playground
 WORKSPACE ?= $(PLAYGROUND)/$(shell cat $(PLAYGROUND)/workspace)
 
-AUGMENT ?= ./augment.pl
+AUGMENT ?= $(PLAYGROUND)/augmented_corpora/augment.pl
 AUGMENTMAKEFILE ?= Makefile
 MAKEFILEDIR ?= ./
 
@@ -279,55 +279,55 @@ emille20080820%hi.gz: emille20080820.enhi.%.gz
 
 %.factors/lc.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| $(STATMT)/scripts/lowercase.pl \
 	| gzip -c > $@
 
 %.factors/tag1.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+tag \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+tag \
 	| sed 's/\([^ ]\)[^ ]*/\1/g' \
 	| gzip -c > $@
 
 %.factors/pluslemma.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+form+lemma+tag \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form+lemma+tag \
 	| $(STATMT)/scripts/construct_improved_czech_lemma.pl \
 	| gzip -c > $@
 
 %.factors/striplemma2.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+lemma \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lemma \
 	| $(STATMT)/scripts/strip_czech_lemma.pl \
 	| gzip -c > $@
 
 %.factors/lcnosuf2.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lc \
 	| $(STATMT)/scripts/nosuf_factor.pl --cut=2 --minstem=3 \
 	| gzip -c > $@
 
 %.factors/lcnosuf3.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lc \
 	| $(STATMT)/scripts/nosuf_factor.pl --cut=3 --minstem=3 \
 	| gzip -c > $@
 
 %.factors/lcstem4.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lc \
 	| $(STATMT)/scripts/stem_factor.pl --stem=4 \
 	| gzip -c > $@
 
 %.factors/lcstem3.gz:
 	# augment.pl asks us to create lowercase corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lc \
 	| $(STATMT)/scripts/stem_factor.pl --stem=3 \
 	| gzip -c > $@
 
 %.factors/devnorm3lcstem4.gz:
 	# augment.pl asks us to create corp $(CORP) lang $(LANG): $@
-	./augment.pl --dump $(CORP)/$(LANG)+lc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+lc \
 	| ./devnormal3.pl \
 	| $(STATMT)/scripts/stem_factor.pl --stem=4 \
 	| $(STATMT)/scripts/lowercase.pl \
@@ -338,7 +338,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/wc50.gz:
 	# augment.pl asks us to create 50 word classes $(CORP) lang $(LANG)
 	# and also drop distinctions between numbers
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal2.pl \
 	| perl -pne 'tr/0123456789/5555555555/' \
 	> $@.tempin
@@ -349,8 +349,8 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/TESTwc50.gz:
 	# augment.pl asks us to reuse 50 word classes $(CORP) lang $(LANG)
 	traincorp=`echo $(CORP) | sed 's/\.dev//' | sed 's/\.test//'`; \
-	./augment.pl $$traincorp/$(LANG)+wc50 \
-	&& ./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) $$traincorp/$(LANG)+wc50 \
+	&& $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal2.pl \
 	| perl -pne 'tr/0123456789/5555555555/' \
 	> $@.tempin \
@@ -360,7 +360,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/wc10.gz:
 	# augment.pl asks us to create 10 word classes $(CORP) lang $(LANG)
 	# and also drop distinctions between numbers
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal2.pl \
 	| perl -pne 'tr/0123456789/5555555555/' \
 	> $@.tempin
@@ -372,8 +372,8 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/TESTwc10.gz:
 	# augment.pl asks us to reuse 10 word classes $(CORP) lang $(LANG)
 	traincorp=`echo $(CORP) | sed 's/\.dev//' | sed 's/\.test//'`; \
-	./augment.pl $$traincorp/$(LANG)+wc10 \
-	&& ./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) $$traincorp/$(LANG)+wc10 \
+	&& $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal2.pl \
 	| perl -pne 'tr/0123456789/5555555555/' \
 	> $@.tempin \
@@ -382,26 +382,26 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 
 %.factors/devnormal2.gz:
 	# augment.pl asks us to create devanagari normalized corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal2.pl \
 	| gzip -c > $@
 
 %.factors/devnormal3.gz:
 	# augment.pl asks us to create devanagari normalized corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal3.pl \
 	| gzip -c > $@
 
 %.factors/devnormal.gz:
 	# augment.pl asks us to create devanagari normalized corp $(CORP) lang $(LANG)
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| ./devnormal.pl \
 	| gzip -c > $@
 
 %.factors/dzstemK.gz:
 	# augment.pl asks us to create dzstem corp $(CORP) lang $(LANG)
 	if [ ! -e $(CORP)/hindomorK.out.gz ]; then \
-	  ./augment.pl --dump $(CORP)/$(LANG)+form \
+	  $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	  | /home/zeman/projekty/hindstina/hindomor.pl -s \
 	  | sed 's/| /|-- /g' | sed 's/|$$/|--/' \
 	  | gzip > $(CORP)/hindomorK.out.gz; \
@@ -412,7 +412,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/dzsufK.gz:
 	# augment.pl asks us to create dzstem corp $(CORP) lang $(LANG)
 	if [ ! -e $(CORP)/hindomorK.out.gz ]; then \
-	  ./augment.pl --dump $(CORP)/$(LANG)+form \
+	  $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	  | /home/zeman/projekty/hindstina/hindomor.pl -s \
 	  | sed 's/| /|-- /g' | sed 's/|$$/|--/' \
 	  | gzip > $(CORP)/hindomorK.out.gz; \
@@ -424,7 +424,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/dzstem.gz:
 	# augment.pl asks us to create dzstem corp $(CORP) lang $(LANG)
 	if [ ! -e $(CORP)/hindomor.out.gz ]; then \
-	  ./augment.pl --dump $(CORP)/$(LANG)+form \
+	  $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	  | /home/zeman/projekty/hindstina/hindomor.pl \
 	  | sed 's/| /|-- /g' | sed 's/|$$/|--/' \
 	  | gzip > $(CORP)/hindomor.out.gz; \
@@ -435,7 +435,7 @@ MKCLS=/home/bojar/diplomka/granty/jhuws-mt-2006/experiments/binaries/mkcls
 %.factors/dzsuf.gz:
 	# augment.pl asks us to create dzstem corp $(CORP) lang $(LANG)
 	if [ ! -e $(CORP)/hindomor.out.gz ]; then \
-	  ./augment.pl --dump $(CORP)/$(LANG)+form \
+	  $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	  | /home/zeman/projekty/hindstina/hindomor.pl \
 	  | sed 's/| /|-- /g' | sed 's/|$$/|--/' \
 	  | gzip > $(CORP)/hindomor.out.gz; \
@@ -511,13 +511,13 @@ TRDCTOOLS ?= /home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_cor
 	dict=$(CORP).$(LANG).uppercased_tokens; \
 	if [ ! -e $$dict ] ; then\
 	  echo "Extracting uppercased forms for $(LANG) from $(CORP)" >&2; \
-	  ./augment.pl --dump $(CORP)/$(LANG)+form \
+	  $(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	  | $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	      0 --collect-names-file=$$dict \
 	  || exit 1 ; \
 	fi; \
 	echo "Truecasing according to $$dict" >&2 ; \
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| $(REDUCECOMBINE) - 0 \
 	| $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	    0 \
@@ -528,7 +528,7 @@ TRDCTOOLS ?= /home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_cor
 	# supervised truecasing
 	[ -x $(REDUCECOMBINE) ]
 	[ -x $(TRDCTOOLS)/add_truecased_form.pl ]
-	./augment.pl --dump $(CORP)/$(LANG)+form+lemma \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form+lemma \
 	| $(TRDCTOOLS)/add_truecased_form.pl 0:1:0:1 \
 	    --replace-form \
 	    --no-info \
@@ -538,21 +538,21 @@ TRDCTOOLS ?= /home/bojar/diplomka/granty/euromatrix/treedecode/trunk/prepare_cor
 %.factors/stcnums.gz:
 	# simplify numbers of supervised truecased
 	[ -x $(REDUCECOMBINE) ]
-	./augment.pl --dump $(CORP)/$(LANG)+stc \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+stc \
 	| ./simplify_numbers.pl \
 	| gzip -c > $@
 
 # hardwired rule just to keep track how the lexicon was collected
 .PRECIOUS: english_uppercased_tokens
 english_uppercased_tokens:
-	./augment.pl --dump wmt09czeng-all/en+form \
+	$(AUGMENT) --dump wmt09czeng-all/en+form \
 	| $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	    0 --collect-names-file=$@
 
 %.factors/enutc.gz: english_uppercased_tokens
 	# English truecased
 	[ -x $(REDUCECOMBINE) ]
-	./augment.pl --dump $(CORP)/$(LANG)+form \
+	$(AUGMENT) --dump $(CORP)/$(LANG)+form \
 	| $(REDUCECOMBINE) - 0 \
 	| $(TRDCTOOLS)/lowercase_beginnings_of_sentences.pl \
 	    0 \
@@ -562,7 +562,7 @@ english_uppercased_tokens:
 %.factors/cstc.gz:
 	# Czech truecased
 	[ -x $(REDUCECOMBINE) ]
-	./augment.pl --dump $(CORP)/$(LANG) \
+	$(AUGMENT) --dump $(CORP)/$(LANG) \
 	| $(TRDCTOOLS)/add_truecased_form.pl 0:1:0:1 \
 	    --replace-form \
 	    --no-info \
@@ -598,8 +598,8 @@ align:
 	  --jobname align.$(CORP).$$NAME \
 	  '. /net/projects/SGE/user/sge_profile ; \
 	  $(STATMT)/scripts/gizawrapper.pl \
-	  `./augment.pl $(CORP)/$(SRCAUG)` \
-	  `./augment.pl $(CORP)/$(TGTAUG)` \
+	  `$(AUGMENT) $(CORP)/$(SRCAUG)` \
+	  `$(AUGMENT) $(CORP)/$(TGTAUG)` \
 	  --lfactors=0 --rfactors=0 \
 	  --tempdir /mnt/h/tmp \
 	  --bindir=$(WORKSPACE)/bin \
