@@ -20,7 +20,7 @@ if [ -z "$CORP" ] \
   exit 1
 fi
 
-BINDIR="`pwd`../$BINARIES/bin/"
+BINDIR="`pwd`/../$BINARIES/bin/"
 
 grep SKIP_SRILM=yes ../$BINARIES/eman.vars >/dev/null 2>/dev/null \
   && die "\$BINARIES don't/won't include SRILM"

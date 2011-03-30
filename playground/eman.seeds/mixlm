@@ -18,7 +18,7 @@ if [ -z "$LMS" ] \
 fi
 
 SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-BINDIR="`pwd`../$BINARIES/bin/"
+BINDIR="`pwd`/../$BINARIES/bin/"
 
 if [ ! -f ../$BINARIES/srilm.path ]; then
   echo "SRILM not found in $BINARIES"
