@@ -1,23 +1,20 @@
 #!/bin/bash
-# just translates the given corpus, no reference to evaluate against
-#
-# also outputs the alignments produced by Moses
-
-## Save our own copy of moses
+# translates the given corpus, outputs the alignments produced by Moses
 
 if [ -z "$MERTEXP" ] \
 || [ -z "$BINARIES" ] \
-|| [ -z "$TESTCORP" ]; then
+|| [ -z "$INPUTCORP" ]; then
   echo "You must set: "
   echo "  \$BINARIES to the step containing compiled tools"
   echo "  \$MERTEXP to the directory that contains the model, incl. all files, the optimized ini will be used"
-  echo "  \$TESTCORP to the corpus for evaluation"
+  echo "  \$INPUTCORP to the corpus for translation"
   echo "and optionally"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$GRIDFLAGS to any further flags"
   echo "  \$JOBS to number of jobs" # or 0 for serial"
   echo "  \$CHUNKSIZE to the size of translated chunks in lines"
   echo "  \$ITER to the ITER-th BEST at... (will use run(ITER+1).moses.ini)"
+  echo "  \$INVERTALI to \"yes\" if output alignment should be inverted (e.g. for reverse self-training)"
   exit 1
 fi
 
@@ -39,7 +36,7 @@ if [ ! -z "$ITER" ]; then
   itertag=ITER$ITER
 fi
 
-echo `cat ../$MERTEXP/eman.tag`"$itertag"TEST$TESTCORP > eman.tag
+echo `cat ../$MERTEXP/eman.tag`"$itertag"TEST$INPUTCORP > eman.tag
 
 if [ -z "$REFAUG" ]; then
   eval `cat ../$MERTEXP/eman.vars | grep 'REFAUG='`
@@ -52,25 +49,27 @@ eval `cat ../$MODELEXP/eman.vars` || exit 1
 MODELEXP=$SAVEMODELEXP
 
 # hack to make toa look like align
-[ -z "ALISYM" ] || ALISYM=gdfa
-[ -z "OUTALILABEL" ] \
-  || OUTALILABEL=$ALISYM-$(echo $REFAUG-$SRCAUG | tr '+.' '--')
+if [ "$INVERTALI" = "yes" ]; then
+  OUTALILABEL=toa-$(echo $REFAUG-$SRCAUG | tr '+.' '--')
+  INVERT_CMD=" sed -r 's/([0-9]+)-([0-9]+)/\2-\1/g' | "
+else
+  OUTALILABEL=toa-$(echo $SRCAUG-$REFAUG | tr '+.' '--')
+  INVERT_CMD=""
+fi
 
-# XXX musim prohodit src a tgt aug?
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
 MERTEXP=$MERTEXP
-TESTCORP=$TESTCORP
+INPUTCORP=$INPUTCORP
 MOSESFLAGS="$MOSESFLAGS"
 GRIDFLAGS="$GRIDFLAGS"
 OUTALILABEL="$OUTALILABEL"
 ALISYM="$ALISYM"
 JOBS=$JOBS
 ITER=$ITER
-CORPUS=$TESTCORP-toa
-SRCALIAUG=$REFAUG
-TGTALIAUG=$SRCAUG
+CORPUS=$INPUTCORP-toa
 KONEC
+
 echo $MODELEXP > ./info.modelexp
 echo $MERTEXP > info.mertexp
 
@@ -82,11 +81,6 @@ echo $BINARIES >> eman.deps
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
-
-../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || exit 1
-
-echo Checking eval corp size
-[ `wc -l < evaluation.in` -gt 0 ] || exit 1
 
 
 # for running this command, qsub is allowed, although we're going to submit jobs ourselves
@@ -159,6 +153,11 @@ export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 export REFAUG=$REFAUG
 
+../augmented_corpora/augment.pl --dump $INPUTCORP/$SRCAUG > evaluation.in || exit 1
+
+echo Checking eval corp size
+[ \`wc -l < evaluation.in\` -gt 0 ] || exit 1
+
 # clone some important executables
 ../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 
@@ -176,9 +175,9 @@ fi
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-cat evaluation.in | ../../scripts/qruncmd -jobs=$JOBS -split-to-size=$CHUNKSIZE ./toa.job || die "Failed to filter and translate"
+../../scripts/qruncmd -jobs=$JOBS -split-to-size=$CHUNKSIZE ./toa.job evaluation.in || die "Failed to filter and translate"
 
-ls alignment0* | sort -n | xargs cat | sed 's/ $//' | sed -r 's/([0-9]+)-([0-9]+)/\2-\1/g' | gzip -c > alignment.gz
+ls alignment0* | sort -n | xargs cat | sed 's/ $//' | $INVERT_CMD gzip -c > alignment.gz
 ls evaluation0*.opt.out.gz | sort -n | xargs zcat | sed 's/ $//' | gzip -c > evaluation.opt.out.gz
 
 if [ -n "\`grep 'FAILED\|RUNNING' status0*\`" ]; then
@@ -189,18 +188,18 @@ rm status0*
 
 # rm alignment0* evaluation0*.opt.out.gz
 
-if [ -d ../augmented_corpora/$TESTCORP-toa ]; then
-  die "Won't overwrite existing directory ../augmented_corpora/$TESTCORP-toa"
+if [ -d ../augmented_corpora/$INPUTCORP-toa ]; then
+  die "Won't overwrite existing directory ../augmented_corpora/$INPUTCORP-toa"
 fi
 
-mkdir ../augmented_corpora/$TESTCORP-toa
-../../scripts/wiseln ../augmented_corpora/$TESTCORP/LINECOUNT ../augmented_corpora/$TESTCORP-toa/LINECOUNT
-gzip -c < evaluation.in > ../augmented_corpora/$TESTCORP-toa/$SRC_LANG.gz
-../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$TESTCORP-toa/$TGT_LANG.gz 
-../../scripts/wiseln alignment.gz ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.gz 
-echo "$SRC_FACT" >../augmented_corpora/$TESTCORP-toa/$SRC_LANG.info
-echo "$TGT_FACT" >../augmented_corpora/$TESTCORP-toa/$TGT_LANG.info
-echo ali > ../augmented_corpora/$TESTCORP-toa/$OUTALILABEL.info
+mkdir ../augmented_corpora/$INPUTCORP-toa
+../../scripts/wiseln ../augmented_corpora/$INPUTCORP/LINECOUNT ../augmented_corpora/$INPUTCORP-toa/LINECOUNT
+gzip -c < evaluation.in > ../augmented_corpora/$INPUTCORP-toa/$SRC_LANG.gz
+../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$INPUTCORP-toa/$TGT_LANG.gz 
+../../scripts/wiseln alignment.gz ../augmented_corpora/$INPUTCORP-toa/$OUTALILABEL.gz 
+echo "$SRC_FACT" >../augmented_corpora/$INPUTCORP-toa/$SRC_LANG.info
+echo "$TGT_FACT" >../augmented_corpora/$INPUTCORP-toa/$TGT_LANG.info
+echo ali > ../augmented_corpora/$INPUTCORP-toa/$OUTALILABEL.info
 
 echo DONE > \$mydir/eman.status
 
