@@ -4,15 +4,29 @@
 # Copyright © 2011 Dan Zeman <zeman@ufal.mff.cuni.cz>
 # Licence: GNU GPL
 
+sub usage
+{
+    print STDERR ("Usage: specchar.pl -l language < original-corpus > modified-corpus\n");
+    print STDERR ("    Corpus is untokenized, one sentence (segment) per line.\n");
+    print STDERR ("    Language is identified by ISO 639-1 code.\n");
+    print STDERR ("    Known languages: en, es.\n");
+}
+
 use utf8;
 use open ":utf8";
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
+use Getopt::Long;
 use HTML::Entities;
 
 # Úpravy uvozovek jsou jazykově závislé.
-$jazyk = 'en';
+GetOptions('language=s' => \$jazyk);
+unless($jazyk =~ m/^(en|es)$/i)
+{
+    usage();
+    die("Unknown language '$jazyk'.\n");
+}
 
 
 
@@ -83,9 +97,13 @@ while(<>)
     # Mezera určitě nemá být za počátečními závorkami a uvozovkami.
     # Mezera určitě nemá být před koncovými závorkami a uvozovkami a dále před čárkou, středníkem, dvojtečkou, vykřičníkem a otazníkem.
     # Nemůžeme s jistotou říct, že mezera nemá být před tečkou, protože výpustka ("...") může mít mezery z obou stran.
+    # Nicméně, když už teď máme orientované uvozovky, můžeme alespoň říct, že mezi koncovou uvozovkou a tečkou mezera být nemá.
     # Také nemáme dostatečně spolehlivé pravidlo pro mezery kolem pomlček.
-    s/([$lrb$lsb$lcb$llt$lexcl$lqest])\s+/$1/g;
-    s/\s+([$ggt$rcb$rsb$rrb,;:$excl$qest])/$1/g;
+    s/([$q0$lrb$lsb$lcb$lexcl$lqest])\s+/$1/g;
+    s/\s+([$rcb$rsb$rrb$q1,;:$excl$qest])/$1/g;
+    s/$q1\s+\./$q1./g;
+    # Sjednotit třítečkové výpustky.
+    s/\.\.\.+/$ell/g;
     # Vypsat opravenou větu na standardní výstup.
     print("$_\n");
 }
@@ -165,7 +183,7 @@ sub odstranit_jednorazove_chyby
     my $veta = shift;
     # europarl-v6.es-en.es
     $veta =~ s/\x{AB}'((Turkish|Indice)[\s\w]+?)\x{BB}/\x{AB}$1\x{BB}/g;
-    $veta =~ s/m''as allá/más allá/g;
+    $veta =~ s/m($asq$asq|$acu$acu)as allá/más allá/g;
     # (re)"[!]lanzamiento"[K1]
     $veta =~ s/\(re\)"lanzamiento"/(re)${llt}lanzamiento${ggt}/g;
     $veta =~ s/siguientes:"\./siguientes:\x{BB}./g;
@@ -214,7 +232,7 @@ sub usmernit_uvozovky
         $veta =~ s/\`(\w.*?\w)'/$q0$1$q1/g;
         # V europarl-v6.es-en.en se objevuje genitiv odtržený od hlavní části slova s apostrofem.
         # Přilepením zpět jednak dosáhneme správnějšího pravopisu, jednak usnadníme identifikaci apostrofu jako neuvozovkového.
-        $veta =~ s/(\w)'\s+s\s+/$1's /g;
+        $veta =~ s/(\w)'\s+s(,?)\s+/$1's$2 /g;
     }
     # Sjednotit znak pro apostrof s funkcí výpustky.
     $veta = sjednotit_vypustkovy_apostrof($veta);
