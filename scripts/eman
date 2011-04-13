@@ -998,8 +998,8 @@ sub submit {
       # check if there is such an executable at all
     if ($qsub_available) {
       # check whether it is SGE qsub or PBS qsub
-      my $sgeversion = `qsub -help nonexistent-file 2>&1 | grep SGE 2>/dev/null`;
-      $qsub_available = 0 if $sgeversion !~ /SGE/;
+      my $sgeversion = `qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`;
+      $qsub_available = 0 if $sgeversion !~ /GE/;
     }
   }
   if ($sge && !$qsub_available) {
