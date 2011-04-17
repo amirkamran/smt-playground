@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+# Calculates exact confidence intervals for pairwise (head-to-head) comparisons
+# assuming binomial distribution.
+# More: http://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm
+# Ondrej Bojar, bojar@ufal.mff.cuni.cz
+#
+# detailed usage:
+#   perl binomialconf.pl 66 29 \
+#   | labelledxychart --blockpivot=1 --data=2,3,0,'',linespoints | gpsandbox
+use strict;
+
+my $conf = 0.95;
+my $alpha = 1-$conf;
+my $a = shift;
+my $b = shift;
+my $n = $a+$b;
+
+my $wins = $a;
+
+
+my $p = 0;
+while ($p <= 1) {
+  my $bn = binom_distr($n, $wins, $p);
+  printf "upper\t%.4f\t%.4f\n", $p, $bn-$alpha/2;
+  printf "lower\t%.4f\t%.4f\n", $p, $bn-1+$alpha/2;
+  $p += 0.05;
+}
+print "zero\t0\t0\n";
+print "zero\t1\t0\n";
+my $rat = $wins/$n;
+printf "$wins of $n\t$rat\t-1\n";
+printf "$wins of $n\t$rat\t1\n";
+my $othwins = $n-$wins;
+my $othrat = $othwins/$n;
+printf "$othwins of $n\t$othrat\t-1\n";
+printf "$othwins of $n\t$othrat\t1\n";
+
+sub binom_distr {
+  # calculates sum_k=0^Nd (N choose k) p^k (1-p)^(N-k)
+  my $N = shift;
+  my $Nd = shift;
+  my $p = shift;
+  my $sum = 0;
+  for(my $k=0; $k<=$Nd; $k++) {
+    $sum += binom_coef($N, $k) * $p**$k * (1-$p)**($N-$k);
+  }
+  return $sum;
+}
+
+sub binom_coef {
+  # calculates "n choose k"
+  my $n = shift;
+  my $k = shift;
+  my $prod = 1;
+  for(my $i=1; $i<=$k; $i++) {
+    $prod *= $n-$i+1;
+    $prod /= $i;
+  }
+  return $prod;
+}
+
+
+exit 0;
+
+# use PDL::Opt::NonLinear;
+# 
+# $x = random(5);
+# $gx = rosen_grad($x);
+# $fx = rosen($x);
+# 
+# $xtol = pdl(1e-16);
+# $gtol = pdl(0.9);
+# $eps = pdl(1e-10);
+# $print = ones(2);
+# $maxit = pdl(long, 200);
+# $info = pdl(long,0);
+# sub fg_func{
+#        my ($f, $g, $x) = @_;
+#        $f .= rosen($x);
+#        $g .= rosen_grad($x);           
+# }
+# cgfam($fx, $gx, $x, $maxit, $eps, $xtol, $gtol,$print,$info,1,\&fg_func);
