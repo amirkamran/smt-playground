@@ -22,7 +22,7 @@ use HTML::Entities;
 
 # Úpravy uvozovek jsou jazykově závislé.
 GetOptions('language=s' => \$jazyk);
-unless($jazyk =~ m/^(en|es|fr)$/)
+unless($jazyk =~ m/^(en|de|es|fr)$/)
 {
     usage();
     die("Unknown language '$jazyk'.\n");
@@ -41,9 +41,12 @@ BEGIN
     $ggt = "\x{BB}"; # greater greater than: RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
     $sh6 = "\x{2018}"; # horní 6: LEFT SINGLE QUOTATION MARK
     $sh9 = "\x{2019}"; # horní 9: RIGHT SINGLE QUOTATION MARK
+    $sd9 = "\x{201A}"; # dolní 9: SINGLE LOW-9 QUOTATION MARK
+    $shp = "\x{201B}"; # horní stranově převrácená 9: SINGLE HIGH-REVERSED-9 QUOTATION MARK
     $h66 = "\x{201C}"; # horní 66: LEFT DOUBLE QUOTATION MARK
     $h99 = "\x{201D}"; # horní 99: RIGHT DOUBLE QUOTATION MARK
     $d99 = "\x{201E}"; # dolní 99: DOUBLE LOW-9 QUOTATION MARK
+    $hpp = "\x{201F}"; # horní stranově převrácené 99: DOUBLE HIGH-REVERSED-9 QUOTATION MARK
     $pri = "\x{2032}"; # PRIME (určeno pro matematiku, ale zneužitelné jako apostrof)
     $dpri = "\x{2033}"; # DOUBLE PRIME
     $tpri = "\x{2034}"; # TRIPLE PRIME
@@ -70,6 +73,7 @@ BEGIN
     $dot = "\\."; # FULL STOP
     $plus = "\\+"; # PLUS SIGN
     $hyph = "\\-"; # HYPHEN-MINUS
+    $minus = "\x{2212}"; # MINUS SIGN
     $ast = "\\*"; # ASTERISK
     $excl = "\\!"; # EXCLAMATION MARK
     $qest = "\\?"; # QUESTION MARK
@@ -151,7 +155,7 @@ sub zjistit_znaky_uvozovek_pro_jazyk
         $q1 = $ggt;
     }
     # Čeština: spodní 99 vlevo, horní 66 vpravo.
-    elsif($jazyk eq 'cs')
+    elsif($jazyk =~ m/^(cs|de)$/)
     {
         $q0 = $d99;
         $q1 = $h66;
@@ -339,6 +343,24 @@ sub odstranit_jednorazove_chyby
     $veta =~ s/démocratie"$shyph/démocratie" $shyph/g;
     $veta =~ s/JavaScript:affichage\([^()]*\)//g;
     $veta =~ s/l${ggt}'Ile de l'Espérance${ggt}/l'${llt}Ile de l'Espérance${ggt}/g;
+    # news-commentary-v6.de-en.de
+    $veta =~ s/gegen${sd9}das System'/gegen ${sd9}das System${sh6}/g;
+    $veta =~ s/do"${minus}/do" ${ndash}/g;
+    # europarl-v6.de-en.de
+    $veta =~ s/${minus}${bslash}${asq}2d/-/g;
+    $veta =~ s/(\(Pseudo-?\))"Mini-Einigung"/$1${q0}Mini-Einigung${q1}/g;
+    $veta =~ s/(eine Stimme")(\("one share)/$1 $2/g;
+    $veta =~ s/(\(ODA\)")(Computerprogramm)/$1 $2/g;
+    $veta =~ s/("TBL 1\+")(System)/$1 $2/g;
+    $veta =~ s/"\+"Taste/${q0}${plus}${q1} Taste/g;
+    $veta =~ s/($slash$dot$dot$dot$slash)" $dot/$1$q1$dot/g;
+    $veta =~ s/"Bug"${shyph}Problem/${q0}Bug${q1}-Problem/g;
+    $veta =~ s/Ausdruck "relevante Aspekte "' durch/Ausdruck ${q0}relevante Aspekte${q1} durch/g;
+    # news-commentary-v6.de-en.en
+    $veta =~ s/ d${sd9}tente / dtente /g; # nevím, co to má znamenat, aspoň mažu tu uvozovku
+    $veta =~ s/Russia"\(OVR\)/Russia" (OVR)/g;
+    # europarl-v6.de-en.en
+    $veta =~ s/'([\w\s]+):'\./${q0}$1:${q1}./g;
     return $veta;
 }
 
@@ -353,7 +375,7 @@ sub usmernit_uvozovky
     my $veta = shift;
     local $jazyk = shift;
     local $q = "[$acu$gra$asq$adq$llt$ggt\x{2018}-\x{201F}]";
-    local $sq = "[$acu$gra$asq$sh6$sh9]";
+    local $sq = "[$acu$gra$asq$sh6$sh9$shp]";
     # Na výstupu chceme počáteční (q0) a koncové (q1) uvozovky daného jazyka sjednotit na následujících znacích:
     my ($q0, $q1) = zjistit_znaky_uvozovek_pro_jazyk($jazyk);
     # Nahradit TeXové uvozovky normálními.
@@ -476,6 +498,12 @@ sub usmernit_uvozovky
             {
                 unless(je_vypustkovy_apostrof($i))
                 {
+                    # Kombinace uvozovky a tečky musíme vyřešit zvlášť, protože tečka se může vyskytovat těsně před i těsně po
+                    # počáteční i koncové uvozovce (zvláště když připustíme chybně vložené mezery mezi tokeny, které se skutečně hojně objevují).
+                    # Tečku proto z počátečních úvah úplně vynecháváme. Příklady:
+                    #   "Přišel ."
+                    #   Nemám rád toho "umělce ".
+                    #   "... a pak to začalo."
                     # Nalevo od počáteční uvozovky může být mezera, levá nebo neutrální interpunkce.
                     # Obrácený vykřičník a otazník může uvozovce i předcházet: \x{BF}"Perderán" los Estados Unidos a América Latina?
                     my $predq0 = "[\\s$hyph$ndash$mdash$slash$lrb$lsb$lcb$lexcl$lqest:]";
@@ -483,7 +511,7 @@ sub usmernit_uvozovky
                     # Tečka je neutrální, může být na začátku přímé řeči jako součást výpustky ("...").
                     # Taky může následovat výpustkový apostrof ("el "'68""). To bychom ale měli kontrolovat, zda už byl identifikován jako výpustkový.
                     # Dvojkříž za počáteční uvozovkou se vyskytl v news-commentary-v6.es-en.es.
-                    my $poq0 = "[\\w$hyph$lrb$lsb$lcb$lexcl$lqest$dot$ell$asq$hash$plus$at]";
+                    my $poq0 = "[\\w$hyph$lrb$lsb$lcb$lexcl$lqest$ell$asq$hash$plus$at]";
                     # Nalevo od koncové uvozovky může být alfanumerický znak, pravá nebo neutrální interpunkce.
                     # \x{B7} je "MIDDLE DOT". Jednou se mi vyskytla před koncovou uvozovkou, ale byl to překlep.
                     my $predq1 = "[\\w$hyph$rrb$rsb$rcb$excl$qest$dot$ell,;\x{B7}$asq%$plus$at]";
@@ -526,6 +554,24 @@ sub usmernit_uvozovky
                         }
                     }
                     # Zvláštní případy:
+                    # Mezera, uvozovka, tečka, mezera.
+                    # Tečku za počáteční uvozovkou očekáváme pouze v případě výpustky, a to by bylo několik teček za sebou.
+                    # Pokud tedy za tečkou následuje mezera nebo konec řádku, budeme předpokládat, že jde spíše o koncovou uvozovku
+                    # za posledním slovem věty.
+                    if($znaky[$i-1] =~ m/\s/ &&
+                       $znaky[$i+1] eq '.' &&
+                       ($i>$#znaky-2 || $znaky[$i+2] =~ m/\s/))
+                    {
+                        $koncova[$i] += 4;
+                    }
+                    # Kromě výpustky ("... něco") může být tečka také na začátku tokenu s internetovou doménou (".EU"),
+                    # takže nepožadujeme, aby následovala další tečka, může to být i alfanumerický znak.
+                    elsif($znaky[$i-1] =~ m/[\s$lrb$lsb$lcb]/ &&
+                          $znaky[$i+1] eq '.' &&
+                          $i<=$#znaky-2 && $znaky[$i+2] =~ m/[\.\w]/)
+                    {
+                        $pocatecni[$i] += 2;
+                    }
                     # Pokud je za uvozovkou (chybně) mezera, ale před uvozovkou je počáteční závorka, je také uvozovka počáteční.
                     # Stejně tak dvojtečku před uvozovkou považujeme za důkaz počátečnosti uvozovky.
                     if($znaky[$i-1] =~ m/[\(:]/ &&
@@ -534,9 +580,9 @@ sub usmernit_uvozovky
                         $pocatecni[$i] += 2;
                     }
                     # Pokud je před uvozovkou (chybně) mezera, ale za uvozovkou je koncová závorka, je také uvozovka koncová.
-                    # Stejně tak středník, dvojtečku nebo otazník za uvozovkou považujeme za důkaz koncovosti uvozovky.
+                    # Stejně tak středník, dvojtečku, vykřičník nebo otazník za uvozovkou považujeme za důkaz koncovosti uvozovky.
                     if($znaky[$i-1] =~ m/\s/ &&
-                       $znaky[$i+1] =~ m/[\);:\?]/)
+                       $znaky[$i+1] =~ m/[\);:\!\?]/)
                     {
                         $koncova[$i] += 2;
                     }
