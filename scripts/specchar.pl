@@ -9,7 +9,7 @@ sub usage
     print STDERR ("Usage: specchar.pl -l language < original-corpus > modified-corpus\n");
     print STDERR ("    Corpus is untokenized, one sentence (segment) per line.\n");
     print STDERR ("    Language is identified by ISO 639-1 code.\n");
-    print STDERR ("    Known languages: en, es.\n");
+    print STDERR ("    Known languages: en, es, fr.\n");
 }
 
 use utf8;
@@ -22,7 +22,7 @@ use HTML::Entities;
 
 # Úpravy uvozovek jsou jazykově závislé.
 GetOptions('language=s' => \$jazyk);
-unless($jazyk =~ m/^(en|es)$/i)
+unless($jazyk =~ m/^(en|es|fr)$/)
 {
     usage();
     die("Unknown language '$jazyk'.\n");
@@ -44,6 +44,12 @@ BEGIN
     $h66 = "\x{201C}"; # horní 66: LEFT DOUBLE QUOTATION MARK
     $h99 = "\x{201D}"; # horní 99: RIGHT DOUBLE QUOTATION MARK
     $d99 = "\x{201E}"; # dolní 99: DOUBLE LOW-9 QUOTATION MARK
+    $pri = "\x{2032}"; # PRIME (určeno pro matematiku, ale zneužitelné jako apostrof)
+    $dpri = "\x{2033}"; # DOUBLE PRIME
+    $tpri = "\x{2034}"; # TRIPLE PRIME
+    $rpri = "\x{2035}"; # REVERSED PRIME
+    $rdpri = "\x{2036}"; # REVERSED DOUBLE PRIME
+    $rtpri = "\x{2037}"; # REVERSED TRIPLE PRIME
     # Další zvláštní znaky
     $slash = '/'; # SOLIDUS; proměnná se hodí do regulárních výrazů, které jsou lomítky ohraničené, protože znemožní interpretaci lomítka jako konce výrazu
     $hash = '#'; # NUMBER SIGN; proměnná se hodí pro jistotu, kdyby si snad regulární výraz nebo syntax highlighting myslel, že jde o komentář
@@ -67,6 +73,7 @@ BEGIN
     $ast = "\\*"; # ASTERISK
     $excl = "\\!"; # EXCLAMATION MARK
     $qest = "\\?"; # QUESTION MARK
+    $at = "\\\@"; # COMMERCIAL AT
     $bslash = "\\\\"; # REVERSE SOLIDUS
 }
 
@@ -80,8 +87,17 @@ while(<>)
     s/^\s+//;
     s/\s+$//;
     s/\s+/ /g;
+    # U některých textů došlo k chybám při konverzi kódování a výsledkem je REPLACEMENT CHARACTER (xFFFD). Ten chceme odstranit bez náhrady.
+    s/\x{FFFD}//g;
     # Obsahuje vstup XML entity? Typicky nechceme žádné kromě &amp;, &lt;, &gt; a &pipe;. Např. &quot; je na závadu.
     decode_entities($_);
+    # Europarl kromě XML entit ojediněle obsahuje i sekvence typu "\u8243".
+    while(m/\\u(\d+)/)
+    {
+        my $kod = $1;
+        my $znak = chr($kod);
+        s/\\u$kod/$znak/g;
+    }
     # Zkontrolovat, že HTML::Entities umí odstranit všechny entity.
     # Je ale taky možné, že text obsahuje řetězec, který vypadá jako entita, ale není, např. "S&D;".
     while(s/(&\#?[A-Za-z0-9]+;)//)
@@ -91,6 +107,8 @@ while(<>)
     # Dvě po sobě jdoucí pomlčky považujeme za snahu napsat dlouhou m-pomlčku.
     # Nerozpoznáváme žádnou podobnou pomůcku pro n-pomlčku, tu by musel autor textu napsat přímo.
     s/--/$mdash/g;
+    # Převést NON-BREAKING HYPHEN (vyskytuje se např. v "Al-Qaida" ve francouzském news-commentary) na normální pomlčku.
+    s/\x{2011}/-/g;
     # Najít všechny uvozovky na řádku a odhadnout, zda jsou počáteční, nebo koncové.
     $_ = usmernit_uvozovky($_, $jazyk);
     # Odstranit přebytečné (chybné) mezery kolem interpunkce.
@@ -99,6 +117,7 @@ while(<>)
     # Nemůžeme s jistotou říct, že mezera nemá být před tečkou, protože výpustka ("...") může mít mezery z obou stran.
     # Nicméně, když už teď máme orientované uvozovky, můžeme alespoň říct, že mezi koncovou uvozovkou a tečkou mezera být nemá.
     # Také nemáme dostatečně spolehlivé pravidlo pro mezery kolem pomlček.
+    my ($q0, $q1) = zjistit_znaky_uvozovek_pro_jazyk($jazyk);
     s/([$q0$lrb$lsb$lcb$lexcl$lqest])\s+/$1/g;
     s/\s+([$rcb$rsb$rrb$q1,;:$excl$qest])/$1/g;
     s/$q1\s+\./$q1./g;
@@ -125,8 +144,8 @@ sub zjistit_znaky_uvozovek_pro_jazyk
     my $jazyk = shift; # kód jazyka
     my $q0; # znak počáteční uvozovky
     my $q1; # znak koncové uvozovky
-    # Španělština: dvojité menšítko nalevo, dvojité většítko napravo.
-    if($jazyk eq 'es')
+    # Španělština a francouzština: dvojité menšítko nalevo, dvojité většítko napravo.
+    if($jazyk =~ m/^(es|fr)$/)
     {
         $q0 = $llt;
         $q1 = $ggt;
@@ -165,8 +184,114 @@ sub sjednotit_vypustkovy_apostrof
     # Pokud má ale z jedné strany mezeru, musíme být opatrnější, může to být pokus o náhradu počáteční jednoduché anglické uvozovky.
     # Totéž platí pro RIGHT SINGLE QUOTATION MARK (\x{2019}).
     # Výjimečně též LEFT SINGLE QUOTATION MARK (\x{2018}).
-    $veta =~ s/(\w)[$gra$acu$sh6$sh9](\w)/$1'$2/g;
+    # Ve francouzštině se občas objevují (i když možná chybně) dvě písmena s apostrofem za sebou, např. "l's'applique".
+    # Opakovaná aplikace regulárního výrazu /\w'\w/ na to nezabere, zřejmě proto, že po nalezení "l's" se dál hledá až za tím "s".
+    # Proto nejdřív zkusíme delší výraz, který hledá tyto složené případy (a doufáme, že tři za sebou už se objevit nemohou).
+    $veta =~ s/(\w)$sq(\w)$sq(\w)/$1'$2'$3/g;
+    $veta =~ s/(\w)$sq(\w)/$1'$2/g;
+    # Ve francouzštině se také objevilo "l'(la Commission irlandaise du cinéma)".
+    $veta =~ s/l$sq\(/l'(/g;
     return $veta;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Zjistí, zda i-tý znak je apostrof s funkcí výpustky, nikoliv uvozovky. Pokud
+# ano, vrátí 1 a kromě toho rovnou upraví příslušnou váhu. Podle potřeby může
+# upravit i váhy případných sousedních uvozovek.
+#------------------------------------------------------------------------------
+sub je_vypustkovy_apostrof
+{
+    my $i = shift;
+    my $je = 0;
+    if($znaky[$i] =~ m/$sq/)
+    {
+        # Ve francouzštině (případně ve francouzských citacích uvnitř ostatních jazyků)
+        # se před výpustkovým apostrofem nejčastěji vyskytují slova "l", "d", "s", "n" a "qu", popř. "puisqu".
+        if($jazyk eq 'fr' &&
+           ($i==1 && $znaky[$i-1] =~ m/[ldsncj]/i ||
+            $i>=2 && $znaky[$i-2] eq ' ' && $znaky[$i-1] =~ m/[ldsncj]/i ||
+            $i>=2 && $znaky[$i-2] eq 'q' && $znaky[$i-1] eq 'u') &&
+           $i<=$#znaky-1)
+        {
+            # Nejběžnější situace je, že následuje písmeno.
+            if($znaky[$i+1] =~ m/\w/)
+            {
+                $zadna[$i] += 2;
+                $je = 1;
+            }
+            # Může také následovat uvozovka jako v tomto příkladu:
+            # statut essentiel d'"état numéro un"
+            elsif($znaky[$i+1] =~ m/$q/)
+            {
+                $zadna[$i] += 2;
+                $je = 1;
+                # Tu následující uvozovku typicky pozdější pravidla považují za koncovou,
+                # takže teď musíme zvýšit její počáteční váhu.
+                $pocatecni[$i+1] += 4;
+            }
+            # Ve francouzském europarlu se dále objevuje "d'" před závorkou:
+            # question no 41 d'(H-0212/00) :
+            elsif($znaky[$i+1] =~ m/[$lrb$lsb$lcb]/)
+            {
+                $zadna[$i] += 2;
+                $je = 1;
+            }
+        }
+        # V angličtině za výpustkový považujeme i apostrof na konci slova, které končí písmenem "s". Označuje genitiv plurálu: "with taxpayers' money".
+        # Genitiv může také dostat zkratka ukončená tečkou:
+        # Speer Jr.'s commission
+        # Berlusconi and Co.'s attacks
+        # Genitiv může také dostat složené podstatné jméno následované zkratkou v závorce:
+        # Union for Europe of the Nations Group (UEN)'s Amendment
+        elsif($jazyk eq 'en' &&
+              $i>=2 && $i<=$#znaky-1 &&
+              ($znaky[$i-2] =~ m/\w/ && $znaky[$i-1] eq '.' && $znaky[$i+1] eq 's' ||
+               $znaky[$i-1] eq 's' && $znaky[$i+1] =~ m/[\s$shyph]/ ||
+               $znaky[$i-1] =~ m/[$rrb$rsb$rcb]/ && $znaky[$i+1] eq 's'))
+        {
+            $zadna[$i] += 2;
+            $je = 1;
+        }
+        # Obecně: možná můžeme každý apostrof, který má z obou stran alfanumerický znak, považovat za výpustku.
+        elsif($i>=1 && $znaky[$i-1] =~ m/\w/ &&
+              $i<=$#znaky-1 && $znaky[$i+1] =~ m/\w/)
+        {
+            $zadna[$i] += 2;
+            $je = 1;
+        }
+        #=== ZVLÁŠTNÍ PŘÍPADY ===
+        # Výše zmíněný (a na francouzštinu omezený) apostrof před uvozovkou se může objevit i v jiných jazycích, např. španělský europarl:
+        # del'\x{AB}Estonia\x{BB}
+        # Nevím, na jaké jazyky a řetězce bych to měl omezit, tak zatím hlídám více méně jen ten jeden objevený vzor.
+        elsif($i>=3 && $i<=$#znaky-1 && $znaky[$i-3] eq 'd' && $znaky[$i-2] eq 'e' && $znaky[$i-1] eq 'l' && $znaky[$i+1] =~ m/$q/)
+        {
+            $zadna[$i] += 2;
+            $je = 1;
+        }
+        # Výpustkový apostrof také může být před čísly označujícími letopočet: "recapitular el "'68"?"
+        # news-commentary-v6.es-en.en
+        # m/"'68(\.| generation)"/
+        # Tohle nejde dostatečně zobecnit, protože by to taky mohly být vnořené uvozovky.
+        # Potřebovali bychom kombinaci indexového přístupu k jednotlivým znakům a regulárních výrazů.
+        # Třeba pro každý znak udržovat levý kontext od začátku řádku a pravý kontext do konce řádku.
+        # Nad těmito kontexty bychom pak mohli pouštět regulární výrazy.
+        # To zatím nemáme, tak alespoň zavedeme tvrdé pravidlo pro '68.
+        # Takové pravidlo by spíše patřilo do funkce odstranit_jednorazove_chyby(), ale tam ho dát nemůžeme,
+        # protože tato funkce umí pouze substituce regulárních výrazů, ale nemůže konkrétnímu znaku upravit váhu značky.
+        elsif($i<=$#znaky-2 && $znaky[$i+1] eq '6' && $znaky[$i+1] eq '8')
+        {
+            $zadna[$i] += 10;
+            $je = 1;
+        }
+    }
+    # Pro jistotu hned normalizovat apostrof, občas se nám tam objevují i accenty acute a grave a další znaky.
+    if($je)
+    {
+        $znaky[$i] = $asq;
+    }
+    return $je;
 }
 
 
@@ -203,6 +328,17 @@ sub odstranit_jednorazove_chyby
     $veta =~ s/ \x{E2}\x{20AC}" / $mdash /g;
     $veta =~ s/America\x{E2}\x{20AC}\x{2122}s/America's/g;
     $veta =~ s/leaders$shyph'/leaders'$shyph/g;
+    # news-commentary-v6.fr-en.fr
+    $veta =~ s/"junk science"\[la/$q0junk science$q1 [la/g;
+    $veta =~ s/($llt$llt$llt)$gra($dot)/$1$2/g;
+    # europarl-v6.fr-en.fr
+    $veta =~ s/prescrit :"\?conduite/prescrit: "conduite/g;
+    $veta =~ s/$pri\\'3fespace/"espace/g;
+    $veta =~ s/[$adq$dpri]\\'3f/"/g;
+    $veta =~ s/le "programme "$sh6,/le "programme",/g;
+    $veta =~ s/démocratie"$shyph/démocratie" $shyph/g;
+    $veta =~ s/JavaScript:affichage\([^()]*\)//g;
+    $veta =~ s/l${ggt}'Ile de l'Espérance${ggt}/l'${llt}Ile de l'Espérance${ggt}/g;
     return $veta;
 }
 
@@ -215,8 +351,9 @@ sub odstranit_jednorazove_chyby
 sub usmernit_uvozovky
 {
     my $veta = shift;
-    my $jazyk = shift;
-    my $q = "[$acu$gra$asq$adq$llt$ggt\x{2018}-\x{201F}]";
+    local $jazyk = shift;
+    local $q = "[$acu$gra$asq$adq$llt$ggt\x{2018}-\x{201F}]";
+    local $sq = "[$acu$gra$asq$sh6$sh9]";
     # Na výstupu chceme počáteční (q0) a koncové (q1) uvozovky daného jazyka sjednotit na následujících znacích:
     my ($q0, $q1) = zjistit_znaky_uvozovek_pro_jazyk($jazyk);
     # Nahradit TeXové uvozovky normálními.
@@ -234,8 +371,31 @@ sub usmernit_uvozovky
         # Přilepením zpět jednak dosáhneme správnějšího pravopisu, jednak usnadníme identifikaci apostrofu jako neuvozovkového.
         $veta =~ s/(\w)'\s+s(,?)\s+/$1's$2 /g;
     }
+    # Pokud ve francouzštině omylem následuje za apostrofem mezera, bude výpustkový apostrof nahrazen koncovou uvozovkou, což rozhodně nechceme.
+    # Zkusíme takové případy rozpoznat a opravit alespoň u nejčastějších slov, která se před výpustkovým apostrofem objevují.
+    if($jazyk eq 'fr')
+    {
+        $veta =~ s/^([ldsncj]|qu)$sq /$1'/ig;
+        $veta =~ s/\s([ldsncj]|qu)$sq / $1'/ig;
+    }
+    # V europarl-v6.fr-en.fr se objevuje vzor "(APIS ou "")" (někdo asi odstranil nefrancouzské rozepsání zkratky z uvozovek).
+    if($jazyk eq 'fr')
+    {
+        $veta =~ s/\(([^\(\)]*)""\)/($1$q0$q1)/g;
+        $veta =~ s/\(""([^\(\)]*)\)/($q0$q1$1)/g;
+    }
     # Sjednotit znak pro apostrof s funkcí výpustky.
     $veta = sjednotit_vypustkovy_apostrof($veta);
+    # Kvůli překlepu (mezeře navíc) nemusíme poznat výpustkový apostrof. Pokud ale víme, že je jazyk francouzština, můžeme některé případy poznat i tak.
+    if($jazyk eq 'fr')
+    {
+        # Vypustit mezeru, aby rozpoznávač poznal, že apostrof je výpustkový.
+        $veta =~ s/ ([ld]') (\w)/ $1$2/ig;
+    }
+    # Kvůli překlepu (vynechané mezeře) se k sobě může dostat koncová uvozovka a počáteční závorka, opravit.
+    # Totéž platí koncovou závorku a počáteční uvozovku.
+    $veta =~ s/( "\w+")\(/$1 (/g;
+    $veta =~ s/\)("\w+" )/) $1/g;
     # Bez mezery po obou stranách se může vyskytnout apostrof s funkcí výpustky, nikoli uvozovky.
     # Pokud se takto vyskytne uvozovka, jde zřejmě o chybu a na jedné straně měla být mezera.
     # Nevíme však na které, proto přidáme mezery po obou stranách a necháme řešení na pořadí uvozovky, viz níže.
@@ -254,13 +414,13 @@ sub usmernit_uvozovky
     # Konkrétní jednorázové chyby. Neodvažuji se je zatím příliš zobecnit.
     $veta = odstranit_jednorazove_chyby($veta);
     # Po provedení všech oprav nad celou větou rozebrat větu na znaky a pracovat dále s nimi.
-    my @znaky = split(//, $veta);
+    local @znaky = split(//, $veta);
     # Váha možnosti, že i-tý znak je počáteční, resp. koncová uvozovka.
-    my @pocatecni;
-    my @koncova;
+    local @pocatecni;
+    local @koncova;
     # Váha možnosti, že dotyčný znak nemá funkci uvozovky (např. apostrof v anglickém "don't").
-    my @zadna;
-    my @rozhodnuto;
+    local @zadna;
+    local @rozhodnuto;
     my $vse_rozhodnuto = 1;
     for(my $i = 0; $i<=$#znaky; $i++)
     {
@@ -314,43 +474,7 @@ sub usmernit_uvozovky
             # U dalších pravidel chceme kontrolovat sousedy vlevo a vpravo, takže potřebujeme mít jistotu, že sousedé existují.
             if($i>0 && $i<$#znaky)
             {
-                # Apostrofy se vyskytují také jako znak výpustky.
-                # Francouzský člen "l'" se může vyskytnout díky citacím i v jiných jazycích.
-                # Podobně předložka "d'".
-                # Nebudeme zkoumat, zda je před "l" mezera, mohl by to být také začátek řádku, případně nějaká stažená předložka ("dell'"?)
-                # A navíc bychom nejdřív museli ověřit, že se nacházíme dostatečně daleko od začátku řádku.
-                # Obecně: možná můžeme každý apostrof, který má z obou stran alfanumerický znak, považovat za výpustku.
-                # Výpustkový apostrof také může být před čísly označujícími letopočet: "recapitular el "'68"?"
-                # Ojediněle se objevil také mezi písmenem a uvozovkou: "del'\x{AB}Estonia\x{BB}"
-                # V angličtině za výpustkový považujeme i apostrof na konci slova, které končí písmenem "s". Označuje genitiv plurálu: "with taxpayers' money".
-                # Genitiv může také dostat zkratka ukončená tečkou:
-                # Speer Jr.'s commission
-                # Berlusconi and Co.'s attacks
-                # Genitiv může také dostat složené podstatné jméno následované zkratkou v závorce:
-                # Union for Europe of the Nations Group (UEN)'s Amendment
-                # news-commentary-v6.es-en.en
-                # m/"'68(\.| generation)"/
-                # Tohle nejde dostatečně zobecnit, protože by to taky mohly být vnořené uvozovky.
-                # Potřebovali bychom kombinaci indexového přístupu k jednotlivým znakům a regulárních výrazů.
-                # Třeba pro každý znak udržovat levý kontext od začátku řádku a pravý kontext do konce řádku.
-                # Nad těmito kontexty bychom pak mohli pouštět regulární výrazy.
-                # To zatím nemáme, tak alespoň zavedeme tvrdé pravidlo pro '68.
-                # Takové pravidlo by spíše patřilo do funkce odstranit_jednorazove_chyby(), ale tam ho dát nemůžeme,
-                # protože tato funkce umí pouze substituce regulárních výrazů, ale nemůže konkrétnímu znaku upravit váhu značky.
-                if($i<=$#znaky-2 && $znaky[$i] eq "'" && $znaky[$i+1] eq '6' && $znaky[$i+2] eq '8')
-                {
-                    $zadna[$i] += 10;
-                }
-                elsif($znaky[$i-1] =~ m/\w/ && $znaky[$i] eq "'" && $znaky[$i+1] =~ m/\w/ ||
-                   $znaky[$i-1] =~ m/[\s"]/ && $znaky[$i] eq "'" && $znaky[$i+1] =~ m/\d/ ||
-                   $i>=3 && $znaky[$i-3] eq 'd' && $znaky[$i-2] eq 'e' && $znaky[$i-1] eq 'l' && $znaky[$i] eq "'" && $znaky[$i+1] eq "\x{AB}" ||
-                   $i>=2 && $znaky[$i-2] =~ m/\w/ && $znaky[$i-1] eq '.' && $znaky[$i] eq "'" && $znaky[$i+1] eq 's' ||
-                   $jazyk eq 'en' && $znaky[$i-1] eq 's' && $znaky[$i] eq "'" && $znaky[$i+1] =~ m/[\s$shyph]/ ||
-                   $jazyk eq 'en' && $znaky[$i-1] eq ')' && $znaky[$i] eq "'" && $znaky[$i+1] eq 's')
-                {
-                    $zadna[$i] += 2;
-                }
-                else
+                unless(je_vypustkovy_apostrof($i))
                 {
                     # Nalevo od počáteční uvozovky může být mezera, levá nebo neutrální interpunkce.
                     # Obrácený vykřičník a otazník může uvozovce i předcházet: \x{BF}"Perderán" los Estados Unidos a América Latina?
@@ -359,10 +483,10 @@ sub usmernit_uvozovky
                     # Tečka je neutrální, může být na začátku přímé řeči jako součást výpustky ("...").
                     # Taky může následovat výpustkový apostrof ("el "'68""). To bychom ale měli kontrolovat, zda už byl identifikován jako výpustkový.
                     # Dvojkříž za počáteční uvozovkou se vyskytl v news-commentary-v6.es-en.es.
-                    my $poq0 = "[\\w$hyph$lrb$lsb$lcb$lexcl$lqest$dot$ell$asq$hash$plus]";
+                    my $poq0 = "[\\w$hyph$lrb$lsb$lcb$lexcl$lqest$dot$ell$asq$hash$plus$at]";
                     # Nalevo od koncové uvozovky může být alfanumerický znak, pravá nebo neutrální interpunkce.
                     # \x{B7} je "MIDDLE DOT". Jednou se mi vyskytla před koncovou uvozovkou, ale byl to překlep.
-                    my $predq1 = "[\\w$hyph$rrb$rsb$rcb$excl$qest$dot$ell,;\x{B7}$asq%$plus]";
+                    my $predq1 = "[\\w$hyph$rrb$rsb$rcb$excl$qest$dot$ell,;\x{B7}$asq%$plus$at]";
                     # Napravo od koncové uvozovky může být mezera, pravá nebo neutrální interpunkce.
                     # (Poznámka: v češtině se většinou tečka za větou schová dovnitř uvozovek, ale ve španělských datech to mám častěji obráceně.)
                     # U vnořených uvozovek může následovat výpustka, např. "nunca se enteró de que hubo un 'baby boom'...".
@@ -410,9 +534,9 @@ sub usmernit_uvozovky
                         $pocatecni[$i] += 2;
                     }
                     # Pokud je před uvozovkou (chybně) mezera, ale za uvozovkou je koncová závorka, je také uvozovka koncová.
-                    # Stejně tak dvojtečku nebo otazník za uvozovkou považujeme za důkaz koncovosti uvozovky.
+                    # Stejně tak středník, dvojtečku nebo otazník za uvozovkou považujeme za důkaz koncovosti uvozovky.
                     if($znaky[$i-1] =~ m/\s/ &&
-                       $znaky[$i+1] =~ m/[\):\?]/)
+                       $znaky[$i+1] =~ m/[\);:\?]/)
                     {
                         $koncova[$i] += 2;
                     }
@@ -474,9 +598,27 @@ sub usmernit_uvozovky
                     {
                         $koncova[$i]++;
                     }
-                    # europarl-v6.es-en.en
-                    # Pozorované dvojice vnořených uvozovek:
-                    # \x{201D}'
+                    # europarl-v6.fr-en.en
+                    # Několik případů, kdy na konci věty je prázdná dvojice uvozovek (zřejmě odstraněný citát v jiném jazyce).
+                    if($i<=$#znaky-2 &&
+                       $znaky[$i-1] eq ' ' &&
+                       $znaky[$i] eq $adq &&
+                       $znaky[$i+1] eq $adq &&
+                       $znaky[$i+2] =~ m/[\.:]/)
+                    {
+                        $pocatecni[$i]++;
+                        $koncova[$i+1]++;
+                    }
+                    # europarl-v6.fr-en.en
+                    if($i<=$#znaky-2 &&
+                       $znaky[$i-1] eq ' ' &&
+                       $znaky[$i] eq $adq &&
+                       $znaky[$i+1] eq $sh9 &&
+                       $znaky[$i+2] eq ',')
+                    {
+                        $koncova[$i]++;
+                        $koncova[$i+1]++;
+                    }
                 }
             }
             # Už víme, jaká je to uvozovka?
@@ -506,7 +648,22 @@ sub usmernit_uvozovky
             {
                 $iq++;
                 # Jestliže už jsme uvozovku rozhodli, nedělat nic.
-                if(!$rozhodnuto[$i])
+                # Akorát pokud její druh neodpovídá našemu aktuálnímu číslu uvozovky, změnit lichost/sudost tohoto čísla.
+                if($rozhodnuto[$i])
+                {
+                    my $druh = druhuv($i);
+                    if($druh eq 'z')
+                    {
+                        # Tento znak nepočítat jako uvozovku.
+                        $iq--;
+                    }
+                    elsif($druh eq 'p' && $iq%2==0 || $druh eq 'k' && $iq%2==1)
+                    {
+                        # Změnit lichost/sudost přičtením jedničky.
+                        $iq++;
+                    }
+                }
+                else
                 {
                     # Jestliže kolem uvozovky nejsou mezery, nedělat taky nic. Chtělo by to prohlédnout a ověřit, že nejde o dosud neznámé pravidlo.
                     # Výjimka: před uvozovkou je mezera a za ní čárka. Tohle jsem viděl jednou jako koncovou, ale nejsem si jist, jak to bude jinde.
@@ -571,7 +728,7 @@ sub usmernit_uvozovky
     {
         if($zadna[$i]>$pocatecni[$i] && $zadna[$i]>$koncova[$i])
         {
-            $vystup .= $znaky[$i];
+            $vystup .= $asq;
         }
         elsif($pocatecni[$i]>$koncova[$i])
         {
@@ -591,4 +748,43 @@ sub usmernit_uvozovky
         }
     }
     return $vystup;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Zjistí momentálně převažující názor o druhu dané uvozovky. Vrátí:
+# p ... počáteční uvozovka má nejvyšší váhu
+# k ... koncová uvozovka má nejvyšší váhu
+# z ... žádná uvozovka (tj. výpustkový apostrof) má nejvyšší váhu
+# 0 ... nejde o znak podobný uvozovce, všechny váhy jsou nulové
+# ! ... alespoň dvě váhy jsou nenulové, ale shodné, takže nelze rozhodnout
+#------------------------------------------------------------------------------
+sub druhuv
+{
+    my $i = shift;
+    # Do polí s vahami máme přímý přístup, protože byla deklarována jako local.
+    my $pi = $pocatecni[$i];
+    my $ki = $koncova[$i];
+    my $zi = $zadna[$i];
+    if($pi>$ki && $pi>$zi)
+    {
+        return 'p';
+    }
+    elsif($ki>$pi && $ki>$zi)
+    {
+        return 'k';
+    }
+    elsif($zi>$pi && $zi>$ki)
+    {
+        return 'z';
+    }
+    elsif($pi==0 && $ki==0 && $zi==0)
+    {
+        return '0';
+    }
+    else
+    {
+        return '!';
+    }
 }
