@@ -45,15 +45,15 @@ if ($plot) {
   # check if larger is outside of conf. int. for smaller
   my $value_of_larger = binom_distr($n, $smaller, $larger/$n)-$alpha/2;
   if ($value_of_larger < 0) {
-    print "$smaller is significantly worse than $larger\n";
+    print "$smaller is significantly worse than $larger ($value_of_larger)\n";
   } else {
-    print "$smaller is NOT significantly worse than $larger\n";
+    print "$smaller is NOT significantly worse than $larger ($value_of_larger)\n";
   }
   my $value_of_smaller = binom_distr($n, $larger, $smaller/$n)-1+$alpha/2;
   if ($value_of_smaller > 0) {
-    print "$larger is significantly better than $smaller\n";
+    print "$larger is significantly better than $smaller ($value_of_smaller)\n";
   } else {
-    print "$larger is NOT significantly better than $smaller\n";
+    print "$larger is NOT significantly better than $smaller ($value_of_smaller)\n";
   }
 }
 
@@ -64,8 +64,8 @@ sub plot {
   my $p = 0;
   while ($p <= 1) {
     my $bn = binom_distr($n, $wins, $p);
-    printf "upper\t%.4f\t%.4f\n", $p, $bn-$alpha/2;
-    printf "lower\t%.4f\t%.4f\n", $p, $bn-1+$alpha/2;
+    printf "upper\t%.4f\t%.4f\n", $p, (1)*($bn-$alpha/2);
+    printf "lower\t%.4f\t%.4f\n", $p, (1)*($bn-1+$alpha/2);
     $p += 0.05;
   }
   print "zero\t0\t0\n";
