@@ -13,11 +13,13 @@ use Getopt::Long;
 my $conf = 95;
 my $plot = 0;
 my $step = 0.05;
+my $total = undef;
 
 GetOptions(
   "conf=s" => \$conf,
   "plot" => \$plot,
   "step=s" => \$step,
+  "total=i" => \$total,
 ) or exit 1;
 
 my $alpha = 1-$conf/100;
@@ -28,6 +30,7 @@ my $b = shift;
 if (!defined $a || !defined $b) {
   print STDERR "$0 a-wins b-wins
 Options:
+  --total=N     ... defaults to a-wins+b-wins
   --conf=95     ... the confidence level
   --plot        ... to plot the distribution etc.
   --step=0.05   ... for the plot
@@ -36,10 +39,13 @@ Options:
 }
 
 my $n = $a+$b;
+if (defined $total) {
+  die "Bad total ($total), smaller than a+b=$n" if $total < $n;
+  $n = $total;
+}
 
 if ($plot) {
-  my $wins = $a;
-  plot($n, $wins);
+  plot($n, $a, $b);
 } else {
   my ($smaller, $larger) = sort ($a, $b);
   # check if larger is outside of conf. int. for smaller
@@ -60,23 +66,23 @@ if ($plot) {
 
 sub plot {
   my $n = shift;
-  my $wins = shift;
+  my $a = shift;
+  my $b = shift;
   my $p = 0;
   while ($p <= 1) {
-    my $bn = binom_distr($n, $wins, $p);
+    my $bn = binom_distr($n, $a, $p);
     printf "upper\t%.4f\t%.4f\n", $p, (1)*($bn-$alpha/2);
     printf "lower\t%.4f\t%.4f\n", $p, (1)*($bn-1+$alpha/2);
     $p += 0.05;
   }
   print "zero\t0\t0\n";
   print "zero\t1\t0\n";
-  my $rat = $wins/$n;
-  printf "$wins of $n\t$rat\t-1\n";
-  printf "$wins of $n\t$rat\t1\n";
-  my $othwins = $n-$wins;
-  my $othrat = $othwins/$n;
-  printf "$othwins of $n\t$othrat\t-1\n";
-  printf "$othwins of $n\t$othrat\t1\n";
+  my $rat = $a/$n;
+  printf "$a of $n\t$rat\t-1\n";
+  printf "$a of $n\t$rat\t1\n";
+  my $othrat = $b/$n;
+  printf "$b of $n\t$othrat\t-1\n";
+  printf "$b of $n\t$othrat\t1\n";
   if (-t STDOUT) {
     print STDERR "# To see the plot, feed the output to the following pipe:
   | labelledxychart --blockpivot=1 --data=2,3,0,'',linespoints | gpsandbox\n";
