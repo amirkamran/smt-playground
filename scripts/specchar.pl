@@ -9,7 +9,7 @@ sub usage
     print STDERR ("Usage: specchar.pl -l language < original-corpus > modified-corpus\n");
     print STDERR ("    Corpus is untokenized, one sentence (segment) per line.\n");
     print STDERR ("    Language is identified by ISO 639-1 code.\n");
-    print STDERR ("    Known languages: en, es, fr.\n");
+    print STDERR ("    Known languages: en, cs, de, es, fr.\n");
 }
 
 use utf8;
@@ -22,7 +22,7 @@ use HTML::Entities;
 
 # Úpravy uvozovek jsou jazykově závislé.
 GetOptions('language=s' => \$jazyk);
-unless($jazyk =~ m/^(en|de|es|fr)$/)
+unless($jazyk =~ m/^(en|cs|de|es|fr)$/)
 {
     usage();
     die("Unknown language '$jazyk'.\n");
@@ -154,7 +154,7 @@ sub zjistit_znaky_uvozovek_pro_jazyk
         $q0 = $llt;
         $q1 = $ggt;
     }
-    # Čeština: spodní 99 vlevo, horní 66 vpravo.
+    # Čeština a němčina: spodní 99 vlevo, horní 66 vpravo.
     elsif($jazyk =~ m/^(cs|de)$/)
     {
         $q0 = $d99;
@@ -361,6 +361,16 @@ sub odstranit_jednorazove_chyby
     $veta =~ s/Russia"\(OVR\)/Russia" (OVR)/g;
     # europarl-v6.de-en.en
     $veta =~ s/'([\w\s]+):'\./${q0}$1:${q1}./g;
+    # news-commentary-v6.cs-en.cs
+    # Ve dvou větách je poškozené kódování:
+    $veta =~ s/^Tyto kulisy neshod a soupeřen.. zakr..vaj.. v .*/Tyto kulisy neshod a soupeření zakrývají v čínsko-japonských vztazích nově vznikající prvky spolupráce, které jsou sice nesmírně důležité, ale světová média je bohužel považují za příliš nudné, a tedy ${q0}neprodejné${q1}./;
+    $veta =~ s/^Z toho je..tě nevypl..v.., ..e vl..da mus.. vl..dnout prostřednictv..m.*/Z toho ještě nevyplývá, že vláda musí vládnout prostřednictvím strachu, jak to činily předchozí ruské kabinety: v tomto ohledu je Putinova vláda nejlepší, jakou kdy Rusko mělo. ${q0}Putinistické${q1} vládě však nezbude mnoho času na otevřenost, diskusi či zodpovědnost./;
+    # europarl-v6.cs-en.cs
+    $veta =~ s/se zvláštním důrazem na:"\./se zvláštním důrazem na:${q1}./g;
+    $veta =~ s/členských${h99}státech/členských státech/g;
+    $veta =~ s/process"\(zastřešující/process${q1} (zastřešující/g;
+    $veta =~ s/negotiations;'\("Připomíná/negotiations;${q1} (${q0}Připomíná/g;
+    $veta =~ s/Partnership${h99}\(" třebaže/Partnership${q1} (${q0}třebaže/g;
     return $veta;
 }
 
