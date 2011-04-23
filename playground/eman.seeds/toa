@@ -11,6 +11,7 @@ if [ -z "$MERTEXP" ] \
   echo "and optionally"
   echo "  \$MOSESFLAGS to any further flags"
   echo "  \$GRIDFLAGS to any further flags"
+  echo "  \$CORPUS to output corpus directory"
   echo "  \$JOBS to number of jobs" # or 0 for serial"
   echo "  \$CHUNKSIZE to the size of translated chunks in lines"
   echo "  \$ITER to the ITER-th BEST at... (will use run(ITER+1).moses.ini)"
@@ -57,6 +58,8 @@ else
   INVERT_CMD=""
 fi
 
+[ -n "$CORPUS" ] || CORPUS="$CORPUS"
+
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
 MERTEXP=$MERTEXP
@@ -67,7 +70,7 @@ OUTALILABEL="$OUTALILABEL"
 ALISYM="$ALISYM"
 JOBS=$JOBS
 ITER=$ITER
-CORPUS=$INPUTCORP-toa
+CORPUS=$CORPUS
 INVERTALI=$INVERTALI
 KONEC
 
@@ -189,18 +192,18 @@ rm status0*
 
 # rm alignment0* evaluation0*.opt.out.gz
 
-if [ -d ../augmented_corpora/$INPUTCORP-toa ]; then
-  die "Won't overwrite existing directory ../augmented_corpora/$INPUTCORP-toa"
+if [ -d ../augmented_corpora/$CORPUS ]; then
+  die "Won't overwrite existing directory ../augmented_corpora/$CORPUS"
 fi
 
-mkdir ../augmented_corpora/$INPUTCORP-toa
-../../scripts/wiseln ../augmented_corpora/$INPUTCORP/LINECOUNT ../augmented_corpora/$INPUTCORP-toa/LINECOUNT
-gzip -c < evaluation.in > ../augmented_corpora/$INPUTCORP-toa/$SRC_LANG.gz
-../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$INPUTCORP-toa/$TGT_LANG.gz 
-../../scripts/wiseln alignment.gz ../augmented_corpora/$INPUTCORP-toa/$OUTALILABEL.gz 
-echo "$SRC_FACT" >../augmented_corpora/$INPUTCORP-toa/$SRC_LANG.info
-echo "$TGT_FACT" >../augmented_corpora/$INPUTCORP-toa/$TGT_LANG.info
-echo ali > ../augmented_corpora/$INPUTCORP-toa/$OUTALILABEL.info
+mkdir ../augmented_corpora/$CORPUS
+../../scripts/wiseln ../augmented_corpora/$INPUTCORP/LINECOUNT ../augmented_corpora/$CORPUS/LINECOUNT
+gzip -c < evaluation.in > ../augmented_corpora/$CORPUS/$SRC_LANG.gz
+../../scripts/wiseln evaluation.opt.out.gz ../augmented_corpora/$CORPUS/$TGT_LANG.gz 
+../../scripts/wiseln alignment.gz ../augmented_corpora/$CORPUS/$OUTALILABEL.gz 
+echo "$SRC_FACT" >../augmented_corpora/$CORPUS/$SRC_LANG.info
+echo "$TGT_FACT" >../augmented_corpora/$CORPUS/$TGT_LANG.info
+echo ali > ../augmented_corpora/$CORPUS/$OUTALILABEL.info
 
 echo DONE > \$mydir/eman.status
 
