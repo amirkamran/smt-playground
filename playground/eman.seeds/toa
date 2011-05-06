@@ -58,7 +58,7 @@ else
   INVERT_CMD=""
 fi
 
-[ -n "$CORPUS" ] || CORPUS="$CORPUS"
+[ -n "$CORPUS" ] || CORPUS="$INPUTCORP-toa"
 
 cat << KONEC > eman.vars
 BINARIES=$BINARIES
