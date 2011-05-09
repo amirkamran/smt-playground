@@ -54,8 +54,6 @@ MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 [ ! -z "$JOBS" ] || JOBS=15
 [ $JOBS == 0 ] && SERIAL=yes
 
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-
 [ ! -z "$SEARCH" ] || SEARCH=cube
 [ ! -z "$MERTPRG" ] || MERTPRG=mert
 
@@ -106,6 +104,10 @@ KONEC
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
+
+# Prepare testbleu.
+gunzip ../../src/testbleu.gz -c > ./testbleu || die "Cannot extract testbleu binary!"
+chmod +x ./testbleu
 
 # create local copies of the corpora
 ../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"
@@ -233,9 +235,6 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
 ../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-if [ -e $TESTBLEU ]; then
-  ../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
-fi
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \

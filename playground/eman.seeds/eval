@@ -1,7 +1,5 @@
 #!/bin/bash
 
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-
 if [ -z "$MERTSTEP" ] \
 || [ -z "$TESTCORP" ]; then
   echo "You must set: "
@@ -82,7 +80,7 @@ MOSESCMD="`pwd`/../$BINARIES/bin/moses"
 
 # clone some importnant executables
 ../../scripts/wiseln $MOSESCMD ./moses || exit 1
-../../scripts/wiseln $TESTBLEU ./testbleu || exit 1
+../../scripts/wiseln ../$MERTSTEP/testbleu ./testbleu || exit 1
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
