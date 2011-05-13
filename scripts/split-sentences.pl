@@ -28,7 +28,7 @@ if ($HELP) {
     ###??? print "  Untokenized input is expected.\n";
     print "  Sentences on input may span over multiple lines.\n";
     print "  Paragraphs on input are delimited by blank lines or <p>.\n";
-    print "  Paragraphs on output are delimited by <p>.\n";
+    print "  Paragraphs on output are delimited by <P>.\n";
     print "  Sentences on output are delimited by line breaks.\n";
     exit;
 }

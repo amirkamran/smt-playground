@@ -4,21 +4,28 @@
 #any single upper case letter  followed by a period is not a sentence ender
 #usually upper case letters are initials in a name
 A
+Á
 B
 C
 Č
 D
+Ď
 E
+É
 F
 G
 H
 I
+Í
 J
 K
 L
+Ľ
 M
 N
+Ň
 O
+Ó
 P
 Q
 R
@@ -26,11 +33,14 @@ R
 S
 Š
 T
+Ť
 U
+Ú
 V
 W
 X
 Y
+Ý
 Z
 Ž
 
@@ -41,10 +51,15 @@ sl
 s
 br
 ing
+Ing
 bc
+Bc
 mgr
+Mgr
 dr
+Dr
 doc
+Doc
 prof
 Prof
 RNDr
@@ -53,17 +68,29 @@ MUDr
 JUDr
 RSDr
 maj
+Maj
 mjr
+Mjr
 poruč
+Poruč
 ppor
+Ppor
 npor
+Npor
 plk
+Plk
 pplk
+Pplk
 gen
+Gen
 adm
+Adm
 guv
+Guv
 kpt
+Kpt
 kap
+Kap
 
 #misc - odd period-ending items that NEVER indicate breaks (p.m. does NOT fall into this category - it sometimes ends a sentence)
 v
