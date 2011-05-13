@@ -24,9 +24,15 @@ while (@ARGV) {
 }
 
 if ($HELP) {
-    print "Usage ./split-sentences.perl (-l [en|de|...]) < textfile > splitfile\n";
-	exit;
+    print "Usage ./split-sentences.pl (-l [en|de|...]) < textfile > splitfile\n";
+    ###??? print "  Untokenized input is expected.\n";
+    print "  Sentences on input may span over multiple lines.\n";
+    print "  Paragraphs on input are delimited by blank lines or <p>.\n";
+    print "  Paragraphs on output are delimited by <p>.\n";
+    print "  Sentences on output are delimited by line breaks.\n";
+    exit;
 }
+
 if (!$QUIET) {
 	print STDERR "Sentence Splitter v3\n";
 	print STDERR "Language: $language\n";
