@@ -522,7 +522,13 @@ sub collect {
     foreach my $f (@files) {
       my $step = $f; $step =~ s/\/.*//;
       my $res = undef;
-      if ($regexorcmd =~ /^CMD: *(.*)/) {
+      if ($regexorcmd =~ /^CMD:(.*)\$\$(.*)/) {
+		# e.g. "CMD: du -sh $$"
+		$res = `$1 $f $2`;
+		chomp $res;
+        $res =~ s/\n+/ /;
+      }
+      elsif ($regexorcmd =~ /^CMD: *(.*)/) {
         $res = `cat $f | $1`;
         chomp $res;
         $res =~ s/\n+/ /;
