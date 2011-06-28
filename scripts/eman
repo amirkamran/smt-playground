@@ -75,6 +75,7 @@ my $show_vars = 0;
 my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
+my $show_disk_usage = 0;
 my $sge = 1;
 my $do_start = 0;
 my $subst = undef;
@@ -122,6 +123,7 @@ my %options = (
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
+  "disk-usage|dus!" => \$show_disk_usage,
   "read-only|readonly!" => \$readonly,
   "s|subst=s@" => \$subst,
   "avoid=s@" => \$avoid,
@@ -687,6 +689,7 @@ sub init_by_recipe {
   @newvars = map { my ($varname, $val) = split /=/, $_, 2;
                    defined $ENV{$varname}
                      ? "$varname=$ENV{$varname}" # prefer environment
+		         # TODO  escape the value!
                      : $_; # use the value from the scenario
                  } @newvars;
 
@@ -1196,6 +1199,7 @@ sub print_short {
   print "\t".load_status($s) if $show_status;
   print "\t".load_tag($s) if $show_tag;
   print "\t".(load_jobid($s) || "") if $show_jobid;
+  print "\t".show_disk_usage($s) if $show_disk_usage;
   print "\n";
   print_vars("  ", $s) if $show_vars;
   print_log("  ", $s) if $show_log;
@@ -1373,6 +1377,12 @@ sub load_jobid {
   my $step = shift;
   return try_load(relative_to_maindir("$step/eman.jobid"));
 }
+sub show_disk_usage {
+  my $step = shift;
+  my $du = `du -sh $step 2>/dev/null | cut -f1`;
+  chomp $du;
+  return $du;
+}
 
 sub canon_stepdir {
   my $step = shift;
@@ -1521,7 +1531,7 @@ sub saveidx {
 sub get_hash_from_dir {
   my $exp = shift;
 
-  my @vars = split /\n/, load($exp."/eman.vars");
+  my @vars = load($exp."/eman.vars");
   #my @deps = split /\n/, load($exp."/eman.deps");
   return get_hash_from_vars_deps($exp, \@vars, undef);
 }
@@ -1529,13 +1539,17 @@ sub get_hash_from_vars_deps {
   my $name = shift;
   my $vars = shift;
   my $deps = shift;
-  #print "HASH: @$vars @$deps\n";
-  #return md5_hex(sort @$vars, sort @$deps);
+    # deps are totally ignored, we assume they are implied by vars
   # avoid considering the name of ourselves significant in content check
   my @usevars = @$vars;
-  @usevars = map  {s/$name/---SELF---/g; $_} @usevars;
-  print STDERR "NAME $name, USEVARS: @usevars\n" if $debug;
-  return md5_hex(sort @usevars);
+  @usevars = 
+    grep { ! /^[^=]+=''$/ } grep { ! /^[^=]+=""$/ } # skip empty-valued vars
+    grep { /^[^=]+=./ }  # skip empty-valued vars
+    map  {s/$name/---SELF---/g; $_}
+    @usevars;
+  my $hash =  md5_hex(sort @usevars);
+  print STDERR "NAME $name, USEVARS: @usevars\n  -> $hash\n" if 1 && $debug;
+  return $hash;
 }
 
 sub all_steps {
