@@ -10,7 +10,8 @@ if [ -z "$MODELSTEP" ] || [ -z "$DEVCORP" ] \
   ; then
   echo "You must set: "
   echo "  \$MODELSTEP to the directory that contains the model, incl. all files"
-  echo "  \$DEVCORP to the corpus for tuning"
+  echo "  \$DEVCORP to the corpus for tuning; use colon to delimit more corpora"
+  echo "            source side is taken from the first one"
   echo "  \$TESTCORP to the corpus for evaluation"
   echo "  \$REFAUG to the target (reference) lang+factors"
   echo "and optionally"
@@ -109,16 +110,25 @@ KONEC
 gunzip ../../src/testbleu.gz -c > ./testbleu || die "Cannot extract testbleu binary!"
 chmod +x ./testbleu
 
+firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
+
 # create local copies of the corpora
-../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"
-../augmented_corpora/augment.pl --dump $DEVCORP/$REFAUG > tuning.ref.0 || die "tuning.ref"
+../augmented_corpora/augment.pl --dump $firstdevcorp/$SRCAUG > tuning.in \
+  || die "Failed to create tuning.in from $firstdevcorp/$SRCAUG"
+refidx=0
+for devcorp in $(echo $DEVCORP | tr ':' ' '); do
+  ../augmented_corpora/augment.pl --dump $devcorp/$REFAUG > tuning.ref.$refidx \
+    || die "Failed to create tuning.ref.$refidx from $devcorp/$REFAUG"
+  [ `wc -l < tuning.in` == `wc -l < tuning.ref.$refidx` ] \
+    || die "Mismatching number of lines in tuning.ref.$refidx taken from $devcorp/$REFAUG"
+  refidx=$(($refidx+1))
+done
 ../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
 ../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
 
 echo Checking tune and eval corp sizes
 [ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
 [ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
-[ `wc -l < tuning.in` == `wc -l < tuning.ref.0` ] || die "Mismatching tuning.ref.0"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
 ../../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
