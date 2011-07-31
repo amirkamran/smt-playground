@@ -76,6 +76,7 @@ my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
 my $show_disk_usage = 0;
+my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
 my $do_start = 0;
 my $subst = undef;
@@ -192,7 +193,8 @@ if ($list_options) {
 
 my $lock = undef;
 
-my $autoreadonly = ( !$reindex && $cmd eq "traceback" ); # for "tb | clone"
+my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
+  # for "tb | clone"
 if ($readonly || $autoreadonly
     || (-e $indexfile && ! -w $indexfile) || ! -w '.') {
   $readonly = 1;
@@ -283,8 +285,14 @@ if ($cmd eq "vars") {
   # listing steps of the given types including variables
   $lock->unlock() if defined $lock;
   $show_vars = 1;
-  $waserror = !list([@ARGV]);
-  exit $waserror;
+  if(defined $subst && scalar (@$subst) > 0) {
+    # actually use traceback if we are doing substitutions
+    $recurse = 0;
+    $cmd = "traceback";
+  } else {
+    $waserror = !list([@ARGV]);
+    exit $waserror;
+  }
 }
 
 if ($cmd eq "duplicates") {
@@ -1271,6 +1279,7 @@ sub traceback {
   print_vars($prefix.$indent, $step) if $show_vars;
   print_log($prefix.$indent, $step) if $show_log;
   $indent = $show_tree_in_traceback ? "|  " : "";
+  return if !$recurse;
   foreach my $dep (@$deps) {
     traceback($prefix.$indent, $dep);
   }
