@@ -38,7 +38,8 @@ kombinace
           constraint bude tento: 16.35±0.57 s.mert.ba213fab.20110314-1953
     nebo hlavne na vetsich datech...
  ==>  s vetsim toa uz jede: 17.03±0.58 s.mert.5f685f3b.20110314-2303 (unconstr a bez rm)
-     PRIPRAVUJU PRO COMB: s.eval.590077a9.20110317-1904
+     PRIPRAVUJU PRO COMB: 17.02±0.58 s.eval.590077a9.20110317-1904
+                    OFIC: 17.81±0.62 s.eval.95727b5d.20110318-1107
 	  mel bych spustit taky jeden kontrastni, bez toa
 	     zdehle: 16.86±0.56 s.mert.c765d205.20110315-1431
 	     16.86±0.56 vs 17.03±0.58 je spravedlive, rev vitezi
@@ -50,19 +51,20 @@ kombinace
                                (OFIC: 17.98±0.55 ed73b6ac.20110314-1241)
     ale chystame v obrich datech: 17.45±0.62 s.2step.587dea22.20110314-1546
  ==>a specialne s reorderingem: 17.51±0.56 s.2step.beb8df86.20110314-1544
-     OFIC: 18.07±0.57 s.2step.536a2f87.20110317-2245
-     PRIPRAVUJU PRO COMB: s.2step.764485a2.20110317-1627
+     PRIPRAVUJU PRO COMB: 17.51±0.56 s.2step.764485a2.20110317-1627
+                    OFIC: 18.07±0.57 s.2step.536a2f87.20110317-2245
     prvni pohled na prvnich par vet potvrzuje BLEU...
     druhy pohled na par vet v hilidiff dava prednost 17.51 pred 17.59!
     !!! NUTNO RUCNE OPRAVIT UNK2step, napr. L @ - - - +
     melo by to resit pridani POSTPROC=../tools/remove_pluslemma_prefixes.pl
       do 2stepu: prvni pokus s.2step.4fdb81a2.20110317-1553
 - ==> straight, zatim 17.50±0.58 50d06baa.20110313-0137
-      PRIPRAVUJU PRO COMB: s.eval.8e40675c.20110317-1632
-                   oficialni eval: 18.33±0.64 s.eval.1b59c51e.20110314-1611
+      PRIPRAVUJU PRO COMB: 17.50±0.58 s.eval.8e40675c.20110317-1632
+                     OFIC: 18.33±0.64 s.eval.6777764d.20110317-1427
     jeste dost mozna zdroj/cil tag!
       zdroj tag (stredni data): 17.09±0.59 1db3d71c.20110312-0116
-      PRIPRAVUJU PRO COMB: s.eval.94d4193d.20110317-1913
+      PRIPRAVUJU PRO COMB: 17.09±0.59 s.eval.94d4193d.20110317-1913
+                     OFIC: 17.51±0.57 s.eval.7d853762.20110320-0105
         ?? proc je horsi nez 17.24±0.58 nebo 17.50±0.58
    ??>   zdroj tag (velka data): 17.55±0.59 s.mert.49bb6e43.20110317-1909
             OFIC: 18.02±0.56 s.eval.20257008.20110318-1139
@@ -71,12 +73,53 @@ kombinace
 - news-only?
 - tecto?
 
-PRVNI COMB: s.combmert.99dda235.20110317-1922
-  havaroval, asi vadi lex reord...
-  s.combmert.1cfb1eaa.20110317-2131
+POUZIJU TENTO COMB: cd4284bb.20110318-2359 (devbleu: 17.35)
+  i kdyz jsem mohl pouzit dd4e7208.20110319-1524 (devbleu: 17.42)
+  zatim testuju evaluaci combmertu:
+    s.combmert.466b0681.20110320-0123 -> blbe
+    s.combmert.2db74b89.20110320-0829
+  OFIC: s.combmert.4919d24e.20110320-0130 -> blbe
+    s.combmert.d70d3a19.20110320-0830
+
+zkousim jeste comb jen dvou: s.combmert.8fba6538.20110320-0203
+                       OFIC: s.combmert.6b0bd86e.20110320-0835
+  a tri: s.combmert.61ba433f.20110320-0204
+
+DVOU a pritom zadny hyplm: 0.176859 s.combmert.e44ed97f.20110320-1930
+  OFIC: 17.70±0.60 s.combmert.cdd6814d.20110320-2047
+DVOU, bez hyplm, s taglm: s.combmert.c3fabe5a.20110320-2156
+CTYR a pritom zadny hyplm: s.combmert.688ff84f.20110320-2109
+CTYR, bez hyplm, ale s taglm: s.combmert.23f0487c.20110320-2153
+
+Rucni srovnani comb or plain (s hyplm)
+19:35 tauri4 playground$./qj comb-or-plain 38ca3305.20110320-1102 s.eval.590077a9.20110317-1904 s.2step.764485a2.20110317-1627 s.eval.8e40675c.20110317-1632 s.eval.94d4193d.20110317-1913
+  vim qj.data/comb-or-plain.anot
+
 
 snad zacina byt nadeje
-Pripravuju si taky taglm: s.mixlm.7514131a.20110318-1922
+Pripravuju si taky taglm: s.mixlm.e46b2b10.20110318-2342 -> musim proriznout!
+        zde: s.prunelm.25e5ce24.20110320-0847 (moc velky)
+	     s.prunelm.b9079dbc.20110320-2058
+  a k nemu (jen paralelni=>pokazi 2step!) generovaci LM:
+    s.tm.6804b65a.20110319-0017
+  a podle tohoto sestavim model: s.model.2fe10fca.20110307-1650
+  toto by mohl byt ten model: s.model.074af818.20110320-2105
+  a jeste lepsi generovaci model: s.gm.3997e386.20110320-2056
+
+Mikroevaluace zdrojoveho taglm
+00:54 tauri4 playground$./qj straight-srctag s.mert.49bb6e43.20110317-1909 50d06baa.20110313-0137
+The evaluation called straight-srctag already exists, interpreting:
+Mark    Count   Tag
+Executing: /home/bojar/bin//quickjudge --print qj.data/straight-srctag 2>/dev/null | cut -f2,3 | see
+*       7       sys2, 50d06baa.20110313-0137
+*       3       sys1, s.mert.49bb6e43.20110317-1909
+equally-fine    3       sys2, 50d06baa.20110313-0137
+equally-fine    3       sys1, s.mert.49bb6e43.20110317-1909
+equally-wrong   2       sys1, s.mert.49bb6e43.20110317-1909
+equally-wrong   2       sys2, 50d06baa.20110313-0137
+**      1       sys2, 50d06baa.20110313-0137
+-       1       sys1, s.mert.49bb6e43.20110317-1909
+
 
 
 ODESLAT:
@@ -86,6 +129,7 @@ bojar-marecek: 2step+fix:
     vylepseni s filt: s.tectoproc.bee1bb43.20110318-1513
   contrast (no fix) 18.07±0.57 536a2f87.20110317-2245
   contrast (direct) 18.33±0.64 6777764d.20110317-1427
+  contrast (direct+fix) 18.33±0.64 s.tectoproc.d5f371e6.20110320-0145
 
 tamchyna-bojar: mono
   jsou to analogie k 16.86±0.56 vs 17.03±0.58 je spravedlive, rev vitezi
@@ -94,16 +138,25 @@ tamchyna-bojar: mono
   (obema chybi reordering)
 
 bojar:
-  cs->en:
-    primary: 21.18±0.58 s.eval.8c0bd511.20110318-1140	nema reord
-    (jeste zkousim uplnou ptakovinu, pluslemma misto lemmatu:
-      s.mert.50b53a16.20110318-1115)
+
+      s.combmert.f5dd1bd7.20110319-1343 se musi spustit znovu, ale pro zajimavost zkusim, jestli zvladne vyrovnach vadny system
+      zde ona oprava: s.combmert.dd4e7208.20110319-1524
 
   en->cs
     primary: 18.33±0.64 6777764d.20110317-1427	OK, ma reord, just data
-    ?przywara? s.eval.440a7504.20110318-0114
+    ?comb?: s.combmert.4919d24e.20110320-0130
+    ?przywara? 18.01±0.61 s.eval.440a7504.20110318-0114
     ?sigfilt? s.eval.dba272eb.20110318-1430
-            a jeste jiny: s.eval.67377db6.20110318-1503
+            a jeste jiny: 18.05±0.60 s.eval.67377db6.20110318-1503
+	    spravedlive: 20.08±0.59 fbd17b75.20110313-2123
+	              vs 19.84±0.57 s.mert.81d942bb.20110318-1513
+		      ...lepsi *bez* filtrace TM
+
+  cs->en:
+    primary: 21.18±0.58 s.eval.8c0bd511.20110318-1140	nema reord
+    (jeste zkousim uplnou ptakovinu, pluslemma misto lemmatu:
+      20.30±0.55 s.mert.50b53a16.20110318-1115, vyslo lepe!
+      OFIC: s.eval.d41f95a8.20110320-2332
 
 
 depfix Davida Marecka
@@ -443,3 +496,25 @@ spravedlive srovnani 2stepu, ktery jeden pracuje i se zdrojovym tagem a druhy ne
 Velmi zajimave je, ze ten s nizsim BLEU ma vic vet, v nichz lepe trefuje referenci:
 
 ./hilidiff dff1e30c.20110312-0126 006f1412.20110314-1052 | pickre --pick --re=' diff=([-0-9]*)' | cut -f1 | see | numsort 2
+
+
+
+2011-04-12
+
+interni evaluace EM+:
+s.eval.a95e742d.20110412-1523 do cestiny primary
+s.tectoproc.5f026539.20110413-0105 do cestiny threestep (twostep+depfix)
+s.eval.3537df0e.20110413-0106 do cestiny tamchyna
+s.eval.3782981d.20110413-0055 do anglictiny
+
+
+
+2011-07-31
+
+s.mert.11bd3592.20110731-1634  .... zkousim optimalizovat na wmt10 misto wmt09 (50d0)
+s.mert.a2c6bd5f.20110731-1744  .... zkousim optimalizovat na wmt10.tectomt
+s.mert.cd982957.20110731-1805  .... human+tectomt, tj. oba ref. preklady najednou
+s.mert.1b904c6f.20110731-1820  .... human+moses50d0
+s.mert.46e50921.20110731-1821  .... human+moses50d0+tectomt
+
+50d0  trenovano na wmt09, spusteno na wmt10 => ma smysl optimalizovat na toto
