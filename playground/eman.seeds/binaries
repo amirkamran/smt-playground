@@ -84,9 +84,10 @@ fi
 
 if [ "$SKIP_IRSTLM" != yes ]; then
   echo "Extracting irstlm"
-  tar xzf ../../src/irstlm-5.50.02.tgz || die "Failed to extract srilm"
-  mv irstlm-5.50.02 irstlm || die "Failed to rename dir"
+  tar xzf ../../src/irstlm-5.60.03.tgz || die "Failed to extract srilm"
+  mv irstlm-5.60.03 irstlm || die "Failed to rename dir"
   cd irstlm
+  ./regenerate-makefiles.sh
   ./configure --prefix=\$(pwd) --enable-caching || die "irstlm configure failed"
   make || die "irstlm make failed"
   make install || die "irstlm install failed"
