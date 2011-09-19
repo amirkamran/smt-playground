@@ -7,8 +7,10 @@
 # 
 # all options:
 #   d ...  only DONE
-#   do ...  execute command X for matched steps; this must be the last command
-#           (all that follows is eval'ed)
+#   do ...  - execute command X for matched steps
+#           - this must be the last command
+#           - all that follows is eval'ed
+#           - matched steps are not output if this command is used
 #   dp ... X is a dependency
 #   f ...  only FAILED
 #   l ...  last X steps
@@ -42,8 +44,6 @@ while [ -n "$*" ]; do
       shift
       ;;
     "d")
-      shift
-      status=$1
       new_steps=""
       for i in $steps; do
         [ -z "`cat $i/eman.status | grep DONE`" ] || new_steps="$new_steps $i"
@@ -53,7 +53,6 @@ while [ -n "$*" ]; do
       ;;
     "f")
       shift
-      status=$1
       new_steps=""
       for i in $steps; do
         [ -z "`cat $i/eman.status | grep '^FAILED'`" ] || new_steps="$new_steps $i"
@@ -62,7 +61,6 @@ while [ -n "$*" ]; do
       shift
       ;;
     "lh")    
-      shift
       steps=`echo $steps | tr ' ' '\n' | head`
       shift
       ;;
@@ -91,7 +89,12 @@ while [ -n "$*" ]; do
         cd $mydir/$i
         eval $*
       done
-      cd $mydir
+      exit # do not print matched steps (otherwise 'break' should be here)
+      ;;
+    *)
+      echo "Unknown command: $1" >&2
+      exit 1
+      ;;
   esac
 done
 
