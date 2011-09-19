@@ -3,10 +3,12 @@
 # fancy queries of eman steps in current directory
 # example usage:
 #   ./query_steps.sh t mert l 50 s INITED v REFAUG=cs+lc
-#   # return last 50 mert steps with status inited and variable REFAUG set to 'cs+lc'
+#   # return last 50 mert steps with status INITED and variable REFAUG set to 'cs+lc'
 # 
 # all options:
 #   d ...  only DONE
+#   do ...  execute command X for matched steps; this must be the last command
+#           (all that follows is eval'ed)
 #   dp ... X is a dependency
 #   f ...  only FAILED
 #   l ...  last X steps
@@ -82,6 +84,14 @@ while [ -n "$*" ]; do
       steps="$new_steps"
       shift
       ;;
+    "do")
+      shift
+      mydir=`pwd`
+      for i in $steps; do
+        cd $mydir/$i
+        eval $*
+      done
+      cd $mydir
   esac
 done
 
