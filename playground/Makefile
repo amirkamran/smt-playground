@@ -19,7 +19,7 @@ mertdetails:
 	> $@
 
 bleu:
-	eman --read-only collect
+	eman --read-only collect || echo "Ignoring errors"
 	cp eman.results $@.`./sitename`
 	cat $@.* \
 	| numsort a2,a1 \
@@ -91,9 +91,15 @@ exp.lm.%.binarize:
 
 AGE?=3
 clean:
-	find -ctime +$(AGE) -name 'run*.feats.opt.gz' -exec rm {} \;
-	find -ctime +$(AGE) -name 'run*.feats' -exec rm {} \;
-	find -ctime +$(AGE) -name 'run*.best*.out.gz' -exec rm {} \;
+	find -maxdepth 3 -ctime +$(AGE) -name 'run*.features.dat' -exec rm {} \;
+	find -maxdepth 3 -ctime +$(AGE) -name 'run*.features.dat.gz' -exec rm {} \;
+	find -maxdepth 3 -ctime +$(AGE) -name 'run*.scores.dat' -exec rm {} \;
+	find -maxdepth 3 -ctime +$(AGE) -name 'run*.scores.dat.gz' -exec rm {} \;
+	find -maxdepth 3 -ctime +$(AGE) -name 'run*.best*.out.gz' -exec rm {} \;
+	rm -rf s.mert.*/mert-tuning/filtered
 	find -ctime +$(AGE) -name filtered-for-eval-std -exec rm -rf {} \; || true
 	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.src' -exec rm {} \;
 	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.tgt' -exec rm {} \;
+	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.custom' -exec rm {} \;
+	# Other hot candidates to remove:
+	# s.tm.*/model/phrase-table*unfiltered*
