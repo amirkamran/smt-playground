@@ -37,6 +37,7 @@ my %opts = (
   jobs => $default_jobs,
   splits => undef,
   "split-to-size" => undef,
+  logdir => undef,
   jobname => "qruncmd",
   "promise-linecount" => undef, # trust caller about the lines to process
   "input-file" => undef, # optional; to make sure we don't wait for stdin
@@ -63,6 +64,7 @@ my @optionspec = (
   "splits=i",
   "split-to-size=i",
   "jobname|N=s",
+  "logdir=s",
   "help|h",
   "sync|s",
   "priority|p=i",
@@ -103,6 +105,8 @@ if ($opts{usage} || $badusage) {
   print STDERR "$0 cmd infile
 Runs the cmd on N sections of input file or stdin in parallel (Sun Grid Engine).
 Options:
+  --jobname=STR ... set the job name and log filename prefix
+  --logdir=STR  ... where the logs should go (default: current dir)
   --attempts=1  ... each job restarts up to attempts times
   --jobs=N  ... default is $default_jobs
   --splits=M  ... use M>N to avoid flooding cluster: at most N 1/M-sized jobs
@@ -143,6 +147,13 @@ my $tempfile_to_delete = undef;
 
 my @launched_jobids = ();
 my $tempoutdir = undef;
+
+if (defined $opts{logdir}) {
+  if (! -d $opts{logdir}) {
+    mkpath($opts{logdir}) or die "Failed to create logdir '$opts{logdir}'.";
+  }
+  -w $opts{logdir} or die "Logdir '$opts{logdir}' not writeable.";
+}
 
 if ($opts{"continue"}) {
   my $assume_line_for_line = $opts{"promise-line-for-line"};
@@ -340,7 +351,7 @@ if ($opts{sync} || $opts{join}) {
 
   my @opts;
   if (defined $opts{jobname}) {
-    $opts{jobname} =~ s/\//_/g;
+    #$opts{jobname} =~ s/\//_/g;
     push @opts, ('-N', "W".$opts{jobname});
   }
   push @opts, qw(-sync yes);
@@ -545,6 +556,7 @@ KONEC
   if (defined $opts{jobname}) {
     $opts{jobname} =~ s/\//_/g;
     push @opts, ('-N', $opts{jobname});
+    push @opts, ('-o', $opts{logdir}.'/$JOB_NAME.o$JOB_ID') if defined $opts{logdir};
   }
   # push @opts, qw(-sync yes) if $opts{sync};
   # push @opts, map { -hold_jid => $_ } @{$opts{holds}};
