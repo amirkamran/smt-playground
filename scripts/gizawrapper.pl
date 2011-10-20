@@ -20,7 +20,7 @@ binmode(STDERR, ":utf8");
 
 my $tempdir = "/tmp";
 my $parallel = 1; # run the two GIZA runs simultaneously
-my $dirsym = "grow-diag-final";
+my @dirsyms = ();
       # right, left   ... for unidirectional GIZA only
       # gdf, intersect, union   ... for two runs, symmetrized
 # my $splits = 0;
@@ -47,7 +47,7 @@ GetOptions(
   # Splits are not supported yet.
   # "splits=i" => \$splits, # assume the corpus has i sections
   # "split=i" => \$split, # and we should run only the (i-1)th of them
-  "dirsym=s" => \$dirsym, # direction or symmetrization method
+  "dirsym=s@" => \@dirsyms, # direction or symmetrization method
   "lfactors=s" => \$lfactors, # use only some of the left factors
   "rfactors=s" => \$rfactors, # use only some of the right factors
   "lcol=i" => \$lcol, # use a different column of a bicolumn input, not 0
@@ -85,32 +85,33 @@ For options see the source code.
   }
 } ($lfactors, $rfactors);
 
-# validate and interpret alignment
-my $alitype = undef;
-my $alidiag = "no";
-my $alifinal = "no";
-my $alifinaland = "no";
-if ($dirsym eq "left" || $dirsym eq "right") {
-  # ok
-} elsif ($dirsym eq "int" || $dirsym eq "intersect") {
-  $alitype = "intersect";
-} elsif ($dirsym eq "uni" || $dirsym eq "union") {
-  $alitype = "union";
-} elsif ($dirsym eq "g" || $dirsym eq "grow") {
-  $alitype = "grow";
-} elsif ($dirsym eq "gd" || $dirsym eq "grow-diag") {
-  $alitype = "grow";
-  $alidiag = "yes";
-} elsif ($dirsym eq "gdf" || $dirsym eq "grow-diag-final") {
-  $alitype = "grow";
-  $alidiag = "yes";
-  $alifinal = "yes";
-} elsif ($dirsym eq "gdfa" || $dirsym eq "grow-diag-final-and") {
-  $alitype = "grow";
-  $alidiag = "yes";
-  $alifinal = "yes";
-  $alifinaland = "yes";
+# normalize dirsyms
+my @normdirsyms = ();
+foreach my $d (@dirsyms) {
+  push @normdirsyms, split(/[, ]+/, $d);
 }
+@dirsyms = @normdirsyms;
+@dirsyms = ("grow-diag-final", "right", "left") if 0 == scalar @dirsyms;
+
+# check which symmetrizations do we need, validate symmetrization requests
+my %simple_needed = ();
+my %symmetrized_needed = ();
+foreach my $req (@dirsyms) {
+  if ($req eq "left" || $req eq "right" ) {
+    $simple_needed{$req} = 1;
+  } else {
+    my $symalargs = make_symal_args($req);
+    die "Bad symmetrization type: '$req'" if ! defined $symalargs;
+    $symmetrized_needed{$req} = $symalargs;
+    # any symmetrization needs both left and right alignments
+    $simple_needed{"left"} = 1;
+    $simple_needed{"right"} = 1;
+  }
+}
+
+
+die "Nothing to do. Use at least one --dirsym."
+  if 0 == scalar keys %simple_needed && 0 == scalar keys %symmetrized_needed;
 
 
 my $tmp;
@@ -167,7 +168,13 @@ print STDERR "Vocabulary sizes: "
   ."\n";
 my %vcb = ("a"=>$vcba, "b"=>$vcbb);
 
-if ($dirsym eq "left" || $dirsym eq "right") {
+my %alifilename = ();
+# maps alignment and symmetrization names to filenames
+
+my @simple_needed = keys %simple_needed;
+if (1 == scalar @simple_needed) {
+  # just one giza run needed
+  my $dirsym = shift @simple_needed;
   my ($usea, $useb);
   if ($dirsym eq "left") {
     ($usea, $useb) = ("a", "b");
@@ -178,6 +185,8 @@ if ($dirsym eq "left" || $dirsym eq "right") {
         $vcb{$usea}, $vcb{$useb},
         "$tmp/vcb-$usea", "$tmp/vcb-$useb",
         "$tmp/txt-$usea", "$tmp/txt-$useb");
+
+  # process the giza output and emit it (swapped if needed)
   open ALI, $alifile, or die "Can't read $alifile";
   my $cnt = 0;
   while (!eof(ALI)) {
@@ -204,10 +213,10 @@ if ($dirsym eq "left" || $dirsym eq "right") {
   }
   close ALI;
   print STDERR "My tempdir: $tmp\n";
-  print STDERR "Aligned and symmetrized $insents sentences, some may have truncated alignments.\n";
+  print STDERR "Aligned $insents sentences, some may have truncated alignments.\n";
   die "Lost some sentences" if $insents != $cnt;
 } else {
-  # run two gizas and symmetrize!
+  # run two gizas and possibly also symmetrizations
   my ($aliback, $alithere) = may_parallel(
     sub { 
       my ($usea, $useb) = ("a", "b");
@@ -224,11 +233,17 @@ if ($dirsym eq "left" || $dirsym eq "right") {
         "$tmp/txt-$usea", "$tmp/txt-$useb");
     },
   );
+
+  $alifilename{"left"} = "$tmp/out.left";
+  $alifilename{"right"} = "$tmp/out.right";
+  my $symalinfile = "$tmp/symalinput";
+
+  # convert GIZA output to symal input, and save also left and right files
   open ALITHERE, $alithere or die "Can't read $alithere";
   open ALIBACK, $aliback or die "Can't read $aliback";
-  open SYMAL, "| $SYMAL -alignment='$alitype' -diagonal='$alidiag'"
-              ." -final='$alifinal' -both='$alifinaland' > $tmp/symalout"
-         or die "Can't launch symal";
+  open SYMAL, ">$symalinfile" or die "Can't write $symalinfile";
+  open LEFT, ">$alifilename{left}" or die "Can't write $alifilename{left}";
+  open RIGHT, ">$alifilename{right}" or die "Can't write $alifilename{right}";
   my $cnt = 0;
   my @skip_at = ();
   while (!eof(ALITHERE)) {
@@ -241,49 +256,103 @@ if ($dirsym eq "left" || $dirsym eq "right") {
       print SYMAL "$sent_weight\n";
       print SYMAL $#a," $senta \# @a[1..$#a]\n";
       print SYMAL $#b," $sentb \# @b[1..$#b]\n";
+      for (my $i=0; $i<$#b; $i++) {
+        print LEFT $i, "-", $b[$i+1]-1, " " if $b[$i+1] > 0;
+      }
+      print LEFT "\n";
+      for (my $i=0; $i<$#a; $i++) {
+        print RIGHT $a[$i+1]-1, "-", $i, " " if $a[$i+1] > 0;
+      }
+      print RIGHT "\n";
     } else {
       # print STDERR "Skipping sent $cnt\n";
       push @skip_at, $cnt;
+      print LEFT "\n";
+      print RIGHT "\n";
     }
   }
   close ALITHERE;
   close ALIBACK;
   close SYMAL;
+  close LEFT;
+  close RIGHT;
 
-  open SYMAL, "$tmp/symalout" or die "Can't read $tmp/symalout";
-  $cnt = 0;
-  my $skipped = 0;
-  while(<SYMAL>) {
-    $cnt++;
-    while (defined $skip_at[0] && $skip_at[0] == $cnt) {
-      print STDERR "Printing blank line for skipped sent $cnt\n";
+  # run all symmetrizations and emit to our temp files including skipped lines
+  my $skipped = undef;
+  foreach my $dirsym (keys %symmetrized_needed) {
+    my $symaloutfn = "$tmp/out.$dirsym";
+    $alifilename{$dirsym} = $symaloutfn;
+    my $symalargs = $symmetrized_needed{$dirsym};
+
+    open SYMALOUT, ">$symaloutfn" or die "Can't write $symaloutfn";
+    open SYMAL, "$SYMAL $symalargs < $symalinfile |"
+      or die "Failed to run symal ($symalargs)";
+    $cnt = 0;
+    my @this_skip_at = @skip_at;
+    $skipped = 0;
+    while(<SYMAL>) {
+      $cnt++;
+      while (defined $this_skip_at[0] && $this_skip_at[0] == $cnt) {
+        print STDERR "Printing blank line for skipped sent $cnt\n";
+        $skipped++;
+        $cnt++;
+        shift @this_skip_at;
+        print SYMALOUT "\n"; # add extra line for the skipped sentence
+      }
+      shift(@$sentnums);
+      print SYMALOUT $_; # print the original line
+    }
+    $cnt++; # skip_at counts at +1
+    while (defined $this_skip_at[0] && $this_skip_at[0] == $cnt) {
+      # print STDERR "Printing blank line for skipped sent $cnt\n";
       $skipped++;
       $cnt++;
-      shift @skip_at;
+      shift @this_skip_at;
       print "\n"; # add extra line for the skipped sentence
     }
-    print shift(@$sentnums);
-    print "\t";
-    print; # print the original line
+    $cnt--; # skip_at counts at +1
+    close SYMAL;
+    close SYMALOUT;
+
+    die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
+      if $insents != $cnt;
   }
-  $cnt++; # skip_at counts at +1
-  while (defined $skip_at[0] && $skip_at[0] == $cnt) {
-    # print STDERR "Printing blank line for skipped sent $cnt\n";
-    $skipped++;
-    $cnt++;
-    shift @skip_at;
-    print "\n"; # add extra line for the skipped sentence
+
+  # merge all alignments into output
+  my @temphdls = map { my $fh;
+                       my $fn = $alifilename{$_};
+                       print STDERR "Will emit $fn\n";
+                       open $fh, $fn or die "Can't read $fn";
+                       $fh;
+                     } @dirsyms;
+  my $nr = 0;
+  while (!eof($temphdls[0])) {
+    $nr++;
+    for(my $i=0; $i<=$#temphdls; $i++) {
+      my $line = readline($temphdls[$i]);
+      if (! defined $line) {
+        die "$alifilename{$dirsyms[$i]}:$nr: File too short!" if $i != 0;
+      } else {
+        chomp $line;
+  
+        print $line;
+        if ($i == $#temphdls) {
+          print "\n";
+        } else {
+          print "\t";
+        }
+      }
+    }
   }
-  $cnt--; # skip_at counts at +1
-  close SYMAL;
+  # close all files
+  map { close $_ } @temphdls;
 
   print STDERR "My tempdir: $tmp\n";
-
   print STDERR "Aligned and symmetrized $insents sentences, skipped $skipped"
-    ." entries.\n";
-  die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @skip_at."
-    if $insents != $cnt;
+    ." blank lines.\n";
 }
+
+
 
 if ($keep) {
   print STDERR "Keeping $tmp, delete yourself.\n";
@@ -731,3 +800,37 @@ sub my_open {
   binmode $hdl, ":utf8";
   return $hdl;
 }
+
+sub make_symal_args {
+  # validate and interpret alignment
+  my $dirsym = shift;
+  my $alitype = undef;
+  my $alidiag = "no";
+  my $alifinal = "no";
+  my $alifinaland = "no";
+  if ($dirsym eq "int" || $dirsym eq "intersect") {
+    $alitype = "intersect";
+  } elsif ($dirsym eq "uni" || $dirsym eq "union") {
+    $alitype = "union";
+  } elsif ($dirsym eq "g" || $dirsym eq "grow") {
+    $alitype = "grow";
+  } elsif ($dirsym eq "gd" || $dirsym eq "grow-diag") {
+    $alitype = "grow";
+    $alidiag = "yes";
+  } elsif ($dirsym eq "gdf" || $dirsym eq "grow-diag-final") {
+    $alitype = "grow";
+    $alidiag = "yes";
+    $alifinal = "yes";
+  } elsif ($dirsym eq "gdfa" || $dirsym eq "grow-diag-final-and") {
+    $alitype = "grow";
+    $alidiag = "yes";
+    $alifinal = "yes";
+    $alifinaland = "yes";
+  } else {
+    return undef;
+  }
+  # construct symal args
+  return "-alignment='$alitype' -diagonal='$alidiag'"
+        ." -final='$alifinal' -both='$alifinaland'";
+}
+
