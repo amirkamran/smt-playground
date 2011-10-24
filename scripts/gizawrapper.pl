@@ -4,7 +4,15 @@
 # partially based on train-factored-phrase-model.perl from Moses
 #
 # Runs either on two files or on one file (column 1 and 2).
-# The output is always just the alignment, single column.
+# The output is several columns, one for each request symmetrization
+# (--dirsym=X) and two more columns for alignment quality as reported by GIZA:
+# first for the 'there' direction (ie. "a-b"), then for the 'back' direction
+# (ie. "b-a").
+#
+#   there = (from) left   = a-b  =    f(src)=tgt
+#   back  = (from) right  = b-a  =    f(tgt)=src
+#
+# Note that gdf* symmetrizations cannot be simply reversed.
 
 use strict;
 use utf8;
@@ -13,6 +21,7 @@ use Getopt::Long;
 use File::Temp qw /tempdir/;
 use threads;
 use File::Path;
+use File::Basename;
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
@@ -91,7 +100,7 @@ foreach my $d (@dirsyms) {
   push @normdirsyms, split(/[, ]+/, $d);
 }
 @dirsyms = @normdirsyms;
-@dirsyms = ("grow-diag-final", "right", "left") if 0 == scalar @dirsyms;
+@dirsyms = ("grow-diag-final", "left", "right") if 0 == scalar @dirsyms;
 
 # check which symmetrizations do we need, validate symmetrization requests
 my %simple_needed = ();
@@ -190,11 +199,10 @@ if (1 == scalar @simple_needed) {
   open ALI, $alifile, or die "Can't read $alifile";
   my $cnt = 0;
   while (!eof(ALI)) {
-    my ($leftwords, $rightwords, $aliarr, $senta, $sentb)
+    my ($leftwords, $rightwords, $aliarr, $senta, $sentb, $aliscore)
       = ReadAlign(*ALI);
     $cnt++;
-    print shift(@$sentnums);
-    print "\t";
+    # print shift(@$sentnums), "\t"; # don't emit sentence number
     # no way to check if got expected number of words left or right
     for(my $i=1; $i<scalar(@$aliarr); $i++) {
       if ($dirsym eq "left") {
@@ -209,6 +217,8 @@ if (1 == scalar @simple_needed) {
       }
       print " " if $i+1 <= @$aliarr;
     }
+    print "\t";
+    print $aliscore if defined $aliscore;
     print "\n";
   }
   close ALI;
@@ -234,20 +244,25 @@ if (1 == scalar @simple_needed) {
     },
   );
 
-  $alifilename{"left"} = "$tmp/out.left";
-  $alifilename{"right"} = "$tmp/out.right";
-  my $symalinfile = "$tmp/symalinput";
+  $alifilename{"left"} = "$tmp/out.left.gz";
+  $alifilename{"right"} = "$tmp/out.right.gz";
+  $alifilename{"aliscorefile"} = "$tmp/out.there-and-back-scores.gz";
+  # for direct and reverse gdfa
+  my @symalinfile = ("$tmp/symalinput.gz", "$tmp/symalinput-rev.gz");
 
   # convert GIZA output to symal input, and save also left and right files
   open ALITHERE, $alithere or die "Can't read $alithere";
   open ALIBACK, $aliback or die "Can't read $aliback";
-  open SYMAL, ">$symalinfile" or die "Can't write $symalinfile";
-  open LEFT, ">$alifilename{left}" or die "Can't write $alifilename{left}";
-  open RIGHT, ">$alifilename{right}" or die "Can't write $alifilename{right}";
+  *SYMAL = my_save($symalinfile[0]);
+  *SYMALREV = my_save($symalinfile[1]);
+  *LEFT = my_save($alifilename{"left"});
+  *RIGHT = my_save($alifilename{"right"});
+  *ALISCORES = my_save($alifilename{"aliscorefile"});
   my $cnt = 0;
   my @skip_at = ();
   while (!eof(ALITHERE)) {
-    my ($ok, $alitherearr, $alibackarr, $senta, $sentb, $sent_weight)
+    my ($ok, $alitherearr, $alibackarr, $senta, $sentb, $sent_weight,
+        $aliscorethere, $aliscoreback)
       = ReadBiAlign(undef,*ALITHERE,*ALIBACK);
     $cnt++;
     if ($ok) {
@@ -256,6 +271,9 @@ if (1 == scalar @simple_needed) {
       print SYMAL "$sent_weight\n";
       print SYMAL $#a," $senta \# @a[1..$#a]\n";
       print SYMAL $#b," $sentb \# @b[1..$#b]\n";
+      print SYMALREV "$sent_weight\n";
+      print SYMALREV $#b," $sentb \# @b[1..$#b]\n";
+      print SYMALREV $#a," $senta \# @a[1..$#a]\n";
       for (my $i=0; $i<$#b; $i++) {
         print LEFT $i, "-", $b[$i+1]-1, " " if $b[$i+1] > 0;
       }
@@ -264,28 +282,33 @@ if (1 == scalar @simple_needed) {
         print RIGHT $a[$i+1]-1, "-", $i, " " if $a[$i+1] > 0;
       }
       print RIGHT "\n";
+      print ALISCORES $aliscoreback, "\t", $aliscorethere, "\n";
+      # back =~ left, there =~ right
     } else {
       # print STDERR "Skipping sent $cnt\n";
       push @skip_at, $cnt;
       print LEFT "\n";
       print RIGHT "\n";
+      print ALISCORES "\n";
     }
   }
   close ALITHERE;
   close ALIBACK;
   close SYMAL;
+  close SYMALREV;
   close LEFT;
   close RIGHT;
+  close ALISCORES;
 
   # run all symmetrizations and emit to our temp files including skipped lines
   my $skipped = undef;
   foreach my $dirsym (keys %symmetrized_needed) {
-    my $symaloutfn = "$tmp/out.$dirsym";
+    my $symaloutfn = "$tmp/out.$dirsym.gz";
     $alifilename{$dirsym} = $symaloutfn;
-    my $symalargs = $symmetrized_needed{$dirsym};
+    my ($revsymal, $symalargs) = @{$symmetrized_needed{$dirsym}};
 
-    open SYMALOUT, ">$symaloutfn" or die "Can't write $symaloutfn";
-    open SYMAL, "$SYMAL $symalargs < $symalinfile |"
+    *SYMALOUT = my_save($symaloutfn);
+    open SYMAL, "zcat $symalinfile[$revsymal] | $SYMAL $symalargs |"
       or die "Failed to run symal ($symalargs)";
     $cnt = 0;
     my @this_skip_at = @skip_at;
@@ -300,6 +323,10 @@ if (1 == scalar @simple_needed) {
         print SYMALOUT "\n"; # add extra line for the skipped sentence
       }
       shift(@$sentnums);
+      if ($revsymal) {
+        # need to reverse symal's output
+        s/([0-9]+)-([0-9]+)/$2-$1/g;
+      }
       print SYMALOUT $_; # print the original line
     }
     $cnt++; # skip_at counts at +1
@@ -319,12 +346,13 @@ if (1 == scalar @simple_needed) {
   }
 
   # merge all alignments into output
-  my @temphdls = map { my $fh;
+  # append also the alignment scores stored in $alifilename{aliscorefile}
+  my @temphdls = map {
                        my $fn = $alifilename{$_};
                        print STDERR "Will emit $fn\n";
-                       open $fh, $fn or die "Can't read $fn";
+                       my $fh = my_open($fn);
                        $fh;
-                     } @dirsyms;
+                     } (@dirsyms, "aliscorefile");
   my $nr = 0;
   while (!eof($temphdls[0])) {
     $nr++;
@@ -367,9 +395,13 @@ sub ReadAlign{
   my($t1,$s1);
   my @a = ();
 
-  my $dummy=<$fd>; ## header
+  my $stats=<$fd>; ## header
   chomp($s1=<$fd>);
   chomp($t1=<$fd>);
+
+  my $aliscore = undef;
+  chomp $stats;
+  $aliscore = $1 if $stats =~ / : (.+)$/;
 
   #get target statistics
   my $n=1;
@@ -389,7 +421,7 @@ sub ReadAlign{
       $a[$j]=0 if !$a[$j];
   }
 
-  return ($n-1, $M,\@a, $s1, $t1);
+  return ($n-1, $M,\@a, $s1, $t1, $aliscore);
 }
 
 
@@ -397,7 +429,7 @@ sub ReadBiAlign{
   # based on giza2bal.pl by Marcello Federico; from Moses scripts
   my($fd0,$fd1,$fd2)=@_;
   my($dummy);
-  my($t1,$t2, $s1, $s2);
+  my($t1,$t2, $s1, $s2, $stats);
   my(@a, @b, $c);
 
   if (defined $fd0) {
@@ -407,13 +439,15 @@ sub ReadBiAlign{
   }
   $c=1 if !$c;
 
-  $dummy=<$fd1>; ## header
+  chomp($stats=<$fd1>); ## header
   chomp($s1=<$fd1>);
   chomp($t1=<$fd1>);
+  my $aliscore1 = $1 if $stats =~ / : (.+)$/;
 
-  $dummy=<$fd2>; ## header
+  chomp($stats=<$fd2>); ## header
   chomp($s2=<$fd2>);
   chomp($t2=<$fd2>);
+  my $aliscore2 = $1 if $stats =~ / : (.+)$/;
 
   @a=@b=();
 
@@ -445,7 +479,8 @@ sub ReadBiAlign{
   my @s2 = split / /, $s2;
   my $N=scalar @s2;
 
-  return (0, undef, undef, $s1, $s2, $c) if $m != ($M+1) || $n != ($N+1);
+  return (0, undef, undef, $s1, $s2, $c, $aliscore1, $aliscore2)
+    if $m != ($M+1) || $n != ($N+1);
 
   for (my $j=1;$j<$m;$j++){
       $a[$j]=0 if !$a[$j];
@@ -455,7 +490,7 @@ sub ReadBiAlign{
       $b[$i]=0 if !$b[$i];
   }
 
-  return (1, \@a, \@b, $s1, $s2, $c);
+  return (1, \@a, \@b, $s1, $s2, $c, $aliscore1, $aliscore2);
 }
 
 
@@ -801,13 +836,43 @@ sub my_open {
   return $hdl;
 }
 
+sub my_save {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDOUT, ":utf8");
+    return *STDOUT;
+  }
+
+  my $opn;
+  my $hdl;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/) {
+    $opn = "| gzip -c > '$f'";
+  } elsif ($f =~ /\.bz2$/) {
+    $opn = "| bzip2 > '$f'";
+  } else {
+    $opn = ">$f";
+  }
+  mkpath( dirname($f) );
+  open $hdl, $opn or die "Can't write to '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
+
 sub make_symal_args {
   # validate and interpret alignment
   my $dirsym = shift;
   my $alitype = undef;
+  my $revneeded = 0;
   my $alidiag = "no";
   my $alifinal = "no";
   my $alifinaland = "no";
+
+  if ($dirsym =~ /^rev/) {
+    $revneeded = 1;
+    $dirsym =~ s/^rev//;
+  }
+
   if ($dirsym eq "int" || $dirsym eq "intersect") {
     $alitype = "intersect";
   } elsif ($dirsym eq "uni" || $dirsym eq "union") {
@@ -830,7 +895,8 @@ sub make_symal_args {
     return undef;
   }
   # construct symal args
-  return "-alignment='$alitype' -diagonal='$alidiag'"
-        ." -final='$alifinal' -both='$alifinaland'";
+  return [ $revneeded,
+    "-alignment='$alitype' -diagonal='$alidiag'"
+    ." -final='$alifinal' -both='$alifinaland'"];
 }
 
