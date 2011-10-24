@@ -251,6 +251,7 @@ if (1 == scalar @simple_needed) {
   my @symalinfile = ("$tmp/symalinput.gz", "$tmp/symalinput-rev.gz");
 
   # convert GIZA output to symal input, and save also left and right files
+  print STDERR "Preparing for symal.\n";
   open ALITHERE, $alithere or die "Can't read $alithere";
   open ALIBACK, $aliback or die "Can't read $aliback";
   *SYMAL = my_save($symalinfile[0]);
