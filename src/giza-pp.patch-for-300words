@@ -1,0 +1,12 @@
+diff -ru giza-pp/GIZA++-v2/defs.h giza-pp.patched/GIZA++-v2/defs.h
+--- giza-pp/GIZA++-v2/defs.h	2011-09-24 20:05:08.000000000 +0200
++++ giza-pp.patched/GIZA++-v2/defs.h	2011-11-01 16:17:57.453410047 +0100
+@@ -28,7 +28,7 @@
+ const int TRANSFER_SIMPLE=1;
+ const int TRANSFER=0;
+ 
+-const unsigned int MAX_SENTENCE_LENGTH_ALLOWED=101;
++const unsigned int MAX_SENTENCE_LENGTH_ALLOWED=301;
+ const int TRAIN_BUFFER_SIZE= 50000;
+ //#ifdef WORDINDEX_WITH_4_BYTE
+ typedef unsigned int WordIndex;
