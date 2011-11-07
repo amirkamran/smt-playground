@@ -20,10 +20,12 @@ KONEC
 # often confuses eman in many ways.
 
 if [ ! -z "$INIT_ONLY" ]; then
-  echo "## Making sure you accept sourceforge's SSL certificate."
-  echo "## Please say (p)ermanently if you are asked anything:"
-  svn cat https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk/BUILD-INSTRUCTIONS.txt \
-	  > /dev/null || die "Can't access moses, no point in trying others"
+  if [ "$SKIP_IRSTLM" != yes ]; then
+    echo "## Making sure you accept sourceforge's SSL certificate."
+    echo "## Please say (p)ermanently if you are asked anything:"
+    svn cat https://irstlm.svn.sourceforge.net/svnroot/irstlm/trunk/README \
+  	  > /dev/null || die "Can't access irstlm repo, no point in trying others"
+  fi
 
   # Stop here if we are just initing ourselves
   exit 0
@@ -85,7 +87,7 @@ fi
 
 if [ "$SKIP_IRSTLM" != yes ]; then
   echo "Extracting irstlm"
-  svn co https://irstlm.svn.sourceforge.net/svnroot/irstlm/trunk irstlm
+  svn co https://irstlm.svn.sourceforge.net/svnroot/irstlm/trunk/ irstlm
   cd irstlm
   ./regenerate-makefiles.sh
   ./configure --prefix=\$(pwd) --enable-caching || die "irstlm configure failed"
@@ -120,13 +122,8 @@ else
 fi
 
 echo "Getting moses"
-if [ svn == svn ]; then
-  CLONE_CMD="svn co https://mosesdecoder.svn.sourceforge.net/svnroot/mosesdecoder/trunk moses"
-else
-  CLONE_CMD="git clone /net/work/projects/moses-ufal-git-repo moses"
-fi
-
-eval \$CLONE_CMD || die "Failed to obtain moses"
+git clone git://github.com/moses-smt/mosesdecoder.git moses \
+  || die "Failed to obtain moses"
 cd moses || die "Failed to chdir to moses"
 ./regenerate-makefiles.sh || die "moses reg.makefiles failed"
 WITH=""
