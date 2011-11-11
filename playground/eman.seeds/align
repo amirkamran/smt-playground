@@ -84,7 +84,7 @@ $GIZAWRAPPER \
   --bindir=../$BINARIES/bin \
   --dirsym=$ALISYM \
   --drop-bad-lines \
-| cut -f2 \
+| cut -f1 \
 | gzip -c > alignment.gz \
 || die "Failed to align the corpus"
 
