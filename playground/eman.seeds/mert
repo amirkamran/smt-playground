@@ -175,7 +175,7 @@ case "$MERTPRG" in
 zmert)
   cat << KONEC > command.mert
 $ZMERTMOSES \
-  --working-dir=mert-tuning \\
+  --working-dir=\`pwd\`/mert-tuning \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
@@ -192,7 +192,7 @@ KONEC
 mert)
   cat << KONEC > command.mert
 $MERTMOSES \
-  --working-dir=mert-tuning \\
+  --working-dir=\`pwd\`/mert-tuning \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
