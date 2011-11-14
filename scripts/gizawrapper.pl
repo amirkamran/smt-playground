@@ -35,6 +35,7 @@ my @dirsyms = ();
 # my $splits = 0;
 # my $split = undef;
 my $bindir = "/no/bindir/specified";
+my $mgizadir = undef;
 my $lfactors = undef;
 my $rfactors = undef;
 my $lcol = 0;
@@ -51,6 +52,7 @@ print STDERR "ARGS: @ARGV\n";
 GetOptions(
   "parallel!" => \$parallel,
   "bindir=s" => \$bindir,
+  "mgizadir=s" => \$mgizadir,
   "tempdir=s" => \$tempdir,
   "continue-dir=s" => \$continue_dir, # continue working in this directory
   # Splits are not supported yet.
@@ -65,10 +67,21 @@ GetOptions(
   "keep" => \$keep,
   "giza-flags=s" => \$giza_extra_options,
 ) or exit 1;
-my $MKCLS = "$bindir/mkcls";
-my $GIZA = "$bindir/GIZA++";
-my $SNT2COOC = "$bindir/snt2cooc.out";
-my $SYMAL = "$bindir/symal";
+
+my ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL, $MERGE );
+
+if (defined $mgizadir) {
+  $MKCLS = "$mgizadir/bin/mkcls";
+  $GIZA = "$mgizadir/bin/mgiza";
+  $SNT2COOC = "$mgizadir/bin/snt2cooc";
+  $SYMAL = "$mgizadir/bin/symal";
+  $MERGE = "$mgizadir/scripts/merge_alignment.py";
+} else {
+  $MKCLS = "$bindir/mkcls";
+  $GIZA = "$bindir/GIZA++";
+  $SNT2COOC = "$bindir/snt2cooc.out";
+  $SYMAL = "$bindir/symal";
+}
 
 map { die "Can't run $_" if ! -x $_ } ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL );
 
@@ -738,7 +751,13 @@ sub run_giza {
   numberize_and_merge($vcba, $infile_a, $vcbb, $infile_b, $traincorpus);
 
   my $cooc_file = "$dir/$a-$b.cooc";
-  my $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
+  my $snt2cooc_call;
+  
+  if (defined $mgizadir) {
+    $snt2cooc_call = "$SNT2COOC $cooc_file $vcba_file $vcbb_file $traincorpus";
+  } else {
+    $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
+  }
   safesystem($snt2cooc_call) or die;
 
   my %GizaDefaultOptions = 
@@ -773,6 +792,11 @@ sub run_giza {
   }
   
   safesystem("$GIZA $GizaOptions >&2");
+
+  if (defined $mgizadir) {
+    safesystem("$MERGE $dir/$a-$b.A3.final.part* > $outfile");
+  }
+  
   die "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
     if ! -e $outfile;
   return $outfile;
