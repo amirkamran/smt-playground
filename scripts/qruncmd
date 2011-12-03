@@ -264,7 +264,11 @@ if ($opts{"continue"}) {
   
   if (!defined $opts{splits}) {
     if (defined $opts{"split-to-size"}) {
-      $opts{splits} = int($totlines / $opts{"split-to-size"});
+      if ($totlines <= $opts{"split-to-size"}) {
+        $opts{splits} = 1;
+      } else {
+        $opts{splits} = int($totlines / $opts{"split-to-size"});
+      }
     } else {
       $opts{splits} = $opts{jobs};
     }
