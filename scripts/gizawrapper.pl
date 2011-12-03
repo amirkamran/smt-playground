@@ -542,6 +542,10 @@ sub restrict_factors_and_section {
     die "$infile:$nl:Empty line" if $_ eq "";
     print OUTF $_."\n";
     $sents++;
+    # Verbose output so that the user can quickly check
+    if ($sents < 3) {
+      print STDERR "Preview, s$sents: $_\n";
+    }
   }
   close INF;
   close OUTF;
@@ -600,10 +604,16 @@ sub restrict_factors_and_section_from_twocolfile {
       die if !$drop_bad_lines;
       next;
     }
+    # Main output files
     print OUTFA $senta."\n";
     print OUTFB $sentb."\n";
     push @sentnums, $nl;
     $sents++;
+    # Verbose output so that the user can quickly check
+    if ($sents < 3) {
+      print STDERR "Preview A, s$sents: $senta\n";
+      print STDERR "Preview B, s$sents: $sentb\n";
+    }
   }
   close INF;
   close OUTFA;
