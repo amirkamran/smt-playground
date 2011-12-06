@@ -805,6 +805,7 @@ sub run_giza {
 
   if (defined $mgizadir) {
     safesystem("$MERGE $dir/$a-$b.A3.final.part* > $outfile");
+    safesystem("rm $dir/$a-$b.A3.final.part*");
   }
   
   die "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
