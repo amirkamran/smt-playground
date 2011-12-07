@@ -758,17 +758,25 @@ sub run_giza {
   }
 
   my $traincorpus = "$dir/$a-$b.snt";
-  numberize_and_merge($vcba, $infile_a, $vcbb, $infile_b, $traincorpus);
+  if (-e $traincorpus) {
+    print STDERR "  $traincorpus seems finished, reusing.\n";
+  } else {
+    numberize_and_merge($vcba, $infile_a, $vcbb, $infile_b, $traincorpus);
+  }
 
   my $cooc_file = "$dir/$a-$b.cooc";
   my $snt2cooc_call;
   
-  if (defined $mgizadir) {
-    $snt2cooc_call = "$SNT2COOC $cooc_file $vcba_file $vcbb_file $traincorpus";
+  if (-e $cooc_file) {
+    print STDERR "  $cooc_file seems finished, reusing.\n";
   } else {
-    $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
+    if (defined $mgizadir) {
+      $snt2cooc_call = "$SNT2COOC $cooc_file $vcba_file $vcbb_file $traincorpus";
+    } else {
+      $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
+    }
+    safesystem($snt2cooc_call) or die;
   }
-  safesystem($snt2cooc_call) or die;
 
   my %GizaDefaultOptions = 
       (p0 => .999 ,
