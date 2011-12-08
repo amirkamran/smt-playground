@@ -29,6 +29,7 @@ binmode(STDERR, ":utf8");
 
 my $tempdir = "/tmp";
 my $parallel = 1; # run the two GIZA runs simultaneously
+my $compress = 0; # gzip everything
 my @dirsyms = ();
       # right, left   ... for unidirectional GIZA only
       # gdf, intersect, union   ... for two runs, symmetrized
@@ -51,6 +52,7 @@ print STDERR "ARGS: @ARGV\n";
 
 GetOptions(
   "parallel!" => \$parallel,
+  "compress!" => \$compress,
   "bindir=s" => \$bindir,
   "mgizadir=s" => \$mgizadir,
   "tempdir=s" => \$tempdir,
@@ -209,7 +211,7 @@ if (1 == scalar @simple_needed) {
         "$tmp/txt-$usea", "$tmp/txt-$useb");
 
   # process the giza output and emit it (swapped if needed)
-  open ALI, $alifile, or die "Can't read $alifile";
+  *ALI = my_open($alifile);
   my $cnt = 0;
   while (!eof(ALI)) {
     my ($leftwords, $rightwords, $aliarr, $senta, $sentb, $aliscore)
@@ -265,8 +267,8 @@ if (1 == scalar @simple_needed) {
 
   # convert GIZA output to symal input, and save also left and right files
   print STDERR "Preparing for symal.\n";
-  open ALITHERE, $alithere or die "Can't read $alithere";
-  open ALIBACK, $aliback or die "Can't read $aliback";
+  *ALITHERE = my_open($alithere);
+  *ALIBACK = my_open($aliback);
   *SYMAL = my_save($symalinfile[0]);
   *SYMALREV = my_save($symalinfile[1]);
   *LEFT = my_save($alifilename{"left"});
@@ -750,7 +752,7 @@ sub run_giza {
     if ! -e $vcbb_file.".classes";
 
   my $outprefix = "$dir/$a-$b";
-  my $outfile = "$outprefix.A3.final";
+  my $outfile = get_filename("$outprefix.A3.final");
 
   if (-e $outfile) {
     print STDERR "  $outfile seems finished, reusing.\n";
@@ -764,7 +766,7 @@ sub run_giza {
     numberize_and_merge($vcba, $infile_a, $vcbb, $infile_b, $traincorpus);
   }
 
-  my $cooc_file = "$dir/$a-$b.cooc";
+  my $cooc_file = get_filename("$dir/$a-$b.cooc");
   my $snt2cooc_call;
   
   if (-e $cooc_file) {
@@ -773,7 +775,8 @@ sub run_giza {
     if (defined $mgizadir) {
       $snt2cooc_call = "$SNT2COOC $cooc_file $vcba_file $vcbb_file $traincorpus";
     } else {
-      $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
+      my $redirect = $compress ? " | gzip -c " : "";
+      $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus $redirect > $cooc_file";
     }
     safesystem($snt2cooc_call) or die;
   }
@@ -802,6 +805,8 @@ sub run_giza {
           $GizaDefaultOptions{$option} = $value;
       }
   }
+
+  $GizaDefaultOptions{"use_gzip"} = 1 if $compress;
 
   my $GizaOptions;
   foreach my $option (sort keys %GizaDefaultOptions){
@@ -944,3 +949,10 @@ sub make_symal_args {
     ." -final='$alifinal' -both='$alifinaland'"];
 }
 
+# append '.gz' to first arg if -compress is set
+sub get_filename
+{
+  my $name = shift;
+  $name .= ".gz" if $compress;
+  return $name;
+}

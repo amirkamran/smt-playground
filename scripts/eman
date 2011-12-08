@@ -53,6 +53,7 @@ my %expand_abbrev = qw(
   dups duplicates
   guess guess
   collect collect
+  sel select
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -508,6 +509,11 @@ if ($cmd eq "abolish") {
     save("eman.status", "ABOLISHED");
     chdir_to_maindir();
   }
+  exit $waserror;
+}
+
+if ($cmd eq "select") {
+  $waserror = ! select_steps(@ARGV);
   exit $waserror;
 }
 
@@ -1580,6 +1586,48 @@ sub all_steps {
     }
   }
   return keys %steps_to_list;
+}
+
+# compare steps by timestamp
+sub compare_steps {
+  my ( $first, $second ) = @_;
+  $first = s/.*\.//;
+  $second = s/.*\.//;
+  return $first <=> $second;
+}
+
+sub select_steps {
+  my @args = @_;
+  my @steps = sort { compare_steps($a, $b) } all_steps();
+  my $error = (scalar @args > 0) ? 0 : 1;
+  while (@args) {
+    my $cmd = shift @args;
+    given ($cmd) {
+      when "d" { @steps = grep { chomp(load_status($_)) eq 'DONE' } @steps; }
+      when "dp" { @steps = grep { chomp(load_status($_)) eq 'DONE' } @steps; }
+      when "f" { @steps = grep { chomp(load_status($_)) eq 'FAILED' } @steps; }
+      when "l" {
+        my $n = shift @args;
+        @steps = @steps[0 .. $n];
+      }
+      when "lh" { @steps = @steps[0 .. 10]; }
+      when "s" {
+        my $status = shift @args;
+        @steps = grep { chomp(load_status($_)) eq $status } @steps;
+      }
+      when "t" {
+        my $type = shift @args;
+        @steps = grep { get_steptype($_) eq $type } @steps;
+      }
+      default { $error = 1; }
+    }
+  }
+
+  if ($error) {
+    mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
+  } else {
+    return 1;
+  }
 }
 
 sub try_load {
