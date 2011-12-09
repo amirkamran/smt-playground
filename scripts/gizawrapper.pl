@@ -343,6 +343,7 @@ if (1 == scalar @simple_needed) {
         # need to reverse symal's output
         s/([0-9]+)-([0-9]+)/$2-$1/g;
       }
+      s/.*{##} // if defined $mgizadir; # mgiza also outputs the sentences
       print SYMALOUT $_; # print the original line
     }
     $cnt++; # skip_at counts at +1
@@ -752,7 +753,8 @@ sub run_giza {
     if ! -e $vcbb_file.".classes";
 
   my $outprefix = "$dir/$a-$b";
-  my $outfile = get_filename("$outprefix.A3.final");
+  my $outfile = "$outprefix.A3.final";
+  $outfile .= '.gz' if $compress;
 
   if (-e $outfile) {
     print STDERR "  $outfile seems finished, reusing.\n";
@@ -766,19 +768,23 @@ sub run_giza {
     numberize_and_merge($vcba, $infile_a, $vcbb, $infile_b, $traincorpus);
   }
 
-  my $cooc_file = get_filename("$dir/$a-$b.cooc");
+  my $cooc_file = "$dir/$a-$b.cooc";
   my $snt2cooc_call;
   
-  if (-e $cooc_file) {
+  if (-e $cooc_file || -e "$cooc_file.gz") {
+    $cooc_file .= '.gz' if ! -e $cooc_file;
     print STDERR "  $cooc_file seems finished, reusing.\n";
   } else {
     if (defined $mgizadir) {
       $snt2cooc_call = "$SNT2COOC $cooc_file $vcba_file $vcbb_file $traincorpus";
     } else {
-      my $redirect = $compress ? " | gzip -c " : "";
-      $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus $redirect > $cooc_file";
+      $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
     }
     safesystem($snt2cooc_call) or die;
+    if ($compress) {
+      safesystem("gzip $cooc_file");
+      $cooc_file .= '.gz';
+    }
   }
 
   my %GizaDefaultOptions = 
@@ -817,7 +823,8 @@ sub run_giza {
   safesystem("$GIZA $GizaOptions >&2");
 
   if (defined $mgizadir) {
-    safesystem("$MERGE $dir/$a-$b.A3.final.part* > $outfile");
+    my $redirect = $compress ? " | gzip -c " : "";
+    safesystem("$MERGE $dir/$a-$b.A3.final.part* $redirect > $outfile");
     safesystem("rm $dir/$a-$b.A3.final.part*");
   }
   
@@ -947,12 +954,4 @@ sub make_symal_args {
   return [ $revneeded,
     "-alignment='$alitype' -diagonal='$alidiag'"
     ." -final='$alifinal' -both='$alifinaland'"];
-}
-
-# append '.gz' to first arg if -compress is set
-sub get_filename
-{
-  my $name = shift;
-  $name .= ".gz" if $compress;
-  return $name;
 }
