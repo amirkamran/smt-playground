@@ -29,7 +29,7 @@ binmode(STDERR, ":utf8");
 
 my $tempdir = "/tmp";
 my $parallel = 1; # run the two GIZA runs simultaneously
-my $compress = 0; # gzip everything
+my $compress = 1; # gzip everything 
 my @dirsyms = ();
       # right, left   ... for unidirectional GIZA only
       # gdf, intersect, union   ... for two runs, symmetrized
