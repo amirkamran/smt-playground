@@ -37,6 +37,7 @@ my @dirsyms = ();
 # my $split = undef;
 my $bindir = "/no/bindir/specified";
 my $mgizadir = undef;
+my $mgizacores = undef;
 my $lfactors = undef;
 my $rfactors = undef;
 my $lcol = 0;
@@ -55,6 +56,7 @@ GetOptions(
   "compress!" => \$compress,
   "bindir=s" => \$bindir,
   "mgizadir=s" => \$mgizadir,
+  "mgizacores=i" => \$mgizacores,
   "tempdir=s" => \$tempdir,
   "continue-dir=s" => \$continue_dir, # continue working in this directory
   # Splits are not supported yet.
@@ -83,6 +85,12 @@ if (defined $mgizadir) {
   $GIZA = "$bindir/GIZA++";
   $SNT2COOC = "$bindir/snt2cooc.out";
   $SYMAL = "$bindir/symal";
+}
+
+if (defined $mgizadir && ! defined $mgizacores) {
+  chomp($mgizacores = `cat /proc/cpuinfo | grep CPU | wc -l`);
+  print STDERR "Guessed $mgizacores CPU cores.\n";
+  $mgizacores /= 2 if $parallel;
 }
 
 map { die "Can't run $_" if ! -x $_ } ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL );
@@ -813,6 +821,7 @@ sub run_giza {
   }
 
   $GizaDefaultOptions{"use_gzip"} = 1 if $compress;
+  $GizaDefaultOptions{"ncpu"} = $mgizacores if defined $mgizadir;
 
   my $GizaOptions;
   foreach my $option (sort keys %GizaDefaultOptions){
