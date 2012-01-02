@@ -47,12 +47,14 @@ my %expand_abbrev = qw(
   reindex reindex
   redo redo
   wait wait
-  setvar setvar
   fail fail
   outdate outdate
   dups duplicates
   guess guess
   collect collect
+  defvar defvar
+  bash-loadvars bash-loadvars
+  succeed succeed
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -75,6 +77,7 @@ my $show_vars = 0;
 my $show_status = 0;
 my $show_log = 0;
 my $show_jobid = 0;
+my $list_only_steps_with_no_users = 0;
 my $show_disk_usage = 0;
 my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
@@ -124,6 +127,7 @@ my %options = (
   "status!" => \$show_status,
   "jobid!" => \$show_jobid,
   "log!" => \$show_log,
+  "only-leaves|only-leafs!" => \$list_only_steps_with_no_users,
   "disk-usage|dus!" => \$show_disk_usage,
   "read-only|readonly!" => \$readonly,
   "s|subst=s@" => \$subst,
@@ -182,6 +186,7 @@ if ($help || !defined $command) {
   exit $waserror;
 }
 if ($list_options) {
+  # show all possible command line options of eman
   foreach my $o (keys %options) {
     $o=~s/=.$//;
     foreach my $oo (split /\|/,$o) {
@@ -192,6 +197,80 @@ if ($list_options) {
 }
 
 my $lock = undef;
+
+## Helper commands for bash scripting of seeds, these do not manipulate
+## index at all
+
+my %is_helper_command = map {($_,1)} qw/defvar bash-loadvars/;
+if ($is_helper_command{$command}) {
+  if ($command eq "bash-loadvars") {
+    my $varsstr = try_load("eman.vars");
+    die "eman.vars not set; Did you use 'eman defvar ...' before?"
+      if !defined $varsstr;
+    print $varsstr."\n";
+  } else {
+    # assuming a sequence of defvar commands
+    # construct the file eman.vars
+    my $vars; # ->{varname}->{'opt'}->{'help'} = ...
+              # ->{varname}->{'val'} = ...the value from the environment...
+              # ->{varname}->{'defined'} = 1  ... always
+    my %deps = (); # the dependencies we've learned about
+    my @cmds = @ARGV;
+    unshift @cmds, "defvar";
+    while (scalar @cmds) {
+      my $cmd = shift @cmds;
+      die "Expected only 'defvar' commands, got: $cmd" if $cmd ne "defvar";
+      my $varname = shift @cmds;
+      $vars->{$varname}->{'defined'} = 1;
+      $vars->{$varname}->{'val'} = $ENV{$varname};
+      # load all flags like 'help', 'default', ...
+      while (scalar @cmds && $cmds[0] ne "defvar") {
+        my $opt = shift @cmds;
+	my ($optname, $optval) = split /=/, $opt, 2;
+        $vars->{$varname}->{'opt'}->{$optname} = $optval;
+      }
+    }
+    # check all the vars and prepare the eman.vars file
+    my $varshelp = "The step needs the following variables:\n";
+      # the info to show upon error
+    my $varsfile = "";
+    foreach my $varname (sort keys %$vars) {
+      my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
+      $thisvarhelp = "" if !defined $thisvarhelp;
+      my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
+      my $usevalue = $vars->{$varname}->{'val'};
+      $usevalue = $thisvardefault if ! defined $usevalue;
+
+      $varshelp .= "  $varname ... $thisvarhelp"
+        .(defined $thisvardefault ? " [$thisvardefault]" : "")
+	."\n";
+      if (defined $usevalue) {
+        # ok, we got the value
+	$varsfile .= "$varname=".var_bash_escape($usevalue)."\n";
+	my $type = $vars->{$varname}->{'opt'}->{'type'};
+	if (defined $type) {
+	  # do some consistency checks and other bits
+	  if ($type eq "reqstep") {
+	    $deps{$usevalue} = 1;
+	  }
+	}
+      } else {
+        # value missed
+	$varshelp .= "    !!! $varname was not defined.\n";
+	$waserror = 1;
+      }
+    }
+    if ($waserror) {
+      print STDERR $varshelp;
+    } else {
+      # save the vars file
+      save("eman.vars", $varsfile);
+      save("eman.deps", join("\n", sort {$a cmp $b} keys %deps));
+    }
+  }
+  exit $waserror;
+}
+## End of helper commands for bash scripting.
 
 my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
   # for "tb | clone"
@@ -471,6 +550,17 @@ if ($command eq "fail") {
     my $step = guess_step($key);
     chdir_to_stepdir($step);
     save("eman.status", "FAILED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
+if ($command eq "succeed") {
+  mydie "usage: eman succeed SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "DONE");
     chdir_to_maindir();
   }
   exit $waserror;
@@ -1190,6 +1280,10 @@ sub list {
   }
   foreach my $s (sort { if (-e $a && -e $b) { -C $b <=> -C $a } else { -1 } }
                  keys %steps_to_list) {
+    if ($list_only_steps_with_no_users) {
+      my $users = $idx->{'USED_BY'}->{$s};
+      next if defined $users;
+    }
     print_short($s);
   }
   my $ok = 1;
@@ -1707,6 +1801,14 @@ sub field {
   chomp $l;
   my @f = split /\t/, $l;
   return $f[$i];
+}
+
+sub var_bash_escape {
+  my $s = shift;
+  return $s if $s =~ /^[-[:alnum:]_+,]*$/;
+  $s =~ s/\\/\\\\/g;
+  $s =~ s/"/\\"/g;
+  return $s;
 }
 
 
