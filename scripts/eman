@@ -458,7 +458,7 @@ if ($cmd eq "clone") {
   if (defined $step) {
     # clone the single dir
     my $srcstep = guess_step($step); # happily guess the exact step
-    my $srcvarsstr = load_vars($srcstep);
+    my $srcvarsstr = load_vars_str($srcstep);
     # decide which vars should be cloned
     # for vars that are already defined in the environment, use the value
     # from the environment, not the scenario
@@ -786,8 +786,8 @@ sub init_by_recipe {
   # env. vars override the recipe (for usecases like V=x eman redo)
   @newvars = map { my ($varname, $val) = split /=/, $_, 2;
                    defined $ENV{$varname}
-                     ? "$varname=$ENV{$varname}" # prefer environment
-		         # TODO  escape the value!
+                     ? "$varname=".var_bash_escape($ENV{$varname})
+		         # prefer environment
                      : $_; # use the value from the scenario
                  } @newvars;
 
@@ -808,6 +808,7 @@ sub init_by_recipe {
   if (defined $knownsteps) {
     my @usable = ();
     foreach my $k (@$knownsteps) {
+      print STDERR "Considering old: $k\n" if $debug;
       next if $avoid{$k};
         # an explicit wish to ignore this step
       if ($reuse{$k}) {
@@ -1309,7 +1310,7 @@ sub print_short {
 sub print_vars {
   my $prefix = shift;
   my $s = shift;
-  my $v = load_vars($s);
+  my $v = load_vars_str($s);
   return if !defined $v;
   foreach my $l (split /\n/, $v) {
     # perform substitutions, if defined and step not reused
@@ -1338,7 +1339,7 @@ sub traceback_to_recipe {
   mydie "Can't create traceback, $step nonexistent."
     if ! -e relative_to_maindir($step);
   my $recipe = { "name" => $step,
-                 "vars" => [ split /\n/, load_vars($step) ],
+                 "vars" => [ split /\n/, load_vars_str($step) ],
                  "deps" => [],
                };
   my $deps = load_depsarr($step);
@@ -1472,7 +1473,7 @@ sub load_depsarr {
   return $depsarr;
 
 }
-sub load_vars {
+sub load_vars_str {
   my $step = shift;
   return try_load(relative_to_maindir("$step/eman.vars"));
 }
@@ -1634,7 +1635,7 @@ sub saveidx {
 sub get_hash_from_dir {
   my $exp = shift;
 
-  my @vars = load($exp."/eman.vars");
+  my @vars = split /\n/, load($exp."/eman.vars");
   #my @deps = split /\n/, load($exp."/eman.deps");
   return get_hash_from_vars_deps($exp, \@vars, undef);
 }
@@ -1648,6 +1649,7 @@ sub get_hash_from_vars_deps {
   @usevars = 
     grep { ! /^[^=]+=''$/ } grep { ! /^[^=]+=""$/ } # skip empty-valued vars
     grep { /^[^=]+=./ }  # skip empty-valued vars
+    grep { /./ } # skip empty lines
     map  {s/$name/---SELF---/g; $_}
     @usevars;
   my $hash =  md5_hex(sort @usevars);
