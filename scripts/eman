@@ -1720,7 +1720,7 @@ sub compare_steps {
 sub select_steps {
   my @args = @_;
   my @steps = sort { compare_steps($a, $b) } grep { $_ !~ m/jid/ } all_steps();
-  my $error = (scalar @args > 0) ? 0 : 1;
+  my $error = 0; # select without arguments lists all steps
   while (@args) {
     my $cmd = shift @args;
     given ($cmd) {
