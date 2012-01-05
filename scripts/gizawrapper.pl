@@ -331,43 +331,47 @@ if (1 == scalar @simple_needed) {
     $alifilename{$dirsym} = $symaloutfn;
     my ($revsymal, $symalargs) = @{$symmetrized_needed{$dirsym}};
 
-    *SYMALOUT = my_save($symaloutfn);
-    open SYMAL, "zcat $symalinfile[$revsymal] | $SYMAL $symalargs |"
-      or die "Failed to run symal ($symalargs)";
-    $cnt = 0;
-    my @this_skip_at = @skip_at;
-    $skipped = 0;
-    while(<SYMAL>) {
-      $cnt++;
+    if (-e $symaloutfn) {
+      print STDERR "Reusing exising $symaloutfn\n";
+    } else {
+      *SYMALOUT = my_save($symaloutfn);
+      open SYMAL, "zcat $symalinfile[$revsymal] | $SYMAL $symalargs |"
+        or die "Failed to run symal ($symalargs)";
+      $cnt = 0;
+      my @this_skip_at = @skip_at;
+      $skipped = 0;
+      while(<SYMAL>) {
+        $cnt++;
+        while (defined $this_skip_at[0] && $this_skip_at[0] == $cnt) {
+          print STDERR "Printing blank line for skipped sent $cnt\n";
+          $skipped++;
+          $cnt++;
+          shift @this_skip_at;
+          print SYMALOUT "\n"; # add extra line for the skipped sentence
+        }
+        shift(@$sentnums);
+        if ($revsymal) {
+          # need to reverse symal's output
+          s/([0-9]+)-([0-9]+)/$2-$1/g;
+        }
+        s/.*{##} // if defined $mgizadir; # mgiza also outputs the sentences
+        print SYMALOUT $_; # print the original line
+      }
+      $cnt++; # skip_at counts at +1
       while (defined $this_skip_at[0] && $this_skip_at[0] == $cnt) {
-        print STDERR "Printing blank line for skipped sent $cnt\n";
+        # print STDERR "Printing blank line for skipped sent $cnt\n";
         $skipped++;
         $cnt++;
         shift @this_skip_at;
-        print SYMALOUT "\n"; # add extra line for the skipped sentence
+        print "\n"; # add extra line for the skipped sentence
       }
-      shift(@$sentnums);
-      if ($revsymal) {
-        # need to reverse symal's output
-        s/([0-9]+)-([0-9]+)/$2-$1/g;
-      }
-      s/.*{##} // if defined $mgizadir; # mgiza also outputs the sentences
-      print SYMALOUT $_; # print the original line
+      $cnt--; # skip_at counts at +1
+      close SYMAL;
+      close SYMALOUT;
+  
+      die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
+        if $insents != $cnt;
     }
-    $cnt++; # skip_at counts at +1
-    while (defined $this_skip_at[0] && $this_skip_at[0] == $cnt) {
-      # print STDERR "Printing blank line for skipped sent $cnt\n";
-      $skipped++;
-      $cnt++;
-      shift @this_skip_at;
-      print "\n"; # add extra line for the skipped sentence
-    }
-    $cnt--; # skip_at counts at +1
-    close SYMAL;
-    close SYMALOUT;
-
-    die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
-      if $insents != $cnt;
   }
 
   # merge all alignments into output
