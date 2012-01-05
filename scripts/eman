@@ -219,7 +219,7 @@ if ($command eq "addtag") {
     my $step = guess_step($key);
     my $oldwd = chdir_to_stepdir($step);
     my $oldtag = load_tag($step);
-    save("eman.tag", $oldtag." ".$newtag);
+    save("eman.tag", (defined $oldtag ? $oldtag." ".$newtag : $newtag));
     chdir($oldwd) or die "Failed to chdir back to $oldwd";
   }
   exit $waserror;
