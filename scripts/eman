@@ -55,6 +55,8 @@ my %expand_abbrev = qw(
   defvar defvar
   bash-loadvars bash-loadvars
   succeed succeed
+  addtag addtag
+  add-tag addtag
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -198,80 +200,97 @@ if ($list_options) {
 
 my $lock = undef;
 
-## Helper commands for bash scripting of seeds, these do not manipulate
-## index at all
+## Helper commands for bash scripting of seeds
+## These commands do not need and manipulate index at all
 
-my %is_helper_command = map {($_,1)} qw/defvar bash-loadvars/;
-if ($is_helper_command{$command}) {
-  if ($command eq "bash-loadvars") {
-    my $varsstr = try_load("eman.vars");
-    die "eman.vars not set; Did you use 'eman defvar ...' before?"
-      if !defined $varsstr;
-    print $varsstr."\n";
-  } else {
-    # assuming a sequence of defvar commands
-    # construct the file eman.vars
-    my $vars; # ->{varname}->{'opt'}->{'help'} = ...
-              # ->{varname}->{'val'} = ...the value from the environment...
-              # ->{varname}->{'defined'} = 1  ... always
-    my %deps = (); # the dependencies we've learned about
-    my @cmds = @ARGV;
-    unshift @cmds, "defvar";
-    while (scalar @cmds) {
-      my $cmd = shift @cmds;
-      die "Expected only 'defvar' commands, got: $cmd" if $cmd ne "defvar";
-      my $varname = shift @cmds;
-      $vars->{$varname}->{'defined'} = 1;
-      $vars->{$varname}->{'val'} = $ENV{$varname};
-      # load all flags like 'help', 'default', ...
-      while (scalar @cmds && $cmds[0] ne "defvar") {
-        my $opt = shift @cmds;
-	my ($optname, $optval) = split /=/, $opt, 2;
-        $vars->{$varname}->{'opt'}->{$optname} = $optval;
-      }
-    }
-    # check all the vars and prepare the eman.vars file
-    my $varshelp = "The step needs the following variables:\n";
-      # the info to show upon error
-    my $varsfile = "";
-    foreach my $varname (sort keys %$vars) {
-      my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
-      $thisvarhelp = "" if !defined $thisvarhelp;
-      my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
-      my $usevalue = $vars->{$varname}->{'val'};
-      $usevalue = $thisvardefault if ! defined $usevalue;
+if ($command eq "bash-loadvars") {
+  my $varsstr = try_load("eman.vars");
+  mydie "eman.vars not set; Did you use 'eman defvar ...' before?"
+    if !defined $varsstr;
+  print $varsstr."\n";
+  exit 0;
+}
 
-      $varshelp .= "  $varname ... $thisvarhelp"
-        .(defined $thisvardefault ? " [$thisvardefault]" : "")
-	."\n";
-      if (defined $usevalue) {
-        # ok, we got the value
-	$varsfile .= "$varname=".var_bash_escape($usevalue)."\n";
-	my $type = $vars->{$varname}->{'opt'}->{'type'};
-	if (defined $type) {
-	  # do some consistency checks and other bits
-	  if ($type eq "reqstep") {
-	    $deps{$usevalue} = 1;
-	  }
-	}
-      } else {
-        # value missed
-	$varshelp .= "    !!! $varname was not defined.\n";
-	$waserror = 1;
-      }
+if ($command eq "addtag") {
+  mydie "usage: eman addtag TAG [SPEC ...]" if 0 == scalar @ARGV;
+  my $newtag = shift;
+  push @ARGV, "." if 0 == scalar @ARGV; # operate on cwd if nothing given
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    my $oldwd = chdir_to_stepdir($step);
+    my $oldtag = load_tag($step);
+    save("eman.tag", $oldtag." ".$newtag);
+    chdir($oldwd) or die "Failed to chdir back to $oldwd";
+  }
+  exit $waserror;
+}
+
+if ($command eq "defvar") {
+  # assuming a sequence of defvar commands
+  # construct the file eman.vars
+  my $vars; # ->{varname}->{'opt'}->{'help'} = ...
+            # ->{varname}->{'val'} = ...the value from the environment...
+            # ->{varname}->{'defined'} = 1  ... always
+  my %deps = (); # the dependencies we've learned about
+  my @cmds = @ARGV;
+  unshift @cmds, "defvar";
+  while (scalar @cmds) {
+    my $cmd = shift @cmds;
+    die "Expected only 'defvar' commands, got: $cmd" if $cmd ne "defvar";
+    my $varname = shift @cmds;
+    $vars->{$varname}->{'defined'} = 1;
+    $vars->{$varname}->{'val'} = $ENV{$varname};
+    # load all flags like 'help', 'default', ...
+    while (scalar @cmds && $cmds[0] ne "defvar") {
+      my $opt = shift @cmds;
+      my ($optname, $optval) = split /=/, $opt, 2;
+      $vars->{$varname}->{'opt'}->{$optname} = $optval;
     }
-    if ($waserror) {
-      print STDERR $varshelp;
+  }
+  # check all the vars and prepare the eman.vars file
+  my $varshelp = "The step needs the following variables:\n";
+    # the info to show upon error
+  my $varsfile = "";
+  foreach my $varname (sort keys %$vars) {
+    my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
+    $thisvarhelp = "" if !defined $thisvarhelp;
+    my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
+    my $usevalue = $vars->{$varname}->{'val'};
+    $usevalue = $thisvardefault if ! defined $usevalue;
+
+    $varshelp .= "  $varname ... $thisvarhelp"
+      .(defined $thisvardefault ? " [$thisvardefault]" : "")
+      ."\n";
+    if (defined $usevalue) {
+      # ok, we got the value
+      $varsfile .= "$varname=".var_bash_escape($usevalue)."\n";
+      my $type = $vars->{$varname}->{'opt'}->{'type'};
+      if (defined $type) {
+        # do some consistency checks and other bits
+        if ($type eq "reqstep") {
+          $deps{$usevalue} = 1;
+        }
+      }
     } else {
-      # save the vars file
-      save("eman.vars", $varsfile);
-      save("eman.deps", join("\n", sort {$a cmp $b} keys %deps));
+      # value missed
+      $varshelp .= "    !!! $varname was not defined.\n";
+      $waserror = 1;
     }
+  }
+  if ($waserror) {
+    print STDERR $varshelp;
+  } else {
+    # save the vars file
+    save("eman.vars", $varsfile);
+    save("eman.deps", join("\n", sort {$a cmp $b} keys %deps));
   }
   exit $waserror;
 }
 ## End of helper commands for bash scripting.
 
+
+## Decide if we will lock the index
+my $oldwd = chdir_to_maindir();
 my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
   # for "tb | clone"
 if ($readonly || $autoreadonly
@@ -286,10 +305,8 @@ if ($readonly || $autoreadonly
     if !defined $lock;
 }
 
-# update md5 indices
+# Load and update index, possibly also saving it
 my $idx;
-
-my $oldwd = chdir_to_maindir();
 if ($cmd eq "reindex" || $reindex) {
   # do not load any saved values
 } else {
@@ -313,6 +330,7 @@ foreach my $s (@dirs) {
 }
 saveidx($idx) if ! $readonly;
 chdir($oldwd) or die "Failed to chdir back to $oldwd";
+## End of updating the index
 
 exit 0 if $cmd eq "reindex"; # the job has been done already
 
