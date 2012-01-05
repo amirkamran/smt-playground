@@ -11,6 +11,7 @@
 
 use strict;
 use warnings;
+use 5.010;
 use YAML;
 use Carp;
 use Term::ANSIColor;
@@ -55,6 +56,7 @@ my %expand_abbrev = qw(
   defvar defvar
   bash-loadvars bash-loadvars
   succeed succeed
+  sel select
   addtag addtag
   add-tag addtag
 );
@@ -616,6 +618,11 @@ if ($cmd eq "abolish") {
     save("eman.status", "ABOLISHED");
     chdir_to_maindir();
   }
+  exit $waserror;
+}
+
+if ($cmd eq "select") {
+  $waserror = ! select_steps(@ARGV);
   exit $waserror;
 }
 
@@ -1696,6 +1703,82 @@ sub all_steps {
   return keys %steps_to_list;
 }
 
+# compare steps by timestamp
+sub compare_steps {
+  my ( $first, $second ) = @_;
+  $first =~ s/.*\.([^\/]*)\/*/$1/;
+  $second =~ s/.*\.([^\/]*)\/*/$1/;
+  my ( $first_date, $first_time ) = split '-', $first;
+  my ( $second_date, $second_time ) = split '-', $second;
+  if ($second_date != $first_date) {
+  	return $second_date <=> $first_date;
+  } else {
+  	return $second_time <=> $first_time;
+  }
+}
+
+sub select_steps {
+  my @args = @_;
+  my @steps = sort { compare_steps($a, $b) } grep { $_ !~ m/jid/ } all_steps();
+  my $error = (scalar @args > 0) ? 0 : 1;
+  while (@args) {
+    my $cmd = shift @args;
+    given ($cmd) {
+      when ("d") { @steps = grep { load_status($_) eq 'DONE' } @steps; }
+      when ("f") { @steps = grep { load_status($_) eq 'FAILED' } @steps; }
+      when ("l") {
+        my $n = shift @args;
+		if (! $n) {
+		  $error = 1;
+		  last;
+		}
+        @steps  = @steps[0 .. $n - 1];
+      }
+      when ("lh") { @steps = @steps[0 .. 9]; }
+      when ("s") {
+        my $status = shift @args;
+		if (! $status) {
+		  $error = 1;
+		  last;
+		}
+        @steps = grep { load_status($_) eq $status } @steps;
+      }
+      when ("t") {
+        my $type = shift @args;
+		if (! $type) {
+		  $error = 1;
+		  last;
+		}
+        @steps = grep { get_steptype($_) eq $type } @steps;
+      }
+      when ("v") {
+        my $varexpr = shift @args;
+		if (! $varexpr) {
+		  $error = 1;
+		  last;
+		}
+        my @new_steps;
+        for my $step (@steps) {
+          my $varsstr = load_vars_str($step);
+          next if ! $varsstr;
+          my @vars = split /\n/, $varsstr;
+          push @new_steps, $step if grep { $_ eq $varexpr } @vars;
+        }
+        @steps = @new_steps;
+      }
+      default { $error = 1; }
+    }
+  }
+
+  if ($error) {
+    mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
+  } else {
+  	print join("\n", @steps), "\n";
+    return 1;
+  }
+}
+
+
 sub try_load {
   my $f = shift;
   my $h = try_open($f);
@@ -1881,6 +1964,9 @@ eman, experiment manager
 
   eman wait SPEC ...         # block until the jobs are FAILED or DONE
                              # die if FAILED nor DONE is reachable
+  
+  eman select QUERY          # output steps matching the QUERY;
+                             #   query syntax is documented below
 
 SPEC is a text snippet capable of identifying a step uniquely.
 You can even use '.' and '`pwd`' as SPEC.
@@ -2033,6 +2119,24 @@ eman stat `qstat | cut -c 1-8 | skip 2`
   # the skip command is available here:
   #   http://www.cuni.cz/~obo/textutils/#skip
 
+=head2 Eman `select' query syntax
+
+You can use the following filters in eman select:
+
+  t <type>         ... only steps of type <type>
+  l <count>        ... latest <count> steps
+  lh               ... latest 10 steps
+  d                ... only DONE steps
+  f                ... only FAILED steps
+  s <status>       ... only steps with status <status>
+  v <VAR>=<value>  ... only steps with variable <VAR> that
+                       has value <value>
+
+The result depends on the order of fitlers, e.g.:
+
+eman select t mert l 10 # output last 10 merts
+eman select l 10 t mert # output merts that were among 10 latest steps
+
 =head2 If a Cluster Node Completely Dies
 
 A cluster node completely dies when (your) job takes too much RAM. Assuming
@@ -2042,8 +2146,6 @@ is probably what you want to do:
   qdel 2472256                         # remove it from the cluster
   eman fail 2472256                    # mark it FAILED for eman
   eman redo 2472256 --start --mem 20g  # re-run it with some more memory
-
-
 
 =head1 COMMON PROBLEMS
 
