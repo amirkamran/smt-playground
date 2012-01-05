@@ -12,7 +12,7 @@ case `hostname` in
   if pwd | grep wmt > /dev/null ; then
     suff=`pwd | sed 's/.*\(wmt[0-9]*\).*/\1/'`
   fi
-  echo UFAL$suff
+  echo $USER-$suff
   ;;
 x[0-9][0-9] )
   echo JHU

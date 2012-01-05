@@ -9,7 +9,7 @@ set -o pipefail
 
 [ ! -z "$1" ] || die "usage: $0 exp-identifier [dev|test]"
 
-e=`manager.pl --guess $1`
+e=`eman guess $1`
 src=$2
 
 [ ! -z "$src" ] || src=test   # default to test
