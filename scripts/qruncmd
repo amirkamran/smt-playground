@@ -382,9 +382,9 @@ KONEC
   print STDERR "Jobs are now running. Check progress yourself.\n";
 }
 
+my $err = 0;
 if ($opts{join}) {
   print STDERR "Joining the outputs...\n";
-  my $err = 0;
   foreach my $i (1..$opts{splits}) {
     if (-e "$tempoutdir/out.$i.ok") {
       # fine, copy the file
@@ -397,23 +397,27 @@ if ($opts{join}) {
       $err++;
     }
   }
-  if ($err || $opts{'debug'}) {
+  if ($err) {
     print STDERR "$err jobs failed. Their output has been ignored.\n";
+  } else {
+    print STDERR "Done.\n";
+  }
+  if ($err || $opts{'debug'}) {
     print STDERR "Leaving outputs directory intact, delete yourself:\n   $tempoutdir\n";
     print STDERR "Leaving temp input file intact, delete yourself:\n   $tempfile_to_delete\n"
       if defined $tempfile_to_delete;
-    exit 1;
   } else {
     # remove temporary directory
     rmtree($tempoutdir);
     unlink($tempfile_to_delete) if defined $tempfile_to_delete;
   }
-  print STDERR "Done.\n";
 }
 
 my $stoptime = time();
 my $diff = $stoptime-$starttime;
 printf STDERR "Took: %.0fs (%s)\n", $diff, humantimediff($diff);
+
+exit 1 if $err;
 
 
 sub start_job {
