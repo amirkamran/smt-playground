@@ -110,8 +110,30 @@ if (defined $entry && $entry->{"factind"} == -1) {
   exit 0;
 }
 
+# need to construct corpus from parts
+
+# read rules from makecorpus.rules
+my $rulestext = load_file("makecorpus.rules");
+
+my $rule;
+# $rule->{outlang}->{outfacts} = {
+#   inlang=>input language
+#   infacts=>input factors
+# }
+
+
+
+# first ensure we can prepare all necessary parts
+# allow direct application factor->factor rules
+# allow also indirect manyfactors->manyfactors + restrict (in two eman steps)
+#   ... and recursively search for the prerequisites
+
+
+
 
 sub add_entry {
+  # Add a corpus to the index avoiding duplicates.
+  # This *could* be restricted by some other variables like eman select...
   my ($corpname, $lang, $fact, $newentry) = @_;
 
   print STDERR "Adding $corpname/$lang+$fact: "

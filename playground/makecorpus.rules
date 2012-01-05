@@ -1,0 +1,6 @@
+# rules for constructing
+# inlng	infacts       	outlng	outfacts      	command
+*      	form          	*     	lc            	lowercase.pl
+*      	lc            	*     	lcstem4       	stem4.pl
+cs_txt 	untoken       	csNm  	form|lemma|tag	runtreex.sh XXXscenario.scen
+csNm   	form|lemma|tag	csNmT1	form|lemma|tag	retokenize_factored
