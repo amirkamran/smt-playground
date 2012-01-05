@@ -648,9 +648,9 @@ sub collect {
       my $step = $f; $step =~ s/\/.*//;
       my $res = undef;
       if ($regexorcmd =~ /^CMD:(.*)\$\$(.*)/) {
-		# e.g. "CMD: du -sh $$"
-		$res = `$1 $f $2`;
-		chomp $res;
+        # e.g. "CMD: du -sh $$"
+        $res = `$1 $f $2`;
+        chomp $res;
         $res =~ s/\n+/ /;
       }
       elsif ($regexorcmd =~ /^CMD: *(.*)/) {
@@ -812,7 +812,7 @@ sub init_by_recipe {
   @newvars = map { my ($varname, $val) = split /=/, $_, 2;
                    defined $ENV{$varname}
                      ? "$varname=".var_bash_escape($ENV{$varname})
-		         # prefer environment
+                 # prefer environment
                      : $_; # use the value from the scenario
                  } @newvars;
 
@@ -1711,9 +1711,9 @@ sub compare_steps {
   my ( $first_date, $first_time ) = split '-', $first;
   my ( $second_date, $second_time ) = split '-', $second;
   if ($second_date != $first_date) {
-  	return $second_date <=> $first_date;
+    return $second_date <=> $first_date;
   } else {
-  	return $second_time <=> $first_time;
+    return $second_time <=> $first_time;
   }
 }
 
@@ -1728,35 +1728,35 @@ sub select_steps {
       when ("f") { @steps = grep { load_status($_) eq 'FAILED' } @steps; }
       when ("l") {
         my $n = shift @args;
-		if (! $n) {
-		  $error = 1;
-		  last;
-		}
+        if (! $n) {
+          $error = 1;
+          last;
+        }
         @steps  = @steps[0 .. $n - 1];
       }
       when ("lh") { @steps = @steps[0 .. 9]; }
       when ("s") {
         my $status = shift @args;
-		if (! $status) {
-		  $error = 1;
-		  last;
-		}
+        if (! $status) {
+          $error = 1;
+          last;
+        }
         @steps = grep { load_status($_) eq $status } @steps;
       }
       when ("t") {
         my $type = shift @args;
-		if (! $type) {
-		  $error = 1;
-		  last;
-		}
+        if (! $type) {
+          $error = 1;
+          last;
+        }
         @steps = grep { get_steptype($_) eq $type } @steps;
       }
       when ("v") {
         my $varexpr = shift @args;
-		if (! $varexpr) {
-		  $error = 1;
-		  last;
-		}
+        if (! $varexpr) {
+          $error = 1;
+          last;
+        }
         my @new_steps;
         for my $step (@steps) {
           my $varsstr = load_vars_str($step);
@@ -1773,7 +1773,7 @@ sub select_steps {
   if ($error) {
     mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
   } else {
-  	print join("\n", @steps), "\n";
+    print join("\n", @steps), "\n";
     return 1;
   }
 }
