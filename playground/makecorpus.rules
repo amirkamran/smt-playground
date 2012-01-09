@@ -1,6 +1,12 @@
-# rules for constructing
+# rules for constructing other languages and factors
+# if the inlang is '*', then the outlang must be '*' as well
+#
+# The command field may contain $INLANG, $INFACTS, $OUTLANG, $OUTFACTS to know
+# the first four fields on the line.
+#
 # inlng	infacts       	outlng	outfacts      	command
 *      	form          	*     	lc            	lowercase.pl
-*      	lc            	*     	lcstem4       	stem4.pl
+*      	form|lemma    	*     	stc           	XXXsupervised_truecase.pl
+*      	lc            	*     	lcstem4       	../../scripts/stem_factor.pl --stem=4
 cs_txt 	untoken       	csNm  	form|lemma|tag	runtreex.sh XXXscenario.scen
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	retokenize_factored

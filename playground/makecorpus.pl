@@ -2,14 +2,26 @@
 # This script cooperates with eman.seeds/makecorpus (and possibly other eman
 # seeds) and constructs factored corpus of a given specification within eman
 # framework of steps.
+# Upon success, it prints just one line with three columns:
+#   stepname ... the name of the eman step, where the wished corpus was created
+#   filename ... the file in the step directory
+#   column   ... the column in the file (if -1, take the whole file)
 
 use strict;
+use warnings;
 
 use Getopt::Long;
 use File::Path;
 use File::Basename;
 
 my $verbose = 0;
+my $dry_run = 1;
+my $fakeno = 1; # the step number when for dry-runs
+
+GetOptions(
+  "dry-run|dryrun!" => \$dry_run,
+  "verbose!" => \$verbose,
+) or exit 1;
 
 my $descr = shift;
 
@@ -26,6 +38,10 @@ Allowed corpus descriptions:
 ";
   exit 1;
 }
+
+# constants:
+my $yes_derived = 1;
+my $not_derived = 0;
 
 
 # first construct an index of corpora bits
@@ -59,37 +75,58 @@ while (<INDFILES>) {
   my $text = load_file($fn);
   foreach my $line (split /\n/, $text) {
     next if $line eq "";
-    my ($filename, $column, $corpname, $lang, $facts, $linecount)
-      = split /\t/, $line;
+    my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
+      = split /\t/, trim($line);
     die "Bad entry $fn: $line" if $linecount !~ /^[0-9]+$/;
-
-    add_entry($corpname, $lang, $facts, {
-      "stepname" => $stepname,
-      "filename" => $filename,
-      "column" => $column,
-      "factind" => -1,
-      "linecount" => $linecount,
-    });
-
-    if ($facts =~ /[+\|]/) {
-      # add also individual factors to support construction of the corpus
-      my $factind = -1;
-      foreach my $fact (split /[+\|]/, $facts) {
-        $factind++;
-        add_entry($corpname, $lang, $fact, {
-          "stepname" => $stepname,
-          "filename" => $filename,
-          "column" => $column,
-          "factind" => $factind,
-          "linecount" => $linecount,
-        });
-      }
-    }
+    add_entry_incl_entries_of_separate_factors(
+      $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
   }
 }
 close INDFILES;
 
+
 exit 1 if $err;
+
+
+# read rules from makecorpus.rules
+my $rulestext = load_file("makecorpus.rules");
+my $rules;
+# $rules->{outlang}->{outfacts} = {
+#   inlang=>input language
+#   infacts=>input factors
+#   command=>the command to run
+# }
+foreach my $line (split /\n/, $rulestext) {
+  next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+  my ($inlang, $infacts, $outlang, $outfacts, $command)
+    = split /\t/, trim($line);
+  if ($inlang eq "*" xor $outlang eq "*") {
+    print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
+    $err++;
+  }
+  # for the construction of all factors at once
+  add_rule($outlang, $outfacts, {
+    'inlang'=>$inlang,
+    'infacts'=>$infacts,
+    'command'=>$command,
+  });
+  if ($outfacts =~ /[+\|]/) {
+    # add also rules for two-step construction
+    my $f = 0;
+    foreach my $outfact (split /[+\|]/, $outfacts) {
+      add_rule($outlang, $outfact, {
+        'inlang'=>$outlang,
+        'infacts'=>$outfacts,
+        # 'command'=>"reduce_factors.pl $f",
+            # no command, this will be lazy-extracted
+      });
+      $f++;
+    }
+  }
+}
+
+exit 1 if $err;
+
 
 my $corp;
 my $lang;
@@ -102,45 +139,189 @@ if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
  die "Bad descr format: $descr";
 }
 
-# now check if the whole corpus wish happens to be ready
-my $entry = $index->{$corp}->{$lang}->{$facts};
-if (defined $entry && $entry->{"factind"} == -1) {
-  print $entry->{"stepname"}, "\t", $entry->{"filename"}, "\t",
-    $entry->{"column"}, "\n";
-  exit 0;
+
+
+my ($stepname, $filename, $column)
+  = build_exact_factors($corp, $lang, $facts);
+print $stepname, "\t", $filename, "\t", $column, "\n";
+  # 
+  # or --dump or anything...
+
+sub build_exact_factors {
+  # runs lazy_build and extracts the required factor if necessary
+  my $entry = lazy_build($corp, $lang, $facts);
+  if ($entry->{"factind"} == -1) {
+    # great, the given column contains exactly the factors we asked for
+    return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
+  } else {
+    # not quite, we need to restrict the given factor
+    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUNCOMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", [$entry->{"stepname"}]);
+    my $filename = "corpus.txt.gz";
+    my $column = -1;
+    return ($stepname, $filename, $column);
+  }
 }
 
-# need to construct corpus from parts
 
-# read rules from makecorpus.rules
-my $rulestext = load_file("makecorpus.rules");
+sub lazy_build {
+  # build the specified corpus
+  # return stepname, filename, column and -1 (if the requested factors are
+  # exactly there) or the factor number of the *single* factor to pick
+  my ($corp, $lang, $facts) = @_;
 
-my $rule;
-# $rule->{outlang}->{outfacts} = {
-#   inlang=>input language
-#   infacts=>input factors
-# }
+  # check if the whole corpus happens to be ready
+  my $entry = $index->{$corp}->{$lang}->{$facts};
+  return $entry if defined $entry;
+    # here is the laziness: $entry->{factind} may be != -1, i.e. asking to
+    # extract a factor
+
+  # the required sequence of factors, or the single factor is not available,
+  # we must build it
+
+  # if we're asked for a single factor, we know we must use rules
+  # if we're asked for multiple factors, there *may* be a chance it's just a
+  # different permutation of the existing ones...
+  #   but we will simply lazy_build all necessary factors and combine them
+
+  # need to construct corpus from parts
+  if ($facts =~ /[\|+]/) {
+    # check if this set of factors can be constructed using a rule
+    return build_using_rules($corp, $lang, $facts)
+      if defined $rules->{$lang}->{$facts};
+
+    # no, there is no rule for this particular set of factors, construct by
+    # combination
+    my $linecount = undef;
+    # construct by combining corpus parts
+    my @parts = ();
+    my @deps = (); # which steps should we wait for
+    foreach my $fact (split /[\|+]/, $facts) {
+      # recursion:
+      my $subentry = lazy_build($corp, $lang, $fact);
+
+      die "Incompatible linecount when constructing $corp/$lang+$facts from parts: $linecount vs. $subentry->{linecount}, the latter for $fact"
+        if defined $linecount && $linecount != $subentry->{"linecount"};
+      $linecount = $subentry->{"linecount"};
+
+      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
+        # XXX should ask eman to locate the stepdir
+      push @parts, "$pathname $subentry->{column} $subentry->{factind}";
+      push @deps, $subentry->{"stepname"};
+    }
+    # build a step that combines all these
+
+    my $stepname = run_or_fake_corpman_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", \@deps);
+    my $filename = "corpus.txt.gz";
+    my $column = -1;
+
+    # add to index for further use 
+    return add_entry_incl_entries_of_separate_factors(
+      $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
+  }
+
+  # $facts is now just a single factor and we surely know we need to search
+  # rules to construct it
+  return build_using_rules($corp, $lang, $facts);
+}
+
+sub build_using_rules {
+  my ($corp, $lang, $facts) = @_;
+
+  my $rule = $rules->{$lang}->{$facts};
+  $rule = $rules->{'*'}->{$facts} if ! defined $rule;
+  die "No rule to make $lang+$facts."
+    if !defined $rule;
+
+  my $useinlang = $rule->{'inlang'};
+  $useinlang = $lang if $useinlang eq "*";
+  # build the input corpus for the rule
+  my $subentry = lazy_build($corp, $useinlang, $rule->{"infacts"});
+
+  return lazy_build($corp, $lang, $facts)
+    if !defined $rule->{'command'};
+
+  # apply the rule
+  my $stepname = run_or_fake_corpman_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", [$subentry->{"stepname"}]);
+  my $filename = "corpus.txt.gz";
+  my $column = -1;
+  my $linecount = $subentry->{"linecount"};
+
+  # add to index for further use 
+  return add_entry_incl_entries_of_separate_factors(
+    $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
+}
+
+
+sub run_or_fake_corpman_step {
+  my $command = shift;
+  my $deps = shift; # deps to wait for
+
+  if ($dry_run) {
+    my $fakeoutstep = "s.fake.".($fakeno++);
+    print STDERR $fakeoutstep, ": ", $command, "\n";
+    return $fakeoutstep;
+  }
+}
 
 
 
-# first ensure we can prepare all necessary parts
-# allow direct application factor->factor rules
-# allow also indirect manyfactors->manyfactors + restrict (in two eman steps)
-#   ... and recursively search for the prerequisites
+sub add_rule {
+  my ($outlang, $outfacts, $newrule) = @_;
+  my $oldrule = $rules->{$outlang}->{$outfacts};
+  if (defined $oldrule) {
+    print STDERR "Conflicting rules to produce $outlang+$outfacts: "
+      ."from $newrule->{inlang}+$newrule->{infacts}"
+      ." vs. "
+      ."from $oldrule->{inlang}+$oldrule->{infacts}\n";
+    $err = 1;
+  } else {
+    $rules->{$outlang}->{$outfacts} = $newrule;
+  }
+}
 
 
 
+sub add_entry_incl_entries_of_separate_factors {
+  my ($corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived) = @_;
+  my $newentry = {
+    "stepname" => $stepname,
+    "filename" => $filename,
+    "column" => $column,
+    "factind" => -1,
+    "linecount" => $linecount,
+  };
+  add_entry($corpname, $lang, $facts, $newentry, $mayderived);
+
+  if ($facts =~ /[+\|]/) {
+    # add also individual factors to support construction of the corpus
+    my $factind = -1;
+    foreach my $fact (split /[+\|]/, $facts) {
+      $factind++;
+      add_entry($corpname, $lang, $fact,
+        {
+          "stepname" => $stepname,
+          "filename" => $filename,
+          "column" => $column,
+          "factind" => $factind,
+          "linecount" => $linecount,
+        },
+        $yes_derived
+        );
+    }
+  }
+  return $newentry;
+}
 
 sub add_entry {
   # Add a corpus to the index avoiding duplicates.
   # This *could* be restricted by some other variables like eman select...
-  my ($corpname, $lang, $fact, $newentry) = @_;
+  my ($corpname, $lang, $fact, $newentry, $isderived) = @_;
 
   print STDERR "Adding $corpname/$lang+$fact: "
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ."\n" if $verbose;
   my $oldentry = $index->{$corpname}->{$lang}->{$fact};
-  if (defined $oldentry) {
+  if (defined $oldentry && !$isderived) {
     print STDERR "Conflicing sources for $corpname/$lang+$fact: "
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ." vs "
@@ -231,4 +412,13 @@ sub save_file {
   my $h = my_save($fn);
   print $h $text;
   close $h;
+}
+
+sub trim {
+  my $s = shift;
+  $s =~ s/ +\t/\t/g;
+  $s =~ s/\t +/\t/g;
+  $s =~ s/^ +//;
+  $s =~ s/ +$//;
+  return $s;
 }
