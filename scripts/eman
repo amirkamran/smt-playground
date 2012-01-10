@@ -1624,9 +1624,17 @@ sub guess_step_from_hashdate {
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
   if (-d $key) {
     # directory name explicitly given, check if it is indeed a step directory
+    # this branch is also used for '.', i.e. the current step dir...
     my $step = basename(File::Spec->rel2abs($key));
     return $step if -e $key."/eman.seed";
   }
+  # try to interpret the stepname relative to main dir
+  my $dkey = relative_to_maindir($key);
+  if (-d $dkey) {
+    my $step = basename(File::Spec->rel2abs($dkey));
+    return $step if -e $dkey."/eman.seed";
+  }
+  # scan index if there is such a step
   my %stepnames = map { ($_,1) }
                   map { s/(\Q$dirprefix\E[^\.]+\.).*/$1/; $_; }
                   grep { /^\Q$dirprefix/ } # this is a forward index
