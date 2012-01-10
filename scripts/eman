@@ -30,6 +30,7 @@ my $eman = $Bin."/".basename($0); # full path to ourselves
 # command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
   ls list
+  sel select
   cl clone
   tb traceback
   tr traceback
@@ -56,9 +57,9 @@ my %expand_abbrev = qw(
   defvar defvar
   bash-loadvars bash-loadvars
   succeed succeed
-  sel select
-  addtag addtag
-  add-tag addtag
+  addtag add-tag
+  adddep add-deps
+  add-dep add-deps
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -205,7 +206,7 @@ my $lock = undef;
 ## Helper commands for bash scripting of seeds
 ## These commands do not need and manipulate index at all
 
-if ($command eq "bash-loadvars") {
+if ($cmd eq "bash-loadvars") {
   my $varsstr = try_load("eman.vars");
   mydie "eman.vars not set; Did you use 'eman defvar ...' before?"
     if !defined $varsstr;
@@ -213,8 +214,8 @@ if ($command eq "bash-loadvars") {
   exit 0;
 }
 
-if ($command eq "addtag") {
-  mydie "usage: eman addtag TAG [SPEC ...]" if 0 == scalar @ARGV;
+if ($cmd eq "add-tag") {
+  mydie "usage: eman add-tag TAG [SPEC ...]" if 0 == scalar @ARGV;
   my $newtag = shift;
   push @ARGV, "." if 0 == scalar @ARGV; # operate on cwd if nothing given
   foreach my $key (@ARGV) {
@@ -227,7 +228,22 @@ if ($command eq "addtag") {
   exit $waserror;
 }
 
-if ($command eq "defvar") {
+if ($cmd eq "add-deps") {
+  my $step = shift;
+  mydie "usage: eman add-deps SPEC DEP1 DEP2 ..." if ! defined $step;
+  my $s = guess_step($step); # guess the exact step
+  my $olddeps = load_depsarr($s);
+  my %deps = map { ($_, 1 ) } @$olddeps; # convert to hash
+  foreach my $dep (@ARGV) {
+    my $d = guess_step($dep);
+    $deps{$d} = 1; # add this among the deps
+  }
+  chdir_to_stepdir($s);
+  save("eman.deps", join("\n", sort {$a cmp $b} keys %deps));
+  exit $waserror;
+}
+
+if ($cmd eq "defvar") {
   # assuming a sequence of defvar commands
   # construct the file eman.vars
   my $vars; # ->{varname}->{'opt'}->{'help'} = ...
@@ -926,7 +942,7 @@ sub init {
         }
       }
     } else {
-      save("eman.deps", ""); # save blank tag
+      save("eman.deps", ""); # save blank dependencies
     }
 
     # vars: must exist (blank vars make no sense)
@@ -1908,10 +1924,10 @@ sub field {
 
 sub var_bash_escape {
   my $s = shift;
-  return $s if $s =~ /^[-[:alnum:]_+,]*$/;
+  return $s if $s =~ /^[-[:alnum:]._+,]*$/;
   $s =~ s/\\/\\\\/g;
   $s =~ s/"/\\"/g;
-  return $s;
+  return '"'.$s.'"';
 }
 
 
