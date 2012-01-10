@@ -1,0 +1,9 @@
+## English to m-layer
+Util::SetGlobal language=cs
+Read::Sentences from=-
+
+W2A::CS::Tokenize
+W2A::CS::TagMorce
+W2A::CS::FixMorphoErrors
+
+Write::Factored outcols=csm flags=escape_space:join_spaced_numbers

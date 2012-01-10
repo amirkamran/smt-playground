@@ -7,4 +7,4 @@ W2A::EN::FixTokenization
 W2A::EN::TagMorce
 W2A::EN::FixTags
 W2A::EN::Lemmatize
-Write::Factored outcols=enm
+Write::Factored outcols=enm flags=escape_space:join_spaced_numbers

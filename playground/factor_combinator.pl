@@ -43,6 +43,7 @@ while (1) {
     my $line = readline($fname_to_stream{$fname});
     die "$fname:$nr:File too short!"
       if !defined $line && $got_a_line;
+    next if !defined $line;
     $got_a_line = 1;
     chomp($line);
     my $splitline = undef;
@@ -79,6 +80,7 @@ while (1) {
   }
   print "\n";
 }
+print STDERR "Done.\n";
 
 foreach my $stream (values %fname_to_stream) {
   close $stream;

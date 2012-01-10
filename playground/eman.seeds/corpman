@@ -22,10 +22,19 @@ eman defvar RUN_COMMAND default='NO-COMMAND' \
      defvar OUTLANG help='output language name' \
      defvar OUTFACTS help='output factors sequence' \
      defvar OUTLINECOUNT help='forward check: expected number of lines' \
+     defvar DEPS default='' help='steps we rely on' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
+
+# add our prerequisites
+eman add-deps . $DEPS
+
+# other vars, not influencing exact output
+JOBS=${JOBS:-30}
+SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-50000}
+  # even for big corpora, use at most 50k lines per job
 
 # double check our input is a corpus
 [ -z "$STEPNAME" ] || [ -e ../$STEPNAME/corpman.info ] \
@@ -39,14 +48,18 @@ if [ -z "$STEPNAME" ]; then
   [ ! -z "$COMBINE_PARTS" ] || die "Either \$STEPNAME or \$COMBINE_PARTS needed"
   cmd="../factor_combinator.pl $COMBINE_PARTS"
 else
-  cmd="zcat ../$STEPNAME/$FILENAME \\"$'\n'
-  if [ "$COLUMN" != "-1" ]; then
-    cmd="$cmd | cut -f $COLUMN \\"$'\n'
+  if [ "$JOBS" == 0 ]; then
+    cmd="zcat ../$STEPNAME/$FILENAME \\"$'\n'
+    [ "$COLUMN" == "-1" ] || cmd="$cmd | cut -f $COLUMN \\"$'\n'
+    [ "$FACTOR" == "-1" ] || cmd="$cmd | reduce_factors.pl $FACTOR \\"$'\n'
+    cmd="$cmd | $RUN_COMMAND \\"$'\n'
+  else
+    cmd="qruncmd --jobs=$JOBS --split-to-size=$SPLIT_TO_SIZE --join --jobname corpman.$OUTCORP.$OUTLANG \" \\"$'\n'
+    [ "$COLUMN" == "-1" ] || cmd="$cmd cut -f $COLUMN | \\"$'\n'
+    [ "$FACTOR" == "-1" ] || cmd="$cmd reduce_factors.pl $FACTOR | \\"$'\n'
+    cmd="$cmd $RUN_COMMAND \\"$'\n'
+    cmd="$cmd \" ../$STEPNAME/$FILENAME --promise-linecount=$OUTLINECOUNT"
   fi
-  if [ "$FACTOR" != "-1" ]; then
-    cmd="$cmd | reduce_factors.pl $FACTOR \\"$'\n'
-  fi
-  cmd="$cmd | $RUN_COMMAND \\"$'\n'
 fi
 
 #echo "For debugging:"
@@ -71,6 +84,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 $cmd | gzip -c > corpus.txt.gz \\
 || die "Failed to prepare the corpus"
 
+echo "Checking output number of lines of corpus.txt.gz"
 nl=\$(zcat corpus.txt.gz | wc -l)
 
 [ "\$nl" -eq $OUTLINECOUNT ] \\
