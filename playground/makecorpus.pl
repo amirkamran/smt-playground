@@ -15,11 +15,13 @@ use File::Path;
 use File::Basename;
 
 my $verbose = 0;
-my $dry_run = 1;
+my $init = 0;
+my $start = 0;
 my $fakeno = 1; # the step number when for dry-runs
 
 GetOptions(
-  "dry-run|dryrun!" => \$dry_run,
+  "init!" => \$init,
+  "start!" => \$start,
   "verbose!" => \$verbose,
 ) or exit 1;
 
@@ -38,6 +40,8 @@ Allowed corpus descriptions:
 ";
   exit 1;
 }
+
+$init = 1 if $start; # start implies to init
 
 # constants:
 my $yes_derived = 1;
@@ -104,8 +108,8 @@ foreach my $line (split /\n/, $rulestext) {
     print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
     $err++;
   }
-  $infacts =~ s/\+/\|/g;
-  $outfacts =~ s/\+/\|/g;
+  $infacts =~ s/\|/+/g;
+  $outfacts =~ s/\|/+/g;
   # for the construction of all factors at once
   add_rule($outlang, $outfacts, {
     'inlang'=>$inlang,
@@ -141,7 +145,7 @@ if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
  die "Bad descr format: $descr";
 }
 
-$facts =~ s/\+/\|/g;
+$facts =~ s/\|/+/g;
 
 
 my ($stepname, $filename, $column)
@@ -262,10 +266,25 @@ sub run_or_fake_corpman_step {
   my $command = shift;
   my $deps = shift; # deps to wait for
 
-  if ($dry_run) {
+  if (!$init) {
     my $fakeoutstep = "s.fake.".($fakeno++);
     print STDERR $fakeoutstep, ": ", $command, "\n";
     return $fakeoutstep;
+  }
+  $command .= " --start" if $start;
+  print STDERR "EXECUTING: $command\n" if $verbose;
+  $command .= " 2>&1";
+  my $out = `$command`;
+  print STDERR "--eman-stdout--\n$out\n--end-of-eman-stdout--\n" if $verbose;
+  if ($out =~ /Inited: (s\.corpman\..*)/) {
+    my $outstep = $1;
+    print STDERR "corpman inited: $outstep\n";
+    return $outstep;
+  } else {
+    print STDERR "Failed to get stepname!\n";
+    print STDERR "Launched: $command\n";
+    print STDERR "Got:\n$out\n--end-of-eman-stdout--\n";
+    exit 1;
   }
 }
 
@@ -273,7 +292,7 @@ sub run_or_fake_corpman_step {
 
 sub add_rule {
   my ($outlang, $outfacts, $newrule) = @_;
-  $outfacts =~ s/\+/\|/g;
+  $outfacts =~ s/\|/+/g;
   my $oldrule = $rules->{$outlang}->{$outfacts};
   if (defined $oldrule) {
     print STDERR "Conflicting rules to produce $outlang+$outfacts: "
@@ -323,7 +342,7 @@ sub add_entry {
   # Add a corpus to the index avoiding duplicates.
   # This *could* be restricted by some other variables like eman select...
   my ($corpname, $lang, $facts, $newentry, $isderived) = @_;
-  $facts =~ s/\+/\|/g;
+  $facts =~ s/\|/+/g;
 
   print STDERR "Adding $corpname/$lang+$facts: "
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
