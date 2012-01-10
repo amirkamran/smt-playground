@@ -104,6 +104,8 @@ foreach my $line (split /\n/, $rulestext) {
     print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
     $err++;
   }
+  $infacts =~ s/\+/\|/g;
+  $outfacts =~ s/\+/\|/g;
   # for the construction of all factors at once
   add_rule($outlang, $outfacts, {
     'inlang'=>$inlang,
@@ -139,6 +141,7 @@ if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
  die "Bad descr format: $descr";
 }
 
+$facts =~ s/\+/\|/g;
 
 
 my ($stepname, $filename, $column)
@@ -150,6 +153,7 @@ print $stepname, "\t", $filename, "\t", $column, "\n";
 sub build_exact_factors {
   # runs lazy_build and extracts the required factor if necessary
   my $entry = lazy_build($corp, $lang, $facts);
+  print STDERR "Called build_exact_factors @_\n" if $verbose;
   if ($entry->{"factind"} == -1) {
     # great, the given column contains exactly the factors we asked for
     return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
@@ -168,6 +172,7 @@ sub lazy_build {
   # return stepname, filename, column and -1 (if the requested factors are
   # exactly there) or the factor number of the *single* factor to pick
   my ($corp, $lang, $facts) = @_;
+  print STDERR "Called lazy_build @_\n" if $verbose;
 
   # check if the whole corpus happens to be ready
   my $entry = $index->{$corp}->{$lang}->{$facts};
@@ -226,6 +231,7 @@ sub lazy_build {
 
 sub build_using_rules {
   my ($corp, $lang, $facts) = @_;
+  print STDERR "Called build_using_rules @_\n" if $verbose;
 
   my $rule = $rules->{$lang}->{$facts};
   $rule = $rules->{'*'}->{$facts} if ! defined $rule;
@@ -267,6 +273,7 @@ sub run_or_fake_corpman_step {
 
 sub add_rule {
   my ($outlang, $outfacts, $newrule) = @_;
+  $outfacts =~ s/\+/\|/g;
   my $oldrule = $rules->{$outlang}->{$outfacts};
   if (defined $oldrule) {
     print STDERR "Conflicting rules to produce $outlang+$outfacts: "
@@ -315,20 +322,21 @@ sub add_entry_incl_entries_of_separate_factors {
 sub add_entry {
   # Add a corpus to the index avoiding duplicates.
   # This *could* be restricted by some other variables like eman select...
-  my ($corpname, $lang, $fact, $newentry, $isderived) = @_;
+  my ($corpname, $lang, $facts, $newentry, $isderived) = @_;
+  $facts =~ s/\+/\|/g;
 
-  print STDERR "Adding $corpname/$lang+$fact: "
+  print STDERR "Adding $corpname/$lang+$facts: "
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ."\n" if $verbose;
-  my $oldentry = $index->{$corpname}->{$lang}->{$fact};
+  my $oldentry = $index->{$corpname}->{$lang}->{$facts};
   if (defined $oldentry && !$isderived) {
-    print STDERR "Conflicing sources for $corpname/$lang+$fact: "
+    print STDERR "Conflicing sources for $corpname/$lang+$facts: "
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ." vs "
       ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n";
     $err = 1;
   } else {
-    $index->{$corpname}->{$lang}->{$fact} = $newentry;
+    $index->{$corpname}->{$lang}->{$facts} = $newentry;
   }
 }
 
