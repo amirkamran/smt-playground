@@ -1,10 +1,13 @@
 ## English to m-layer
 Util::SetGlobal language=en
 Read::Sentences from=-
+
+W2W::NormalizeEnglishSentence
 W2A::EN::Tokenize
 W2A::EN::NormalizeForms
 W2A::EN::FixTokenization
 W2A::EN::TagMorce
 W2A::EN::FixTags
 W2A::EN::Lemmatize
+
 Write::Factored outcols=enm flags=escape_space:join_spaced_numbers

@@ -33,8 +33,8 @@ eman add-deps . $DEPS
 
 # other vars, not influencing exact output
 JOBS=${JOBS:-30}
-SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-50000}
-  # even for big corpora, use at most 50k lines per job
+SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
+  # even for big corpora, use at most 30k lines per job
 
 # double check our input is a corpus
 [ -z "$STEPNAME" ] || [ -e ../$STEPNAME/corpman.info ] \
