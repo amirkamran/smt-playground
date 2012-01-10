@@ -1,0 +1,68 @@
+#!/bin/bash
+# eman step for compiling the plaintext version of WMT* test files
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
+                 help='where are WMT dev/test files' \
+     defvar SECTION help='extract only this section (our short name)' \
+     defvar OUTLANG help='extract this language' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# mapping of our short names (e.g. wmt09) to filename masks
+bnwmt08=news-test2008*src*$OUTLANG*sgm
+bnwmt09=newstest2009*src*$OUTLANG*sgm
+bnwmt10=newstest2010*src*$OUTLANG*sgm
+bnwmt11=newstest2011*src*$OUTLANG.sgm
+bnwmt11raw=newstest2011*src*$OUTLANG*raw*sgm
+eval "bn=\$bn$SECTION"
+[ -z "$bn" ] && die "Unrecognized \$SECTION $SECTION"
+
+fn=`find $WMT_SOURCEDIR -name "$bn"`
+[ -e "$fn" ] || die "Failed to find corpus for $SECTION $OUTLANG (searched for $bn, got $fn)"
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+eman add-tag $SECTION .
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+gzip < $fn > corpus.sgml.gz \\
+|| die "Failed to copy $fn"
+
+zcat corpus.sgml.gz \\
+| perl -nle '/^<seg[^>]*> ?([^<]+)</ && print \$1;' \\
+| gzip -c > corpus.txt.gz \\
+|| die "Failed to strip sgml"
+
+nl=\$(zcat corpus.txt.gz | wc -l)
+
+echo "corpus.txt.gz;-1;$SECTION;$OUTLANG""_txt;untoken;\$nl" \\
+| tr ';' '\t' > corpman.info \\
+|| die "Failed to create corpman.info"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
