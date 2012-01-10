@@ -1,33 +1,60 @@
 #!/bin/bash
 # eman step to support makecorpus.pl
-# Three modes of operation:
-#   RUN_COMMAND=...
-#   RESTRICT_TO_FACTOR=...
-#   COMBINE_PARTS=...
-
-XXX
+# Two modes of operation:
+#   RUN_COMMAND=...  apply the given pipe to the given input corpus
+#                    you *may* leave STEPNAME etc empty if the command produces
+#                    everything <- this is not yet supported, because we
+#                    wouldn't know the output line count
+#   COMBINE_PARTS=... use factor_combinator.pl to combine multiple factors to a
+#                     single corpus
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
-eman defvar CZENG_SOURCEDIR default='/net/data/czeng10-public-release' \
-                 help='where is CzEng 1.0, untarred' \
-     defvar SECTION default='' help='extract only this section' \
-     defvar FILTER_THRESHOLD default='0.0' help='extract only lines better than this' \
-     defvar FNRE default='*train.gz' help='use these input files' \
+eman defvar RUN_COMMAND default='NO-COMMAND' \
+     defvar COMBINE_PARTS default='NO-PARTS' \
+     defvar STEPNAME default='' help='input step name' \
+     defvar FILENAME default='' help='input file name' \
+     defvar COLUMN default='' help='input column in the file, or -1' \
+     defvar FACTOR default='' help='input factor in the column, or -1' \
+     defvar OUTCORP help='output corpus name' \
+     defvar OUTLANG help='output language name' \
+     defvar OUTFACTS help='output factors sequence' \
+     defvar OUTLINECOUNT help='forward check: expected number of lines' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-[ -e $CZENG_SOURCEDIR/data.plaintext-format ] \
-|| die "\$CZENG_SOURCEDIR/data.plaintext-format not found"
+# double check our input is a corpus
+[ -z "$STEPNAME" ] || [ -e ../$STEPNAME/corpman.info ] \
+|| die "\$STEPNAME/corpman.info not found"
+
+# Create corpman info
+echo "corpus.txt.gz	-1	$OUTCORP	$OUTLANG	$OUTFACTS	$OUTLINECOUNT" \
+> corpman.info
+
+if [ -z "$STEPNAME" ]; then
+  [ ! -z "$COMBINE_PARTS" ] || die "Either \$STEPNAME or \$COMBINE_PARTS needed"
+  cmd="../factor_combinator.pl $COMBINE_PARTS"
+else
+  cmd="zcat ../$STEPNAME/$FILENAME \\"$'\n'
+  if [ "$COLUMN" != "-1" ]; then
+    cmd="$cmd | cut -f $COLUMN \\"$'\n'
+  fi
+  if [ "$FACTOR" != "-1" ]; then
+    cmd="$cmd | reduce_factors.pl $FACTOR \\"$'\n'
+  fi
+  cmd="$cmd | $RUN_COMMAND \\"$'\n'
+fi
+
+#echo "For debugging:"
+#echo "$cmd"
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
 
-[ "$SECTION" == "" ] || eman addtag $SECTION .
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -41,20 +68,13 @@ mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
-eval zcat $CZENG_SOURCEDIR/data.plaintext-format/$FNRE \\
-| perl -F'\\t' -lane 'next if \$F[1] < $FILTER_THRESHOLD; \\
-                      next if "$SECTION" ne "" && \$F[0] !~ /^$SECTION/; \\
-                      print \$F[2], "\\t", \$F[3];' \\
-| sed 's/&/&amp;/g;s/|/\\&pipe;/g' \\
-| gzip -c > corpus.cs-en.txt.gz \\
+$cmd | gzip -c > corpus.txt.gz \\
 || die "Failed to prepare the corpus"
 
-nl=\$(zcat corpus.cs-en.txt.gz | wc -l)
+nl=\$(zcat corpus.txt.gz | wc -l)
 
-(echo "corpus.cs-en.txt.gz;1;c-$SECTION;cs_txt;untoken;\$nl"; \\
- echo "corpus.cs-en.txt.gz;2;c-$SECTION;en_txt;untoken;\$nl") \\
-| sed 's/- /-/' | tr ';' '\t' > corpman.info \\
-|| die "Failed to create corpman.info"
+[ "\$nl" -eq $OUTLINECOUNT ] \\
+|| die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
 
 echo Done.
 eman succeed \$mydir

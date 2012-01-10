@@ -12,6 +12,7 @@ while ! [ -e "$logf" ]; do
   [ $warned == 1 ] || echo "Waiting for logfile for $s"
   warned=1
   sleep 1
+  logf=`ls -t $s/log.o* 2>/dev/null | head -n1`
 done
 
 if [ -e "$logf" ]; then

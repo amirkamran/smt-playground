@@ -1,0 +1,82 @@
+#!/bin/bash
+# eman seed for checking out treex
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# There are no eman vars
+touch eman.vars
+
+# Nothing to do in initialization
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+# ufal's preferred tempdir
+TEMPDIR=$(if [ -e /mnt/h/tmp ]; then echo /mnt/h/tmp; else echo /tmp; fi)
+
+# Minimalistic checkout of treex files
+svn co --depth=empty https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk treex \
+|| die "Failed to checkout treex"
+
+cd treex \
+|| die "Failed to chdir"
+
+# The real (slow) checkout will be done later
+#svn up treex libs \
+#|| die "Failed to obtain treex and libs"
+
+# UFAL-specific links
+ln -s /net/projects/tectomt_shared share \
+|| die "Failed to link share"
+
+ln -s $TEMPDIR tmp \
+|| die "Failed to link tmp"
+
+cd .. \
+|| die "Failed to chdir back"
+
+# To use Treex at UFAL
+#   source treex.bashsource
+
+# The envvars needed to run treex
+echo '# Source this script to use treex in bash.' > treex.bashsource
+echo 'export PATH=/opt/bin:$PATH' >> treex.bashsource
+echo "  # to use Perl 5.12, not Perl 5.10" >> treex.bashsource
+echo "source /net/work/projects/perl_repo/admin/bin/setup_platform" >> treex.bashsource
+echo "  # to have all necessary CPAN modules pre-installed" >> treex.bashsource
+echo "export TMT_ROOT=$(pwd)/treex" >> treex.bashsource
+echo "export PERL5LIB=\$PERL5LIB:$(pwd)/treex/treex/lib:$(pwd)/treex/libs/other" >> treex.bashsource
+echo "export PERLLIB=\$PERL5LIB" >> treex.bashsource
+echo "  # to set TMT_ROOT and PERL*LIB" >> treex.bashsource
+echo "export PATH=\$PATH:$(pwd)/treex/treex/bin" >> treex.bashsource
+echo "  # to have treex in your path" >> treex.bashsource
+
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+cd treex || die "Can't chdir"
+
+svn up treex libs \
+|| die "Failed to obtain treex and libs"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

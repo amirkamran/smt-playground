@@ -155,7 +155,7 @@ sub build_exact_factors {
     return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
   } else {
     # not quite, we need to restrict the given factor
-    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUNCOMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", [$entry->{"stepname"}]);
+    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUNCOMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpman", [$entry->{"stepname"}]);
     my $filename = "corpus.txt.gz";
     my $column = -1;
     return ($stepname, $filename, $column);
@@ -210,7 +210,7 @@ sub lazy_build {
     }
     # build a step that combines all these
 
-    my $stepname = run_or_fake_corpman_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", \@deps);
+    my $stepname = run_or_fake_corpman_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", \@deps);
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
@@ -241,10 +241,10 @@ sub build_using_rules {
     if !defined $rule->{'command'};
 
   # apply the rule
-  my $stepname = run_or_fake_corpman_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS=$facts eman init corpman", [$subentry->{"stepname"}]);
+  my $linecount = $subentry->{"linecount"};
+  my $stepname = run_or_fake_corpman_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", [$subentry->{"stepname"}]);
   my $filename = "corpus.txt.gz";
   my $column = -1;
-  my $linecount = $subentry->{"linecount"};
 
   # add to index for further use 
   return add_entry_incl_entries_of_separate_factors(
