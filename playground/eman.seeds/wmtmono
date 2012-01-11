@@ -1,12 +1,12 @@
 #!/bin/bash
-# eman step for compiling the plaintext version of WMT* test files
+# eman step for compiling the plaintext version of WMT* mono training files
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
 eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
-                 help='where are WMT dev/test files' \
+                 help='where are WMT mono training files' \
      defvar SECTION help='produce this section (our short name)' \
      defvar OUTLANG help='produce this language' \
 || exit 1
@@ -15,11 +15,13 @@ eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
 eval `eman bash-loadvars`
 
 # mapping of our short names (e.g. wmt09) to filename masks
-bnwmt08=news-test2008*src*$OUTLANG*sgm
-bnwmt09=newstest2009*src*$OUTLANG*sgm
-bnwmt10=newstest2010*src*$OUTLANG*sgm
-bnwmt11=newstest2011*src*$OUTLANG.sgm
-bnwmt11raw=newstest2011*src*$OUTLANG*raw*sgm
+bnmononews07=news.2007.$OUTLANG*gz
+bnmononews08=news.2008.$OUTLANG*gz
+bnmononews09=news.2009.$OUTLANG*gz
+bnmononews10=news.2010.$OUTLANG*gz
+bnmononews11=news.2011.$OUTLANG*gz
+bnmonoeurop=europarl*.$OUTLANG*gz
+bnmononcomm=news-commentary*.$OUTLANG.gz
 eval "bn=\$bn$SECTION"
 [ -z "$bn" ] && die "Unrecognized \$SECTION $SECTION"
 
@@ -43,13 +45,10 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 
-gzip < $fn > corpus.sgml.gz \\
-|| die "Failed to copy $fn"
-
-zcat corpus.sgml.gz \\
-| perl -nle '/^<seg[^>]*> ?([^<]+)</ && print \$1;' \\
+zcat $fn \\
+| sort -u \\
 | gzip -c > corpus.txt.gz \\
-|| die "Failed to strip sgml"
+|| die "Failed to uniq lines"
 
 nl=\$(zcat corpus.txt.gz | wc -l)
 
