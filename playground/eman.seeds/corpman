@@ -1,19 +1,21 @@
 #!/bin/bash
 # eman step to support makecorpus.pl
-# Two modes of operation:
+# Three modes of operation:
 #   RUN_COMMAND=...  apply the given pipe to the given input corpus
 #                    you *may* leave STEPNAME etc empty if the command produces
 #                    everything <- this is not yet supported, because we
 #                    wouldn't know the output line count
 #   COMBINE_PARTS=... use factor_combinator.pl to combine multiple factors to a
 #                     single corpus
+#   TAKE_FROM_COMMAND=... run the command (no input) and collect its output
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
-eman defvar RUN_COMMAND default='NO-COMMAND' \
-     defvar COMBINE_PARTS default='NO-PARTS' \
+eman defvar RUN_COMMAND default='' \
+     defvar COMBINE_PARTS default='' \
+     defvar TAKE_FROM_COMMAND default='' \
      defvar STEPNAME default='' help='input step name' \
      defvar FILENAME default='' help='input file name' \
      defvar COLUMN default='' help='input column in the file, or -1' \
@@ -44,12 +46,18 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 echo "corpus.txt.gz	-1	$OUTCORP	$OUTLANG	$OUTFACTS	$OUTLINECOUNT" \
 > corpman.info
 
-if [ -z "$STEPNAME" ]; then
-  [ ! -z "$COMBINE_PARTS" ] || die "Either \$STEPNAME or \$COMBINE_PARTS needed"
-  cmd="../factor_combinator.pl $COMBINE_PARTS"
-else
+options=0
+[ -z "$RUN_COMMAND" ] || options=$((options+1))
+[ -z "$COMBINE_PARTS" ] || options=$((options+1))
+[ -z "$TAKE_FROM_COMMAND" ] || options=$((options+1))
+
+[ "$options" -eq 1 ] || die "Bad usage: Needed exactly one of RUN_COMMAND, COMBINE_PARTS and TAKE_FROM_COMMAND, got $options"
+
+if [ ! -z "$RUN_COMMAND" ]; then
+  inf="../$STEPNAME/$FILENAME"
+  # we're not checking -e because the dep may not be done yet
   if [ "$JOBS" == 0 ]; then
-    cmd="zcat ../$STEPNAME/$FILENAME \\"$'\n'
+    cmd="zcat $inf \\"$'\n'
     [ "$COLUMN" == "-1" ] || cmd="$cmd | cut -f $COLUMN \\"$'\n'
     [ "$FACTOR" == "-1" ] || cmd="$cmd | reduce_factors.pl $FACTOR \\"$'\n'
     cmd="$cmd | $RUN_COMMAND \\"$'\n'
@@ -58,8 +66,12 @@ else
     [ "$COLUMN" == "-1" ] || cmd="$cmd cut -f $COLUMN | \\"$'\n'
     [ "$FACTOR" == "-1" ] || cmd="$cmd reduce_factors.pl $FACTOR | \\"$'\n'
     cmd="$cmd $RUN_COMMAND \\"$'\n'
-    cmd="$cmd \" ../$STEPNAME/$FILENAME --promise-linecount=$OUTLINECOUNT"
+    cmd="$cmd \" $inf --promise-linecount=$OUTLINECOUNT"
   fi
+elif [ ! -z "$COMBINE_PARTS" ]; then
+  cmd="../factor_combinator.pl $COMBINE_PARTS"
+else # implied $TAKE_FROM_COMMAND
+  cmd="$TAKE_FROM_COMMAND"
 fi
 
 #echo "For debugging:"

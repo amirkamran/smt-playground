@@ -184,6 +184,36 @@ sub lazy_build {
     # here is the laziness: $entry->{factind} may be != -1, i.e. asking to
     # extract a factor
 
+  if ($corp =~ /\+/) {
+    # The corpus needs to be constructed by concatenation
+    # First recursively build all parts
+    my $linecount = 0;
+    my @parts = ();
+    my @deps = (); # which steps should we wait for
+    foreach my $subcorp (split /\+/, $corp) {
+      my $subentry = lazy_build($subcorp, $lang, $facts);
+      $linecount += $subentry->{"linecount"};
+      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
+        # XXX should ask eman to locate the stepdir
+      my $subcolumn = $subentry->{"column"};
+      my $subfactind = $subentry->{"factind"};
+      my $cmd = "zcat $pathname";
+      $cmd .= " | cut -f $subcolumn" if $subcolumn != -1;
+      $cmd .= " | reduce_factors.pl $subfactind" if $subfactind != -1;
+      push @parts, $cmd;
+      push @deps, $subentry->{"stepname"};
+    }
+    my $stepname = run_or_fake_corpman_step("DEPS='@deps' TAKE_FROM_COMMAND='("
+      .join("; ", @parts)
+      .")' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", \@deps);
+    my $filename = "corpus.txt.gz";
+    my $column = -1;
+
+    # add to index for further use 
+    return add_entry_incl_entries_of_separate_factors(
+      $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
+  }
+
   # the required sequence of factors, or the single factor is not available,
   # we must build it
 
