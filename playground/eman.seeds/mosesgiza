@@ -1,0 +1,65 @@
+#!/bin/bash
+# eman seed for compiling moses
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
+     defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+
+# Obtain GIZA++
+tar xzf ../../src/giza-pp.tgz || die "giza-pp missing"
+cd giza-pp || die "Failed to chdir to giza-pp"
+patch -p1 < ../../../src/giza-pp.patch-for-300words \
+  || die "Failed to patch GIZA"
+cd GIZA++-v2 && make -j4 && make -j4 snt2cooc.out && cd ../ || die "GIZA failed"
+cd mkcls-v2 && make -j4 && cd ../ || die "mkcls failed"
+cd ../ || die "chdir back failed"
+
+mkdir -p bin || die "Can't make bindir"
+ln -s ../giza-pp/GIZA++-v2/GIZA++ ../giza-pp/GIZA++-v2/snt2cooc.out \
+   ../giza-pp/mkcls-v2/mkcls bin/
+
+# Obtain Moses
+echo "Obtaining Moses"
+git clone https://github.com/moses-smt/mosesdecoder.git moses \\
+|| die "Failed to clone moses"
+
+cd moses || die "Chdir failed"
+./bjam -j4 --with-giza=\$mydir/bin || die "Build failed"
+
+cd ../ || die "chdir back failed"
+ln -s moses/moses-cmd/src/moses moses/moses-chart-cmd/src/moses_chart \\
+   moses/scripts/training/symal/symal \\
+   bin/
+
+
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
