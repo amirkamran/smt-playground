@@ -20,7 +20,7 @@ use Pod::Usage;
 use File::Basename;
 use File::Path;
 use File::Spec;
-use Cwd;
+use Cwd qw/cwd abs_path/;
 use Digest::MD5 qw(md5_hex);
 use Fcntl qw(LOCK_EX LOCK_NB);
 use File::NFSLock;
@@ -98,6 +98,8 @@ my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
 my $resultsconffile = "eman.results.conf";
 my $seedsdir = "eman.seeds";
+my $maindir = undef; # the path of the directory with seeds, steps etc.
+                     # guessed using chdir_to_maindir
 
 my $qsub_available = undef;
 
@@ -1461,17 +1463,8 @@ sub mkdiruniq2 {
 
 sub relative_to_maindir {
   my $fn = shift;
-  if (-e "eman.index" || -d "eman.seeds") {
-    # assume we are in maindir
-    return $fn;
-  } elsif (-e "../eman.index" || -d "eman.seeds") {
-    # assume we are in a dir of a step
-    return $fn if $fn =~ /^\//; # do not mangle absolute paths
-    return "../".$fn;
-  } else {
-    print STDERR "Can't guess our location. Hoping we're in steps directory.\n";
-    return $fn;
-  }
+  guess_maindir();
+  return File::Spec->catfile($maindir, $fn);
 }
 
 sub step_valid {
@@ -1539,30 +1532,55 @@ sub canon_stepdir {
   return $s;
 }
 
-sub chdir_to_maindir {
+sub guess_maindir {
+  # ensure the variable maindir is set
+  return if defined $maindir;
   die "../$seedsdir and ./$seedsdir exist, I'm confused."
     if -e "../$seedsdir" && -e "./$seedsdir";
-  my $oldwd = cwd();
-  if (-e $seedsdir) {
-    # we're there, no action needed
-  } elsif (-e "../$seedsdir") {
-    chdir("../") or die "Failed to chdir to the main directory";
-  } else {
-    die "Neither ./$seedsdir nor ../$seedsdir exist. Can't guess our main dir.";
+  # search upwards in the tree
+  my $up = "./";
+  while ( -d $up && ! -e $up.$seedsdir) {
+    $up .= "../";
   }
+  die "Failed to guess eman main dir (failed to find '$seedsdir' up in the CWD path.)"
+    if ! -e $up.$seedsdir;
+  # store the absolute path of the maindir
+  $maindir = File::Spec->canonpath($up);  # string manipulation
+  #$maindir = abs_path(".");  # touch filesystem
+}
+
+sub guess_stepdir {
+  my $dir = shift;
+  # given a subdir of a stepdir, return the stepdir name (or undef)
+  # search upwards in the tree
+  my $oldwd = cwd();
+  chdir $dir or die "Failed to guess stepdir from $dir (nonexistent)";
+  my $up = "./";
+  while ( -d $up && ! -e $up."/../".$seedsdir) {
+    $up .= "../";
+  }
+  my $out = undef;
+  if (-e $up."/../".$seedsdir) {
+    $out = basename(abs_path($up));
+  }
+  chdir($oldwd) or die "Failed chdir back to $oldwd";
+  return $out;
+}
+
+
+sub chdir_to_maindir {
+  my $oldwd = cwd();
+  guess_maindir();
+  mychdir($maindir);
   return $oldwd;
 }
 sub chdir_to_stepdir {
   my $stepdir = shift;
-  die "../$stepdir and ./$stepdir exist, I'm confused."
-    if -e "../$stepdir" && -e "./$stepdir";
-  my $oldwd = cwd();
+  my $oldwd = chdir_to_maindir();
   if (-e $stepdir) {
     chdir($stepdir) or die "Failed to chdir to $stepdir";
-  } elsif (-e "../$stepdir") {
-    chdir("../$stepdir") or die "Failed to chdir to $stepdir";
   } else {
-    die "Neither ./$stepdir nor ../$stepdir exist.";
+    die "Stepdir $stepdir not found in the main directory ($maindir).";
   }
   return $oldwd;
 }
@@ -1619,14 +1637,16 @@ sub guess_step {
   return $step;
 }  
 
+
 sub guess_step_from_hashdate {
   my $key = shift;
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
   if (-d $key) {
     # directory name explicitly given, check if it is indeed a step directory
+    # (or a subdir)
     # this branch is also used for '.', i.e. the current step dir...
-    my $step = basename(File::Spec->rel2abs($key));
-    return $step if -e $key."/eman.seed";
+    my $step = guess_stepdir($key);
+    return $step if -e relative_to_maindir($step)."/eman.seed";
   }
   # try to interpret the stepname relative to main dir
   my $dkey = relative_to_maindir($key);
