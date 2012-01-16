@@ -1727,7 +1727,8 @@ sub get_hash_from_vars_deps {
     grep { /./ } # skip empty lines
     map  {s/$name/---SELF---/g; $_}
     @usevars;
-  my $hash =  md5_hex(sort @usevars);
+  # include steptype in the hash to distinguist vars-less steps
+  my $hash =  md5_hex(get_steptype($name), sort @usevars);
   print STDERR "NAME $name, USEVARS: @usevars\n  -> $hash\n" if 1 && $debug;
   return $hash;
 }
