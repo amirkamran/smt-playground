@@ -42,8 +42,9 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 [ -z "$STEPNAME" ] || [ -e ../$STEPNAME/corpman.info ] \
 || die "\$STEPNAME/corpman.info not found"
 
-# Create corpman info
-echo "corpus.txt.gz	-1	$OUTCORP	$OUTLANG	$OUTFACTS	$OUTLINECOUNT" \
+# Create corpman info, the last field "1" indicates that this corpus is derived
+# automatically
+echo "corpus.txt.gz	-1	$OUTCORP	$OUTLANG	$OUTFACTS	$OUTLINECOUNT	1" \
 > corpman.info
 
 options=0

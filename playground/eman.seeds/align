@@ -4,60 +4,56 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
-if [ -z "$CORPUS" ] \
-  || [ -z "$SRCALIAUG" ] \
-  || [ -z "$TGTALIAUG" ] \
-  || [ -z "$BINARIES" ] \
-  ; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$CORPUS to corpus name"
-  echo "  \$SRCALIAUG to the string describing lang+factors of src corpus"
-  echo "  \$TGTALIAUG same for target, e.g. cs+lemma"
-  echo "And optionally:"
-  echo "  \$ALISYM defaults to gdfa"
-  echo "  \$OUTALILABEL ... where to save the alignment to augmented_corpora"
-  exit 1
-fi
-# Accepted vars:
-#   BINARIES=s.binaries.9209b705.20101126-1547
-#   CORPUS=czeng
-#   SRC
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
+  defvar CORPUS help='the corpus name' \
+  defvar SRCALIAUG help='lang+factors for the source side' \
+  defvar TGTALIAUG help='lang+factors for the target side' \
+  defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
+    help='symmetrization methods, several allowed if delimited by comma' \
+  defvar OUTLABEL default='' \
+    help='suffix to add to the resulting "alignment corpus" name' \
+|| exit 1
 
-[ -z "ALISYM" ] || ALISYM=gdfa
-[ -z "OUTALILABEL" ] \
-  || OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+# Set local bash variables
+eval `eman bash-loadvars`
 
-cat > eman.vars << KONEC
-BINARIES=$BINARIES
-CORPUS=$CORPUS
-SRCALIAUG=$SRCALIAUG
-TGTALIAUG=$TGTALIAUG
-OUTALILABEL=$OUTALILABEL
-ALISYM=$ALISYM
-KONEC
+OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+[ -z "$OUTLABEL" ] \
+  || OUTALILABEL=$OUTALILABEL.$OUTLABEL
 
-echo $CORPUS.$OUTALILABEL > eman.tag
-
-echo $BINARIES > eman.deps
+eman add-tag $CORPUS.$OUTALILABEL .
 
 GIZAWRAPPER=../../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
+
+# an eager check for symal
+SYMAL=../$GIZASTEP/bin/symal
+[ -x $SYMAL ] || die "symal not found: $SYMAL"
+
+# add source and target corpora to deps
+eman add-deps . \
+  $(../makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1) \
+  $(../makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
 # Run checks in the preparation phase
-[ -d ../augmented_corpora/$CORPUS ] || die "Can't find corpus $CORPUS"
+# no checks.
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
 #!/bin/bash
-
-# standard command header
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
 mydir=\$(pwd)
 set -o pipefail
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
@@ -65,9 +61,17 @@ export SCRIPTS_ROOTDIR=$BINARIES/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
-  ../augmented_corpora/augment.pl \$1 || die "Failed to prepare \$1"
-  ../../scripts/wiseln \$(../augmented_corpora/augment.pl \$1) corpus.\$2.gz \
+  ../makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=\$(../makecorpus.pl \$1)
+  if [ \${step_file_col[2]} == "-1" ]; then
+    ../../scripts/wiseln ../\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
     || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$(../makecorpus.pl --cmd $1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
 }
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
@@ -94,27 +98,33 @@ srclen=\`zcat corpus.src.gz | wc -l\`
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
   
 
-echo "Aligned, now export this to augmented corpora."
+echo "Aligned, now create corpman index."
 
-do_export=1
-if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
-  origlen=\`zcat ../augmented_corpora/$CORPUS/$OUTALILABEL.gz | wc -l\`
-  if [ \$alilen == \$origlen ]; then
-    echo "WARNING: won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
-    do_export=0
-  else
-    echo "REMOVING BAD: ../augmented_corpora/$CORPUS/$OUTALILABEL.gz"
-    rm ../augmented_corpora/$CORPUS/$OUTALILABEL.gz
-  fi
-fi
+#do_export=1
+#if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
+#  origlen=\`zcat ../augmented_corpora/$CORPUS/$OUTALILABEL.gz | wc -l\`
+#  if [ \$alilen == \$origlen ]; then
+#    echo "WARNING: won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+#    do_export=0
+#  else
+#    echo "REMOVING BAD: ../augmented_corpora/$CORPUS/$OUTALILABEL.gz"
+#    rm ../augmented_corpora/$CORPUS/$OUTALILABEL.gz
+#  fi
+#fi
+#
+#if [ x1 == x\$do_export ]; then
+#  cd ../augmented_corpora/$CORPUS
+#  ../../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
+#    || die "Failed to save to augmented_corpora"
+#  echo ali > $OUTALILABEL.info
+#fi
 
-if [ x1 == x\$do_export ]; then
-  cd ../augmented_corpora/$CORPUS
-  ../../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
-    || die "Failed to save to augmented_corpora"
-  echo ali > $OUTALILABEL.info
-fi
-
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
 KONEC

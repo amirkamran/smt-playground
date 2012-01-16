@@ -230,7 +230,7 @@ sub build_exact_factors {
     return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
   } else {
     # not quite, we need to restrict the given factor
-    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUNCOMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpman", [$entry->{"stepname"}]);
+    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpman", [$entry->{"stepname"}]);
     my $filename = "corpus.txt.gz";
     my $column = -1;
     return ($stepname, $filename, $column);
@@ -368,6 +368,10 @@ sub run_or_fake_corpman_step {
     print STDERR $fakeoutstep, ": ", $command, "\n";
     return $fakeoutstep;
   }
+  # we indeed issue the command to prepare the corpus
+  # first invalidate our index, if it exists
+  unlink("$mydir/$indexfile");
+  $command = "cd $mydir && $command";
   $command .= " --start" if $start;
   print STDERR "EXECUTING: $command\n" if $verbose;
   $command .= " 2>&1";
