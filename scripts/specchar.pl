@@ -425,7 +425,7 @@ sub usmernit_uvozovky
         $veta =~ s/ ([ld]') (\w)/ $1$2/ig;
     }
     # Kvůli překlepu (vynechané mezeře) se k sobě může dostat koncová uvozovka a počáteční závorka, opravit.
-    # Totéž platí koncovou závorku a počáteční uvozovku.
+    # Totéž platí pro koncovou závorku a počáteční uvozovku.
     $veta =~ s/( "\w+")\(/$1 (/g;
     $veta =~ s/\)("\w+" )/) $1/g;
     # Bez mezery po obou stranách se může vyskytnout apostrof s funkcí výpustky, nikoli uvozovky.
