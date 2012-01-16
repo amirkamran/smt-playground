@@ -62,8 +62,8 @@ echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
   ../makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
-  step_file_col=\$(../makecorpus.pl \$1)
-  if [ \${step_file_col[2]} == "-1" ]; then
+  step_file_col=(\$(../makecorpus.pl \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
     ../../scripts/wiseln ../\${step_file_col[0]}/\${step_file_col[1]} \\
       corpus.\$2.gz \
     || die "Failed to clone \$2 corpus \$1"
@@ -85,7 +85,7 @@ $GIZAWRAPPER \
   corpus.src.gz corpus.tgt.gz \
   --lfactors=0 --rfactors=0 \
   --tempdir=\$tempdir \
-  --bindir=../$BINARIES/bin \
+  --bindir=../$GIZASTEP/bin \
   --dirsym=$ALISYM \
   --drop-bad-lines \
 | cut -f1 \
