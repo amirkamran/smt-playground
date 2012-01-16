@@ -1824,8 +1824,7 @@ sub select_steps {
   if ($error) {
     mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
   } else {
-    print join("\n", @steps), "\n";
-    return 1;
+    return list([@steps]);
   }
 }
 
