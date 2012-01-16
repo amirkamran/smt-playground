@@ -102,6 +102,8 @@ nl=\$(zcat corpus.txt.gz | wc -l)
 [ "\$nl" -eq $OUTLINECOUNT ] \\
 || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
 
+rm -f \$mydir/../makecorpus.index || echo "Failed to force reindexing"
+
 echo Done.
 eman succeed \$mydir
 

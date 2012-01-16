@@ -13,13 +13,21 @@ use warnings;
 use Getopt::Long;
 use File::Path;
 use File::Basename;
+use YAML;
 
+
+my $MYPATH = File::Spec->rel2abs(__FILE__);
+my $basedir = dirname($MYPATH);
+
+my $indexfile = "makecorpus.index";
 my $verbose = 0;
+my $reindex = 0;
 my $init = 0;
 my $start = 0;
 my $fakeno = 1; # the step number when for dry-runs
 
 GetOptions(
+  "reindex!" => \$reindex,
   "init!" => \$init,
   "start!" => \$start,
   "verbose!" => \$verbose,
@@ -59,37 +67,45 @@ my $index;
 # where 'fact' *can* be a specification of several factors: 
 my $err = 0;
 
-# XXX chdir to main dir
-open INDFILES, "find -name corpman.info |" or die "Can't search for corpora";
-while (<INDFILES>) {
-  chomp;
-  my $fn = $_;
-  my @dirs = split /\//, $fn, 2;
-  my $stepname = undef;
-  foreach my $dir (split /\//, $fn) {
-    if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
-      $stepname = $dir;
-      last;
+# chdir to main dir
+chdir($basedir) or die "Failed to chdir to $basedir";
+
+if ( ! -e $indexfile || $reindex ) {
+  print STDERR "Indexing...\n" if $verbose;
+  open INDFILES, "find -maxdepth 2 -name corpman.info |"
+    or die "Can't search for corpora";
+  while (<INDFILES>) {
+    chomp;
+    my $fn = $_;
+    my @dirs = split /\//, $fn, 2;
+    my $stepname = undef;
+    foreach my $dir (split /\//, $fn) {
+      if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
+        $stepname = $dir;
+        last;
+      }
+    }
+    die "Failed to guess step name from $fn" if !defined $stepname;
+    my $status = load_file($stepname."/eman.status");
+    next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
+      # skip all bad steps
+    my $text = load_file($fn);
+    foreach my $line (split /\n/, $text) {
+      next if $line eq "";
+      my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
+        = split /\t/, trim($line);
+      die "Bad entry $fn: $line" if $linecount !~ /^[0-9]+$/;
+      add_entry_incl_entries_of_separate_factors(
+        $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
     }
   }
-  die "Failed to guess step name from $fn" if !defined $stepname;
-  my $status = load_file($stepname."/eman.status");
-  next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
-    # skip all bad steps
-  my $text = load_file($fn);
-  foreach my $line (split /\n/, $text) {
-    next if $line eq "";
-    my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
-      = split /\t/, trim($line);
-    die "Bad entry $fn: $line" if $linecount !~ /^[0-9]+$/;
-    add_entry_incl_entries_of_separate_factors(
-      $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
-  }
+  close INDFILES;
+  exit 1 if $err;
+  saveidx($index);
+} else {
+  # load existing index
+  $index = loadidx();
 }
-close INDFILES;
-
-
-exit 1 if $err;
 
 
 # read rules from makecorpus.rules
@@ -478,4 +494,20 @@ sub trim {
   $s =~ s/^ +//;
   $s =~ s/ +$//;
   return $s;
+}
+
+
+sub loadidx {
+  # load the index file and hash it there and back
+  my $idx;
+  if (-e $indexfile) {
+    $idx = Load(load_file($indexfile)."\n"); # YAML to Load the string
+  }
+  return $idx;
+}
+sub saveidx {
+  my $idx = shift;
+  my $h = my_save($indexfile);
+  print $h YAML::Dump($idx);
+  close $h;
 }

@@ -56,6 +56,8 @@ echo "corpus.txt.gz;-1;$SECTION;$OUTLANG""_txt;untoken;\$nl" \\
 | tr ';' '\t' > corpman.info \\
 || die "Failed to create corpman.info"
 
+rm -f \$mydir/../makecorpus.index || echo "Failed to force reindexing"
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
