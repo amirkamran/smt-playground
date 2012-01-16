@@ -28,10 +28,6 @@ eman add-tag $CORPUS.$OUTALILABEL .
 GIZAWRAPPER=../../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
-# an eager check for symal
-SYMAL=../$GIZASTEP/bin/symal
-[ -x $SYMAL ] || die "symal not found: $SYMAL"
-
 # add source and target corpora to deps
 eman add-deps . \
   $(../makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1) \
