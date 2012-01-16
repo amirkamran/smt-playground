@@ -15,21 +15,30 @@ use File::Path;
 use File::Basename;
 use YAML;
 
+binmode(STDIN, ":utf8");
+binmode(STDOUT, ":utf8");
+binmode(STDERR, ":utf8");
 
 my $MYPATH = File::Spec->rel2abs(__FILE__);
-my $basedir = dirname($MYPATH);
+my $mydir = dirname($MYPATH);
 
 my $indexfile = "makecorpus.index";
 my $verbose = 0;
 my $reindex = 0;
 my $init = 0;
 my $start = 0;
+my $wait = 0;
+my $dumpcmd = 0;
+my $dump = 0;
 my $fakeno = 1; # the step number when for dry-runs
 
 GetOptions(
   "reindex!" => \$reindex,
   "init!" => \$init,
   "start!" => \$start,
+  "wait!" => \$wait,
+  "cmd!" => \$dumpcmd,
+  "dump!" => \$dump,
   "verbose!" => \$verbose,
 ) or exit 1;
 
@@ -45,11 +54,26 @@ Allowed corpus descriptions:
    corp1+corp2/lang+fact1+fact2
      ... concatenate the language lang of corpus 1 and 2 and emit the wished
          factors
+Options:
+  (nothing)  ... dry run: show which eman steps would be prepared
+  --init     ... real run: use eman to init the steps
+  --start    ... also start the newly created steps, implies --init
+  --wait     ... wait for the final step to finish, implies --start
+  --cmd      ... emit a tiny shell script that dumps the corpus to stdout,
+                 implies --wait
+  --dump     ... dump the corpus to stdout, implies --wait
+
 ";
   exit 1;
 }
 
+# switch implications
+$wait = 1 if $dumpcmd || $dump;
+$start = 1 if $wait;
 $init = 1 if $start; # start implies to init
+
+die "Incompatible requests: --dump and --cmd" if $dumpcmd && $dump;
+
 
 # constants:
 my $yes_derived = 1;
@@ -68,7 +92,7 @@ my $index;
 my $err = 0;
 
 # chdir to main dir
-chdir($basedir) or die "Failed to chdir to $basedir";
+chdir($mydir) or die "Failed to chdir to $mydir";
 
 if ( ! -e $indexfile || $reindex ) {
   print STDERR "Indexing...\n" if $verbose;
@@ -86,7 +110,7 @@ if ( ! -e $indexfile || $reindex ) {
       }
     }
     die "Failed to guess step name from $fn" if !defined $stepname;
-    my $status = load_file($stepname."/eman.status");
+    my $status = load_step_status($stepname);
     next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
       # skip all bad steps
     my $text = load_file($fn);
@@ -166,9 +190,36 @@ $facts =~ s/\|/+/g;
 
 my ($stepname, $filename, $column)
   = build_exact_factors($corp, $lang, $facts);
-print $stepname, "\t", $filename, "\t", $column, "\n";
-  # 
-  # or --dump or anything...
+
+if ($wait) {
+  my $status = load_step_status($stepname);
+  if ($status ne "DONE") {
+    safesystem("eman wait $stepname")
+      or die "Failed to wait for $stepname to finish."
+  }
+}
+
+if ($dumpcmd) {
+  my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
+  print "$maygunzip $mydir/$stepname/$filename";
+  print " | cut -f $column" if $column != -1;
+  print "\n";
+} elsif ($dump) {
+  my $h = my_open("$mydir/$stepname/$filename");
+  if ($column == -1) {
+    print while <$h>;
+  } else {
+    while (<$h>) {
+      chomp;
+      my @cols = split /\t/;
+      print $cols[$column-1], "\n";
+    }
+  }
+  close $h;
+} else {
+  # print the details: stepname, filename and column
+  print $stepname, "\t", $filename, "\t", $column, "\n";
+}
 
 sub build_exact_factors {
   # runs lazy_build and extracts the required factor if necessary
@@ -494,6 +545,13 @@ sub trim {
   $s =~ s/^ +//;
   $s =~ s/ +$//;
   return $s;
+}
+
+sub load_step_status {
+  my $stepname = shift;
+  my $status = load_file($stepname."/eman.status");
+  chomp $status;
+  return $status;
 }
 
 
