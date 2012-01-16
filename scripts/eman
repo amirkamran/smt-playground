@@ -481,7 +481,8 @@ if ($cmd eq "wait") {
 }
 
 # the following commands don't work with readonly
-mydie "Can't run '$cmd' in read-only mode." if $readonly;
+print STDERR "Warning: running '$cmd' in read-only mode, make sure to reindex.\n"
+  if $readonly;
 
 if ($cmd eq "init") {
   my $steptype = shift;
@@ -1470,6 +1471,11 @@ sub relative_to_maindir {
 
 sub step_valid {
   my $step = shift;
+  if ($debug) {
+    print STDERR "Checking validity of $step, CWD: ", cwd(), "\n";
+    print STDERR "  relpath: ", relative_to_maindir($step), "\n";
+    print STDERR "  maindir: ", $maindir, "\n";
+  }
   return -d relative_to_maindir($step)
     && -e relative_to_maindir("$step/eman.seed")
     && -e relative_to_maindir("$step/eman.vars");
@@ -1546,8 +1552,7 @@ sub guess_maindir {
   die "Failed to guess eman main dir (failed to find '$seedsdir' up in the CWD path.)"
     if ! -e $up.$seedsdir;
   # store the absolute path of the maindir
-  $maindir = File::Spec->canonpath($up);  # string manipulation
-  #$maindir = abs_path(".");  # touch filesystem
+  $maindir = abs_path($up);  # touch filesystem
 }
 
 sub guess_stepdir {
