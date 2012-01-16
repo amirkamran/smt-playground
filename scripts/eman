@@ -92,6 +92,7 @@ my $avoid = undef;
 my $reuse = undef;
 my $avoid_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
+$readonly = 1 if defined $ENV{"EMAN_READONLY"};
 # standard filenames and filename parts
 my $dirprefix = "s."; # stands for 'step'
 my $indexfile = "eman.index";
@@ -917,7 +918,7 @@ sub init {
   my $preservedir = 0;
   my @varsoverride = ();
   @varsoverride = @$varsarr if defined $varsarr;
-  $ok = safesystem("INIT_ONLY=yes @varsoverride ./eman.seed >&2");
+  $ok = safesystem("INIT_ONLY=yes @varsoverride EMAN_READONLY=yes ./eman.seed >&2");
   if ($ok) {
     $preservedir = 1;
     print STDERR "Step $s inited, checking required files, supplying defaults.\n"
@@ -985,7 +986,7 @@ sub prepare {
 
   my $prevdir = chdir_to_stepdir($s);
   my $ok = 1;
-  $ok = safesystem("eval \$(cat eman.vars) ./eman.seed");
+  $ok = safesystem("eval \$(cat eman.vars) EMAN_READONLY=yes ./eman.seed");
   print STDERR "Step $s prepared, checking required files.\n" if $verbose;
   if (! -e "eman.command") {
     $ok = 0;
