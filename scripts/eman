@@ -1817,6 +1817,21 @@ sub select_steps {
         }
         @steps = @new_steps;
       }
+      when ("vre") {
+        my $varexpr = shift @args;
+        if (! $varexpr) {
+          $error = 1;
+          last;
+        }
+        my @new_steps;
+        for my $step (@steps) {
+          my $varsstr = load_vars_str($step);
+          next if ! $varsstr;
+          my @vars = split /\n/, $varsstr;
+          push @new_steps, $step if grep { $_ =~ $varexpr } @vars;
+        }
+        @steps = @new_steps;
+      }
       default { $error = 1; }
     }
   }
