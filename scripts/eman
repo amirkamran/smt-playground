@@ -533,6 +533,22 @@ if ($cmd eq "wait") {
   exit $waserror;
 }
 
+if ($cmd eq "select") {
+  $waserror = ! select_steps(@ARGV);
+  exit $waserror;
+}
+
+if ($cmd eq "path") {
+  my $stepname = $ARGV[0];
+  guess_maindir();
+  if (defined $stepname) {
+    print relative_to_maindir($stepname), "\n";
+  } else {
+    print "$maindir\n";
+  }
+  exit $waserror;
+}
+
 # the following commands don't work with readonly
 print STDERR "Warning: running '$cmd' in read-only mode, make sure to reindex.\n"
   if $readonly;
@@ -694,11 +710,6 @@ if ($cmd eq "abolish") {
   exit $waserror;
 }
 
-if ($cmd eq "select") {
-  $waserror = ! select_steps(@ARGV);
-  exit $waserror;
-}
-
 if ($cmd eq "add-dir") {
   $waserror = ! add_dir(@ARGV);
   exit $waserror;
@@ -706,17 +717,6 @@ if ($cmd eq "add-dir") {
 
 if ($cmd eq "add-remote") {
   $waserror = ! add_remote_playground(@ARGV);
-  exit $waserror;
-}
-
-if ($cmd eq "path") {
-  my $stepname = $ARGV[0];
-  guess_maindir();
-  if (defined $stepname) {
-    print relative_to_maindir($stepname), "\n";
-  } else {
-    print "$maindir\n";
-  }
   exit $waserror;
 }
 
