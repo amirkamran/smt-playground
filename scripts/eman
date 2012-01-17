@@ -2115,6 +2115,10 @@ eman, experiment manager
   eman select QUERY          # output steps matching the QUERY;
                              #   query syntax is documented below
 
+  eman addremote DIR ALIAS   # add a remote eman playground as ALIAS
+                             # you can use remote steps, clone them etc.
+  eman adddir DIR            # add a subdirectory for steps
+
 SPEC is a text snippet capable of identifying a step uniquely.
 You can even use '.' and '`pwd`' as SPEC.
 Commands marked with '#' are not yet implemented.
