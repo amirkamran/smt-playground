@@ -62,6 +62,7 @@ my %expand_abbrev = qw(
   add-dep add-deps
   adddir adddir
   addremote addremote
+  path path
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -682,6 +683,17 @@ if ($cmd eq "adddir") {
 
 if ($cmd eq "addremote") {
   $waserror = ! add_remote_playground(@ARGV);
+  exit $waserror;
+}
+
+if ($cmd eq "path") {
+  my $stepname = $ARGV[0];
+  guess_maindir();
+  if (defined $stepname) {
+    print relative_to_maindir($stepname), "\n";
+  } else {
+    print "$maindir\n";
+  }
   exit $waserror;
 }
 
