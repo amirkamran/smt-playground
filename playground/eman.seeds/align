@@ -4,6 +4,8 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
+PLAYGROUND=`eman path` # eman playground directory
+
 # Ensure all the required variables are set (or provide the default)
 eman \
   defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
@@ -25,22 +27,24 @@ OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
 
 eman add-tag $CORPUS.$OUTALILABEL .
 
-GIZAWRAPPER=../../scripts/gizawrapper.pl
+GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # add source and target corpora to deps
-srccorpstep=$(../makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1)
+srccorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1)
 [ ! -z "$srccorpstep" ] || die "Missing source corpus"
-tgtcorpstep=$(../makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
+tgtcorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
 [ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
 eman add-deps . $srccorpstep $tgtcorpstep
-
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
 # Run checks in the preparation phase
 # no checks.
+
+# convert the dependencies to absolute paths
+GIZASTEP=`eman path $GIZASTEP`
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
@@ -56,19 +60,19 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-export SCRIPTS_ROOTDIR=$BINARIES/moses/scripts
+export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
-  ../makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
-  step_file_col=(\$(../makecorpus.pl \$1))
+  $PLAYGROUND/makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/makecorpus.pl \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
-    ../../scripts/wiseln ../\${step_file_col[0]}/\${step_file_col[1]} \\
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
       corpus.\$2.gz \
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"
-    eval \$(../makecorpus.pl --cmd $1) \\
+    eval \$($PLAYGROUND/makecorpus.pl --cmd $1) \\
     | gzip -c > corpus.\$2.gz
   fi
 }
@@ -84,7 +88,7 @@ $GIZAWRAPPER \\
   corpus.src.gz corpus.tgt.gz \\
   --lfactors=0 --rfactors=0 \\
   --tempdir=\$tempdir \\
-  --bindir=../$GIZASTEP/bin \\
+  --bindir=$GIZASTEP/bin \\
   --dirsym=$ALISYM \\
   --drop-bad-lines \\
 | gzip -c > alignment.gz \
