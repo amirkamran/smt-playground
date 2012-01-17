@@ -60,6 +60,8 @@ my %expand_abbrev = qw(
   addtag add-tag
   adddep add-deps
   add-dep add-deps
+  adddir adddir
+  addremote addremote
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -99,6 +101,7 @@ my $indexfile = "eman.index";
 my $resultsfile = "eman.results";
 my $resultsconffile = "eman.results.conf";
 my $seedsdir = "eman.seeds";
+my $subdirs_file = "eman.subdirs";
 my $maindir = undef; # the path of the directory with seeds, steps etc.
                      # guessed using chdir_to_maindir
 
@@ -119,6 +122,7 @@ my $hostname = `hostname`;
 if ($hostname =~ /^cluster-cn-/i) {
   $env = "rwth";
 }
+my $subdir = "."; # the directory where to create the experiments
 
 my %options = (
   "help|h" => \$help,
@@ -152,6 +156,7 @@ my %options = (
   "time=s"=>\$time, # format: hh:mm:ss
   "limit|l=s@"=>\@limits, # format, e.g.: h_stack=30M
   "hold=s@"=>\@userholds, # format: 123456
+  "subdir=s"=>\$subdir,
 );
 GetOptions(%options) or exit 1;
 
@@ -333,22 +338,46 @@ if ($cmd eq "reindex" || $reindex) {
 } else {
   $idx = loadidx();
 }
-my @dirs = glob("$dirprefix*.*.[0-9]*");
-foreach my $s (@dirs) {
-  next if defined $idx->{$s}; # && defined $idx->{$s."jid"};
-                              # now avoiding costly regeneration of metadata
-                              # use --reindex if you miss jobids
-  next if ! step_valid($s);
-  add_step_to_index($s);
-  # mark that this step uses its deps
-  my $deps = load_depsarr($s);
-  if (defined $deps) {
-    foreach my $d (@$deps) {
-      $idx->{'USED_BY'}->{$d}->{$s} = 1;
-    }
+my @subdirs;
+push @subdirs, abs_path(".");
+if (-e $subdirs_file) {
+  my $subdirs_hdl = my_open($subdirs_file);
+  while (<$subdirs_hdl>) {
+    chomp;
+    push @subdirs, $_;
   }
-  print STDERR "$s: $idx->{$s}\n" if $debug;
+  close $subdirs_hdl;
+} elsif (! $readonly && ! $autoreadonly) {
+  # the first time we run; touch the file
+  my $subdirs_hdl = my_save($subdirs_file);
+  close $subdirs_hdl;
 }
+
+foreach my $subdir (@subdirs) {
+my @steps = glob("$subdir/$dirprefix*.*.[0-9]*");
+  foreach my $s (@steps) {
+#    print STDERR "indexing $s\n";
+    next if defined $idx->{basename($s)."path"}; # && defined $idx->{$s."jid"};
+                                # now avoiding costly regeneration of metadata
+                                # use --reindex if you miss jobids
+    next if ! step_valid($s);
+    add_step_to_index($s);
+
+    my $stepname = basename($s);
+
+    # mark that this step uses its deps
+    my $deps = load_depsarr($stepname);
+    if (defined $deps) {
+      foreach my $d (@$deps) {
+        $idx->{'USED_BY'}->{$d}->{$stepname} = 1;
+      }
+    }
+    print STDERR "$stepname: $idx->{$stepname}\n" if $debug;
+  }
+}
+
+#print STDERR "done here\n";
+
 saveidx($idx) if ! $readonly;
 chdir($oldwd) or die "Failed to chdir back to $oldwd";
 ## End of updating the index
@@ -646,6 +675,16 @@ if ($cmd eq "select") {
   exit $waserror;
 }
 
+if ($cmd eq "adddir") {
+  $waserror = ! add_dir(@ARGV);
+  exit $waserror;
+}
+
+if ($cmd eq "addremote") {
+  $waserror = ! add_remote_playground(@ARGV);
+  exit $waserror;
+}
+
 $lock->unlock() if defined $lock;
 exit $waserror;
 ## end of main
@@ -909,7 +948,11 @@ sub init {
   mydie "Bad seed name, '.' not allowed." if $steptype =~ /\./;
   my $timestamp = `date '+%Y%m%d-%H%M'`; chomp $timestamp;
   mydie "Bad timestamp: $timestamp" if $timestamp !~ /^[-0-9]+$/;
-  my $s = mkdiruniq($dirprefix.$steptype.".", ".".$timestamp);
+  my $s;
+  my $stepname;
+  add_dir($subdir);
+  $s = mkdiruniq(abs_path($subdir)."/".$dirprefix.$steptype.".", ".".$timestamp);
+  $stepname = basename($s);
   # populate the directory with all relevant files
   quietsystem("cp $seed $s/eman.seed") or die;
   my $oldwd = chdir_to_stepdir($s);
@@ -922,7 +965,7 @@ sub init {
   $ok = safesystem("INIT_ONLY=yes @varsoverride EMAN_READONLY=yes ./eman.seed >&2");
   if ($ok) {
     $preservedir = 1;
-    print STDERR "Step $s inited, checking required files, supplying defaults.\n"
+    print STDERR "Step $stepname inited, checking required files, supplying defaults.\n"
       if $verbose;
 
     # tag: can be blank, non-blank must be valid
@@ -930,7 +973,7 @@ sub init {
     if (defined $tag) {
       if ($tag =~ /[\s\n]/ ) {
         $ok = 0;
-        print STDERR "No whitespace allowed in $s/eman.tag: $tag\n";
+        print STDERR "No whitespace allowed in $stepname/eman.tag: $tag\n";
       }
     } else {
       save("eman.tag", ""); # save blank tag
@@ -951,7 +994,7 @@ sub init {
 
     # vars: must exist (blank vars make no sense)
     if (! defined try_load("eman.vars")) {
-      print STDERR "$seedsdir/$steptype did not create eman.vars for $s\n";
+      print STDERR "$seedsdir/$steptype did not create eman.vars for $stepname\n";
       $ok = 0;
     }
   }
@@ -960,18 +1003,18 @@ sub init {
     save("eman.status", "INITED");
     mychdir($oldwd);
     add_step_to_index($s); # so that further cloning can use that
-    print STDERR "Inited: $s\n";
+    print STDERR "Inited: $stepname\n";
   } elsif ($preservedir) {
-    print STDERR "Failed to init the step. Check and delete: $s\n";
+    print STDERR "Failed to init the step. Check and delete: $stepname\n";
     $waserror = 1;
     save("eman.status", "INITFAILED");
   } else {
-    print STDERR "Failed to init the step. Removing $s\n";
+    print STDERR "Failed to init the step. Removing $stepname\n";
     mychdir($startupwd);
-    rmtree($s) or die "Failed to remove $s";
+    rmtree($s) or die "Failed to remove $stepname";
   }
   mychdir($oldwd);
-  return $ok ? $s : undef;
+  return $ok ? $stepname : undef;
 }
 
 sub prepare {
@@ -1461,12 +1504,14 @@ sub mkdiruniq2 {
   return $prefix.$hash.$suffix;
 }
 
-
-
 sub relative_to_maindir {
   my $fn = shift;
-  guess_maindir();
-  return File::Spec->catfile($maindir, $fn);
+  return $idx->{$fn . "path"} if defined $idx->{$fn . "path"};
+  for my $dir (@subdirs) {
+    my $path = File::Spec->catfile($dir, $fn);
+    return $path if -e $path;
+  }
+  return $fn; # returning non-existent path
 }
 
 sub step_valid {
@@ -1559,15 +1604,18 @@ sub guess_stepdir {
   my $dir = shift;
   # given a subdir of a stepdir, return the stepdir name (or undef)
   # search upwards in the tree
+  # since subdirectories are supported, this is a heuristic based on stepname format
   my $oldwd = cwd();
   chdir $dir or die "Failed to guess stepdir from $dir (nonexistent)";
   my $up = "./";
-  while ( -d $up && ! -e $up."/../".$seedsdir) {
+  my $out = undef;
+  while ( -d $up && ! -e $up."/".$seedsdir) {
+    my $bup = basename(abs_path($up));
+    $out = $bup if $bup =~ m/^$dirprefix.*\d{8,8}-\d{4,4}$/;
     $up .= "../";
   }
-  my $out = undef;
-  if (-e $up."/../".$seedsdir) {
-    $out = basename(abs_path($up));
+  if (! -e $up."/".$seedsdir) {
+    $out = undef;
   }
   chdir($oldwd) or die "Failed chdir back to $oldwd";
   return $out;
@@ -1583,10 +1631,11 @@ sub chdir_to_maindir {
 sub chdir_to_stepdir {
   my $stepdir = shift;
   my $oldwd = chdir_to_maindir();
-  if (-e $stepdir) {
-    chdir($stepdir) or die "Failed to chdir to $stepdir";
+  my $path = relative_to_maindir($stepdir);
+  if (-e $path) {
+    chdir($path) or die "Failed to chdir to $path";
   } else {
-    die "Stepdir $stepdir not found in the main directory ($maindir).";
+    confess "Stepdir $stepdir not found.";
   }
   return $oldwd;
 }
@@ -1647,12 +1696,13 @@ sub guess_step {
 sub guess_step_from_hashdate {
   my $key = shift;
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
-  if (-d $key) {
-    # directory name explicitly given, check if it is indeed a step directory
-    # (or a subdir)
-    # this branch is also used for '.', i.e. the current step dir...
-    my $step = guess_stepdir($key);
-    return $step if -e relative_to_maindir($step)."/eman.seed";
+  for my $subdir ('.', @subdirs) {
+    if (-d "$subdir/$key") {
+      # directory name explicitly given, check if it is indeed a step directory
+      # this branch is also used for '.', i.e. the current step dir...
+      my $step = guess_stepdir("$subdir/$key");
+      return $step if -e "$subdir/$key/eman.seed";
+    }
   }
   # try to interpret the stepname relative to main dir
   my $dkey = relative_to_maindir($key);
@@ -1675,22 +1725,25 @@ sub guess_step_from_hashdate {
 
 sub add_step_to_index {
   my $s = shift;
+  my $stepname = basename($s);
   my $hash = get_hash_from_dir($s);
   print STDERR "ADDED: $s  -> $hash\n" if $debug;
-  $idx->{$s} = $hash;
+  $idx->{$stepname} = $hash;
   # multiple steps can have the same hash, so the hash is mapped to a list
-  if (defined $idx->{$hash}) {
-    push @{$idx->{$hash}}, $s;
+  if (defined $idx->{$hash} && ! grep { $_ eq $stepname } @{$idx->{$hash}}) {
+    push @{$idx->{$hash}}, $stepname;
   } else {
-    $idx->{$hash} = [$s];
+    $idx->{$hash} = [$stepname];
   }
-  my $jid = load_jobid($s);
+  my $jid = load_jobid($stepname);
   # also store jobid, if available
   if (defined $jid) {
-    $idx->{$s} = $hash;
-    $idx->{"jid$jid"} = $s;
-    $idx->{$s."jid"} = $jid;
+    $idx->{$stepname} = $hash;
+    $idx->{"jid$jid"} = $stepname;
+    $idx->{$stepname."jid"} = $jid;
   }
+  # store the path to step
+  $idx->{$stepname."path"} = $s;
 }
 sub loadidx {
   # load the index file and hash it there and back
@@ -1770,7 +1823,7 @@ sub compare_steps {
 
 sub select_steps {
   my @args = @_;
-  my @steps = sort { compare_steps($a, $b) } grep { $_ !~ m/jid/ } all_steps();
+  my @steps = sort { compare_steps($a, $b) } grep { $_ !~ m/(jid|path)/ } all_steps();
   my $error = 0; # select without arguments lists all steps
   while (@args) {
     my $cmd = shift @args;
@@ -1843,6 +1896,35 @@ sub select_steps {
   }
 }
 
+sub add_dir {
+  my $dir = shift;
+  mydie "No directory given." if ! $dir;
+  if (-e $dir) {
+    mydie "$dir is not a directory" if ! -d $dir;
+  } else {
+    mkpath($dir);
+    mydie "Failed to create directory: $dir" if ! -d $dir;
+  }
+  my @current = split /\n/, try_load($subdirs_file);
+  $dir = abs_path($dir);
+  return if grep { $_ eq $dir } @current; # do not add dirs multiple times
+  open(my $subdirs_hdl, ">>$subdirs_file") or mydie "Cannot open $subdirs_file";
+  print $subdirs_hdl $dir, "\n";
+  close $subdirs_hdl;
+}
+
+sub add_remote_playground {
+  my $dir = shift;
+  my $alias = shift;
+  mydie "Usage: eman addremote DIR ALIAS" if ! $dir || ! $alias;
+  mydie "$dir is not a directory" if ! -d $dir;
+  mydie "$dir is not an eman playground" if ! -d "$dir/$seedsdir";
+  mydie "$alias already exists" if -e $alias;
+  symlink abs_path($dir), $alias;
+  open(my $subdirs_hdl, ">>$subdirs_file") or mydie "Cannot open $subdirs_file";
+  print $subdirs_hdl abs_path($alias), "\n";
+  close $subdirs_hdl;
+}
 
 sub try_load {
   my $f = shift;
