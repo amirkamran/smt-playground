@@ -1632,16 +1632,19 @@ sub guess_stepdir {
   # since subdirectories are supported, this is a heuristic based on stepname format
   my $oldwd = cwd();
   chdir $dir or die "Failed to guess stepdir from $dir (nonexistent)";
+  print STDERR "Guess_stepdir $dir; cwd: $oldwd\n";
   my $up = "./";
   my $out = undef;
   while ( -d $up && ! -e $up."/".$seedsdir) {
     my $bup = basename(abs_path($up));
     $out = $bup if $bup =~ m/^$dirprefix.*\d{8,8}-\d{4,4}$/;
+    print STDERR "bup: $bup\nout: $out\n";
     $up .= "../";
   }
   if (! -e $up."/".$seedsdir) {
     $out = undef;
   }
+  print STDERR "up: $up\nout: $out\n";
   chdir($oldwd) or die "Failed chdir back to $oldwd";
   return $out;
 }
@@ -1726,7 +1729,12 @@ sub guess_step_from_hashdate {
       # directory name explicitly given, check if it is indeed a step directory
       # this branch is also used for '.', i.e. the current step dir...
       my $step = guess_stepdir("$subdir/$key");
-      return $step if -e "$subdir/$key/eman.seed";
+      guess_maindir();
+      print STDERR "Guessed: $step; absolute: ".relative_to_maindir($step)."\n",
+        "maindir: ", $maindir, "\n"
+        if defined $step;
+      return $step if defined $step
+                   && -e relative_to_maindir($step)."/eman.seed";
     }
   }
   # try to interpret the stepname relative to main dir
