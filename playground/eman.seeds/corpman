@@ -18,8 +18,8 @@ eman defvar RUN_COMMAND default='' \
      defvar TAKE_FROM_COMMAND default='' \
      defvar STEPNAME default='' help='input step name' \
      defvar FILENAME default='' help='input file name' \
-     defvar COLUMN default='' help='input column in the file, or -1' \
-     defvar FACTOR default='' help='input factor in the column, or -1' \
+     defvar COLUMN default='-1' help='input column in the file, or -1' \
+     defvar FACTOR default='-1' help='input factor in the column, or -1' \
      defvar OUTCORP help='output corpus name' \
      defvar OUTLANG help='output language name' \
      defvar OUTFACTS help='output factors sequence' \

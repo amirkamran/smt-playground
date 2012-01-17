@@ -21,7 +21,7 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-OUTALILABEL=$ALISYM-$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+OUTALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
 [ -z "$OUTLABEL" ] \
   || OUTALILABEL=$OUTALILABEL.$OUTLABEL
 
@@ -35,6 +35,7 @@ srccorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1)
 [ ! -z "$srccorpstep" ] || die "Missing source corpus"
 tgtcorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
 [ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
+
 eman add-deps . $srccorpstep $tgtcorpstep
 
 # Stop here if we are just initing ourselves
@@ -100,26 +101,14 @@ srclen=\`zcat corpus.src.gz | wc -l\`
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
   
 
-echo "Aligned, now create corpman index."
-
-#do_export=1
-#if [ -e ../augmented_corpora/$CORPUS/$OUTALILABEL.gz ]; then
-#  origlen=\`zcat ../augmented_corpora/$CORPUS/$OUTALILABEL.gz | wc -l\`
-#  if [ \$alilen == \$origlen ]; then
-#    echo "WARNING: won't overwrite augmented_corpora/$CORPUS/$OUTALILABEL.gz"
-#    do_export=0
-#  else
-#    echo "REMOVING BAD: ../augmented_corpora/$CORPUS/$OUTALILABEL.gz"
-#    rm ../augmented_corpora/$CORPUS/$OUTALILABEL.gz
-#  fi
-#fi
-#
-#if [ x1 == x\$do_export ]; then
-#  cd ../augmented_corpora/$CORPUS
-#  ../../../scripts/wiseln \$mydir/alignment.gz $OUTALILABEL.gz \
-#    || die "Failed to save to augmented_corpora"
-#  echo ali > $OUTALILABEL.info
-#fi
+echo "Aligned, now create corpman info."
+i=1
+for s in $(echo $ALISYM | tr , ' '); do \\
+  echo "alignment.gz	\$i	$CORPUS	\$s-$OUTALILABEL	ali	$OUTLINECOUNT" \\
+    >> corpman.info \\
+  || die "Failed to append corpman.info"
+  i=\$((\$i+1))
+done
 
 # Standard command footer
 echo Done.
