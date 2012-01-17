@@ -60,8 +60,8 @@ my %expand_abbrev = qw(
   addtag add-tag
   adddep add-deps
   add-dep add-deps
-  adddir adddir
-  addremote addremote
+  adddir add-dir
+  addremote add-remote
   path path
 );
 # all expanded names are also allowed:
@@ -282,7 +282,20 @@ if ($cmd eq "defvar") {
     my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
     $thisvarhelp = "" if !defined $thisvarhelp;
     my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
-    my $usevalue = $vars->{$varname}->{'val'};
+    my $usevalue;
+    if (defined $vars->{$varname}->{'val'}) { 
+      # user specified the value
+      $usevalue = $vars->{$varname}->{'val'};
+    } elsif (defined $vars->{$varname}->{'inherit'}) {
+      # value can be inherited from a particular step
+      my $stepvar = $vars->{$varname}->{'inherit'};
+      my $stepname = $vars->{$stepvar}->{'val'};
+      my ($var) = grep { $_ =~ m/^$varname=/ }
+                  split(/\n/, load_vars_str($stepname));      
+      $usevalue = (split('=', $var))[1] if defined $var;
+    }
+
+    # try default value for the variable
     $usevalue = $thisvardefault if ! defined $usevalue;
 
     $varshelp .= "  $varname ... $thisvarhelp"
@@ -676,12 +689,12 @@ if ($cmd eq "select") {
   exit $waserror;
 }
 
-if ($cmd eq "adddir") {
+if ($cmd eq "add-dir") {
   $waserror = ! add_dir(@ARGV);
   exit $waserror;
 }
 
-if ($cmd eq "addremote") {
+if ($cmd eq "add-remote") {
   $waserror = ! add_remote_playground(@ARGV);
   exit $waserror;
 }
