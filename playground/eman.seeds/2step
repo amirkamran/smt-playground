@@ -6,80 +6,47 @@ set -o pipefail
 
 TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
 
-if [ -z "$PHASE1MERT" ] \
-|| [ -z "$BINARIES" ] \
-|| [ -z "$PHASE2MERT" ]; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$PHASE1MERT to the directory that contains the mert for phase 1"
-  echo "  \$PHASE2MERT to the directory that contains the mert for phase 2"
-  echo "and optionally"
-  echo "  \$TESTCORP to the corpus for evaluation (defaults to the one of phase1"
-  echo "    SRCAUG is implied by PHASE1MERT"
-  echo "    REFAUG is implied by PHASE2MERT"
-  echo "and optionally"
-  echo "  \$SEARCH to beam or cube"
-  echo "  \$MOSESFLAGS to any further flags"
-  echo "  \$GRIDFLAGS to any further flags"
-  echo "  \$SERIAL to yes to disable qsub"
-  echo "  \$STACK to stacksize"
-  echo "  \$TAGPREF to tag prefix"
-  echo "  \$POSTPROC to pipe of commands, e.g. ../tools/remove_pluslemma_prefixes.pl"
-  exit 1
-fi
+PLAYGROUND=`eman path` # eman playground directory
 
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
+eman \
+  defvar PHASE1MERT help="the directory that contains the mert for phase 1" type=reqstep \
+  defvar PHASE2MERT help="the directory that contains the mert for phase 2" type=reqstep \
+  defvar BINARIES help="the step containing compiled tools" inherit=PHASE1MERT type=reqstep \
+  defvar TESTCORP help="the corpus for evaluation" inherit=PHASE1MERT \
+  defvar PHASE1TESTCORP inherit=PHASE2MERT:TESTCORP \
+  defvar SRCAUG inherit=PHASE1MERT \
+  defvar REFAUG inherit=PHASE1MERT \
+  defvar MIDAUG inherit=PHASE2MERT:SRCAUG \
+  defvar SEARCH help="beam or cube" default=cube \
+  defvar MOSESFLAGS help="any further flags" default='' \
+  defvar GRIDFLAGS help="any further flags" default='' \
+  defvar SERIAL help="yes to disable qsub" default='' \
+  defvar STACK help="stacksize" default='' \
+  defvar TAGPREF help="tag prefix" default='' \
+  defvar POSTPROC help="pipe of commands, e.g. ../tools/remove_pluslemma_prefixes.pl" \
+    default='' \
+|| exit 1
 
-[ ! -z "$SEARCH" ] || SEARCH=cube
+# Set local bash variables
+eval `eman bash-loadvars`
 
-[ ! -z "$TESTCORP" ] || eval `cat ../$PHASE1MERT/eman.vars | grep TESTCORP`
+BINARIES=`eman path $BINARIES`
+SCRIPTS_ROOTDIR="`cat $BINARIES/scripts.rootdir`"
+MOSESCMD="$BINARIES/bin/moses"
 
-echo $PHASE1MERT > eman.deps
-echo $PHASE2MERT >> eman.deps
-echo $BINARIES >> eman.deps
-
-eval `cat ../$PHASE1MERT/eman.vars | grep SRCAUG`
-[ ! -z "$SRCAUG" ] || die "Missed SRCAUG"
-eval `cat ../$PHASE2MERT/eman.vars | grep REFAUG`
-[ ! -z "$REFAUG" ] || die "Missed REFAUG"
-MIDAUG=`cat ../$PHASE2MERT/eman.vars | grep SRCAUG | cut -d= -f2`
-[ ! -z "$MIDAUG" ] || die "Missed MIDAUG"
-
-echo "$TAGPREF"SRC"$SRCAUG".MID"$MIDAUG".TGT"$REFAUG".$SEARCH$STACK.FIRST.`cat ../$PHASE1MERT/eman.tag`.SECOND.`cat ../$PHASE2MERT/eman.tag` > eman.tag
-
-echo SETTING eman.tag: `cat eman.tag`
-
-
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-PHASE1MERT=$PHASE1MERT
-PHASE2MERT=$PHASE2MERT
-TESTCORP=$TESTCORP
-SRCAUG=$SRCAUG
-REFAUG=$REFAUG
-SEARCH=$SEARCH
-MOSESFLAGS="$MOSESFLAGS"
-GRIDFLAGS="$GRIDFLAGS"
-SERIAL=$SERIAL
-STACK=$STACK
-POSTPROC="$POSTPROC"
-KONEC
+eman add-tag "$TAGPREF"SRC"$SRCAUG".MID"$MIDAUG".TGT"$REFAUG".$SEARCH$STACK.FIRST.`cat $PHASE1MERT/eman.tag`.SECOND.`cat $PHASE2MERT/eman.tag` .
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-PHASE1TESTCORP=`cat ../$PHASE1MERT/eman.vars | grep TESTCORP | cut -d= -f2`
-[ ! -z "$PHASE1TESTCORP" ] || die "Missed PHASE1TESTCORP"
+$PLAYGROUND/augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
+$PLAYGROUND/augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
 
-
-
-../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
-../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
-
-echo Checking tune and eval corp sizes
-[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
-[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
+srccorpstep=$($PLAYGROUND/makecorpus.pl --init $TESTCORP/$SRCAUG | cut -f1)
+[ ! -z "$srccorpstep" ] || die "Missing source corpus"
+tgtcorpstep=$($PLAYGROUND/makecorpus.pl --init $TESTCORP/$TGTAUG | cut -f1)
+[ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
+eman add-deps . $srccorpstep $tgtcorpstep
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/+.*//'`
 if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
@@ -116,6 +83,9 @@ cube)
   ;;
 esac
 
+PHASE1MERT=`eman path $PHASE1MERT`
+PHASE2MERT=`eman path $PHASE2MERT`
+
 cat << KONEC > eman.command
 # This is the command to be run here
 echo "=============================="
@@ -132,20 +102,42 @@ mydir=\`pwd\`
 set -o pipefail
 function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
+function mkcorpus() {
+  $PLAYGROUND/makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/makecorpus.pl \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      \$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/makecorpus.pl --cmd $1) \\
+    | gzip -c > \$2.gz
+  fi
+}
+mkcorpus $TESTCORP/$SRCAUG evaluation.in
+mkcorpus $TESTCORP/$TGTAUG evaluation.ref.0
+
+gunzip evaluation.in.gz
+gunzip evaluation.ref.0.gz
+
+echo Checking tune and eval corp sizes
+[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
+[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 renice 10 \$\$
 
 # core files limited to 1 byte
 ulimit -c 1
 
-phase1dir=../$PHASE1MERT
-phase2dir=../$PHASE2MERT
+phase1dir=$PHASE1MERT
+phase2dir=$PHASE2MERT
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
 # clone some important executables
-../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+$PLAYGROUND/../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 if [ $PHASE1TESTCORP == $TESTCORP ]; then
   echo "No need to translate first step, reuse output from $PHASE1MERT"
@@ -158,13 +150,13 @@ else
   mkdir phase1model || die "mkdir failed"
   cd phase1model || die "mkdir failed"
   \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
-    ../\$phase1dir/moses.abs.ini || die "clone failed"
+    \$phase1dir/moses.abs.ini || die "clone failed"
   # Absolutize
   \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini \\
     > moses.abs.ini || die "Absolutize failed"
   # Apply weights
-  ../../tools/apply_weights_from_moses_ini.pl \\
-    ../\$phase1dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
+  $PLAYGROUND/tools/apply_weights_from_moses_ini.pl \\
+    \$phase1dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
     || die "Apply failed"
   cd ..
   # Filter for our input
@@ -186,13 +178,13 @@ fi
 mkdir phase2model || die "mkdir failed"
 cd phase2model || die "mkdir failed"
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
-  ../\$phase2dir/moses.abs.ini || die "clone failed"
+  \$phase2dir/moses.abs.ini || die "clone failed"
 # Absolutize
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini \\
   > moses.abs.ini || die "Absolutize failed"
 # Apply weights
-../../tools/apply_weights_from_moses_ini.pl \\
-  ../\$phase2dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
+$PLAYGROUND/tools/apply_weights_from_moses_ini.pl \\
+  \$phase2dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
   || die "Apply failed"
 cd ..
 # Filter for our input
@@ -219,7 +211,7 @@ fi
 
 # assuming the postprocess preserves token count
 paste evaluation.mid.ali evaluation.2nd.ali \\
-| ../../scripts/join_ali.pl \\
+| $PLAYGROUND/../scripts/join_ali.pl \\
 > evaluation.opt.ali
 
 
