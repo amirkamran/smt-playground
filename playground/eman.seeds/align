@@ -29,9 +29,12 @@ GIZAWRAPPER=../../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # add source and target corpora to deps
-eman add-deps . \
-  $(../makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1) \
-  $(../makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
+srccorpstep=$(../makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1)
+[ ! -z "$srccorpstep" ] || die "Missing source corpus"
+tgtcorpstep=$(../makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
+[ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
+eman add-deps . $srccorpstep $tgtcorpstep
+
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
