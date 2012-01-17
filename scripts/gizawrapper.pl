@@ -766,7 +766,8 @@ sub run_giza {
 
   my $outprefix = "$dir/$a-$b";
   my $outfile = "$outprefix.A3.final";
-  $outfile .= '.gz' if $compress;
+  $outfile .= '.gz' if $compress && defined $mgizadir;
+    # plain GIZA does not gzip its output
 
   if (-e $outfile) {
     print STDERR "  $outfile seems finished, reusing.\n";
