@@ -289,8 +289,12 @@ if ($cmd eq "defvar") {
     } elsif (defined $vars->{$varname}->{'inherit'}) {
       # value can be inherited from a particular step
       my $stepvar = $vars->{$varname}->{'inherit'};
-      my $stepname = $vars->{$stepvar}->{'val'};
-      my ($var) = grep { $_ =~ m/^$varname=/ }
+      if ($vars->{$stepvar}->{'type'} ne 'reqstep') {
+        $varshelp .= "    !!! $stepvar is not of type 'reqstep'\n";
+      }
+      my ($stepname, $fromvar) = split ':', $vars->{$stepvar}->{'val'};
+      $fromvar = $varname if ! defined $fromvar;
+      my ($var) = grep { $_ =~ m/^$fromvar=/ }
                   split(/\n/, load_vars_str($stepname));      
       $usevalue = (split('=', $var))[1] if defined $var;
     }
