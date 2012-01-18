@@ -29,13 +29,13 @@ eman defvar SRC help='source language code' \
 # Check that we know the language pair and can select data for it.
 perl -e "\$s = $SRC; \$t = $TGT; "'die "Unknown language pair $s-$t" unless("$s-$t" =~ m/^(cs-en|en-cs|de-en|en-de|es-en|en-es|fr-en|en-fr)$/)' || exit 1
 # Select the corpora according to the language pair.
-if   [ "$SRC-$TGT" == "cs-en" || "$SRC-$TGT" == "en-cs" ] ; then
+if   [ "$SRC-$TGT" == "cs-en" ] || [ "$SRC-$TGT" == "en-cs" ] ; then
   TRAINTM=news-commentary-v6.cs-en+europarl-v6.cs-en
-elif [ "$SRC-$TGT" == "de-en" || "$SRC-$TGT" == "en-de" ] ; then
+elif [ "$SRC-$TGT" == "de-en" ] || [ "$SRC-$TGT" == "en-de" ] ; then
   TRAINTM=news-commentary-v6.de-en+europarl-v6.de-en
-elif [ "$SRC-$TGT" == "es-en" || "$SRC-$TGT" == "en-es" ] ; then
+elif [ "$SRC-$TGT" == "es-en" ] || [ "$SRC-$TGT" == "en-es" ] ; then
   TRAINTM=news-commentary-v6.es-en+europarl-v6.es-en
-elif [ "$SRC-$TGT" == "fr-en" || "$SRC-$TGT" == "en-fr" ] ; then
+elif [ "$SRC-$TGT" == "fr-en" ] || [ "$SRC-$TGT" == "en-fr" ] ; then
   TRAINTM=news-commentary-v6.fr-en+europarl-v6.fr-en
 fi
 TRAINLM=$TRAINTM
