@@ -1,0 +1,103 @@
+#!/bin/bash
+# eman step that prepares Dan's current selection of corpora for WMT experiments
+# This seed script creates steps capable of selecting corpora for variable language pairs, e.g. cs-en, de-en, es-en, fr-en.
+# All input paths are hardwired. The only input variables are the two language codes.
+# Currently the source location is Dan's own augmented_corpora folder at
+# /net/work/people/zeman/wmt/augmented_corpora
+# The step selects and copies/symlinks the following corpora (tokenized plain text, gzipped):
+# - source training data
+# - target training data
+# - source alignment training data (could use different factor than the above)
+# - target alignment training data
+# - target language model training data (might be larger than just the target side of the parallel corpus)
+# - source development data (used for MERT)
+# - target development data (used for MERT)
+# - source test data
+# - target test data (one reference translation assumed)
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default).
+# Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+eman defvar SRC help='source language code' \
+     defvar TGT help='target language code' \
+     defvar STATMT help='root of working copy of the StatMT repository' \
+|| exit 1
+
+# Check that we know the language pair and can select data for it.
+perl -e "\$s = $SRC; \$t = $TGT; "'die "Unknown language pair $s-$t" unless("$s-$t" =~ m/^(cs-en|en-cs|de-en|en-de|es-en|en-es|fr-en|en-fr)$/)' || exit 1
+# Select the corpora according to the language pair.
+if   [ "$SRC-$TGT" == "cs-en" || "$SRC-$TGT" == "en-cs" ] ; then
+  TRAINTM=news-commentary-v6.cs-en+europarl-v6.cs-en
+elif [ "$SRC-$TGT" == "de-en" || "$SRC-$TGT" == "en-de" ] ; then
+  TRAINTM=news-commentary-v6.de-en+europarl-v6.de-en
+elif [ "$SRC-$TGT" == "es-en" || "$SRC-$TGT" == "en-es" ] ; then
+  TRAINTM=news-commentary-v6.es-en+europarl-v6.es-en
+elif [ "$SRC-$TGT" == "fr-en" || "$SRC-$TGT" == "en-fr" ] ; then
+  TRAINTM=news-commentary-v6.fr-en+europarl-v6.fr-en
+fi
+TRAINLM=$TRAINTM
+DEV=newstest2008
+TEST=newstest2011
+TRAINALS=$TRAINTM/$SRC+lcstem4
+TRAINALT=$TRAINTM/$SRC+lcstem4
+TRAINTMS=$TRAINTM/$SRC+stc
+TRAINTMT=$TRAINTM/$TGT+stc
+TRAINLMT=$TRAINLM/$TGT+stc
+DEVS=$DEV/$SRC+stc
+DEVT=$DEV/$TGT+stc
+TESTS=$TEST/$SRC+stc
+TESTT=$TEST/$TGT+stc
+# We still use the old augment.pl to fetch the data.
+AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
+AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
+AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
+
+# Set local bash variables.
+eval `eman bash-loadvars`
+
+# Don't continue if we are not preparing the step yet.
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Tag the step by its prominent characteristics.
+eman add-tag $SRC-$TGT
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+# Note: the essential --dir and --makefile arguments must be stored in a file
+# because augment.pl may call "make" and the Makefile will call another
+# augment.pl, without being able to put through these arguments.
+echo "--dir=$AUGDIR --makefile=$AUGMAKEFILE" > $STATMT/playground/augmented_corpora/augment.pl.flags || die "Failed to save augment.pl.flags"
+cp `$AUGMENT $TRAINALS` trainal.$SRC || die "Failed to copy $TRAINALS"
+cp `$AUGMENT $TRAINALT` trainal.$TGT || die "Failed to copy $TRAINALT"
+cp `$AUGMENT $TRAINTMS` train.$SRC   || die "Failed to copy $TRAINTMS"
+cp `$AUGMENT $TRAINTMT` train.$TGT   || die "Failed to copy $TRAINTMT"
+cp `$AUGMENT $TRAINLMT` trainlm.$TGT || die "Failed to copy $TRAINLMT"
+cp `$AUGMENT $DEVS` dev.$SRC         || die "Failed to copy $DEVS"
+cp `$AUGMENT $DEVT` dev.$TGT         || die "Failed to copy $DEVT"
+cp `$AUGMENT $TESTS` test.$SRC       || die "Failed to copy $TESTS"
+cp `$AUGMENT $TESTT` test.$TGT       || die "Failed to copy $TESTT"
+###!!! Joshua also requires that the corpora be cleaned, i.e. sentences of 100 and more words thrown away.
+###!!! We may want to ensure that in a separate step.
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
