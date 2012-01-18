@@ -104,11 +104,12 @@ srclen=\`zcat corpus.src.gz | wc -l\`
 echo "Aligned, now create corpman info."
 i=1
 for s in $(echo $ALISYM | tr , ' '); do \\
-  echo "alignment.gz	\$i	$CORPUS	\$s-$OUTALILABEL	ali	$OUTLINECOUNT" \\
+  echo "alignment.gz	\$i	$CORPUS	\$s-$OUTALILABEL	ali	\$srclen" \\
     >> corpman.info \\
   || die "Failed to append corpman.info"
   i=\$((\$i+1))
 done
+rm $PLAYGROUND/makecorpus.index # force to reindex
 
 # Standard command footer
 echo Done.
