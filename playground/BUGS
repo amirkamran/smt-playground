@@ -1,5 +1,5 @@
-This file lists known problems of eman, eman seeds and makecorpus.pl
---------------------------------------------------------------------
+This file lists known problems of eman, eman seeds and corpman
+--------------------------------------------------------------
 
 * Default vs. empty variables may cause problems in cloning.
   Variables of individual steps can be explicitly blank or they can be
@@ -12,9 +12,9 @@ This file lists known problems of eman, eman seeds and makecorpus.pl
   default values).
 
 * Two means of dependencies cause confusion.
-  makecorpus.pl knows how to construct trees of steps to prepare the corpus it
+  corpman knows how to construct trees of steps to prepare the corpus it
   was asked for. These trees then become visible in eman tracebacks. However,
   cloning of these tracebacks is not well tested and I'm afraid that eman
   unnecessarily regenerates many of these corpman steps.
-  What's worse: having two copies of the same corpus confuses makecorpus.pl.
+  What's worse: having two copies of the same corpus confuses corpman.
 

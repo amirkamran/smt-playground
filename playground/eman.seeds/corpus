@@ -1,5 +1,5 @@
 #!/bin/bash
-# eman step to support makecorpus.pl
+# eman step to support corpman
 # Three modes of operation:
 #   RUN_COMMAND=...  apply the given pipe to the given input corpus
 #                    you *may* leave STEPNAME etc empty if the command produces
@@ -103,7 +103,7 @@ nl=\$(zcat corpus.txt.gz | wc -l)
 [ "\$nl" -eq $OUTLINECOUNT ] \\
 || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
 
-rm -f \$mydir/../makecorpus.index || echo "Failed to force reindexing"
+rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
 echo Done.
 eman succeed \$mydir

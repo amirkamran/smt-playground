@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# This script cooperates with eman.seeds/makecorpus (and possibly other eman
+# This script cooperates with eman.seeds/corpus (and possibly other eman
 # seeds) and constructs factored corpus of a given specification within eman
 # framework of steps.
 # Upon success, it prints just one line with three columns:
@@ -22,7 +22,7 @@ binmode(STDERR, ":utf8");
 my $MYPATH = File::Spec->rel2abs(__FILE__);
 my $mydir = dirname($MYPATH);
 
-my $indexfile = "makecorpus.index";
+my $indexfile = "corpman.index";
 my $verbose = 0;
 my $reindex = 0;
 my $init = 0;
@@ -132,8 +132,8 @@ if ( ! -e $indexfile || $reindex ) {
 }
 
 
-# read rules from makecorpus.rules
-my $rulestext = load_file("makecorpus.rules");
+# read rules from corpman.rules
+my $rulestext = load_file("corpman.rules");
 my $rules;
 # $rules->{outlang}->{outfacts} = {
 #   inlang=>input language
@@ -230,7 +230,7 @@ sub build_exact_factors {
     return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
   } else {
     # not quite, we need to restrict the given factor
-    my $stepname = run_or_fake_corpman_step("DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpman", [$entry->{"stepname"}]);
+    my $stepname = run_or_fake_corpus_step("DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
     my $filename = "corpus.txt.gz";
     my $column = -1;
     return ($stepname, $filename, $column);
@@ -270,9 +270,9 @@ sub lazy_build {
       push @parts, $cmd;
       push @deps, $subentry->{"stepname"};
     }
-    my $stepname = run_or_fake_corpman_step("DEPS='@deps' TAKE_FROM_COMMAND='("
+    my $stepname = run_or_fake_corpus_step("DEPS='@deps' TAKE_FROM_COMMAND='("
       .join("; ", @parts)
-      .")' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", \@deps);
+      .")' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
@@ -316,7 +316,7 @@ sub lazy_build {
     }
     # build a step that combines all these
 
-    my $stepname = run_or_fake_corpman_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", \@deps);
+    my $stepname = run_or_fake_corpus_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
@@ -349,7 +349,7 @@ sub build_using_rules {
 
   # apply the rule
   my $linecount = $subentry->{"linecount"};
-  my $stepname = run_or_fake_corpman_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpman", [$subentry->{"stepname"}]);
+  my $stepname = run_or_fake_corpus_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", [$subentry->{"stepname"}]);
   my $filename = "corpus.txt.gz";
   my $column = -1;
 
@@ -359,7 +359,7 @@ sub build_using_rules {
 }
 
 
-sub run_or_fake_corpman_step {
+sub run_or_fake_corpus_step {
   my $command = shift;
   my $deps = shift; # deps to wait for
 
@@ -377,7 +377,7 @@ sub run_or_fake_corpman_step {
   $command .= " 2>&1";
   my $out = `$command`;
   print STDERR "--eman-stdout--\n$out\n--end-of-eman-stdout--\n" if $verbose;
-  if ($out =~ /Inited: (s\.corpman\..*)/) {
+  if ($out =~ /Inited: (s\.corpus\..*)/) {
     my $outstep = $1;
     print STDERR "corpman inited: $outstep\n";
     return $outstep;

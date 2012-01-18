@@ -50,7 +50,7 @@ nl=\$(zcat corpus.cs-en.txt.gz | wc -l)
 | sed 's/- /-/' | tr ';' '\t' > corpman.info \\
 || die "Failed to create corpman.info"
 
-rm -f \$mydir/../makecorpus.index || echo "Failed to force reindexing"
+rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
 # Standard command footer
 echo Done.

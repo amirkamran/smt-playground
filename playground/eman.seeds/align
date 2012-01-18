@@ -31,9 +31,9 @@ GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # add source and target corpora to deps
-srccorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$SRCALIAUG | cut -f1)
+srccorpstep=$($PLAYGROUND/corpman --init $CORPUS/$SRCALIAUG | cut -f1)
 [ ! -z "$srccorpstep" ] || die "Missing source corpus"
-tgtcorpstep=$($PLAYGROUND/makecorpus.pl --init $CORPUS/$TGTALIAUG | cut -f1)
+tgtcorpstep=$($PLAYGROUND/corpman --init $CORPUS/$TGTALIAUG | cut -f1)
 [ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
 
 eman add-deps . $srccorpstep $tgtcorpstep
@@ -65,15 +65,15 @@ export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
-  $PLAYGROUND/makecorpus.pl --wait \$1 || die "Failed to prepare \$1"
-  step_file_col=(\$($PLAYGROUND/makecorpus.pl \$1))
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
     $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
       corpus.\$2.gz \
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/makecorpus.pl --cmd $1) \\
+    eval \$($PLAYGROUND/corpman --cmd $1) \\
     | gzip -c > corpus.\$2.gz
   fi
 }
@@ -109,7 +109,7 @@ for s in $(echo $ALISYM | tr , ' '); do \\
   || die "Failed to append corpman.info"
   i=\$((\$i+1))
 done
-rm $PLAYGROUND/makecorpus.index # force to reindex
+rm $PLAYGROUND/corpman.index # force to reindex
 
 # Standard command footer
 echo Done.
