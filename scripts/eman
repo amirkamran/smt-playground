@@ -72,6 +72,7 @@ foreach my $val (values %expand_abbrev) {
 my $wait_sleep = 3;
 my $startupwd = cwd();
 my $debug = 0;
+my $dryrun = 0;
 my $reindex = 0;
 my $verbose = 0;
 my $manpage = 0;
@@ -129,6 +130,11 @@ my %options = (
   "help|h" => \$help,
   "verbose|v" => \$verbose,
   "debug" => \$debug,
+  "dry-run!" => \$dryrun,
+     # note that dry runs are not quite reliable because seeds are allowed to
+     # set default values of variables, so searching for a matching step works
+     # differently for cases where the seed was run (real runs) or where it was
+     # not run (dry runs)
   "list-options" => \$list_options,
   "man" => \$manpage,
   "sge!" => \$sge,
@@ -647,6 +653,7 @@ if ($command eq "redo") {
     $show_status = 1;
     traceback("OLD ", $s);
     traceback("NEW ", $newtopstep);
+    print STDERR "Traceback of NEW not reliable in --dry-run.\n" if $dryrun;
   } else {
     $waserror = 1;
   }
@@ -973,6 +980,7 @@ sub init_by_recipe {
 }
 
 
+my $init_dryrun_no = 0;
 sub init {
   my $steptype = shift;
   my $varsarr = shift; # optional array of strings VAR="sd sdf"
@@ -985,6 +993,14 @@ sub init {
   mydie "Bad timestamp: $timestamp" if $timestamp !~ /^[-0-9]+$/;
   my $s;
   my $stepname;
+  if ($dryrun) {
+    $init_dryrun_no = 0 if !defined $init_dryrun_no;
+    $init_dryrun_no++;
+    $stepname = "s.fake.$init_dryrun_no";
+    print STDERR "$stepname: ", join(" ", @$varsarr), "\n";
+    add_fake_step_to_index($stepname, $varsarr);
+    return $stepname;
+  }
   add_dir($subdir);
   $s = mkdiruniq(abs_path($subdir)."/".$dirprefix.$steptype.".", ".".$timestamp);
   $stepname = basename($s);
@@ -1758,11 +1774,10 @@ sub guess_step_from_hashdate {
   return undef; #couldn't confirm
 }
 
-sub add_step_to_index {
-  my $s = shift;
-  my $stepname = basename($s);
-  my $hash = get_hash_from_dir($s);
-  print STDERR "ADDED: $s  -> $hash\n" if $debug;
+sub add_hash_to_index {
+  my $stepname = shift;
+  my $hash = shift;
+  print STDERR "ADDED: $stepname  -> $hash\n" if $debug;
   $idx->{$stepname} = $hash;
   # multiple steps can have the same hash, so the hash is mapped to a list
   if (defined $idx->{$hash} && ! grep { $_ eq $stepname } @{$idx->{$hash}}) {
@@ -1770,6 +1785,22 @@ sub add_step_to_index {
   } else {
     $idx->{$hash} = [$stepname];
   }
+}
+
+
+sub add_fake_step_to_index {
+  # used in dry runs
+  my $stepname = shift;
+  my $vars = shift;
+  my $hash = get_hash_from_vars_deps($stepname, $vars, undef);
+  add_hash_to_index($stepname, $hash);
+}
+
+sub add_step_to_index {
+  my $s = shift;
+  my $stepname = basename($s);
+  my $hash = get_hash_from_dir($s);
+  add_hash_to_index($stepname, $hash);
   my $jid = load_jobid($stepname);
   # also store jobid, if available
   if (defined $jid) {
@@ -1796,11 +1827,11 @@ sub saveidx {
 }
 
 sub get_hash_from_dir {
-  my $exp = shift;
+  my $step = shift;
 
-  my @vars = split /\n/, load($exp."/eman.vars");
-  #my @deps = split /\n/, load($exp."/eman.deps");
-  return get_hash_from_vars_deps($exp, \@vars, undef);
+  my @vars = split /\n/, load($step."/eman.vars");
+  #my @deps = split /\n/, load($step."/eman.deps");
+  return get_hash_from_vars_deps($step, \@vars, undef);
 }
 sub get_hash_from_vars_deps {
   my $name = shift;
