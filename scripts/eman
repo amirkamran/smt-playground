@@ -313,15 +313,16 @@ if ($cmd eq "defvar") {
     $thisvarhelp = "" if !defined $thisvarhelp;
     my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
     my $usevalue;
-    if (defined $vars->{$varname}->{'val'}) { 
+    if (defined $vars->{$varname}->{'val'}) {
       # user specified the value
       $usevalue = $vars->{$varname}->{'val'};
-    } elsif (defined $vars->{$varname}->{'inherit'}) {
+    } elsif (defined $vars->{$varname}->{'opt'}->{'inherit'}) {
       # value can be inherited from a particular step
-      my $stepvar = $vars->{$varname}->{'inherit'};
-      if ($vars->{$stepvar}->{'type'} ne 'reqstep') {
+      my $stepvar = $vars->{$varname}->{'opt'}->{'inherit'};
+      if ($vars->{$stepvar}->{'opt'}->{'type'} ne 'reqstep') {
         $varshelp .= "    !!! $stepvar is not of type 'reqstep'\n";
       }
+      ###!!!DZ Opravdu to má být takhle? Nemìl se splitnout spíš sám $stepvar?
       my ($stepname, $fromvar) = split ':', $vars->{$stepvar}->{'val'};
       $fromvar = $varname if ! defined $fromvar;
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
@@ -516,7 +517,7 @@ if ($cmd eq "wait") {
   $lock->unlock() if defined $lock;
   mydie "usage: eman wait SPEC ..." if 0 == scalar @ARGV;
   my %steps = map { my $s = guess_step($_); ($s, load_status($s)) } @ARGV;
-  # check if any steps have no chance 
+  # check if any steps have no chance
   my @no_chance = grep { $steps{$_}
                          !~ /^(STARTING|RUNNING|DONE|FAILED|OUTDATED)$/ }
                   keys %steps;
@@ -631,7 +632,7 @@ if ($cmd eq "continue") {
   my $s = guess_step($step); # happily guess the exact step
   chdir_to_stepdir($s);
   my $stat = load_status($s);
-  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)." 
+  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)."
     if $stat ne "FAILED";
   save("eman.status", "PREPARED"); # fake our status
   $waserror = ! submit($s);
@@ -852,7 +853,7 @@ sub parse_recipe {
       next; # read further deps
       # return parse_recipe($lines, $cutprefix, $recipe);
     }
-    
+
     if (! defined $lines->[0]
       || $lines->[0] =~ /^(\|  )*\+- /) {
       # Going shallower
@@ -881,7 +882,7 @@ sub init_by_recipe {
   }
 
   # print "INIT_BY_RECIPE: $recipe->{name}\n";
-  
+
   # handle all dependencies
   my $olddeps = $recipe->{"deps"};
   my @newdeps = ();
@@ -971,7 +972,7 @@ sub init_by_recipe {
         if $verbose;
     }
   }
-  
+
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
     # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
@@ -1110,7 +1111,7 @@ sub start {
   # 2. walk back, make sure all are prepared (if not, prepare
   #    if failed, fail
   # 3. walk back, if done, ok, if prepared, submit
-  #    subshould 
+  #    subshould
   # check predecessors and if none of them failed
   # so that we wait for them
   my $s = shift;
@@ -1212,7 +1213,7 @@ sub brief_traceback {
   traceback($prefix, $s);
   ($show_status, $show_vars, $show_log) = @mem;
 }
-  
+
 
 sub submit {
   # assume all predecessors are DONE or their jobids are provided
@@ -1242,7 +1243,7 @@ sub submit {
   my $oldsgeholds = $ENV{"HOLDS"};
   $oldsgeholds ||= "";
   my $sgeholdsstr = join(" ", ($oldsgeholds, @sgeholds));
-  
+
   # just to be sure
   quietsystem("chmod +x eman.command")
     or print STDERR "Failed to ensure executable bit for eman.command in $s\n";
@@ -1539,7 +1540,7 @@ sub recognize_command {
 sub mkdiruniq {
   my $prefix = shift;
   my $suffix = shift;
-  
+
   my $dirnum = 1;
   my $tryname = mkdiruniq2($prefix, $suffix, $dirnum);
   while (-e $tryname) {
@@ -1769,7 +1770,7 @@ sub guess_step {
   if (!defined $step && -e $resultsfile) {
     # guess from results file
     my $resultstext = load($resultsfile);
-    
+
     my @resultsmatches = grep { /$key/ } split /\n/, $resultstext;
     my $step_to_text;
     foreach my $l (@resultsmatches) {
@@ -1805,7 +1806,7 @@ sub guess_step {
   }
   die "Failed to guess step from: $key\nTry --reindex." if !defined $step;
   return $step;
-}  
+}
 
 
 sub guess_step_from_hashdate {
@@ -1905,7 +1906,7 @@ sub get_hash_from_vars_deps {
     # deps are totally ignored, we assume they are implied by vars
   # avoid considering the name of ourselves significant in content check
   my @usevars = @$vars;
-  @usevars = 
+  @usevars =
     grep { ! /^[^=]+=''$/ } grep { ! /^[^=]+=""$/ } # skip empty-valued vars
     grep { /^[^=]+=./ }  # skip empty-valued vars
     grep { /./ } # skip empty lines
@@ -2212,7 +2213,7 @@ eman, experiment manager
     --avoid=SPEC             #   don't reuse the given step in the clone
     --all-avoid              #   avoid all input steps
     --start                  # after init/clone/redo, submit to queue
-  
+
   eman prepare SPEC          # prepare inited step
   eman run SPEC              # run prepared step
   eman continue SPEC         # continue a single step that failed
@@ -2235,7 +2236,7 @@ eman, experiment manager
   eman duplicates            # show groups of 2+ steps having same vars
     --tag --vars --status    #   include relevant information
     --log --jobid            #   and the tail of the log or SGE job ID
-  
+
   eman abolish SPEC ...      # destroy all step files except
                              #   metadata => can still be cloned
   eman collect               # collect results of all experiments
@@ -2243,7 +2244,7 @@ eman, experiment manager
 
   eman wait SPEC ...         # block until the jobs are FAILED or DONE
                              # die if FAILED nor DONE is reachable
-  
+
   eman select QUERY          # output steps matching the QUERY;
                              #   query syntax is documented below
 
@@ -2385,7 +2386,7 @@ naturally requires to clone the subsequent steps as well.
 
 eman traceback SPEC -s '/.../.../'
   # preview the experiment with some vars replaced
-  # append "--colorize | less" to preview 
+  # append "--colorize | less" to preview
 
 eman traceback SPEC -s '/.../.../' | eman clone
   # clone the whole subtree of steps replacing some vars
@@ -2498,6 +2499,13 @@ current step. This can be easily achieved:
 Note that your seed can be asked to perform the init before the $DEPENDENCE was
 prepared and likewise, it can be asked to prepare before $DEPENDENCE was run.
 So avoid asking for files in $DEPENDENCE too early.
+
+Note DZ: The complicated code above is probably outdated.
+There is now support for variable inheriting directly in eman.
+This is an example of what to include in the seed of the inheriting step:
+
+  eman defvar INHERITED inherit=PREVIOUSSTEP
+  eman defvar INHERITED2 inherit=PREVIOUSSTEP:VARIABLE
 
 
 =head2 Inheriting Dependencies

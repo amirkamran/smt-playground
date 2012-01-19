@@ -16,6 +16,8 @@ GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 eman \
   defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
   defvar DATASTEP type=reqstep help='where are trainal.$SRC.gz and trainal.$TGT.gz' \
+  defvar SRC inherit=DATASTEP help='source language code' \
+  defvar TGT inherit=DATASTEP help='target language code' \
   defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar OUTLABEL default='' \
@@ -25,7 +27,7 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-# Somehow we must inherit the values of $SRC and $TGT from the $DATASTEP.
+# Check inheriting of the values of $SRC and $TGT from the $DATASTEP.
 if [ -z "$SRC" ] || [ -z "$TGT" ] ; then die "Both \$SRC and \$TGT must be set. Currently \$SRC=$SRC, \$TGT=$TGT." ; fi
 SRCALIAUG=$SRC
 TGTALIAUG=$TGT
@@ -83,7 +85,7 @@ alilen=\`zcat alignment.gz | wc -l\`
 srclen=\`zcat $TRAINALS | wc -l\`
 [ \$alilen == \$srclen ] \
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
-  
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
