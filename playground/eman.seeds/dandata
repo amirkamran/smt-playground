@@ -20,10 +20,17 @@ set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default).
 # Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
 # It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+if [ -z "$STATMT" ] ; then
+  echo "You must set: "
+  echo "  \$STATMT to the root of your working copy of the StatMT repository (one level above playground)"
+  echo "  \$SRC to the code of the source language"
+  echo "  \$TGT to the code of the target language"
+  exit 1
+fi
 eman defvar SRC help='source language code' \
      defvar TGT help='target language code' \
-     defvar STATMT help='root of working copy of the StatMT repository' \
 || exit 1
 
 # Check that we know the language pair and can select data for it.
