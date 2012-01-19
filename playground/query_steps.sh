@@ -68,7 +68,7 @@ while [ -n "$*" ]; do
       shift
       new_steps=""
       for i in $steps; do
-        [ -z "`cat $i/eman.vars | grep $1`" ] || new_steps="$new_steps $i"
+        [ -z "`cat $i/eman.vars | grep '^'$1'$'`" ] || new_steps="$new_steps $i"
       done
       steps="$new_steps"
       shift

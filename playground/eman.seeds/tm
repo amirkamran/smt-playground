@@ -9,10 +9,10 @@ eman \
   defvar type=reqstep inherit=ALISTEP BINARIES \
     help="the step containing compiled tools; inherited from ALISTEP" \
   defvar SRCCORP help="source corpus name, CORPUS from ALISTEP is used if omitted" \
-  defvar TGTCORP sameas=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
-  defvar ALICORP sameas=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar ALICORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar ALIAUG inherit=ALISTEP:OUTALILABEL \
     help="the string describing the 'language', e.g. 'ali'" \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. 0a1-0+1-1" \
