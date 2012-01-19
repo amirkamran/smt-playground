@@ -1,137 +1,108 @@
 #!/bin/bash
 # eman seed for running mert on a moses model
 
-function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
-set -o pipefail
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
 
-if [ -z "$MODELSTEP" ] || [ -z "$DEVCORP" ] \
-  || [ -z "$TESTCORP" ] \
-  || [ -z "$REFAUG" ] \
-  ; then
-  echo "You must set: "
-  echo "  \$MODELSTEP to the directory that contains the model, incl. all files"
-  echo "  \$DEVCORP to the corpus for tuning; use colon to delimit more corpora"
-  echo "            source side is taken from the first one"
-  echo "  \$TESTCORP to the corpus for evaluation"
-  echo "  \$REFAUG to the target (reference) lang+factors"
-  echo "and optionally"
-  echo "  \$SEARCH to beam or cube"
-  echo "  \$MOSESFLAGS to any further flags"
-  echo "  \$MERTFLAGS to any further flags"
-  echo "  \$GRIDFLAGS to any further flags"
-  echo "  \$SERIAL to yes to disable qsub"
-  echo "  \$STACK to stacksize"
-  echo "  \$TAGPREF to tag prefix"
-  echo "  \$MERTPRG to mert, zmert (and hopefully new-mert later)"
-  echo "  \$ZMERTMETRIC for zmert, to SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU"
-  echo "  \$ZMERTSEMPOSSOURCE for zmert SemPOS, to factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt"
-  echo "  \$ZMERTSEMPOSBLEUWEIGHTS for --semposbleu-weights, e.g. 1:1"
-  echo "  \$ZMERTFLAGS for zmert flags"
-  echo "  \$TMT_ROOT for zmert SemPOS TMT_ROOT"
-  echo "  \$BINARIES if you don't want to inherit them from MODELSTEP"
-  exit 1
-fi
+PLAYGROUND=`eman path` # eman playground directory
 
-echo $MODELSTEP > eman.deps
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar MODELSTEP type=reqstep help='where is the model (moses.ini) incl. all files' \
+  defvar DEVCORP help='the corpus for tuning; use colon to delimit more corpora (the source side will be taken from the first one only)' \
+  defvar TESTCORP help='the corpus for evaluation' \
+  defvar REFAUG help='the target (reference) lang+factors' \
+  defvar SEARCH default=cube help='the search type (beam or cube)' \
+  defvar MOSESFLAGS default='' help='further flags for moses' \
+  defvar MERTFLAGS default='' help='further flags for mert.pl' \
+  defvar GRIDFLAGS default='' help='further flags for qsub' \
+  defvar STACK default='' help='stacksize for beam search' \
+  defvar TAGPREF default='' help='eman tag prefix' \
+  defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
+  defvar ZMERTMETRIC default='' help='for zmert: SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU' \
+  defvar ZMERTSEMPOSSOURCE default='' help='for zmert: factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt' \
+  defvar ZMERTSEMPOSBLEUWEIGHTS default='' help='for zmert --semposbleu-weights, e.g. 1:1' \
+  defvar ZMERTFLAGS default='' help='zmert flags' \
+  defvar TREEXSTEP default='' help='for zmert SemPOS tmt (used to be TMT_ROOT; untested)' \
+  defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
+  defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
+|| exit 1
 
-# Load variables from MODEL
-[ -e ../$MODELSTEP/eman.vars ] || die "Bad translation model: $MODELSTEP"
-SAVEBINARIES=$BINARIES
-# inherit all variables
-eval `cat ../$MODELSTEP/eman.vars` || exit 1
+# Set local bash variables
+eval `eman bash-loadvars`
 
-if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
-  # inheriting, ignoring our SAVEBINARIES
-  true
-else
-  # using our own
-  BINARIES=$SAVEBINARIES
-  echo $BINARIES >> eman.deps
-fi
+## Load variables from MODEL
+#[ -e ../$MODELSTEP/eman.vars ] || die "Bad translation model: $MODELSTEP"
+#SAVEBINARIES=$BINARIES
+## inherit all variables
+#eval `cat ../$MODELSTEP/eman.vars` || exit 1
+#
+#if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
+#  # inheriting, ignoring our SAVEBINARIES
+#  true
+#else
+#  # using our own
+#  BINARIES=$SAVEBINARIES
+#  echo $BINARIES >> eman.deps
+#fi
 
-SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
+MOSESDIR="$(eman path $MOSESSTEP)"
+SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
+MOSESCMD="$MOSESDIR/bin/moses"
 
-[ ! -z "$JOBS" ] || JOBS=15
-[ $JOBS == 0 ] && SERIAL=yes
-
-[ ! -z "$SEARCH" ] || SEARCH=cube
-[ ! -z "$MERTPRG" ] || MERTPRG=mert
-
-
-if [ "$MERTPRG" == zmert ]; then
-  [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS 
-  ZMERTMETRICTAG=$ZMERTMETRIC
-  if [ "$ZMERTMETRIC" == SemPOS ] || [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
-    [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
-    ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
-    ZMERTSEMPOSSOURCEFLAG="--extract-sempos=$ZMERTSEMPOSSOURCE"
-  fi
-  if [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
-    [ ! -z "$ZMERTSEMPOSBLEUWEIGHTS" ] || ZMERTSEMPOSBLEUWEIGHTS=1:1
-    ZMERTMETRICTAG="$ZMERTMETRICTAG"WEIGHTS$ZMERTSEMPOSBLEUWEIGHTS
-    ZMERTSEMPOSSOURCEFLAG=$ZMERTSEMPOSSOURCEFLAG" --semposbleu-weights=$ZMERTSEMPOSBLEUWEIGHTS"
-  fi
-  MERTTAG=ZMERT$ZMERTMETRICTAG
-fi
+#if [ "$MERTPRG" == zmert ]; then
+#  [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS 
+#  ZMERTMETRICTAG=$ZMERTMETRIC
+#  if [ "$ZMERTMETRIC" == SemPOS ] || [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
+#    [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
+#    ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
+#    ZMERTSEMPOSSOURCEFLAG="--extract-sempos=$ZMERTSEMPOSSOURCE"
+#  fi
+#  if [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
+#    [ ! -z "$ZMERTSEMPOSBLEUWEIGHTS" ] || ZMERTSEMPOSBLEUWEIGHTS=1:1
+#    ZMERTMETRICTAG="$ZMERTMETRICTAG"WEIGHTS$ZMERTSEMPOSBLEUWEIGHTS
+#    ZMERTSEMPOSSOURCEFLAG=$ZMERTSEMPOSSOURCEFLAG" --semposbleu-weights=$ZMERTSEMPOSBLEUWEIGHTS"
+#  fi
+#  MERTTAG=ZMERT$ZMERTMETRICTAG
+#fi
 
 
-echo $TAGPREF`cat ../$MODELSTEP/eman.tag`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
+eman add-tag $TAGPREF`eman tag $MODELSTEP`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG .
 
 #echo SETTING eman.tag: `cat eman.tag`
 
 echo $MODELSTEP > info.modelexp
 
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-MODELSTEP=$MODELSTEP
-DEVCORP=$DEVCORP
-TESTCORP=$TESTCORP
-SRCAUG=$SRCAUG
-REFAUG=$REFAUG
-SEARCH=$SEARCH
-MERTFLAGS="$MERTFLAGS"
-GRIDFLAGS="$GRIDFLAGS"
-MOSESFLAGS="$MOSESFLAGS"
-SERIAL=$SERIAL
-STACK=$STACK
-MERTPRG=$MERTPRG
-ZMERTMETRIC="$ZMERTMETRIC"
-ZMERTSEMPOSSOURCE=$ZMERTSEMPOSSOURCE
-ZMERTSEMPOSBLEUWEIGHTS=$ZMERTSEMPOSBLEUWEIGHTS
-ZMERTFLAGS="$ZMERTFLAGS"
-TMT_ROOT=$TMT_ROOT
-KONEC
-
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
 # Prepare testbleu.
-gunzip ../../src/testbleu.gz -c > ./testbleu || die "Cannot extract testbleu binary!"
+gunzip $PLAYGROUND/../src/testbleu.gz -c > ./testbleu \
+  || die "Cannot extract testbleu binary!"
 chmod +x ./testbleu
 
 firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
 
 # create local copies of the corpora
-../augmented_corpora/augment.pl --dump $firstdevcorp/$SRCAUG > tuning.in \
+$PLAYGROUND/corpman --dump $firstdevcorp/$SRCAUG > tuning.in \
   || die "Failed to create tuning.in from $firstdevcorp/$SRCAUG"
 refidx=0
 for devcorp in $(echo $DEVCORP | tr ':' ' '); do
-  ../augmented_corpora/augment.pl --dump $devcorp/$REFAUG > tuning.ref.$refidx \
+  $PLAYGROUND/corpman --dump $devcorp/$REFAUG > tuning.ref.$refidx \
     || die "Failed to create tuning.ref.$refidx from $devcorp/$REFAUG"
   [ `wc -l < tuning.in` == `wc -l < tuning.ref.$refidx` ] \
     || die "Mismatching number of lines in tuning.ref.$refidx taken from $devcorp/$REFAUG"
   refidx=$(($refidx+1))
 done
-../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
-../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
+$PLAYGROUND/corpman --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
+$PLAYGROUND/corpman --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
 
 echo Checking tune and eval corp sizes
 [ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
 [ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 
-../../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
+$PLAYGROUND/../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
   || die "Failed to cut factor 0 of evaluation.ref.0"
 
 
@@ -150,7 +121,7 @@ if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
 
-if [ "$SERIAL" = yes ]; then
+if [ $JOBS -eq 0 ]; then
   GRIDARGS=""
   MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
 else
@@ -215,27 +186,22 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
-mydir=\`pwd\`
-
-set -o pipefail
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-
-renice 10 \$\$
-
-# core files limited to 1 byte
-ulimit -c 1
-
-if [ -d "$TMT_ROOT" ]; then
-  # ensuring tectomt is actually inited!
-  pushd $TMT_ROOT ||  die "Can't chdir to TMT_ROOT $TMT_ROOT"
-  . ./config/init_devel_environ.sh
-  [ "\$TMT_OK" == 1 ] || die "Failed to init TectoMT"
-  popd
-fi
+#if [ -d "$TMT_ROOT" ]; then
+#  # ensuring tectomt is actually inited!
+#  pushd $TMT_ROOT ||  die "Can't chdir to TMT_ROOT $TMT_ROOT"
+#  . ./config/init_devel_environ.sh
+#  [ "\$TMT_OK" == 1 ] || die "Failed to init TectoMT"
+#  popd
+#fi
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
@@ -244,7 +210,7 @@ export MERTFLAGS="$MERTFLAGS"
 echo export MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
-../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
@@ -257,9 +223,10 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
 
+# This is the actual mert to run
 `cat command.mert`
 
-
+# Mert finished, apply the moses.ini to independent test set
 [ -e filtered-for-eval-opt ] \
 || \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
   ./mert-tuning/moses.ini evaluation.in \\
@@ -285,7 +252,7 @@ echo "Detokenizing evaluation.opt.out"
 \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
   < evaluation.opt.out > evaluation.opt.txt
 
-
+# Apply also the non-optimized weights, just to double check mert did something
 \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-std \\
   ./mert-tuning/run1.moses.ini evaluation.in || die "Filter for std failed"
 
@@ -318,15 +285,12 @@ echo ./moses -input-file ./evaluation.in -config \
 #  | head -c 300k \\
 #  > evaluation.opt.verbose
 
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
-if [ "$RUN" == "yes" ]; then
-  sh eman.command
-fi
