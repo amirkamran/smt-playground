@@ -62,7 +62,7 @@ eval `eman bash-loadvars`
 [ -z "$INIT_ONLY" ] || exit 0
 
 # Tag the step by its prominent characteristics.
-eman add-tag $SRC-$TGT
+echo $SRC-$TGT > eman.tag
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -80,15 +80,15 @@ renice 10 \$\$
 # because augment.pl may call "make" and the Makefile will call another
 # augment.pl, without being able to put through these arguments.
 echo "--dir=$AUGDIR --makefile=$AUGMAKEFILE" > $STATMT/playground/augmented_corpora/augment.pl.flags || die "Failed to save augment.pl.flags"
-cp `$AUGMENT $TRAINALS` trainal.$SRC || die "Failed to copy $TRAINALS"
-cp `$AUGMENT $TRAINALT` trainal.$TGT || die "Failed to copy $TRAINALT"
-cp `$AUGMENT $TRAINTMS` train.$SRC   || die "Failed to copy $TRAINTMS"
-cp `$AUGMENT $TRAINTMT` train.$TGT   || die "Failed to copy $TRAINTMT"
-cp `$AUGMENT $TRAINLMT` trainlm.$TGT || die "Failed to copy $TRAINLMT"
-cp `$AUGMENT $DEVS` dev.$SRC         || die "Failed to copy $DEVS"
-cp `$AUGMENT $DEVT` dev.$TGT         || die "Failed to copy $DEVT"
-cp `$AUGMENT $TESTS` test.$SRC       || die "Failed to copy $TESTS"
-cp `$AUGMENT $TESTT` test.$TGT       || die "Failed to copy $TESTT"
+cp \`$AUGMENT $TRAINALS\` trainal.$SRC.gz || die "Failed to copy $TRAINALS"
+cp \`$AUGMENT $TRAINALT\` trainal.$TGT.gz || die "Failed to copy $TRAINALT"
+cp \`$AUGMENT $TRAINTMS\` train.$SRC.gz   || die "Failed to copy $TRAINTMS"
+cp \`$AUGMENT $TRAINTMT\` train.$TGT.gz   || die "Failed to copy $TRAINTMT"
+cp \`$AUGMENT $TRAINLMT\` trainlm.$TGT.gz || die "Failed to copy $TRAINLMT"
+cp \`$AUGMENT $DEVS\` dev.$SRC.gz         || die "Failed to copy $DEVS"
+cp \`$AUGMENT $DEVT\` dev.$TGT.gz         || die "Failed to copy $DEVT"
+cp \`$AUGMENT $TESTS\` test.$SRC.gz       || die "Failed to copy $TESTS"
+cp \`$AUGMENT $TESTT\` test.$TGT.gz       || die "Failed to copy $TESTT"
 ###!!! Joshua also requires that the corpora be cleaned, i.e. sentences of 100 and more words thrown away.
 ###!!! We may want to ensure that in a separate step.
 
