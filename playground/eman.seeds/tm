@@ -16,9 +16,6 @@ eman \
   defvar ALIAUG inherit=ALISTEP:OUTALILABEL \
     help="the string describing the 'language', e.g. 'ali'" \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. 0a1-0+1-1" \
-  defvar REORDERING default='distance' \
-    help="reordering models, eg. orientation-bidirectional-fe" \
-  defvar REORDFACTORS default='0-0' help="factors to use, eg. 0,1-0+0-0" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
   defvar CUTOFF default=0 help="phrase-table cutoff" \
@@ -36,22 +33,10 @@ if echo "$DECODINGSTEPS" | grep , ; then
   exit 1
 fi
 
-if [ -z "$REORDERING" ]; then
-  REORDERING=distance
-  REORDFACTORS="0-0"
-  DOTREORDTAG=""
-else
-  if [ -z "$REORDFACTORS" ]; then
-    echo "Set \$REORDFACTORS to the factors to use!"
-    exit 1
-  fi
-  DOTREORDTAG=`echo ".$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
-fi
-
 if [ $SRCCORP == $TGTCORP ] ; then
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS$DOTREORDTAG"
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS"
 else
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS$DOTREORDTAG"
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS"
 fi
 
 # Stop here if we are just initing ourselves
