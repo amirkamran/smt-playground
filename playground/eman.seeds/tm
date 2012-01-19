@@ -162,14 +162,14 @@ if \\
   success=1
   rm -f \$tempdir/model/extract* # delete temporary files of extracted phrases
   echo "COPYING TEMPDIR \$tempdir BACK"
-  rsync -uavz \$tempdir/* ./ || exit 1
+  rsync -uavz \$tempdir/* ./ || die "Assumed success but rsync back failed"
   echo "COPIED"
 
   echo Deleting \$tempdir
   rm -rf \$tempdir
 else
   success=0
-  rsync -uavz \$tempdir/log* ./ || exit 1
+  rsync -uavz \$tempdir/log* ./ || die "Failure, and rsync back failed"
   echo "ONLY log copied back. Majority of files left here: \$tempdir"
 fi
 
