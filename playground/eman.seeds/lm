@@ -1,113 +1,90 @@
 #!/bin/bash
+# eman seed for constructing an n-gram language model
+# binarization now excluded, because there are different (KenLM/IrstLM)
+# binarization options
 
-function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
 
-set -o pipefail
+PLAYGROUND=`eman path` # eman playground directory
 
-if [ -z "$CORP" ] \
-|| [ -z "$CORPAUG" ] \
-|| [ -z "$BINARIES" ] \
-|| [ -z "$ORDER" ]; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$CORP to the shortname of corpus"
-  echo "  \$CORPAUG to the factors used for lm"
-  echo "  \$ORDER to lm order"
-  echo "And optionally: "
-  echo "  \$PARTS to number of parts to use when building a huge lm"
-  echo "  \$BINARIZE=yes to binarize the model"
-  echo "  \$LMFLAGS='-unk' to various flags for ngram-count"
-  exit 1
-fi
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
+  defvar CORP help='the shortname of corpus' \
+  defvar CORPAUG help='the language+factors for the lm' \
+  defvar ORDER help='the lm order' \
+  defvar PARTS default='1' help='build a huge lm in N parts' \
+  defvar LMFLAGS default='' help='flags for ngram-count like -unk' \
+|| exit 1
 
-BINDIR="`pwd`/../$BINARIES/bin/"
+# Set local bash variables
+eval `eman bash-loadvars`
 
-grep SKIP_SRILM=yes ../$BINARIES/eman.vars >/dev/null 2>/dev/null \
-  && die "\$BINARIES don't/won't include SRILM"
+# Remember the core settings as out tag
+eman add-tag $CORP+$CORPAUG.$ORDER .
 
-if [ x$BINARIZE == xyes ]; then
-  grep SKIP_IRSTLM=yes ../$BINARIES/eman.vars >/dev/null 2>/dev/null \
-    && die "Asking for LM binarization but \$BINARIES don't/won't include IRSTLM"
-fi
+# add source corpus to deps
+corpstep=$($PLAYGROUND/corpman --init $CORP/$CORPAUG | cut -f1)
+[ ! -z "$corpstep" ] || die "Missing source corpus"
 
-if [ x$BINARIZE == xyes ]; then
-  lmtypetag=.blm
-else
-  lmtypetag=
-fi
-
-if [ -z "$PARTS" ]; then
-  PARTS=1
-fi
-
-# Remember the core settings
-echo $CORP+$CORPAUG.$ORDER$lmtypetag > eman.tag
-
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-CORP=$CORP
-CORPAUG=$CORPAUG
-ORDER=$ORDER
-BINARIZE=$BINARIZE
-PARTS=$PARTS
-LMFLAGS="$LMFLAGS"
-KONEC
-
-echo $ORDER > var-ORDER
-echo $CORP > var-CORP
-
-echo $BINARIES > eman.deps
-
+eman add-deps . $corpstep
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
-
-# Run checks in the preparation phase
-[ -d ../augmented_corpora/$CORP ] || die "Can't find corpus $CORP"
 
 # Emit the main script to be used in the running phase
 
 KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
+# convert the dependencies to absolute paths
+SRILMDIR=`eman path $SRILMSTEP`
+
 cat << KONEC > eman.command
-# This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment; sometimes needed for ./augment.pl
 . /net/projects/SGE/user/sge_profile
 
-mydir=\`pwd\`
+SRILMDIR1="\$(cat $SRILMDIR/srilm.path)/bin/"
+SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
 
-renice 10 \$\$
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-set -o pipefail
-
-export TMP=/mnt/h/tmp
-
-export PATH=\$PATH:$BINDIR
-
-SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
-SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
-IRSTLMDIR="\`cat ../$BINARIES/irstlm.path\`/bin/"
-
-export PATH=\$SRILMDIR1:\$SRILMDIR2:\$IRSTLMDIR:\$PATH
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 
 echo "Using this ngram-count:"
 which ngram-count || die "No ngram-count"
 echo "Using this make-big-lm:"
 which make-big-lm || die "No make-big-lm"
 
-CORPSOURCE=\`../augmented_corpora/augment.pl $CORP/$CORPAUG\`
-echo "Got CORPSOURCE: \$CORPSOURCE"
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd $1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
 
-[ -s "\$CORPSOURCE" ] || die "Failed to prepare corpus";
-
-../../scripts/wiseln \$CORPSOURCE corpus.text.gz \
-  || die "Failed to make local backup of corpus \$CORPSOURCE"
+mkcorpus $CORP/$CORPAUG text
 
 echo Generating model from corpus...
 if [ $PARTS == 1 ]; then
@@ -128,42 +105,38 @@ if [ $PARTS == 1 ]; then
     || die "ngram-count FAILED even with bigrams not knsmoothed"
   fi
 else
-  tempdir=\`mktemp -d /mnt/h/tmp/exp.lm.XXXXXX\`
-  echo Counting in $PARTS parts, tempdir=\$tempdir
-  zcat corpus.text.gz | split_even $PARTS \$tempdir/part --gzip \
+  partstempdir=\$(mktemp -d $tempdir/exp.lm.XXXXXX)
+  echo Counting in $PARTS parts, tempdir=\$partstempdir
+  zcat corpus.text.gz | split_even $PARTS \$partstempdir/part --gzip \
   || die "Splitting FAILED"
-  ls \$tempdir/part*.gz > \$tempdir/filelist
+  ls \$partstempdir/part*.gz > \$tempdir/filelist
 
   echo Making batch counts
-  make-batch-counts \$tempdir/filelist 1 zcat \$tempdir \\
+  make-batch-counts \$partstempdir/filelist 1 zcat \$partstempdir \\
     -order $ORDER \\
     $LMFLAGS \\
     -interpolate -kndiscount \\
     || die "make-batch-counts FAILED"
 
   echo Merging batch counts
-  merge-batch-counts \$tempdir \\
+  merge-batch-counts \$partstempdir \\
     || die "merge-batch-counts FAILED"
 
-  make-big-lm -read \$tempdir/*.ngrams.gz \\
-    -name \$tempdir/biglm \\
+  make-big-lm -read \$partstempdir/*.ngrams.gz \\
+    -name \$partstempdir/biglm \\
     -order $ORDER \\
     $LMFLAGS \\
     -interpolate -kndiscount \\
     -lm \`pwd\`/corpus.lm \\
     || die "make-big-lm FAILED"
 
-  echo Removing \$tempdir
-  rm -rf \$tempdir
+  echo Removing \$partstempdir
+  rm -rf \$partstempdir
 fi
 
-if [ x$BINARIZE == xyes ]; then
-  $IRSTLMDIR/compile-lm corpus.lm corpus.blm \\
-  || die "Binarization FAILED"
-fi
-
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
