@@ -287,11 +287,13 @@ if ($cmd eq "defvar") {
             # ->{varname}->{'defined'} = 1  ... always
   my %deps = (); # the dependencies we've learned about
   my @cmds = @ARGV;
+  my @var_decls;
   unshift @cmds, "defvar";
   while (scalar @cmds) {
     my $cmd = shift @cmds;
     die "Expected only 'defvar' commands, got: $cmd" if $cmd ne "defvar";
     my $varname = shift @cmds;
+    push @var_decls, $varname;
     $vars->{$varname}->{'defined'} = 1;
     $vars->{$varname}->{'val'} = $ENV{$varname};
     # load all flags like 'help', 'default', ...
@@ -305,7 +307,7 @@ if ($cmd eq "defvar") {
   my $varshelp = "The step needs the following variables:\n";
     # the info to show upon error
   my $varsfile = "";
-  foreach my $varname (sort keys %$vars) {
+  foreach my $varname (@var_decls) {
     my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
     $thisvarhelp = "" if !defined $thisvarhelp;
     my $thisvardefault = $vars->{$varname}->{'opt'}->{'default'};
