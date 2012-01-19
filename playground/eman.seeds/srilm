@@ -1,0 +1,62 @@
+#!/bin/bash
+# eman seed for compiling srilm
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+touch eman.vars # there are no variables
+
+# Set local bash variables
+#eval `eman bash-loadvars`
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+
+if [ \$(uname -m) == "x86_64" ]; then
+  SRILM_MACHTYPE=i686-m64
+else
+  SRILM_MACHTYPE=i686-gcc4
+fi
+
+echo "Extracting srilm"
+mkdir srilm || die "Failed to mkdir"
+cd srilm || die "chdir failed"
+tar xzf ../../../src/srilm.tgz || die "Failed to extract srilm"
+export SRILM=\$(pwd)
+export NO_TCL=X
+make -j4 MACHINE_TYPE=\$SRILM_MACHTYPE World || die "SRILM failed"
+echo "Making symlinks so that Moses will find srilm" 
+if [ -e lib/i686-m64 ] ; then ln -s i686-m64 lib/i686; fi
+if [ -e lib/i686-gcc4 ] ; then ln -s i686-gcc4 lib/i686; fi
+if [ -e bin/i686-m64 ] ; then ln -s i686-m64 bin/i686; fi
+if [ -e bin/i686-gcc4 ] ; then ln -s i686-gcc4 bin/i686; fi
+
+[ -e bin/i686/ngram-count ] \
+  || die "ngram-count was not compiled. See \`pwd\`/log* for e.g. this error: '/usr/bin/ld: cannot find -ltcl'"
+
+pwd > ../srilm.path
+
+cd \$mydir || die "Failed to chdir back after srilm"
+
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
