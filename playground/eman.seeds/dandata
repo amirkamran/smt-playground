@@ -87,15 +87,15 @@ renice 10 \$\$
 # because augment.pl may call "make" and the Makefile will call another
 # augment.pl, without being able to put through these arguments.
 echo "--dir=$AUGDIR --makefile=$AUGMAKEFILE" > $STATMT/playground/augmented_corpora/augment.pl.flags || die "Failed to save augment.pl.flags"
-cp \`$AUGMENT $TRAINALS\` trainal.$SRC.gz || die "Failed to copy $TRAINALS"
-cp \`$AUGMENT $TRAINALT\` trainal.$TGT.gz || die "Failed to copy $TRAINALT"
-cp \`$AUGMENT $TRAINTMS\` train.$SRC.gz   || die "Failed to copy $TRAINTMS"
-cp \`$AUGMENT $TRAINTMT\` train.$TGT.gz   || die "Failed to copy $TRAINTMT"
-cp \`$AUGMENT $TRAINLMT\` trainlm.$TGT.gz || die "Failed to copy $TRAINLMT"
-cp \`$AUGMENT $DEVS\` dev.$SRC.gz         || die "Failed to copy $DEVS"
-cp \`$AUGMENT $DEVT\` dev.$TGT.gz         || die "Failed to copy $DEVT"
-cp \`$AUGMENT $TESTS\` test.$SRC.gz       || die "Failed to copy $TESTS"
-cp \`$AUGMENT $TESTT\` test.$TGT.gz       || die "Failed to copy $TESTT"
+ln -s \`$AUGMENT $TRAINALS\` trainal.$SRC.gz || die "Failed to link to $TRAINALS"
+ln -s \`$AUGMENT $TRAINALT\` trainal.$TGT.gz || die "Failed to link to $TRAINALT"
+ln -s \`$AUGMENT $TRAINTMS\` train.$SRC.gz   || die "Failed to link to $TRAINTMS"
+ln -s \`$AUGMENT $TRAINTMT\` train.$TGT.gz   || die "Failed to link to $TRAINTMT"
+ln -s \`$AUGMENT $TRAINLMT\` trainlm.$TGT.gz || die "Failed to link to $TRAINLMT"
+ln -s \`$AUGMENT $DEVS\` dev.$SRC.gz         || die "Failed to link to $DEVS"
+ln -s \`$AUGMENT $DEVT\` dev.$TGT.gz         || die "Failed to link to $DEVT"
+ln -s \`$AUGMENT $TESTS\` test.$SRC.gz       || die "Failed to link to $TESTS"
+ln -s \`$AUGMENT $TESTT\` test.$TGT.gz       || die "Failed to link to $TESTT"
 ###!!! Joshua also requires that the corpora be cleaned, i.e. sentences of 100 and more words thrown away.
 ###!!! We may want to ensure that in a separate step.
 
