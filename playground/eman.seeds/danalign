@@ -1,0 +1,95 @@
+#!/bin/bash
+# eman seed for word alignment
+# This variant by Dan does not call mkcorpus.
+# Instead, it wants to know the step that created files trainal.$SRC.gz and trainal.$TGT.gz.
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
+[ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
+  defvar DATASTEP type=reqstep help='where are trainal.$SRC.gz and trainal.$TGT.gz' \
+  defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
+    help='symmetrization methods, several allowed if delimited by comma' \
+  defvar OUTLABEL default='' \
+    help='suffix to add to the resulting "alignment corpus" name' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Somehow we must inherit the values of $SRC and $TGT from the $DATASTEP.
+if [ -z "$SRC" ] || [ -z "$TGT" ] ; then die "Both \$SRC and \$TGT must be set. Currently \$SRC=$SRC, \$TGT=$TGT." ; fi
+SRCALIAUG=$SRC
+TGTALIAUG=$TGT
+OUTALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+[ -z "$OUTLABEL" ] \
+  || OUTALILABEL=$OUTALILABEL.$OUTLABEL
+
+eman add-tag $CORPUS.$OUTALILABEL .
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Run checks in the preparation phase
+# no checks.
+
+# convert the dependencies to absolute paths
+GIZASTEP=`eman path $GIZASTEP`
+DATASTEP=`eman path $DATASTEP`
+TRAINALS=$DATASTEP/trainal.$SRC.gz
+TRAINALT=$DATASTEP/trainal.$TGT.gz
+
+# Emit the main script to be used in the running phase
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
+echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
+
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d \$tempdir ] || tempdir=/tmp
+  # the default
+
+$GIZAWRAPPER \\
+  $TRAINALS $TRAINALT \\
+  --lfactors=0 --rfactors=0 \\
+  --tempdir=\$tempdir \\
+  --bindir=$GIZASTEP/bin \\
+  --dirsym=$ALISYM \\
+  --drop-bad-lines \\
+| gzip -c > alignment.gz \
+|| die "Failed to align the corpus"
+
+alilen=\`zcat alignment.gz | wc -l\`
+srclen=\`zcat $TRAINALS | wc -l\`
+[ \$alilen == \$srclen ] \
+  || die "Mismatched file lengths: ali \$alilen, src \$srclen"
+  
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
