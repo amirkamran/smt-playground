@@ -12,7 +12,7 @@ eman \
   defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
-  defvar ALICORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar ALICORP same_as=SRCCORP help="alignment corpus name, can be omitted if equal to SRCCORP" \
   defvar ALIAUG inherit=ALISTEP:OUTALILABEL \
     help="the string describing the 'language', e.g. 'ali'" \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. 0a1-0+1-1" \
@@ -82,12 +82,12 @@ function mkcorpus() {
   step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
     $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
-      corpus.\$2.gz \
+      \$2.gz \
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/corpman --cmd $1) \\
-    | gzip -c > corpus.\$2.gz
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > \$2.gz
   fi
 }
 
@@ -99,15 +99,10 @@ mkdir corpus
 
 cd corpus
 mkcorpus $SRCCORP/$SRCAUG corpus.src
-mkcorpus $SRCCORP/$SRCAUG corpus.tgt
+mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-if [ ! -z "$ALISTEP" ]; then
-  $PLAYGROUND/../scripts/wiseln $ALISTEP/alignment.gz alignment.custom.gz \
-    || die "Failed to clone alignment file"
-else
-  mkcorpus $ALICORP/$ALIAUG alignment.custom
-fi
+mkcorpus $ALICORP/$ALIAUG+ali alignment.custom
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
