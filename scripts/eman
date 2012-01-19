@@ -222,6 +222,8 @@ my $lock = undef;
 guess_maindir();
 my $oldwd = chdir_to_maindir();
 my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
+$autoreadonly = 1 if defined $ENV{"EMAN_READONLY"};
+  # don't warn if readonly mode came from env.vars
 
 my @subdirs;
 push @subdirs, $maindir;
@@ -590,7 +592,8 @@ if ($cmd eq "clone") {
     my @srcvars = split /\n/, $srcvarsstr;
     my @usevars = map { my ($varname, $val) = split /=/, $_, 2;
                         defined $ENV{$varname}
-                          ? "$varname=$ENV{$varname}" # prefer environment
+                          ? "$varname=".var_bash_escape($ENV{$varname})
+			     # prefer environment, remember to escape it
                           : $_; # use the value from the scenario
                       } @srcvars;
     my $news = init(get_steptype($srcstep), \@usevars, $srcstep);
@@ -1659,7 +1662,7 @@ sub load_vars_hash {
     foreach my $pair (split /\n/, $varsstr) {
       next if $pair eq "";
       my ($varname, $val) = split(/=/, $pair, 2);
-      $varshash{$varname} = $val; # XXX must unescape bash chars
+      $varshash{$varname} = var_bash_unescape($val);
     }
   }
   return \%varshash;
@@ -2194,6 +2197,16 @@ sub var_bash_escape {
   $s =~ s/\\/\\\\/g;
   $s =~ s/"/\\"/g;
   return '"'.$s.'"';
+}
+
+sub var_bash_unescape {
+  # the reverse of *our* escaping, not all possible escaping
+  my $s = shift;
+  return $s if $s !~ /^"/;
+  $s =~ s/^"//;
+  $s =~ s/"$//;
+  $s =~ s/\\(["\\])/$1/g;
+  return $s;
 }
 
 
