@@ -319,8 +319,10 @@ if ($cmd eq "defvar") {
     } elsif (defined $vars->{$varname}->{'opt'}->{'inherit'}) {
       # value can be inherited from a particular step
       my $stepvar = $vars->{$varname}->{'opt'}->{'inherit'};
-      if ($vars->{$stepvar}->{'opt'}->{'type'} ne 'reqstep') {
+      if (!defined $vars->{$stepvar}->{'opt'}->{'type'}
+          || $vars->{$stepvar}->{'opt'}->{'type'} ne 'reqstep') {
         $varshelp .= "    !!! $stepvar is not of type 'reqstep'\n";
+	$waserror = 1;
       }
       ###!!!DZ Opravdu to má být takhle? Nemìl se splitnout spíš sám $stepvar?
       my ($stepname, $fromvar) = split ':', $vars->{$stepvar}->{'val'};
