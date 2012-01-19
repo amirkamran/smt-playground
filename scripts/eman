@@ -282,6 +282,7 @@ if ($cmd eq "add-deps") {
 if ($cmd eq "defvar") {
   # assuming a sequence of defvar commands
   # construct the file eman.vars
+  my $step = guess_step("."); # guess our step name
   my $vars; # ->{varname}->{'opt'}->{'help'} = ...
             # ->{varname}->{'val'} = ...the value from the environment...
             # ->{varname}->{'defined'} = 1  ... always
@@ -306,7 +307,7 @@ if ($cmd eq "defvar") {
   # check all the vars and prepare the eman.vars file
   my $varshelp = "The step needs the following variables:\n";
     # the info to show upon error
-  my $varsfile = "";
+  my $outvars = load_vars_hash($step);
   foreach my $varname (@var_decls) {
     my $thisvarhelp = $vars->{$varname}->{'opt'}->{'help'};
     $thisvarhelp = "" if !defined $thisvarhelp;
@@ -324,7 +325,8 @@ if ($cmd eq "defvar") {
       my ($stepname, $fromvar) = split ':', $vars->{$stepvar}->{'val'};
       $fromvar = $varname if ! defined $fromvar;
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
-                  split(/\n/, load_vars_str($stepname));      
+                  split(/\n/, load_vars_str($stepname));
+      # here is a bug: this will cause double bash escaping of inherited vars
       $usevalue = (split('=', $var))[1] if defined $var;
     } elsif (defined $vars->{$varname}->{'same_as'}) {
       my $same_as = $vars->{$varname}->{'same_as'};
@@ -339,7 +341,7 @@ if ($cmd eq "defvar") {
       ."\n";
     if (defined $usevalue) {
       # ok, we got the value
-      $varsfile .= "$varname=".var_bash_escape($usevalue)."\n";
+      $outvars->{$varname} = $usevalue;
       my $type = $vars->{$varname}->{'opt'}->{'type'};
       if (defined $type) {
         # do some consistency checks and other bits
@@ -356,8 +358,8 @@ if ($cmd eq "defvar") {
   if ($waserror) {
     print STDERR $varshelp;
   } else {
-    # save the vars file
-    save("eman.vars", $varsfile);
+    # if eman.vars already exist, load them (but overrite them with the current ones)
+    save_vars_hash($step, $outvars);
     save("eman.deps", join("\n", sort {$a cmp $b} keys %deps));
   }
   exit $waserror;
@@ -1561,13 +1563,25 @@ sub mkdiruniq2 {
 }
 
 sub relative_to_maindir {
+  # return some valid path (relative to cwd or absolute), to the file given
+  # using a path relative to main directory
   my $fn = shift;
+  # this is something by Ales that Ondrej does not understand
   return $idx->{$fn . "path"} if defined $idx->{$fn . "path"};
   for my $dir (@subdirs) {
     my $path = File::Spec->catfile($dir, $fn);
     return $path if -e $path;
   }
-  return $fn; # returning non-existent path
+  return $fn if $fn =~ /^[\/~]/; # absolute path is already ok
+  guess_maindir();
+  return File::Spec->catfile($maindir, $fn); # this is the real meaning of relative_to_maindir
+}
+
+sub relative_to_stepdir {
+  # return the full path of a file given relative to the stepdir of a step
+  my $step = shift;
+  my $fn = shift;
+  return relative_to_maindir("$step/$fn"); # XXX fix for subdirs
 }
 
 sub step_valid {
@@ -1577,9 +1591,8 @@ sub step_valid {
     print STDERR "  relpath: ", relative_to_maindir($step), "\n";
     print STDERR "  maindir: ", $maindir, "\n";
   }
-  return -d relative_to_maindir($step)
-    && -e relative_to_maindir("$step/eman.seed")
-    && -e relative_to_maindir("$step/eman.vars");
+  return -e relative_to_stepdir($step, "eman.seed")
+    && -e relative_to_stepdir($step, "eman.vars");
 }
 
 sub get_steptype {
@@ -1619,6 +1632,35 @@ sub load_vars_str {
   my $step = shift;
   return try_load(relative_to_maindir("$step/eman.vars"));
 }
+sub load_vars_hash {
+  # load (and unescape) eman variables
+  my $step = shift;
+  my $varsstr = load_vars_str($step);
+  my %varshash = ();
+  if (defined $varsstr) {
+    foreach my $pair (split /\n/, $varsstr) {
+      next if $pair eq "";
+      my ($varname, $val) = split(/=/, $pair, 2);
+      $varshash{$varname} = $val; # XXX must unescape bash chars
+    }
+  }
+  return \%varshash;
+}
+sub save_vars_hash {
+  # overwrite all saved vars with the given hash
+  my $step = shift;
+  my $outvars = shift;
+
+  my $vars_str = "";
+  foreach my $varname (sort {$a cmp $b} keys %$outvars) {
+    $vars_str .= "$varname=".var_bash_escape($outvars->{$varname})."\n";
+  }
+  #print STDERR "Saving $vars_str\n";
+  #print STDERR "Saving into ", relative_to_stepdir($step, "eman.vars"), "\n";
+  save(relative_to_stepdir($step, "eman.vars"), $vars_str);
+}
+
+
 sub load_jobid {
   my $step = shift;
   return try_load(relative_to_maindir("$step/eman.jobid"));
