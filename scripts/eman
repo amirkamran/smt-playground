@@ -324,6 +324,9 @@ if ($cmd eq "defvar") {
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
                   split(/\n/, load_vars_str($stepname));      
       $usevalue = (split('=', $var))[1] if defined $var;
+    } elsif (defined $vars->{$varname}->{'sameas'}) {
+      my $sameas = $vars->{$varname}->{'sameas'};
+      $usevalue = $vars->{$sameas}->{'val'};
     }
 
     # try default value for the variable
