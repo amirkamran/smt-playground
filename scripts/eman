@@ -224,7 +224,7 @@ my $oldwd = chdir_to_maindir();
 my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
 
 my @subdirs;
-push @subdirs, abs_path(".");
+push @subdirs, $maindir;
 if (-e $subdirs_file) {
   my $subdirs_hdl = my_open($subdirs_file);
   while (<$subdirs_hdl>) {
@@ -391,14 +391,14 @@ if ($cmd eq "reindex" || $reindex) {
 }
 
 foreach my $subdir (@subdirs) {
-my @steps = glob("$subdir/$dirprefix*.*.[0-9]*");
+  my @steps = glob("$subdir/$dirprefix*.*.[0-9]*");
   foreach my $s (@steps) {
 #    print STDERR "indexing $s\n";
     next if defined $idx->{basename($s)."path"}; # && defined $idx->{$s."jid"};
                                 # now avoiding costly regeneration of metadata
                                 # use --reindex if you miss jobids
-    next if ! step_valid($s);
-    add_step_to_index($s);
+    next if ! stepdir_valid($s);
+    add_stepdir_to_index($s);
 
     my $stepname = basename($s);
 
@@ -555,7 +555,7 @@ if ($cmd eq "path") {
   my $stepname = $ARGV[0];
   guess_maindir();
   if (defined $stepname) {
-    print relative_to_maindir($stepname), "\n";
+    print get_stepdir($stepname), "\n";
   } else {
     print "$maindir\n";
   }
@@ -1013,7 +1013,7 @@ sub init {
   $stepname = basename($s);
   # populate the directory with all relevant files
   quietsystem("cp $seed $s/eman.seed") or die;
-  my $oldwd = chdir_to_stepdir($s);
+  my $oldwd = mychdir($s);
   quietsystem("set > eman.init_env") or die;
   save("eman.derived_from", $derived_from) if defined $derived_from;
   my $ok = 1;
@@ -1060,7 +1060,7 @@ sub init {
   if ($ok) {
     save("eman.status", "INITED");
     mychdir($oldwd);
-    add_step_to_index($s); # so that further cloning can use that
+    add_stepdir_to_index($s); # so that further cloning can use that
     print STDERR "Inited: $stepname\n";
   } elsif ($preservedir) {
     print STDERR "Failed to init the step. Check and delete: $stepname\n";
@@ -1471,7 +1471,7 @@ sub print_vars {
 sub print_log {
   my $prefix = shift;
   my $s = shift;
-  my $stepdir = relative_to_maindir($s);
+  my $stepdir = get_stepdir($s);
   my $logtext = `tail -n3 $stepdir/log.* 2> /dev/null`;
   chomp $logtext;
   foreach my $l (split /\n/, $logtext) {
@@ -1483,7 +1483,7 @@ sub traceback_to_recipe {
   # construct a recipe from a traceback
   my $step = shift;
   mydie "Can't create traceback, $step nonexistent."
-    if ! -e relative_to_maindir($step);
+    if ! -e get_stepdir($step);
   my $recipe = { "name" => $step,
                  "vars" => [ split /\n/, load_vars_str($step) ],
                  "deps" => [],
@@ -1562,37 +1562,52 @@ sub mkdiruniq2 {
   return $prefix.$hash.$suffix;
 }
 
-sub relative_to_maindir {
-  # return some valid path (relative to cwd or absolute), to the file given
+sub absolutize_within_maindir {
+  # return the absolute path to the file given
   # using a path relative to main directory
   my $fn = shift;
-  # this is something by Ales that Ondrej does not understand
-  return $idx->{$fn . "path"} if defined $idx->{$fn . "path"};
-  for my $dir (@subdirs) {
-    my $path = File::Spec->catfile($dir, $fn);
-    return $path if -e $path;
-  }
   return $fn if $fn =~ /^[\/~]/; # absolute path is already ok
   guess_maindir();
-  return File::Spec->catfile($maindir, $fn); # this is the real meaning of relative_to_maindir
+  return File::Spec->catfile($maindir, $fn); # this is the real meaning of absolutize_within_maindir
 }
 
-sub relative_to_stepdir {
+sub get_stepdir {
+  my $step = shift;
+  # given a step name, scan all the subdirs and return full path
+  # to the step's directory
+  return $idx->{$step . "path"} if defined $idx->{$step . "path"};
+  # scan all subdirs
+  for my $dir (@subdirs) {
+    my $path = File::Spec->catfile($dir, $step);
+    return $path if -e $path;
+  }
+  return undef;
+}
+
+sub absolutize_within_stepdir {
   # return the full path of a file given relative to the stepdir of a step
   my $step = shift;
   my $fn = shift;
-  return relative_to_maindir("$step/$fn"); # XXX fix for subdirs
+  return File::Spec->catfile(get_stepdir($step), $fn);
 }
 
 sub step_valid {
   my $step = shift;
+  my $stepdir = get_stepdir($step);
+  return 0 if !defined $stepdir;
   if ($debug) {
     print STDERR "Checking validity of $step, CWD: ", cwd(), "\n";
-    print STDERR "  relpath: ", relative_to_maindir($step), "\n";
+    print STDERR "  stepdir: ", $stepdir, "\n";
     print STDERR "  maindir: ", $maindir, "\n";
   }
-  return -e relative_to_stepdir($step, "eman.seed")
-    && -e relative_to_stepdir($step, "eman.vars");
+  return stepdir_valid($stepdir);
+}
+
+sub stepdir_valid {
+  # checks if the given directory feels like an eman step
+  my $stepdir = shift;
+  return -e File::Spec->catfile($stepdir, "eman.seed")
+    && -e File::Spec->catfile($stepdir, "eman.vars");
 }
 
 sub get_steptype {
@@ -1605,15 +1620,15 @@ sub get_steptype {
 
 sub load_status {
   my $step = shift;
-  return try_load(relative_to_maindir("$step/eman.status")) || "NONEXISTENT";
+  return try_load(absolutize_within_stepdir($step, "eman.status")) || "NONEXISTENT";
 }
 sub load_tag {
   my $step = shift;
-  return try_load(relative_to_maindir("$step/eman.tag"));
+  return try_load(absolutize_within_stepdir($step, "eman.tag"));
 }
 sub load_depsarr {
   my $step = shift;
-  my $depsstr = try_load(relative_to_maindir("$step/eman.deps"));
+  my $depsstr = try_load(absolutize_within_stepdir($step, "eman.deps"));
   my $depsarr;
   if (defined $depsstr) {
     my @deps = split /\n/, $depsstr;
@@ -1630,7 +1645,7 @@ sub load_depsarr {
 }
 sub load_vars_str {
   my $step = shift;
-  return try_load(relative_to_maindir("$step/eman.vars"));
+  return try_load(absolutize_within_stepdir($step, "eman.vars"));
 }
 sub load_vars_hash {
   # load (and unescape) eman variables
@@ -1656,14 +1671,14 @@ sub save_vars_hash {
     $vars_str .= "$varname=".var_bash_escape($outvars->{$varname})."\n";
   }
   #print STDERR "Saving $vars_str\n";
-  #print STDERR "Saving into ", relative_to_stepdir($step, "eman.vars"), "\n";
-  save(relative_to_stepdir($step, "eman.vars"), $vars_str);
+  #print STDERR "Saving into ", absolutize_within_stepdir($step, "eman.vars"), "\n";
+  save(absolutize_within_stepdir($step, "eman.vars"), $vars_str);
 }
 
 
 sub load_jobid {
   my $step = shift;
-  return try_load(relative_to_maindir("$step/eman.jobid"));
+  return try_load(absolutize_within_stepdir($step, "eman.jobid"));
 }
 sub show_disk_usage {
   my $step = shift;
@@ -1698,7 +1713,7 @@ sub guess_maindir {
   $maindir = abs_path($up);  # touch filesystem
 }
 
-sub guess_stepdir {
+sub guess_stepname_from_dir {
   my $dir = shift;
   # given a subdir of a stepdir, return the stepdir name (or undef)
   # search upwards in the tree
@@ -1727,19 +1742,21 @@ sub chdir_to_maindir {
   return $oldwd;
 }
 sub chdir_to_stepdir {
-  my $stepdir = shift;
-  my $oldwd = chdir_to_maindir();
-  my $path = relative_to_maindir($stepdir);
+  my $step = shift;
+  my $oldwd = cwd();
+  my $path = get_stepdir($step);
   if (-e $path) {
     chdir($path) or die "Failed to chdir to $path";
   } else {
-    confess "Stepdir $stepdir not found.";
+    confess "Stepdir for $step not found.";
   }
   return $oldwd;
 }
 sub mychdir {
   my $d = shift;
+  my $oldwd = cwd();
   chdir($d) or confess "Failed to chdir to $d";
+  return $oldwd;
 }
 
 sub guess_step {
@@ -1792,18 +1809,19 @@ sub guess_step {
 
 
 sub guess_step_from_hashdate {
+  # this is messy :-(
   my $key = shift;
   print STDERR "Guessing step from hash and date: $key\n" if $debug;
   for my $subdir ('.', @subdirs) {
     if (-d "$subdir/$key") {
       # directory name explicitly given, check if it is indeed a step directory
       # this branch is also used for '.', i.e. the current step dir...
-      my $step = guess_stepdir("$subdir/$key");
+      my $step = guess_stepname_from_dir("$subdir/$key");
       return $step if -e "$subdir/$key/eman.seed";
     }
   }
   # try to interpret the stepname relative to main dir
-  my $dkey = relative_to_maindir($key);
+  my $dkey = absolutize_within_maindir($key);
   if (-d $dkey) {
     my $step = basename(File::Spec->rel2abs($dkey));
     return $step if -e $dkey."/eman.seed";
@@ -1843,7 +1861,7 @@ sub add_fake_step_to_index {
   add_hash_to_index($stepname, $hash);
 }
 
-sub add_step_to_index {
+sub add_stepdir_to_index {
   my $s = shift;
   my $stepname = basename($s);
   my $hash = get_hash_from_dir($s);
@@ -1904,6 +1922,7 @@ sub all_steps {
   my %steps_to_list = ();
   foreach my $s (keys %$idx) {
     next if $s !~ /^\Q$dirprefix/; # this is a reverse index
+    next if $s =~ /(jid|path)$/; # this is a job id entry
     $steps_to_list{$s} = 1;
   }
   if (defined $idx->{'USED_BY'}) {
