@@ -1,42 +1,54 @@
 #!/bin/bash
-# Prepare a moses.ini file by combining:
-#   translation model
+# eman seed for the preparation of moses.ini file by combining:
+#   translation model(s)
 #   (optional reordering model)
 #   language models
 
-set -o pipefail
-function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
 
-if [ -z "$TMS" ] || [ -z "$LMS" ] \
-  ; then
-  echo "You must set: "
-  echo "  \$TMS to the extracted phrases, separate TMs with a colon"
-  echo "  \$LMS to tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep"
-  echo "And optionally:"
-  echo "  \$RMSTEP to reordering models"
-  echo "  \$BINARIES if you don't want to inherit them from TMS"
-  exit 1
-fi
+PLAYGROUND=`eman path` # eman playground directory
 
-# Load variables from TMS
-for tm in `echo $TMS | tr ':' ' '`; do
-  [ -e ../$tm/eman.vars ] || die "Bad translation model: $tm"
-done
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar TMS help='extracted phrases, a colon-separated lists of s.tm' \
+  defvar LMS help='tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep' \
+  defvar RMSTEP default='' help='lexicalized reordering model' \
+  defvar MOSESSTEP default='' \
+    help='moses scripts and binaries (default to inherit from the first TM)' \
+|| exit 1
 
-SAVEBINARIES=$BINARIES
-# inherit all variables
-for tm in `echo $TMS | tr ':' ' '`; do
-  source ../$tm/eman.vars
-done
+# Set local bash variables
+eval `eman bash-loadvars`
 
-if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
-  # inheriting, ignoring our SAVEBINARIES
-  true
-else
-  # using our own
-  BINARIES=$SAVEBINARIES
-  echo $BINARIES >> eman.deps
-fi
+## Load variables from TMS
+#for tm in `echo $TMS | tr ':' ' '`; do
+#  [ -e ../$tm/eman.vars ] || die "Bad translation model: $tm"
+#done
+
+tmone=`echo $TMS | cut -d: -f1`
+eman \
+  defvar MOSESSTEP inherit="$tmone" help="Failed to inherit from $tmone" \
+|| exit 1
+
+#SAVEBINARIES=$BINARIES
+## inherit all variables
+#for tm in `echo $TMS | tr ':' ' '`; do
+#  source ../$tm/eman.vars
+#done
+#
+#if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
+#  # inheriting, ignoring our SAVEBINARIES
+#  true
+#else
+#  # using our own
+#  BINARIES=$SAVEBINARIES
+#  echo $BINARIES >> eman.deps
+#fi
+
+eman add-deps . $MOSESTEP
+
+### updated up to here
 
 SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
 WORKSPACE="`pwd`/../$BINARIES/"
