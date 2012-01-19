@@ -4,87 +4,40 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if   [ -z "$SRCCORP" ] \
-  || [ -z "$SRCAUG" ] \
-  || [ -z "$TGTAUG" ] \
-  || ( [ -z "$ALIAUG" ] && [ -z "$ALISTEP" ] ) \
-  || ( [ -z "$BINARIES" ] && [ -z "$ALISTEP" ] ) \
-  || [ -z "$REORDERING" ] || [ -z "$REORDFACTORS" ] \
-  ; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools; inherited from ALISTEP"
-  echo "  \$SRCCORP to source corpus name"
-  echo "  \$TGTCORP to target corpus name, can be omitted if equal to SRCCORP"
-  echo "  \$SRCAUG to the string describing lang+factors of src corpus"
-  echo "  \$TGTAUG same for target, e.g. cs+0+1+pos+lc"
-  echo "  \$ALICORP to target corpus name, can be omitted if equal to SRCCORP"
-  echo "  \$ALIAUG to the string describing the 'language', e.g. 'ali'"
-  echo "    or \$ALISTEP to the step where alignment was constructed"
-  echo "  \$REORDERING to reordering models, eg. orientation-bidirectional-fe"
-  echo "  \$REORDFACTORS to factors to use, eg. 0,1-0+0-0"
-  echo "And optionally:"
-  echo "  \$TRAININGFLAGS to flags for train-model.perl"
-  exit 1
-fi
+eman \
+  defvar ALISTEP type=reqstep default='' help="the step where alignment was constructed" \
+  defvar type=reqstep inherit=ALISTEP BINARIES \
+    help="the step containing compiled tools; inherited from ALISTEP" \
+  defvar SRCCORP help="source corpus name, CORPUS from ALISTEP is used if omitted" \
+  defvar TGTCORP sameas=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar SRCAUG help="the string describing lang+factors of src corpus" \
+  defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
+  defvar ALICORP sameas=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar ALIAUG inherit=ALISTEP:OUTALILABEL \
+    help="the string describing the 'language', e.g. 'ali'" \
+  defvar REORDERING help="reordering models, eg. orientation-bidirectional-fe" \
+  defvar REORDFACTORS help="factors to use, eg. 0,1-0+0-0" \
+  defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
+|| exit 1
 
-# load inherited/inheritable binaries
-[ ! -z "$ALISTEP" ] \
-  && INHER_BINARIES=`cat ../$ALISTEP/eman.vars | grep ^BINARIES | cut -d= -f2`
+eval `eman bash-loadvars`
 
-if [ -z "$BINARIES" ] || [ "$INHER_BINARIES" == "$BINARIES" ]; then
-  # inherit binaries from alistep
-  BINARIES=$INHER_BINARIES
-  # inherited binaries don't belong to our dependencies, we
-  # hope our predecessor has them as a dependence
-else
-  # put BINARIES to our deps as well
-  echo $BINARIES >> eman.deps
-fi
-SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
-
-# TGT and ALI corp default to srccorp
-[ ! -z "$TGTCORP" ] || TGTCORP=$SRCCORP
-[ ! -z "$ALICORP" ] || ALICORP=$SRCCORP
-
-# get ali corpus and aug from alistep
-if [ ! -z "$ALISTEP" ]; then
-  ALICORP=`cat ../$ALISTEP/eman.vars | grep ^CORPUS | cut -d= -f2`
-  ALIAUG=`cat ../$ALISTEP/eman.vars | grep ^OUTALILABEL | cut -d= -f2`
-  echo $ALISTEP >> eman.deps
-fi
+[ -z $ALISTEP ] || ALISTEP=`eman path $ALISTEP`
+PLAYGROUND=`eman path`
+BINARIES=`eman path $BINARIES`
+SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
 
 # shorten the reordering name to produce the tag for this reord model
 REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
 
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-SRCCORP=$SRCCORP
-TGTCORP=$TGTCORP
-ALICORP=$ALICORP
-SRCAUG=$SRCAUG
-TGTAUG=$TGTAUG
-ALIAUG=$ALIAUG
-ALISTEP=$ALISTEP
-REORDERING=$REORDERING
-REORDFACTORS=$REORDFACTORS
-TRAININGFLAGS="$TRAININGFLAGS"
-KONEC
-
-echo $SRCAUG > var-SRCAUG
-echo $TGTAUG > var-TGTAUG
-echo $REORDERING > var-REORDERING
-echo $REORDFACTORS > var-REORDFACTORS
-echo $REORDTAG > var-REORDTAG
-
 if [ $SRCCORP == $TGTCORP ] ; then
-  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$REORDTAG > eman.tag
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$REORDTAG"
 else
-  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$REORDTAG > eman.tag
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$REORDTAG"
 fi
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
-
 
 cat << KONEC > eman.command
 # This is the command to be run here
@@ -101,6 +54,20 @@ function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
 
 renice 10 \$\$
 
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      \$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd $1) \\
+    | gzip -c > \$2.gz
+  fi
+}
+
 ## Prepare the corpus from more factors
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
@@ -108,18 +75,15 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 mkdir corpus
 
 cd corpus
-../../../scripts/wiseln \`../../augmented_corpora/augment.pl $SRCCORP/$SRCAUG\` corpus.src.gz \
-  || die "Failed to clone source corpus"
-../../../scripts/wiseln \`../../augmented_corpora/augment.pl $TGTCORP/$TGTAUG\` corpus.tgt.gz \
-  || die "Failed to clone target corpus"
+mkcorpus $SRCCORP/$SRCAUG corpus.src
+mkcorpus $SRCCORP/$SRCAUG corpus.tgt
 cd ..
 
 if [ ! -z "$ALISTEP" ]; then
-  ../../scripts/wiseln ../$ALISTEP/alignment.gz alignment.custom.gz \
+  $PLAYGROUND/../scripts/wiseln $ALISTEP/alignment.gz alignment.custom.gz \
     || die "Failed to clone alignment file"
 else
-  ../../scripts/wiseln \`../augmented_corpora/augment.pl --ignore-blank-lines $ALICORP/$ALIAUG\` alignment.custom.gz \
-    || die "Failed to clone alignment file"
+  mkcorpus $ALICORP/$ALIAUG alignment.custom
 fi
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
