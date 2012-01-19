@@ -73,7 +73,7 @@ function mkcorpus() {
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/corpman --cmd $1) \\
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
     | gzip -c > corpus.\$2.gz
   fi
 }

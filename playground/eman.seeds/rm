@@ -6,7 +6,7 @@ function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 eman \
   defvar ALISTEP type=reqstep default='' help="the step where alignment was constructed" \
-  defvar type=reqstep inherit=ALISTEP BINARIES \
+  defvar BINARIES type=reqstep inherit=ALISTEP \
     help="the step containing compiled tools; inherited from ALISTEP" \
   defvar SRCCORP help="source corpus name, CORPUS from ALISTEP is used if omitted" \
   defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
@@ -46,24 +46,22 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
-
-mydir=\`pwd\`
-
+mydir=\$(pwd)
 set -o pipefail
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
 function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
     $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
-      \$2.gz \
+      \$2.gz \\
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/corpman --cmd $1) \\
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
     | gzip -c > \$2.gz
   fi
 }
@@ -76,15 +74,10 @@ mkdir corpus
 
 cd corpus
 mkcorpus $SRCCORP/$SRCAUG corpus.src
-mkcorpus $SRCCORP/$SRCAUG corpus.tgt
+mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-if [ ! -z "$ALISTEP" ]; then
-  $PLAYGROUND/../scripts/wiseln $ALISTEP/alignment.gz alignment.custom.gz \
-    || die "Failed to clone alignment file"
-else
-  mkcorpus $ALICORP/$ALIAUG alignment.custom
-fi
+mkcorpus $ALICORP/$ALIAUG+ali alignment.custom
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
@@ -149,8 +142,9 @@ fi
 
 [ \$success == 1 ] || die "THERE WERE ERRORS!! See above."
 
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
