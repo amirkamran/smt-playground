@@ -5,19 +5,19 @@ set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 eman \
-  defvar ALISTEP type=reqstep default='' help="the step where alignment was constructed" \
+  defvar ALISTEP type=reqstep help="the step where alignment was constructed" \
   defvar BINARIES type=reqstep inherit=ALISTEP:GIZASTEP \
-    help="the step containing compiled tools; inherited from ALISTEP" \
+    help="the step containing compiled tools" \
   defvar SRCCORP inherit=ALISTEP:CORPUS \
-    help="source corpus name, CORPUS from ALISTEP is used if omitted" \
+    help="source corpus name" \
   defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
   defvar ALICORP same_as=SRCCORP help="alignment corpus name, can be omitted if equal to SRCCORP" \
-  defvar ALIAUG inherit=ALISTEP:ALILABEL \
-    help="the string describing the 'language', e.g. 'ali'" \
   defvar ALISYM default='gdfa' help='which alignment to use for the translation model' \
-  defvar DECODINGSTEPS help="specification of decoding steps, e.g. 0a1-0+1-1" \
+  defvar ALILABEL inherit=ALISTEP \
+    help="the custom label as given when creating the alignment" \
+  defvar DECODINGSTEPS help="specification of decoding steps, e.g. t0a1-0+t1-1" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
   defvar CUTOFF default=0 help="phrase-table cutoff" \
@@ -36,9 +36,9 @@ if echo "$DECODINGSTEPS" | grep , ; then
 fi
 
 if [ $SRCCORP == $TGTCORP ] ; then
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS"
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
 else
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.DEC$DECODINGSTEPS"
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
 fi
 
 # Stop here if we are just initing ourselves
@@ -87,7 +87,7 @@ mkcorpus $SRCCORP/$SRCAUG corpus.src
 mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-mkcorpus $ALICORP/$ALISYM-$ALIAUG+ali alignment.custom
+mkcorpus $ALICORP/$ALISYM-$ALILABEL+ali alignment.custom
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
