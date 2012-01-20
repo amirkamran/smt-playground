@@ -334,11 +334,18 @@ if ($cmd eq "defvar") {
         $waserror = 1;
       }
       $fromvar = $varname if ! defined $fromvar;
-      my ($var) = grep { $_ =~ m/^$fromvar=/ }
-                  split(/\n/, load_vars_str($outvars->{$stepname}));
-      if (defined $var) {
-        $usevalue = (split('=', $var))[1];
-        $usevalue = var_bash_unescape($usevalue);
+      if (defined $outvars->{$stepname}) {
+        # the error message when undefined not necessary, the
+        # outvar->{stepname} will complain anyway
+        my $parent_vars_str = load_vars_str($outvars->{$stepname});
+        if (defined $parent_vars_str) {
+          my ($var) = grep { $_ =~ m/^$fromvar=/ }
+                      split(/\n/, $parent_vars_str);
+          if (defined $var) {
+            $usevalue = (split('=', $var))[1];
+            $usevalue = var_bash_unescape($usevalue);
+          }
+        }
       }
     } elsif (defined $vars->{$varname}->{'opt'}->{'same_as'}) {
       my $same_as = $vars->{$varname}->{'opt'}->{'same_as'};
@@ -349,6 +356,8 @@ if ($cmd eq "defvar") {
     $usevalue = $thisvardefault if ! defined $usevalue;
 
     $varshelp .= "  $varname ... $thisvarhelp"
+      .(defined $vars->{$varname}->{'opt'}->{'inherit'}
+          ? " [inherited from $vars->{$varname}->{opt}->{inherit}]" : "")
       .(defined $thisvardefault ? " [$thisvardefault]" : "")
       ."\n";
     if (defined $usevalue) {
