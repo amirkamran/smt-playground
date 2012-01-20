@@ -1474,7 +1474,10 @@ sub print_short {
 
   print $s;
   print "\t".load_status($s) if $show_status;
-  print "\t".load_tag($s) if $show_tag;
+  if ($show_tag) {
+    my $tags = load_tag_hash($s);
+    print "\t".join(" ", sort {$a cmp $b} keys %$tags);
+  }
   print "\t".(load_jobid($s) || "") if $show_jobid;
   print "\t".show_disk_usage($s) if $show_disk_usage;
   print "\n";
@@ -1653,6 +1656,11 @@ sub load_status {
 sub load_tag {
   my $step = shift;
   return try_load(absolutize_within_stepdir($step, "eman.tag"));
+}
+sub load_tag_hash {
+  my $step = shift;
+  my %out = map { ($_, 1) } split /(\s|\n)+/, load_tag($step);
+  return \%out;
 }
 sub load_depsarr {
   my $step = shift;
