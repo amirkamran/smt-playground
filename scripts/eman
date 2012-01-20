@@ -324,10 +324,9 @@ if ($cmd eq "defvar") {
       if (!defined $vars->{$stepvar}->{'opt'}->{'type'}
           || $vars->{$stepvar}->{'opt'}->{'type'} ne 'reqstep') {
         $varshelp .= "    !!! $stepvar is not of type 'reqstep'\n";
-	$waserror = 1;
+        $waserror = 1;
       }
-      ###!!!DZ Opravdu to má bıt takhle? Nemìl se splitnout spíš sám $stepvar?
-      my ($stepname, $fromvar) = split ':', $vars->{$stepvar}->{'val'};
+      my ($stepname, $fromvar) = split ':', $vars->{$stepvar};
       $fromvar = $varname if ! defined $fromvar;
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
                   split(/\n/, load_vars_str($stepname));
