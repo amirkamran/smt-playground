@@ -162,6 +162,10 @@ fi
 
 [ \$success == 1 ] || die "THERE WERE ERRORS!! See above."
 
+echo "Getting phrase counts..."
+zwc -l model/*.gz | tee phrase-counts
+ 
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
