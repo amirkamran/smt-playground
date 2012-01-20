@@ -6,9 +6,10 @@ function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 eman \
   defvar ALISTEP type=reqstep default='' help="the step where alignment was constructed" \
-  defvar BINARIES type=reqstep inherit=ALISTEP \
+  defvar BINARIES type=reqstep inherit=ALISTEP:GIZASTEP \
     help="the step containing compiled tools; inherited from ALISTEP" \
-  defvar SRCCORP help="source corpus name, CORPUS from ALISTEP is used if omitted" \
+  defvar SRCCORP inherit=ALISTEP:CORPUS \
+    help="source corpus name, CORPUS from ALISTEP is used if omitted" \
   defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
