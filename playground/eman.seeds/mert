@@ -11,7 +11,9 @@ eman \
   defvar MODELSTEP type=reqstep help='where is the model (moses.ini) incl. all files' \
   defvar DEVCORP help='the corpus for tuning; use colon to delimit more corpora (the source side will be taken from the first one only)' \
   defvar TESTCORP help='the corpus for evaluation' \
-  defvar REFAUG help='the target (reference) lang+factors' \
+  defvar SRCAUG inherit=MODELSTEP help='the source lang+factors' \
+  defvar REFAUG inherit=MODELSTEP:TGTAUG \
+    help='the target (reference) lang+factors' \
   defvar SEARCH default=cube help='the search type (beam or cube)' \
   defvar MOSESFLAGS default='' help='further flags for moses' \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
@@ -30,21 +32,6 @@ eman \
 
 # Set local bash variables
 eval `eman bash-loadvars`
-
-## Load variables from MODEL
-#[ -e ../$MODELSTEP/eman.vars ] || die "Bad translation model: $MODELSTEP"
-#SAVEBINARIES=$BINARIES
-## inherit all variables
-#eval `cat ../$MODELSTEP/eman.vars` || exit 1
-#
-#if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
-#  # inheriting, ignoring our SAVEBINARIES
-#  true
-#else
-#  # using our own
-#  BINARIES=$SAVEBINARIES
-#  echo $BINARIES >> eman.deps
-#fi
 
 MOSESDIR="$(eman path $MOSESSTEP)"
 SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
@@ -67,7 +54,8 @@ MOSESCMD="$MOSESDIR/bin/moses"
 #fi
 
 
-eman add-tag $TAGPREF`eman tag $MODELSTEP`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG .
+#eman add-tag $TAGPREF`eman tag $MODELSTEP`"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG .
+# ignoring tags now
 
 #echo SETTING eman.tag: `cat eman.tag`
 
@@ -197,6 +185,7 @@ ulimit -c 1 # core files limited to 1 byte
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
+# Blocked for the moment, we don't use sempos
 #if [ -d "$TMT_ROOT" ]; then
 #  # ensuring tectomt is actually inited!
 #  pushd $TMT_ROOT ||  die "Can't chdir to TMT_ROOT $TMT_ROOT"
