@@ -330,8 +330,8 @@ if ($cmd eq "defvar") {
       $fromvar = $varname if ! defined $fromvar;
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
                   split(/\n/, load_vars_str($stepname));
-      # here is a bug: this will cause double bash escaping of inherited vars
       $usevalue = (split('=', $var))[1] if defined $var;
+      $usevalue = var_bash_unescape($usevalue);
     } elsif (defined $vars->{$varname}->{'same_as'}) {
       my $same_as = $vars->{$varname}->{'same_as'};
       $usevalue = $vars->{$same_as}->{'val'};
