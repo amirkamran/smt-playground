@@ -12,23 +12,21 @@ eman \
   defvar CORPUS help='the corpus name' \
   defvar SRCALIAUG help='lang+factors for the source side' \
   defvar TGTALIAUG help='lang+factors for the target side' \
-  defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
+  defvar ALISYMS default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
     help='symmetrization methods, several allowed if delimited by comma' \
-  defvar OUTLABEL default='' \
-    help='suffix to add to the resulting "alignment corpus" name' \
+  defvar ALILABEL default='' \
+    help='alignment "corpus" name, generated automatically if not given' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-OUTALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
-[ -z "$OUTLABEL" ] \
-  || OUTALILABEL=$OUTALILABEL.$OUTLABEL
+if [ -z "$ALILABEL" ]; then
+  export ALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+  eman defvar ALILABEL
+fi
 
-export OUTALILABEL
-eman defvar OUTALILABEL
-
-eman add-tag $CORPUS.$OUTALILABEL .
+eman add-tag $CORPUS.$ALILABEL .
 
 GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
@@ -93,7 +91,7 @@ $GIZAWRAPPER \\
   --lfactors=0 --rfactors=0 \\
   --tempdir=\$tempdir \\
   --bindir=$GIZASTEP/bin \\
-  --dirsym=$ALISYM \\
+  --dirsym=$ALISYMS \\
   --drop-bad-lines \\
 | gzip -c > alignment.gz \
 || die "Failed to align the corpus"
@@ -106,8 +104,8 @@ srclen=\`zcat corpus.src.gz | wc -l\`
 
 echo "Aligned, now create corpman info."
 i=1
-for s in $(echo $ALISYM | tr , ' '); do \\
-  echo "alignment.gz	\$i	$CORPUS	\$s-$OUTALILABEL	ali	\$srclen" \\
+for s in $(echo $ALISYMS | tr , ' '); do \\
+  echo "alignment.gz	\$i	$CORPUS	\$s-$ALILABEL	ali	\$srclen" \\
     >> corpman.info \\
   || die "Failed to append corpman.info"
   i=\$((\$i+1))

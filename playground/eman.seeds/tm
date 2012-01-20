@@ -14,8 +14,9 @@ eman \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
   defvar ALICORP same_as=SRCCORP help="alignment corpus name, can be omitted if equal to SRCCORP" \
-  defvar ALIAUG inherit=ALISTEP:OUTALILABEL \
+  defvar ALIAUG inherit=ALISTEP:ALILABEL \
     help="the string describing the 'language', e.g. 'ali'" \
+  defvar ALISYM default='gdfa' help='which alignment to use for the translation model' \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. 0a1-0+1-1" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
@@ -86,7 +87,7 @@ mkcorpus $SRCCORP/$SRCAUG corpus.src
 mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-mkcorpus $ALICORP/$ALIAUG+ali alignment.custom
+mkcorpus $ALICORP/$ALISYM-$ALIAUG+ali alignment.custom
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
