@@ -1654,7 +1654,7 @@ sub stepdir_valid {
 sub get_steptype {
   my $step = shift;
   my $oldstep = $step;
-  $step =~ s/\Q$dirprefix\E([^\.]+)\..*/$1/;
+  $step =~ s/^.*\Q$dirprefix\E([^\.]+)\..*/$1/;
   confess "Failed to get steptype from: $step" if $step eq $oldstep;
   return $step;
 }
@@ -1958,8 +1958,9 @@ sub get_hash_from_vars_deps {
     map  {s/$name/---SELF---/g; $_}
     @usevars;
   # include steptype in the hash to distinguist vars-less steps
-  my $hash =  md5_hex(get_steptype($name), sort @usevars);
-  print STDERR "NAME $name, USEVARS: @usevars\n  -> $hash\n" if 1 && $debug;
+  my $steptype = get_steptype($name);
+  my $hash =  md5_hex($steptype, sort @usevars);
+  print STDERR "STEPTYPE $steptype, USEVARS: @usevars\n  -> $hash\n" if 1 && $debug;
   return $hash;
 }
 
