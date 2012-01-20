@@ -40,8 +40,8 @@ eman add-deps . $MOSESSTEP
 
 ### updated up to here
 
-BINARIES=$(eman path $BINARIES)
-SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
+MOSESSTEPDIR=$(eman path $MOSESSTEP)
+SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
 
 # Load variables from RMexp
 if [ -z "$RMSTEP" ]; then
@@ -142,9 +142,9 @@ fi
 echo "Cloning LMs"
 i=1
 for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
-  lm=\$(eman path \$lm)
   eval \`$PLAYGROUND/../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
-  echo "Cloning lm from \$lmstep, using lmtype \$lmtype"
+  lmstepdir=\$(eman path \$lmstep)
+  echo "Cloning lm from \$lmstep (\$lmstepdir), using lmtype \$lmtype"
   if [ x\$lmtype == xblm ]; then
     numericlmtype=1
     lmsuffix=blm
@@ -157,18 +157,18 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
   fi
 
   if [ \$lmsuffix == flm ]; then
-    $PLAYGROUND/../scripts/wiseln \$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link flm: \$lmstep/config.prepared.flm"
+    $PLAYGROUND/../scripts/wiseln \$lmstepdir/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link flm: \$lmstepdir/config.prepared.flm"
   else
-    if [ -e \$lmstep/corpus.\$lmsuffix.gz ] ; then
+    if [ -e \$lmstepdir/corpus.\$lmsuffix.gz ] ; then
       # prefer gzipped, kenlm (8) supports this
       lmsuffix=\$lmsuffix.gz
     fi
-    $PLAYGROUND/../scripts/wiseln \$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link lm: \$lmstep/corpus.\$lmsuffix"
+    $PLAYGROUND/../scripts/wiseln \$lmstepdir/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link lm: \$lmstepdir/corpus.\$lmsuffix"
   fi
 
-  order=\`eman var \$lmstep ORDER\` || die "Missing variable \$lmstep:ORDER"
+  order=\`eman get-var \$lmstep ORDER\` || die "Missing variable \$lmstep:ORDER"
 
   lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
   i=\$((\$i+1))
@@ -179,7 +179,7 @@ echo lmopts: \$lmopts
 
 i=0
 for tm in \`echo $TMS | tr ':' ' '\`; do
-  tm=\$(eman path \$tm)
+  tmstep=\$(eman path \$tm)
   i=\$((\$i + 1))
   cd tm.\$i/
   \$SCRIPTS_ROOTDIR/training/train-model.perl \\
@@ -195,13 +195,13 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
     \$lmopts \\
     $DECRYPTEDSTEPS \\
   || die "Failed to create moses.ini"
-  if [ -e \$tm/var-SCRADDED ]; then
+  if [ -e \$tmstep/var-SCRADDED ]; then
 	cd model
 	# Some scores has been added to TM -> add corresponding weights to moses.ini.
 	WEIGHTS_ADDER=$PLAYGROUND/tools/alter-moses-ini-ttable-weights.pl
 	[ -x \$WEIGHTS_ADDER ] || die "Missing: \$WEIGHTS_ADDER"
 	cp ./moses.ini ./moses.ini.copy || die "Copy of moses.ini failed"
-	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat \$tm/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
+	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat \$tmstep/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
 	rm ./moses.ini.copy
 	cd ..
   fi
