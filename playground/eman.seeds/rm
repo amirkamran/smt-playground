@@ -30,7 +30,8 @@ BINARIES=`eman path $BINARIES`
 SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
 
 # shorten the reordering name to produce the tag for this reord model
-REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
+export REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
+eman defvar REORDTAG
 
 if [ $SRCCORP == $TGTCORP ] ; then
   eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$REORDTAG"
