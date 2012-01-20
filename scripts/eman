@@ -593,6 +593,7 @@ if ($cmd eq "get-var") {
     print "\n";
   } else {
     my $value = (split '=', $vars[0])[1];
+    $value = "" if !defined $value;
     print $value, "\n";
   }
   exit $waserror;
