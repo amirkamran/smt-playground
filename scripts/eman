@@ -63,6 +63,7 @@ my %expand_abbrev = qw(
   adddir add-dir
   addremote add-remote
   path path
+  getvar get-var
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -562,6 +563,21 @@ if ($cmd eq "path") {
     print get_stepdir($stepname), "\n";
   } else {
     print "$maindir\n";
+  }
+  exit $waserror;
+}
+
+if ($cmd eq "get-var") {
+  my ($stepname, $varname) = @ARGV;
+  mydie "Usage: eman get-var STEP VAR" if ! defined $varname;
+  my @vars = grep { $_ =~ m/^$varname=/ }
+             map { var_bash_unescape($_) }
+             split /\n/, load_vars_str($stepname);
+  if (!defined $vars[0]) {
+    print "\n";
+  } else {
+    my $value = (split '=', $vars[0])[1];
+    print $value, "\n";
   }
   exit $waserror;
 }
