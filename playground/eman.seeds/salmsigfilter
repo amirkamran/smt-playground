@@ -1,0 +1,65 @@
+#!/bin/bash
+# eman seed for compiling SALM and sigfilter
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar MOSESSTEP type=reqstep \
+    help='where is moses checked out (sigfilter is in moses/contrib)' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+[ $(uname -m) == "x86_64" ] || echo "Warning: Our copy of SALM needs x64"
+
+MOSESSTEPDIR=`eman path $MOSESSTEP`
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+[ \$(uname -m) == "x86_64" ] || die "Our copy of SALM needs x64"
+
+mkdir bin || die "Failed to create bin dir"
+
+echo "Extracting SALM"
+tar xzf ../../src/salm-src.tar.gz || die "Failed to extract salm"
+mv SALM salm-src || die "salm rename failed"
+cd salm-src/Distribution/Linux || die "chdir failed"
+make allO64 || [ -x ../../Bin/Linux/Index/IndexSA.O64 ]
+cd ../../../bin || die "chdir back failed"
+ln -s ../salm-src/Bin/Linux/Index/IndexSA.O64 ./
+ln -s ../salm-src/Bin/Linux/Search/FrequencyOfNgrams.O64 ./
+# Check of indexer
+[ -e ../salm-src/Bin/Linux/Index/IndexSA.O64 ] || die "Final SALM check failed"
+cd \$mydir || die "Failed to chdir back"
+
+echo \$(pwd)/salm-src > salm.path
+
+cp -r $MOSESSTEPDIR/moses/contrib/sigtest-filter ./ \
+  || die "Failed to copy sigfilter"
+cd sigtest-filter || die "Chdir failed"
+make SALMDIR=\$mydir/salm-src FLAVOR=o64 || die "sigfilter compilation failed"
+cd \$mydir || die "Failed to chdir back"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
