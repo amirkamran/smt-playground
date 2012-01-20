@@ -290,6 +290,11 @@ if ($cmd eq "defvar") {
             # ->{varname}->{'val'} = ...the value from the environment...
             # ->{varname}->{'defined'} = 1  ... always
   my %deps = (); # the dependencies we've learned about
+
+  # load previous eman.deps
+  my $olddeps = load_depsarr($step);
+  %deps = map { ($_, 1 ) } @$olddeps; # convert to hash
+
   my @cmds = @ARGV;
   my @var_decls;
   unshift @cmds, "defvar";
@@ -322,20 +327,22 @@ if ($cmd eq "defvar") {
     } elsif (defined $vars->{$varname}->{'opt'}->{'inherit'}) {
       # value can be inherited from a particular step
       my $stepvar = $vars->{$varname}->{'opt'}->{'inherit'};
-      if (!defined $vars->{$stepvar}->{'opt'}->{'type'}
-          || $vars->{$stepvar}->{'opt'}->{'type'} ne 'reqstep') {
-        $varshelp .= "    !!! $stepvar is not of type 'reqstep'\n";
+      my ($stepname, $fromvar) = split ':', $stepvar;
+      if (!defined $vars->{$stepname}->{'opt'}->{'type'}
+          || $vars->{$stepname}->{'opt'}->{'type'} ne 'reqstep') {
+        $varshelp .= "    !!! $stepname is not of type 'reqstep'\n";
         $waserror = 1;
       }
-      my ($stepname, $fromvar) = split ':', $vars->{$stepvar};
       $fromvar = $varname if ! defined $fromvar;
       my ($var) = grep { $_ =~ m/^$fromvar=/ }
-                  split(/\n/, load_vars_str($stepname));
-      $usevalue = (split('=', $var))[1] if defined $var;
-      $usevalue = var_bash_unescape($usevalue);
-    } elsif (defined $vars->{$varname}->{'same_as'}) {
-      my $same_as = $vars->{$varname}->{'same_as'};
-      $usevalue = $vars->{$same_as}->{'val'};
+                  split(/\n/, load_vars_str($outvars->{$stepname}));
+      if (defined $var) {
+        $usevalue = (split('=', $var))[1];
+        $usevalue = var_bash_unescape($usevalue);
+      }
+    } elsif (defined $vars->{$varname}->{'opt'}->{'same_as'}) {
+      my $same_as = $vars->{$varname}->{'opt'}->{'same_as'};
+      $usevalue = $outvars->{$same_as};
     }
 
     # try default value for the variable
