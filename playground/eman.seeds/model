@@ -21,37 +21,17 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-## Load variables from TMS
-#for tm in `echo $TMS | tr ':' ' '`; do
-#  [ -e ../$tm/eman.vars ] || die "Bad translation model: $tm"
-#done
-
 tmone=`echo $TMS | cut -d: -f1`
 eman \
-  defvar MOSESSTEP inherit="$tmone" help="Failed to inherit from $tmone" \
+  defvar MOSESSTEP type='reqstep' inherit="$tmone" help="Failed to inherit from $tmone" \
 || exit 1
 
-#SAVEBINARIES=$BINARIES
-## inherit all variables
-#for tm in `echo $TMS | tr ':' ' '`; do
-#  source ../$tm/eman.vars
-#done
-#
-#if [ -z "$SAVEBINARIES" ] || [ "$BINARIES" == "$SAVEBINARIES" ]; then
-#  # inheriting, ignoring our SAVEBINARIES
-#  true
-#else
-#  # using our own
-#  BINARIES=$SAVEBINARIES
-#  echo $BINARIES >> eman.deps
-#fi
-
-eman add-deps . $MOSESTEP
+eman add-deps . $MOSESSTEP
 
 ### updated up to here
 
-SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
-WORKSPACE="`pwd`/../$BINARIES/"
+BINARIES=$(eman path $BINARIES)
+SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
 
 # Load variables from RMexp
 if [ -z "$RMSTEP" ]; then
@@ -59,76 +39,54 @@ if [ -z "$RMSTEP" ]; then
   REORDFACTORS="0-0"
   DOTREORDTAG=""
 else
-  [ "$SRCAUG" == $(cat ../$RMSTEP/var-SRCAUG) ] || die "Incompatible SRCAUGs"
-  [ "$TGTAUG" == $(cat ../$RMSTEP/var-TGTAUG) ] || die "Incompatible TGTAUGs"
-  REORDERING=`cat ../$RMSTEP/var-REORDERING` || die "Missed REORDERING"
-  REORDFACTORS=`cat ../$RMSTEP/var-REORDFACTORS` || die "Missed REORDFACTORS"
-  REORDTAG=`cat ../$RMSTEP/var-REORDTAG` || die "Missed REORDTAG"
+  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] || die "Incompatible TGTAUGs"
+  REORDERING=$(eman get-var $RMSTEP REORDERING) || die "Missed REORDERING"
+  REORDFACTORS=$(eman get-var $RMSTEP REORDFACTORS) || die "Missed REORDFACTORS"
+  REORDTAG=$(eman get-var $RMSTEP REORDTAG) || die "Missed REORDTAG"
   [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] && [ ! -z "$REORDTAG" ] \
     || die "Bad reordering model: $RMSTEP"
   DOTREORDTAG=".$REORDTAG"
 fi
 
-cat > eman.vars << KONEC
-BINARIES=$BINARIES
-TMS=$TMS
-RMSTEP=$RMSTEP
-LMS=$LMS
-SRCCORP=$SRCCORP
-TGTCORP=$TGTCORP
-ALISTEP=$ALISTEP
-ALICORP=$ALICORP
-SRCAUG=$SRCAUG
-TGTAUG=$TGTAUG
-ALIAUG=$ALIAUG
-DECODINGSTEPS=$DECODINGSTEPS
-REORDERING=$REORDERING
-REORDFACTORS=$REORDFACTORS
-KONEC
-
-echo $SRCAUG > var-SRCAUG
-echo $TGTAUG > var-TGTAUG
-
 for tm in `echo $TMS | tr ':' ' '`; do
   echo $tm >> eman.deps
-  tmtag=$tmtag"TM"`cat ../$tm/eman.tag`
+  tmtag=$tmtag"TM"`eman tag $tm`
 done
 
-[ -z "$RMSTEP" ] || echo $RMSTEP >> eman.deps
+[ -z "$RMSTEP" ] || eman add-deps . $RMSTEP || die "Bad RMSTEP: $RMSTEP"
+[ -z "$RMSTEP" ] || RMSTEP=$(eman path $RMSTEP)
 
 ## Create the tag based on LMs
 i=1
 for lm in `echo $LMS | sed 's/:::/ /g'`; do
-  eval `../../scripts/makearg --delim=: $lm factor lmstep lmtype`
+  eval `$PLAYGROUND/../scripts/makearg --delim=: $lm factor lmstep lmtype`
   echo $lmstep >> eman.deps
   # default to kenlm
   lmtypetag=${lmtype:-ken}
-  order=`cat ../$lmstep/var-ORDER` || die "Missing: ../$lmstep/var-ORDER"
+  order=`eman get-var $lmstep ORDER` || die "Missing variable $lmstep:ORDER"
   i=$(($i+1))
   factor=`echo $factor | sed 'y/\,/+/'`
-  lmtag=$lmtag"LM$factor-$order-"`cat ../$lmstep/eman.tag`-$lmtypetag
+  lmtag=$lmtag"LM$factor-$order-"`eman tag $lmstep`-$lmtypetag
 done
 i=$(($i-1))
 
-# XXX beru promenne z prvniho TM
-tm_first=`echo "$TMS" | cut -d: -f1`
-eval "cat ../$tm_first/eman.vars | grep 'THRESHOLD\|CUTOFF'"
+THRESHOLD=`eman var $tmone THRESHOLD`
+CUTOFF=`eman var $tmone CUTOFF`
 if [ ! -z "$THRESHOLD" ]; then
   SIGFILTERTAG=SIG$THRESHOLD"N"$CUTOFF
 fi
 
 if [ $SRCCORP == $TGTCORP ] ; then
-  echo SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG"
 else
-  echo SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG > eman.tag
+  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG"
 fi
-
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-
-DECRYPT=../tools/decrypt_mapping_steps_for_training.pl
+DECRYPT=$PLAYGROUND/tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
 DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
@@ -155,18 +113,18 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 i=0
 for tm in \`echo $TMS | tr ':' ' '\`; do
   i=\$((\$i + 1))
-  for f in ../\$tm/model/*gz ; do
+  tm=\$(eman path \$tm)
+  for f in \$tm/model/*gz ; do
     mkdir -p tm.\$i/model
-    ../../scripts/wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
+    $PLAYGROUND/../scripts/wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
   done
 done
-
 
 ## Cloning reordering model
 if [ ! -z "$RMSTEP" ]; then
   cd tm.1/model || die "Failed to implant reordmodel to tm.1"
-  for f in ../../../$RMSTEP/model/reordering-table*gz ; do
-    ../../../../scripts/wiseln \$f ./\`basename \$f\` \\
+  for f in $RMSTEP/model/reordering-table*gz ; do
+    $PLAYGROUND/../scripts/wiseln \$f ./\`basename \$f\` \\
       || die "Failed to clone \$f"
   done
   cd \$mydir || die "Chdir back failed"
@@ -177,7 +135,8 @@ fi
 echo "Cloning LMs"
 i=1
 for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
-  eval \`../../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
+  lm=\$(eman path \$lm)
+  eval \`$PLAYGROUND/../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
   echo "Cloning lm from \$lmstep, using lmtype \$lmtype"
   if [ x\$lmtype == xblm ]; then
     numericlmtype=1
@@ -191,18 +150,18 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
   fi
 
   if [ \$lmsuffix == flm ]; then
-    ../../scripts/wiseln ../\$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link flm: ../\$lmstep/config.prepared.flm"
+    $PLAYGROUND/../scripts/wiseln \$lmstep/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link flm: \$lmstep/config.prepared.flm"
   else
-    if [ -e ../\$lmstep/corpus.\$lmsuffix.gz ] ; then
+    if [ -e \$lmstep/corpus.\$lmsuffix.gz ] ; then
       # prefer gzipped, kenlm (8) supports this
       lmsuffix=\$lmsuffix.gz
     fi
-    ../../scripts/wiseln ../\$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link lm: ../\$lmstep/corpus.\$lmsuffix"
+    $PLAYGROUND/../scripts/wiseln \$lmstep/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link lm: \$lmstep/corpus.\$lmsuffix"
   fi
 
-  order=\`cat ../\$lmstep/var-ORDER\` || die "Missing: ../\$lmstep/var-ORDER"
+  order=\`eman var \$lmstep ORDER\` || die "Missing variable \$lmstep:ORDER"
 
   lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
   i=\$((\$i+1))
@@ -213,6 +172,7 @@ echo lmopts: \$lmopts
 
 i=0
 for tm in \`echo $TMS | tr ':' ' '\`; do
+  tm=\$(eman path \$tm)
   i=\$((\$i + 1))
   cd tm.\$i/
   \$SCRIPTS_ROOTDIR/training/train-model.perl \\
@@ -228,13 +188,13 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
     \$lmopts \\
     $DECRYPTEDSTEPS \\
   || die "Failed to create moses.ini"
-  if [ -e ../../\$tm/var-SCRADDED ]; then
+  if [ -e \$tm/var-SCRADDED ]; then
 	cd model
 	# Some scores has been added to TM -> add corresponding weights to moses.ini.
-	WEIGHTS_ADDER=../../../tools/alter-moses-ini-ttable-weights.pl
+	WEIGHTS_ADDER=$PLAYGROUND/tools/alter-moses-ini-ttable-weights.pl
 	[ -x \$WEIGHTS_ADDER ] || die "Missing: \$WEIGHTS_ADDER"
 	cp ./moses.ini ./moses.ini.copy || die "Copy of moses.ini failed"
-	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat ../../../\$tm/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
+	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat \$tm/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
 	rm ./moses.ini.copy
 	cd ..
   fi
@@ -242,7 +202,7 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
 done
 
 mkdir model
-../../scripts/merge_moses_models.pl --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
+$PLAYGROUND/../scripts/merge_moses_models.pl --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
   || die "Merge moses.ini failed"
 
 echo DONE > \$mydir/eman.status

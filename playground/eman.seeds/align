@@ -25,6 +25,9 @@ OUTALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
 [ -z "$OUTLABEL" ] \
   || OUTALILABEL=$OUTALILABEL.$OUTLABEL
 
+export OUTALILABEL
+eman defvar OUTALILABEL
+
 eman add-tag $CORPUS.$OUTALILABEL .
 
 GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
