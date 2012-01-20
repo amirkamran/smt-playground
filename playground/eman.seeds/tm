@@ -25,6 +25,11 @@ eman \
 
 eval `eman bash-loadvars`
 
+[ `eman getvar $ALISTEP CORPUS` == $SRCCORP ] \
+  || die "Nonmatching alistep: different corpus"
+[ `eman getvar $ALISTEP ALILABEL` == $ALILABEL ] \
+  || die "Nonmatching alistep: different ALILABEL"
+
 [ -z $ALISTEP ] || ALISTEP=`eman path $ALISTEP`
 PLAYGROUND=`eman path`
 BINARIES=`eman path $BINARIES`
