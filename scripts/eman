@@ -368,6 +368,10 @@ if ($cmd eq "defvar") {
         # do some consistency checks and other bits
         if ($type eq "reqstep") {
           $deps{$usevalue} = 1;
+	  if (!step_valid($usevalue)) {
+            $varshelp .= "    !!! $usevalue is not a valid step\n";
+            $waserror = 1;
+	  }
         }
       }
     } else {
