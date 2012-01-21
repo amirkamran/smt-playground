@@ -40,8 +40,8 @@ fi
 [ "$(eman getvar $ALISTEP ALILABEL)" == "$ALILABEL" ] \
   || die "Nonmatching alistep: different ALILABEL: our is $ALILABEL"
 
-BINARIES=`eman path $BINARIES`
-SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
+BINARIESDIR=`eman path $BINARIES`
+SCRIPTS_ROOTDIR="$BINARIESDIR/moses/scripts"
 
 if echo "$DECODINGSTEPS" | grep , ; then
   echo "\$DECODINGSTEPS ($DECODINGSTEPS) contains a comma! Use 'a' instead, e.g. 0a1-0+1-1"
@@ -145,7 +145,7 @@ if \\
         --srccorp=$SRCCORP --srcaug=$SRCAUG \\
         --tgtcorp=$TGTCORP --tgtaug=$TGTAUG \\
         --cutoff=$CUTOFF --threshold=$THRESHOLD \\
-        --workspace=$BINARIES \\
+        --workspace=$BINARIESDIR \\
         \$tempdir/model/phrase-table.* \\
   && echo "Now will extract generation models" \\
   && \$SCRIPTS_ROOTDIR/training/train-model.perl \\

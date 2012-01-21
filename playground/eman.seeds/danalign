@@ -44,10 +44,10 @@ eman add-tag $CORPUS.$OUTALILABEL .
 # no checks.
 
 # convert the dependencies to absolute paths
-GIZASTEP=`eman path $GIZASTEP`
-DATASTEP=`eman path $DATASTEP`
-TRAINALS=$DATASTEP/trainal.$SRC.gz
-TRAINALT=$DATASTEP/trainal.$TGT.gz
+GIZASTEPDIR=`eman path $GIZASTEP`
+DATASTEPDIR=`eman path $DATASTEP`
+TRAINALS=$DATASTEPDIR/trainal.$SRC.gz
+TRAINALT=$DATASTEPDIR/trainal.$TGT.gz
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
@@ -63,7 +63,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
+export SCRIPTS_ROOTDIR=$GIZASTEPDIR/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 tempdir=/mnt/h/tmp
@@ -75,7 +75,7 @@ $GIZAWRAPPER \\
   $TRAINALS $TRAINALT \\
   --lfactors=0 --rfactors=0 \\
   --tempdir=\$tempdir \\
-  --bindir=$GIZASTEP/bin \\
+  --bindir=$GIZASTEPDIR/bin \\
   --dirsym=$ALISYM \\
   --drop-bad-lines \\
 | gzip -c > alignment.gz \

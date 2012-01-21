@@ -30,9 +30,9 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-BINARIES=`eman path $BINARIES`
-SCRIPTS_ROOTDIR="`cat $BINARIES/scripts.rootdir`"
-MOSESCMD="$BINARIES/bin/moses"
+BINARIESDIR=`eman path $BINARIES`
+SCRIPTS_ROOTDIR="`cat $BINARIESDIR/scripts.rootdir`"
+MOSESCMD="$BINARIESDIR/bin/moses"
 
 eman add-tag "$TAGPREF"SRC"$SRCAUG".MID"$MIDAUG".TGT"$REFAUG".$SEARCH$STACK.FIRST.`cat $PHASE1MERT/eman.tag`.SECOND.`cat $PHASE2MERT/eman.tag` .
 

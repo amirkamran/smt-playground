@@ -31,8 +31,8 @@ eval `eman bash-loadvars`
 
 [ -z $ALISTEP ] || ALISTEP=`eman path $ALISTEP`
 PLAYGROUND=`eman path`
-BINARIES=`eman path $BINARIES`
-SCRIPTS_ROOTDIR="$BINARIES/moses/scripts"
+BINARIESDIR=`eman path $BINARIES`
+SCRIPTS_ROOTDIR="$BINARIESDIR/moses/scripts"
 
 # shorten the reordering name to produce the tag for this reord model
 export REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*/\1/g'`
