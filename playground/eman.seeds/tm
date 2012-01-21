@@ -5,7 +5,7 @@ set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
 eman \
-  defvar ALISTEP help="the step where alignment was constructed, implied by ALICORP+ALISYM+ALILABEL" \
+  defvar ALISTEP type='optstep' help="the step where alignment was constructed, implied by ALICORP+ALISYM+ALILABEL" \
   defvar BINARIES type=reqstep inherit=ALISTEP:GIZASTEP \
     help="the step containing compiled tools" \
   defvar SRCCORP inherit=ALISTEP:CORPUS \
@@ -35,7 +35,7 @@ if [ -z "$ALISTEP" ]; then
   eman defvar ALISTEP
 fi
 
-[ `eman getvar $ALISTEP CORPUS` == $SRCCORP ] \
+[ "$(eman getvar $ALISTEP CORPUS)" == "$SRCCORP" ] \
   || die "Nonmatching alistep: different corpus"
 [ "$(eman getvar $ALISTEP ALILABEL)" == "$ALILABEL" ] \
   || die "Nonmatching alistep: different ALILABEL: our is $ALILABEL"
