@@ -1,0 +1,63 @@
+#!/bin/bash
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+    defvar MERTSTEP type=reqstep \
+        help="step containing untokenized candidate (evaluation.opt.out) and references (evaluation.ref.*)" \
+    defvar MOSESSTEP type=reqstep inherit=MERTSTEP:BINARIES \
+        help="the step containing compiled tools; inherited from MERTSTEP" \
+    defvar SCORERS default="BLEU;PER;TER;CDER" \
+        help="scorers you want to use" \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+
+eman add-tag `eman tag $MERTSTEP`".EVALUATION"
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+MERTSTEP=\`eman path $MERTSTEP \`
+MOSESSTEP=\`eman path $MOSESSTEP \`
+
+EVALUATOR=\$MOSESSTEP/moses/mert/evaluator
+[ -x \$EVALUATOR ] || die "Missing: \$EVALUATOR"
+
+REFERENCES=\`ls -1 \$MERTSTEP/evaluation.ref* | grep "/evaluation\.ref\.[0-9]$" | tr "\\n" "," | head -c -1\`
+CANDIDATE=\$MERTSTEP/evaluation.opt.out
+
+\$EVALUATOR \\
+    --sctype "$SCORERS" \\
+    --reference \$REFERENCES \\
+    --candidate \$CANDIDATE \\
+    --rseed 1234 \\
+|| die "evaluator exit code is not 0"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
