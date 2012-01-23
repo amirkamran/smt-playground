@@ -329,8 +329,9 @@ if ($cmd eq "defvar") {
       my $stepvar = $vars->{$varname}->{'opt'}->{'inherit'};
       my ($stepname, $fromvar) = split ':', $stepvar;
       if (!defined $vars->{$stepname}->{'opt'}->{'type'}
-          || $vars->{$stepname}->{'opt'}->{'type'} ne 'reqstep') {
-        $varshelp .= "    !!! $stepname is not of type 'reqstep'\n";
+          || ($vars->{$stepname}->{'opt'}->{'type'} ne 'reqstep'
+          && $vars->{$stepname}->{'opt'}->{'type'} ne 'optstep')) {
+        $varshelp .= "    !!! $stepname is not a step'\n";
         $waserror = 1;
       }
       $fromvar = $varname if ! defined $fromvar;
