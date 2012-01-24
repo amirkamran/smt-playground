@@ -49,6 +49,8 @@ CANDIDATE=\$MERTSTEP/evaluation.opt.out
     --reference \$REFERENCES \\
     --candidate \$CANDIDATE \\
     --rseed 1234 \\
+    2> /dev/null \\
+    | tee  scores \\
 || die "evaluator exit code is not 0"
 
 # Standard command footer
