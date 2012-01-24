@@ -50,10 +50,10 @@ TRAINALS=$DATASTEPDIR/trainal.$SRC.gz
 TRAINALT=$DATASTEPDIR/trainal.$TGT.gz
 # I am not sure but I am afraid that Giza++ cannot digest gzipped files.
 # However, we should ensure that the files are gunzipped only temporarily during Giza++ processing.
-###!!!TRAINALS=$DATASTEP/trainal.$SRC.gz
-###!!!TRAINALT=$DATASTEP/trainal.$TGT.gz
-gunzip -c $DATASTEP/trainal.$SRC.gz > trainal.$SRC
-gunzip -c $DATASTEP/trainal.$TGT.gz > trainal.$TGT
+###!!!TRAINALS=$DATASTEPDIR/trainal.$SRC.gz
+###!!!TRAINALT=$DATASTEPDIR/trainal.$TGT.gz
+gunzip -c $DATASTEPDIR/trainal.$SRC.gz > trainal.$SRC
+gunzip -c $DATASTEPDIR/trainal.$TGT.gz > trainal.$TGT
 TRAINALS=trainal.$SRC
 TRAINALT=trainal.$TGT
 
