@@ -1659,7 +1659,7 @@ sub stepdir_valid {
 sub get_steptype {
   my $step = shift;
   my $oldstep = $step;
-  $step =~ s/^.*\Q$dirprefix\E([^\.]+)\..*/$1/;
+  $step =~ s/^(|.*\/)\Q$dirprefix\E([^.]*).*/$2/;
   confess "Failed to get steptype from: $step" if $step eq $oldstep;
   return $step;
 }
@@ -1845,7 +1845,10 @@ sub guess_step {
   }
   if (!defined $step) {
     # guess from dir listing
-    my @dirs = grep { /$key/ } glob("$dirprefix*.*.[0-9]*");
+    my @dirs;
+    for my $dir (@subdirs) {
+      push @dirs, grep { /$key/ } glob("$dir/$dirprefix*.*.[0-9]*");
+    }
     # we do not use the preloaded index, because it contains only valid exps.
     if (1<scalar(@dirs)) {
       print STDERR "Ambiguous in dir listing: $key:\n";
@@ -1854,7 +1857,7 @@ sub guess_step {
     }
     $step = guess_step_from_hashdate($dirs[0]) if 1==scalar @dirs;
   }
-  die "Failed to guess step from: $key\nTry --reindex." if !defined $step;
+  die "Failed to guess step from: $key\nTry --reindex." if !defined $step;  
   return $step;
 }
 
