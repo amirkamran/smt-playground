@@ -16,8 +16,7 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-
-eman add-tag `eman tag $MERTSTEP`".EVALUATION"
+#eman add-tag `eman tag $MERTSTEP`
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -48,6 +47,7 @@ CANDIDATE=\$MERTSTEP/evaluation.opt.out
     --sctype "$SCORERS" \\
     --reference \$REFERENCES \\
     --candidate \$CANDIDATE \\
+    --bootstrap 1000 \\
     --rseed 1234 \\
     2> /dev/null \\
     | tee  scores \\
