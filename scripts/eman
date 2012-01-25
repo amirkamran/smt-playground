@@ -2464,6 +2464,8 @@ eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
 
 eman stat `qstat | cut -c 1-8 | skip 2`
   # show status of all running/held jobs in SGE
+  # WARNING: This only works if there are no non-eman cluster jobs.
+  # Otherwise, eman will just say "Failed to guess step from: $job_id".
   # the skip command is available here:
   #   http://www.cuni.cz/~obo/textutils/#skip
 
