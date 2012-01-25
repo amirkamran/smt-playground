@@ -29,7 +29,7 @@ binmode(STDERR, ":utf8");
 
 my $tempdir = "/tmp";
 my $parallel = 1; # run the two GIZA runs simultaneously
-my $compress = 1; # gzip everything 
+my $compress = 1; # gzip everything
 my @dirsyms = ();
       # right, left   ... for unidirectional GIZA only
       # gdf, intersect, union   ... for two runs, symmetrized
@@ -251,14 +251,14 @@ if (1 == scalar @simple_needed) {
 } else {
   # run two gizas and possibly also symmetrizations
   my ($aliback, $alithere) = may_parallel(
-    sub { 
+    sub {
       my ($usea, $useb) = ("a", "b");
       return run_giza($tmp, $usea, $useb,
         $vcb{$usea}, $vcb{$useb},
         "$tmp/vcb-$usea", "$tmp/vcb-$useb",
         "$tmp/txt-$usea", "$tmp/txt-$useb");
     },
-    sub { 
+    sub {
       my ($usea, $useb) = ("b", "a");
       return run_giza($tmp, $usea, $useb,
         $vcb{$usea}, $vcb{$useb},
@@ -368,7 +368,7 @@ if (1 == scalar @simple_needed) {
       $cnt--; # skip_at counts at +1
       close SYMAL;
       close SYMALOUT;
-  
+
       die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
         if $insents != $cnt;
     }
@@ -391,7 +391,7 @@ if (1 == scalar @simple_needed) {
         die "$alifilename{$dirsyms[$i]}:$nr: File too short!" if $i != 0;
       } else {
         chomp $line;
-  
+
         print $line;
         if ($i == $#temphdls) {
           print "\n";
@@ -567,7 +567,7 @@ sub restrict_factors_and_section {
   my @sentnums = (1..$sents);
     # we do not allow skipping any sentences => return all numbers
   print STDERR "Read $nl lines, got $sents sentences\n";
-  return [$sents, [@sentnums]]; 
+  return [$sents, [@sentnums]];
 }
 
 sub restrict_factors_and_section_from_twocolfile {
@@ -696,7 +696,7 @@ sub collect_vocabulary {
     $id++;
   }
   close(VCB);
-  
+
   return \%VCB;
 }
 
@@ -730,7 +730,7 @@ sub numberize_line {
   chomp($txt);
   my $out = "";
   my $not_first = 0;
-  foreach (split(/ /,$txt)) { 
+  foreach (split(/ /,$txt)) {
       next if $_ eq '';
       $out .= " " if $not_first++;
       die "Unknown word '$_'\n" unless defined($VCB->{$_});
@@ -783,7 +783,7 @@ sub run_giza {
 
   my $cooc_file = "$dir/$a-$b.cooc";
   my $snt2cooc_call;
-  
+
   if (-e $cooc_file || -e "$cooc_file.gz") {
     $cooc_file .= '.gz' if ! -e $cooc_file;
     print STDERR "  $cooc_file seems finished, reusing.\n";
@@ -800,16 +800,16 @@ sub run_giza {
     }
   }
 
-  my %GizaDefaultOptions = 
+  my %GizaDefaultOptions =
       (p0 => .999 ,
-       m1 => 5 , 
-       m2 => 0 , 
-       m3 => 3 , 
-       m4 => 3 , 
+       m1 => 5 ,
+       m2 => 0 ,
+       m3 => 3 ,
+       m4 => 3 ,
        o => "giza" ,
        nodumps => 0 ,
        onlyaldumps => 0 ,
-       nsmooth => 4 , 
+       nsmooth => 4 ,
        model1dumpfrequency => 1,
        model4smoothfactor => 0.4 ,
        s => $vcbb_file,
@@ -825,7 +825,7 @@ sub run_giza {
       }
   }
 
-  $GizaDefaultOptions{"use_gzip"} = 1 if $compress;
+  $GizaDefaultOptions{"use_gzip"} = 1 if $compress and defined $mgizadir;
   $GizaDefaultOptions{"ncpu"} = $mgizacores if defined $mgizadir;
 
   my $GizaOptions;
@@ -833,7 +833,7 @@ sub run_giza {
       my $value = $GizaDefaultOptions{$option} ;
       $GizaOptions .= " -$option $value" ;
   }
-  
+
   safesystem("$GIZA $GizaOptions >&2");
 
   if (defined $mgizadir) {
@@ -841,7 +841,7 @@ sub run_giza {
     safesystem("$MERGE $dir/$a-$b.A3.final.part* $redirect > $outfile");
     safesystem("rm $dir/$a-$b.A3.final.part*");
   }
-  
+
   die "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
     if ! -e $outfile;
   return $outfile;

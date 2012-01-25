@@ -50,6 +50,7 @@ TRAINALS=$DATASTEPDIR/trainal.$SRC.gz
 TRAINALT=$DATASTEPDIR/trainal.$TGT.gz
 # I am not sure but I am afraid that Giza++ cannot digest gzipped files.
 # However, we should ensure that the files are gunzipped only temporarily during Giza++ processing.
+# Aleš: only a mutation of MGiza can read .gz. Giza++ cannot. Besides feeding it gunzipped files, we should also call gizawrapper with --nocompress.
 ###!!!TRAINALS=$DATASTEPDIR/trainal.$SRC.gz
 ###!!!TRAINALT=$DATASTEPDIR/trainal.$TGT.gz
 gunzip -c $DATASTEPDIR/trainal.$SRC.gz > trainal.$SRC
@@ -81,6 +82,7 @@ tempdir=/mnt/h/tmp
 
 $GIZAWRAPPER \\
   $TRAINALS $TRAINALT \\
+  --nocompress \\
   --lfactors=0 --rfactors=0 \\
   --tempdir=\$tempdir \\
   --bindir=$GIZASTEPDIR/bin \\
