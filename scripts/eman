@@ -367,7 +367,7 @@ if ($cmd eq "defvar") {
       my $type = $vars->{$varname}->{'opt'}->{'type'};
       if (defined $type) {
         # do some consistency checks and other bits
-        if ($type eq "reqstep") {
+        if ($type eq "reqstep" || $type eq "optstep") {
           $deps{$usevalue} = 1;
 	  if (!step_valid($usevalue)) {
             $varshelp .= "    !!! $usevalue is not a valid step\n";
