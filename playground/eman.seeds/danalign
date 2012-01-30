@@ -13,15 +13,14 @@ GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # Ensure all the required variables are set (or provide the default)
+# defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union ... resulted in too many columns but one can ask for it
 eman \
   defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
   defvar DATASTEP type=reqstep help='where are trainal.$SRC.gz and trainal.$TGT.gz' \
   defvar SRC inherit=DATASTEP help='source language code' \
   defvar TGT inherit=DATASTEP help='target language code' \
-  defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
-    help='symmetrization methods, several allowed if delimited by comma' \
-  defvar OUTLABEL default='' \
-    help='suffix to add to the resulting "alignment corpus" name' \
+  defvar ALISYM default=gdfa help='symmetrization methods, several allowed if delimited by comma' \
+  defvar OUTLABEL default='' help='suffix to add to the resulting "alignment corpus" name' \
 || exit 1
 
 # Set local bash variables
@@ -88,11 +87,12 @@ $GIZAWRAPPER \\
   --bindir=$GIZASTEPDIR/bin \\
   --dirsym=$ALISYM \\
   --drop-bad-lines \\
+| cut -f1 \\
 | gzip -c > alignment.gz \
 || die "Failed to align the corpus"
 
 alilen=\`zcat alignment.gz | wc -l\`
-srclen=\`zcat $TRAINALS | wc -l\`
+srclen=\`wc -l $TRAINALS\`
 [ \$alilen == \$srclen ] \
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
 
