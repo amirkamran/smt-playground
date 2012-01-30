@@ -1,69 +1,107 @@
-+- s.mert.687f8141.20110104-1158
-|  | BINARIES=s.binaries.8f30116d.20101129-1913
-|  | MODELSTEP=s.model.a2d49ad3.20110104-1158
++- s.mert.555397de.20120130-0850
 |  | DEVCORP=sample-cs-en-mini-dev
-|  | TESTCORP=sample-cs-en-mini-test
-|  | SRCAUG=cs+lc
-|  | REFAUG=en+lc
-|  | SEARCH=cube
-|  | MERTFLAGS=""
-|  | GRIDFLAGS=" -hard -l mf=14g -l mnth_free=20g "
-|  | MOSESFLAGS=""
-|  | SERIAL=
-|  | STACK=
+|  | GRIDFLAGS=
+|  | JOBS=15
+|  | MERTFLAGS=
 |  | MERTPRG=mert
-|  | ZMERTMETRIC=""
-|  | ZMERTSEMPOSSOURCE=
+|  | MODELSTEP=s.model.93118e55.20120130-0849
+|  | MOSESFLAGS=
+|  | MOSESSTEP=s.mosesgiza.a3543fb7.20120125-1138
+|  | REFAUG=en+form
+|  | SEARCH=cube
+|  | SRCAUG=cs+form
+|  | STACK=
+|  | TAGPREF=
+|  | TESTCORP=sample-cs-en-mini-test
+|  | TREEXSTEP=
+|  | ZMERTFLAGS=
+|  | ZMERTMETRIC=
 |  | ZMERTSEMPOSBLEUWEIGHTS=
-|  | ZMERTFLAGS=""
-|  | TMT_ROOT=
-|  +- s.model.a2d49ad3.20110104-1158
-|  |  | BINARIES=s.binaries.8f30116d.20101129-1913
-|  |  | TMS=s.tm.3e9f5afb.20110104-1158
-|  |  | RMSTEP=
-|  |  | LMS=0:s.lm.ce9f36b6.20110104-1158
-|  |  | SRCCORP=sample-cs-en-mini-train
-|  |  | TGTCORP=sample-cs-en-mini-train
-|  |  | ALISTEP=s.align.336b51cf.20110104-1158
-|  |  | ALICORP=sample-cs-en-mini-train
-|  |  | SRCAUG=cs+lc
-|  |  | TGTAUG=en+lc
-|  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
+|  | ZMERTSEMPOSSOURCE=
+|  +- s.model.93118e55.20120130-0849
+|  |  | CUTOFF=0
 |  |  | DECODINGSTEPS=t0-0
-|  |  | REORDERING=distance
-|  |  | REORDFACTORS=0-0
-|  |  +- s.tm.3e9f5afb.20110104-1158
-|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
-|  |  |  | SRCCORP=sample-cs-en-mini-train
-|  |  |  | TGTCORP=sample-cs-en-mini-train
-|  |  |  | ALICORP=sample-cs-en-mini-train
-|  |  |  | SRCAUG=cs+lc
-|  |  |  | TGTAUG=en+lc
-|  |  |  | ALISTEP=s.align.336b51cf.20110104-1158
-|  |  |  | ALIAUG=gdfa-cs-lcstem4-en-lcstem4
-|  |  |  | DECODINGSTEPS=t0-0
-|  |  |  | REORDERING=distance
-|  |  |  | REORDFACTORS=0-0
-|  |  |  | TRAININGFLAGS=""
-|  |  |  | CUTOFF=0
-|  |  |  | THRESHOLD=
-|  |  |  +- s.align.336b51cf.20110104-1158
-|  |  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
-|  |  |  |  | CORPUS=sample-cs-en-mini-train
-|  |  |  |  | SRCALIAUG=cs+lcstem4
-|  |  |  |  | TGTALIAUG=en+lcstem4
-|  |  |  |  | OUTALILABEL=gdfa-cs-lcstem4-en-lcstem4
-|  |  |  |  | ALISYM=gdfa
-|  |  |  |  +- s.binaries.8f30116d.20101129-1913
-|  |  |  |  |  | SKIP_SRILM=
-|  |  |  |  |  | SKIP_IRSTLM=
-|  |  +- s.lm.ce9f36b6.20110104-1158
-|  |  |  | BINARIES=s.binaries.8f30116d.20101129-1913
+|  |  | LMS="0:s.lm.4a1fb091.20120130-0848"
+|  |  | MOSESSTEP=s.mosesgiza.a3543fb7.20120125-1138
+|  |  | RMSTEP=
+|  |  | SRCAUG=cs+form
+|  |  | TGTAUG=en+form
+|  |  | THRESHOLD=
+|  |  | TMS=s.tm.f450de50.20120130-0846
+|  |  +- s.lm.4a1fb091.20120130-0848
 |  |  |  | CORP=sample-cs-en-mini-train
-|  |  |  | CORPAUG=en+lc
-|  |  |  | ORDER=5
-|  |  |  | BINARIZE=
+|  |  |  | CORPAUG=en+form
+|  |  |  | LMFLAGS=
+|  |  |  | ORDER=3
 |  |  |  | PARTS=1
-|  |  |  +- s.binaries.8f30116d.20101129-1913
-|  |  |  |  | SKIP_SRILM=
-|  |  |  |  | SKIP_IRSTLM=
+|  |  |  | SRILMSTEP=s.srilm.9a438e81.20120125-1313
+|  |  |  +- s.corpus.f2036040.20120130-0842
+|  |  |  |  | COLUMN=-1
+|  |  |  |  | COMBINE_PARTS=
+|  |  |  |  | DEPS=
+|  |  |  |  | FACTOR=-1
+|  |  |  |  | FILENAME=
+|  |  |  |  | OUTCORP=sample-cs-en-mini-train
+|  |  |  |  | OUTFACTS=form
+|  |  |  |  | OUTLANG=en
+|  |  |  |  | OUTLINECOUNT=6000
+|  |  |  |  | RUN_COMMAND=
+|  |  |  |  | STEPNAME=
+|  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/en.gz"
+|  |  |  +- s.srilm.9a438e81.20120125-1313
+|  |  +- s.mosesgiza.a3543fb7.20120125-1138
+|  |  |  | IRSTLMSTEP=
+|  |  |  | SRILMSTEP=
+|  |  +- s.tm.f450de50.20120130-0846
+|  |  |  | ALICORP=sample-cs-en-mini-train
+|  |  |  | ALILABEL=cs-form-en-form
+|  |  |  | ALISTEP=s.align.18975d96.20120130-0846
+|  |  |  | ALISYM=gdfa
+|  |  |  | BINARIES=s.mosesgiza.a3543fb7.20120125-1138
+|  |  |  | CUTOFF=0
+|  |  |  | DECODINGSTEPS=t0-0
+|  |  |  | SRCAUG=cs+form
+|  |  |  | SRCCORP=sample-cs-en-mini-train
+|  |  |  | TGTAUG=en+form
+|  |  |  | TGTCORP=sample-cs-en-mini-train
+|  |  |  | THRESHOLD=
+|  |  |  | TRAININGFLAGS=
+|  |  |  +- s.align.18975d96.20120130-0846
+|  |  |  |  | ALILABEL=cs-form-en-form
+|  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
+|  |  |  |  | CORPUS=sample-cs-en-mini-train
+|  |  |  |  | GIZASTEP=s.mosesgiza.a3543fb7.20120125-1138
+|  |  |  |  | SRCALIAUG=cs+form
+|  |  |  |  | TGTALIAUG=en+form
+|  |  |  |  +- s.corpus.f2036040.20120130-0842
+|  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  | COMBINE_PARTS=
+|  |  |  |  |  | DEPS=
+|  |  |  |  |  | FACTOR=-1
+|  |  |  |  |  | FILENAME=
+|  |  |  |  |  | OUTCORP=sample-cs-en-mini-train
+|  |  |  |  |  | OUTFACTS=form
+|  |  |  |  |  | OUTLANG=en
+|  |  |  |  |  | OUTLINECOUNT=6000
+|  |  |  |  |  | RUN_COMMAND=
+|  |  |  |  |  | STEPNAME=
+|  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/en.gz"
+|  |  |  |  +- s.corpus.f905ead9.20120130-0842
+|  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  | COMBINE_PARTS=
+|  |  |  |  |  | DEPS=
+|  |  |  |  |  | FACTOR=-1
+|  |  |  |  |  | FILENAME=
+|  |  |  |  |  | OUTCORP=sample-cs-en-mini-train
+|  |  |  |  |  | OUTFACTS=form
+|  |  |  |  |  | OUTLANG=cs
+|  |  |  |  |  | OUTLINECOUNT=6000
+|  |  |  |  |  | RUN_COMMAND=
+|  |  |  |  |  | STEPNAME=
+|  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/cs.gz"
+|  |  |  |  +- s.mosesgiza.a3543fb7.20120125-1138
+|  |  |  |  |  | IRSTLMSTEP=
+|  |  |  |  |  | SRILMSTEP=
+|  |  |  +- s.mosesgiza.a3543fb7.20120125-1138
+|  |  |  |  | IRSTLMSTEP=
+|  |  |  |  | SRILMSTEP=
