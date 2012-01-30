@@ -1847,10 +1847,12 @@ sub guess_step {
   if (!defined $step) {
     # guess from dir listing
     my @dirs;
-    for my $dir (@subdirs) {
-      push @dirs, grep { /$key/ } glob("$dir/$dirprefix*.*.[0-9]*");
+    for my $subdir (@subdirs) {
+      push @dirs, grep { /$key/ } glob("$subdir/$dirprefix*.*.[0-9]*");
     }
     # we do not use the preloaded index, because it contains only valid exps.
+    my %uniqdirs = map { ($_, 1) } @dirs;
+    @dirs = keys %uniqdirs;
     if (1<scalar(@dirs)) {
       print STDERR "Ambiguous in dir listing: $key:\n";
       print STDERR join("", map { "  $_\n" } @dirs);
