@@ -32,9 +32,6 @@ DATASTEPDIR=`eman path $DATASTEP`
 ALIGNSTEPDIR=`eman path $ALIGNSTEP`
 TRAINS=$DATASTEPDIR/train.$SRC.gz
 TRAINT=$DATASTEPDIR/train.$TGT.gz
-# While binarization can read gzipped training corpora, it cannot read gzipped alignment file.
-ALIGNMENT=alignment.txt
-gunzip -c $ALIGNSTEPDIR/alignment.gz > $ALIGNMENT
 
 # Run checks in the preparation phase
 [ -f $TRAINS ] && [ -f $TRAINT ] && [ -f $ALIGNMENT ] || exit 1
@@ -53,8 +50,11 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
+# While binarization can read gzipped training corpora, it cannot read gzipped alignment file.
+gunzip -c $ALIGNSTEPDIR/alignment.gz > alignment.txt \\
+|| die "Cannot gunzip $ALIGNSTEPDIR/alignment.gz"
 # Check that the alignment indices link to existing source/target tokens.
-$STATMT/scripts/check_alignment.pl $TRAINS $TRAINT $ALIGNMENT \\
+$STATMT/scripts/check_alignment.pl $TRAINS $TRAINT alignment.txt \\
 || die "Alignment does not match the selected parallel corpus and translation direction"
 
 # Most experiments worked with '-Xms1024m -Xmx1024m' but the 7M-sentence Czeng+Emea killed it.
@@ -68,7 +68,7 @@ JAVA="java -Dfile.encoding=UTF8 -Xms26g -Xmx26g -cp $JOSHUABINDIR"
 \$JAVA joshua.corpus.suffix_array.Compile $TRAINS $TRAINT $ALIGNMENT `pwd` \\
 || die "Cannot run joshua.corpus.suffix_array.Compile";
 # Remove the temporary gunzipped file.
-rm -f $ALIGNMENT
+rm -f alignment.txt
 
 # Standard command footer
 echo Done.

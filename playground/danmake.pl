@@ -10,7 +10,8 @@ binmode(STDOUT, ':utf8');
 binmode(STDERR, ':utf8');
 use dzsys;
 
-my $steptype = 'binarize'; # augment | data | align | binarize | all
+my $steptype = $ARGV[0];
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -25,7 +26,7 @@ foreach my $sl (@languages)
     }
 }
 ###!!! Dočasně se kvůli testování nového kroku omezíme jen na jeden jazykový pár.
-@pairs = (['en', 'cs']);
+###!!!@pairs = (['en', 'cs']);
 # Pro každou kombinaci korpusu, jazyka a faktoru, kterou budeme potřebovat, vytvořit samostatný augmentovací krok.
 # Jednotlivé augmenty trvají nevysvětlitelně dlouho a tahle paralelizace by nám měla ulevit.
 # Na druhou stranu se obávám, zda Ondrovy zámky ohlídají současné pokusy o vytvoření stejných zdrojových faktorů.
