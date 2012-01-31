@@ -1,0 +1,8 @@
+filename=$1
+shift
+for i in $@
+do
+  JAVA_ARGS=$JAVA_ARGS" -D"$i
+done
+
+java -cp LuceneIndexer.jar:lib/* cz.cuni.mff.ufal.lucene.DomainFilter index $filename $JAVA_ARGS
