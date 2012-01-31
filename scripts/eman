@@ -227,7 +227,6 @@ $autoreadonly = 1 if defined $ENV{"EMAN_READONLY"};
   # don't warn if readonly mode came from env.vars
 
 my @subdirs;
-push @subdirs, $maindir;
 if (-e $subdirs_file) {
   my $subdirs_hdl = my_open($subdirs_file);
   while (<$subdirs_hdl>) {
@@ -235,10 +234,15 @@ if (-e $subdirs_file) {
     push @subdirs, $_;
   }
   close $subdirs_hdl;
-} elsif (! $readonly && ! $autoreadonly) {
-  # the first time we run; touch the file
-  my $subdirs_hdl = my_save($subdirs_file);
-  close $subdirs_hdl;
+} else {
+  # the first time we run
+  push @subdirs, $maindir;
+  # create the file
+  if (! $readonly && ! $autoreadonly) {
+    my $subdirs_hdl = my_save($subdirs_file);
+    print $subdirs_hdl "$maindir\n";
+    close $subdirs_hdl;
+  }
 }
 chdir($oldwd) or die "Failed to chdir back to $oldwd";
 
@@ -1852,8 +1856,6 @@ sub guess_step {
       push @dirs, grep { /$key/ } glob("$subdir/$dirprefix*.*.[0-9]*");
     }
     # we do not use the preloaded index, because it contains only valid exps.
-    my %uniqdirs = map { ($_, 1) } @dirs;
-    @dirs = keys %uniqdirs;
     if (1<scalar(@dirs)) {
       print STDERR "Ambiguous in dir listing: $key:\n";
       print STDERR join("", map { "  $_\n" } @dirs);
