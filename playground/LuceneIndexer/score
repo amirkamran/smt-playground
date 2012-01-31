@@ -1,9 +1,6 @@
-f
-lename=$1
-shift
 for i in $@
 do
   JAVA_ARGS=$JAVA_ARGS" -D"$i
 done
 
-java -Xms500M -Xmx2000M -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter score $filename
+java -Xms500M -Xmx2000M -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter score

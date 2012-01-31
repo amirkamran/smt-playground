@@ -60,18 +60,22 @@ public class DomainFilter {
 		} catch (Exception e) {
 			help();
 		}
+		
+		String filename = "";
+		
+		try{
+			filename = System.getProperty("inputfile");
+		} catch(Exception e) {			
+		}
+		
 		switch (option) {
 		case INDEX:
-			if (args.length < 2)
-				help();
 			DomainFilter indexer = new DomainFilter();
-			indexer.index(args[1]);
+			indexer.index(filename);
 			break;
 		case SCORE:
-			if (args.length < 2)
-				help();
 			DomainFilter scorer = new DomainFilter();
-			scorer.score(args[1]);
+			scorer.score(filename);
 			break;
 		case HELP:
 		default:
@@ -79,28 +83,34 @@ public class DomainFilter {
 		}
 	}
 
-	private void index(String fileName) throws FileNotFoundException,
+	private void index(String filename) throws FileNotFoundException,
 			IOException {
 		BufferedReader input = null;
-		if (fileName.endsWith(".gz") || fileName.endsWith(".GZ")) {
-			input = new BufferedReader(new InputStreamReader(
-					new GZIPInputStream(new FileInputStream(fileName))));
-		} else {
-			input = new BufferedReader(new InputStreamReader(
-					new FileInputStream(fileName)));
-		}
+		boolean consoleInput = false;
 		
+		if(filename!=null && !filename.equals("")) {		
+			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
+				input = new BufferedReader(new InputStreamReader(
+						new GZIPInputStream(new FileInputStream(filename))));
+			} else {
+				input = new BufferedReader(new InputStreamReader(
+						new FileInputStream(filename)));
+			}
+		} else {
+			input = new BufferedReader(new InputStreamReader(System.in));
+			consoleInput = true;
+		}
 		deleteDir(new File(config.getProperty("lucene.index.directory")));
 		
 		IndexWriter writer = getWriter();
 
 		String line = "";
 		int sentenceID = 0;
-		while ((line = input.readLine()) != null) {
+		while ((line = input.readLine()) != null && !(consoleInput && line.equals(""))) {
 			sentenceID++;
 			Document doc = new Document();
-			doc.add(new Field(IndexedFields.ID.toString(), "SP"
-					+ String.valueOf(sentenceID), Field.Store.YES,
+			doc.add(new Field(IndexedFields.ID.toString(),
+					String.valueOf(sentenceID), Field.Store.YES,
 					Field.Index.NO));
 			doc.add(new Field(IndexedFields.TEXT.toString(), line,
 					Field.Store.YES, Field.Index.ANALYZED));
@@ -111,15 +121,22 @@ public class DomainFilter {
 		writer.close();
 	}
 
-	private void score(String fileName) throws FileNotFoundException,
+	private void score(String filename) throws FileNotFoundException,
 			IOException, ParseException {
 		BufferedReader input = null;
-		if (fileName.endsWith(".gz") || fileName.endsWith(".GZ")) {
-			input = new BufferedReader(new InputStreamReader(
-					new GZIPInputStream(new FileInputStream(fileName))));
+		boolean consoleInput = false;
+		
+		if(filename!=null && !filename.equals("")) {		
+			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
+				input = new BufferedReader(new InputStreamReader(
+						new GZIPInputStream(new FileInputStream(filename))));
+			} else {
+				input = new BufferedReader(new InputStreamReader(
+						new FileInputStream(filename)));
+			}
 		} else {
-			input = new BufferedReader(new InputStreamReader(
-					new FileInputStream(fileName)));
+			input = new BufferedReader(new InputStreamReader(System.in));
+			consoleInput = true;
 		}
 
 		// StringBuilder queryString = new StringBuilder();
@@ -130,7 +147,7 @@ public class DomainFilter {
 		Hashtable<String, Result> results = new Hashtable<String, Result>();
 
 		ArrayList<String> lines = new ArrayList<String>();
-		while ((line = input.readLine()) != null) {
+		while ((line = input.readLine()) != null && !(consoleInput && line.equals(""))) {
 			lines.add(line);
 		}
 		input.close();
@@ -279,6 +296,8 @@ public class DomainFilter {
 		} catch (Exception e) {
 		}
 		
+		System.getProperties();
+		
 		try {
 			String temp = System.getProperty("output.format");
 			config.setProperty("output.format", temp);
@@ -288,6 +307,12 @@ public class DomainFilter {
 		try {
 			String temp = System.getProperty("output.seperator");
 			config.setProperty("output.seperator", temp);
+		} catch (Exception e) {
+		}
+
+		try {
+			String temp = System.getProperty("inputfile");
+			config.setProperty("inputfile", temp);
 		} catch (Exception e) {
 		}
 
