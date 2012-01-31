@@ -42,9 +42,7 @@ GetOptions(
   "verbose!" => \$verbose,
 ) or exit 1;
 
-my $descr = shift;
-
-if (! defined $descr) {
+sub usage {
   print STDERR "usage: $0 corpname/lang+fact1+fact2+fact3
 Find or construct a factored corpus given a corpus description.
 Allowed corpus descriptions:
@@ -62,8 +60,15 @@ Options:
   --cmd      ... emit a tiny shell script that dumps the corpus to stdout,
                  implies --wait
   --dump     ... dump the corpus to stdout, implies --wait
-
+  --reindex  ... search all subdirs for corpman.info files
 ";
+}
+
+my $descr = shift;
+
+# Early warning about bad usage
+if (! defined $descr && ! $reindex) {
+  usage();
   exit 1;
 }
 
@@ -96,7 +101,7 @@ chdir($mydir) or die "Failed to chdir to $mydir";
 
 if ( ! -e $indexfile || $reindex ) {
   print STDERR "Indexing...\n" if $verbose;
-  open INDFILES, "find -maxdepth 2 -name corpman.info |"
+  open INDFILES, "find -L -maxdepth 2 -name corpman.info |"
     or die "Can't search for corpora";
   while (<INDFILES>) {
     chomp;
@@ -173,6 +178,10 @@ foreach my $line (split /\n/, $rulestext) {
 
 exit 1 if $err;
 
+if (! defined $descr) {
+  print STDERR "No corpus request. Exiting.\n";
+  exit;
+}
 
 my $corp;
 my $lang;
@@ -336,7 +345,7 @@ sub build_using_rules {
 
   my $rule = $rules->{$lang}->{$facts};
   $rule = $rules->{'*'}->{$facts} if ! defined $rule;
-  die "No rule to make $lang+$facts."
+  die "No rule to make $corp/$lang+$facts."
     if !defined $rule;
 
   my $useinlang = $rule->{'inlang'};
