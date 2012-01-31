@@ -11,7 +11,7 @@ PLAYGROUND=`eman path` # eman playground directory
 # Ensure all the required variables are set (or provide the default)
 # defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union ... resulted in too many columns but one can ask for it
 eman \
-  defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
+  defvar JOSHUASTEP type=reqstep help='where is compiled Joshua' \
   defvar ALIGNSTEP type=reqstep help='where is alignment.gz (only one column, use danalign seed!)' \
   defvar DATASTEP inherit=ALIGNSTEP help='where are train.$SRC.gz and train.$TGT.gz' \
   defvar SRC inherit=ALIGNSTEP help='source language code' \
@@ -27,6 +27,7 @@ eman add-tag $SRC-$TGT .
 [ -z "$INIT_ONLY" ] || exit 0
 
 # convert the dependencies to absolute paths
+JOSHUABINDIR=`eman path $JOSHUASTEP`/bin
 DATASTEPDIR=`eman path $DATASTEP`
 ALIGNSTEPDIR=`eman path $ALIGNSTEP`
 TRAINS=$DATASTEPDIR/train.$SRC.gz
@@ -52,30 +53,18 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-export SCRIPTS_ROOTDIR=$GIZASTEPDIR/moses/scripts
-echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
-
-tempdir=/mnt/h/tmp
-  # best choice for ufal
-[ -d \$tempdir ] || tempdir=/tmp
-  # the default
-
-$GIZAWRAPPER \\
-  $TRAINALS $TRAINALT \\
-  --nocompress \\
-  --lfactors=0 --rfactors=0 \\
-  --tempdir=\$tempdir \\
-  --bindir=$GIZASTEPDIR/bin \\
-  --dirsym=$ALISYM \\
-  --drop-bad-lines \\
-| cut -f1 \\
-| gzip -c > alignment.gz \
-|| die "Failed to align the corpus"
-
-alilen=\`zcat alignment.gz | wc -l\`
-srclen=\`cat $TRAINALS | wc -l\`
-[ \$alilen == \$srclen ] \
-  || die "Mismatched file lengths: ali \$alilen, src \$srclen"
+# Most experiments worked with '-Xms1024m -Xmx1024m' but the 7M-sentence Czeng+Emea killed it.
+# Note however that we also specify memory requirements when submitting this script as a cluster job.
+# To get a 32GB machine, we should ask the cluster for 31g and leave 1g for system processes.
+# However, Java must ask for even less. Experimentally tested: 26g works, 27g does not.
+# Xmx: upper limit for heap memory consumption; Xms: initial memory allocation.
+JAVA="java -Dfile.encoding=UTF8 -Xms26g -Xmx26g -cp $JOSHUABINDIR"
+# Output of binarization differs in Joshua 1.1 vs. 1.3.
+# However, the binarization command itself does not change so we do not need to check Joshua version here.
+$JAVA joshua.corpus.suffix_array.Compile $TRAINS $TRAINT $ALIGNMENT `pwd` \\
+|| die "Cannot run joshua.corpus.suffix_array.Compile";
+# Remove the temporary gunzipped file.
+rm -f $ALIGNMENT
 
 # Standard command footer
 echo Done.

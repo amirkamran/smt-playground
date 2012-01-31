@@ -28,7 +28,7 @@ ulimit -c 1 # core files limited to 1 byte
 ###!!! At the moment we only link to Dan's installation of Joshua 1.3.
 ###!!! We will take care for the full installation procedure later.
 echo "Obtaining Joshua"
-ln -s $JOSHUA/bin/joshua joshua \\
+ln -s $JOSHUA/bin bin \\
 || die "Failed to link to Joshua"
 
 # Standard command footer
