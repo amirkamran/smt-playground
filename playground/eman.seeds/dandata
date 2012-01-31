@@ -29,6 +29,7 @@ if [ -z "$STATMT" ] ; then
   echo "  \$TGT to the code of the target language"
   exit 1
 fi
+SCRIPTS=$STATMT/scripts
 eman defvar SRC help='source language code' \
      defvar TGT help='target language code' \
 || exit 1
@@ -96,8 +97,13 @@ ln -s \`$AUGMENT $DEVS\` dev.$SRC.gz         || die "Failed to link to $DEVS"
 ln -s \`$AUGMENT $DEVT\` dev.$TGT.gz         || die "Failed to link to $DEVT"
 ln -s \`$AUGMENT $TESTS\` test.$SRC.gz       || die "Failed to link to $TESTS"
 ln -s \`$AUGMENT $TESTT\` test.$TGT.gz       || die "Failed to link to $TESTT"
-###!!! Joshua also requires that the corpora be cleaned, i.e. sentences of 100 and more words thrown away.
-###!!! We may want to ensure that in a separate step.
+# Clean training data and alignment of sentences of 100 or more words.
+# Longer sentences sometimes make binarization fail.
+$SCRIPTS/clean-corpus-dan.pl -min 1 -max 99 trainal.$SRC.gz trainal.$TGT.gz train.$SRC.gz train.$TGT.gz \\
+|| die "Cannot clean corpus from empty or too long sentences"
+for i in trainal.$SRC trainal.$TGT train.$SRC train.$TGT ; do
+  mv $i.clean.gz $i.gz || die "Failed mv $i.clean.gz $i.gz"
+done
 
 # Standard command footer
 echo Done.

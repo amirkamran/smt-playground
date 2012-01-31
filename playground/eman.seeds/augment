@@ -1,0 +1,68 @@
+#!/bin/bash
+# eman step to call the old augment.pl
+# This is Dan's temporary solution until Dan switches to the new corpman thing.
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default).
+# Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
+# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+if [ -z "$STATMT" ] ; then
+  echo "You must set: "
+  echo "  \$STATMT to the root of your working copy of the StatMT repository (one level above playground)"
+  echo "  \$SRC to the code of the source language"
+  echo "  \$TGT to the code of the target language"
+  exit 1
+fi
+SCRIPTS=$STATMT/scripts
+# We still use the old augment.pl to fetch the data.
+AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
+AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
+AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
+eman defvar ACDESC help='description of augmented corpus, e.g. newstest2008/en+lemma' \
+|| exit 1
+# We still use the old augment.pl to fetch the data.
+AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
+AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
+AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
+
+# Set local bash variables.
+eval `eman bash-loadvars`
+
+# Don't continue if we are not preparing the step yet.
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Tag the step by its prominent characteristics.
+echo $ACDESC > eman.tag
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+# Note: the essential --dir and --makefile arguments must be stored in a file
+# because augment.pl may call "make" and the Makefile will call another
+# augment.pl, without being able to put through these arguments.
+echo "--dir=$AUGDIR --makefile=$AUGMAKEFILE" > $STATMT/playground/augmented_corpora/augment.pl.flags || die "Failed to save augment.pl.flags"
+ln -s \`$AUGMENT $ACDESC\` corpus.gz || die "Failed to augment $ACDESC and link to it"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

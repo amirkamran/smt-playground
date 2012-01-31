@@ -10,7 +10,7 @@ binmode(STDOUT, ':utf8');
 binmode(STDERR, ':utf8');
 use dzsys;
 
-my $steptype = 'binarize'; # data | align | binarize
+my $steptype = 'binarize'; # augment | data | align | binarize | all
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -26,8 +26,30 @@ foreach my $sl (@languages)
 }
 ###!!! Dočasně se kvůli testování nového kroku omezíme jen na jeden jazykový pár.
 @pairs = (['en', 'cs']);
+# Pro každou kombinaci korpusu, jazyka a faktoru, kterou budeme potřebovat, vytvořit samostatný augmentovací krok.
+# Jednotlivé augmenty trvají nevysvětlitelně dlouho a tahle paralelizace by nám měla ulevit.
+# Na druhou stranu se obávám, zda Ondrovy zámky ohlídají současné pokusy o vytvoření stejných zdrojových faktorů.
+if($steptype =~ m/^(augment|all)$/)
+{
+    foreach my $language ('cs', 'de', 'es', 'fr')
+    {
+        my $corpus = "news-commentary-v6.$language-en+europarl-v6.$language-en";
+        dzsys::saferun("ACDESC=$corpus/$language+lcstem4 eman init augment --start") or die;
+        dzsys::saferun("ACDESC=$corpus/en+lcstem4 eman init augment --start") or die;
+        dzsys::saferun("ACDESC=$corpus/$language+stc eman init augment --start") or die;
+        dzsys::saferun("ACDESC=$corpus/en+stc eman init augment --start") or die;
+    }
+    foreach my $year (2008, 2009, 2010, 2011)
+    {
+        my $corpus = "newstest$year";
+        foreach my $language ('cs', 'de', 'en', 'es', 'fr')
+        {
+            dzsys::saferun("ACDESC=$corpus/$language+stc eman init augment --start") or die;
+        }
+    }
+}
 # Pro každý pár vytvořit a spustit vstupní krok dandata, který na jednom místě soustředí odkazy na všechny potřebné korpusy.
-if($steptype eq 'data')
+if($steptype =~ m/^(data|all)$/)
 {
     foreach my $pair (@pairs)
     {
@@ -36,7 +58,7 @@ if($steptype eq 'data')
     }
 }
 # Pro každý pár vytvořit a spustit krok danalign, který vyrobí obousměrný alignment.
-if($steptype eq 'align')
+if($steptype =~ m/^(align|all)$/)
 {
     my $gizastep = dzsys::chompticks('eman ls mosesgiza');
     foreach my $pair (@pairs)
@@ -59,7 +81,7 @@ if($steptype eq 'align')
     }
 }
 # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.
-if($steptype eq 'binarize')
+if($steptype =~ m/^(binarize|all)$/)
 {
     my $joshuastep = dzsys::chompticks('eman ls joshua');
     foreach my $pair (@pairs)
