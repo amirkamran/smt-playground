@@ -11,9 +11,9 @@ set -o pipefail  # safer pipes
 [ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
 eman \
   defvar BINARIZESTEP type=reqstep help='where is the binarized parallel corpus and word alignment' \
-  defvar JOSHUASTEP inherit=BINARIZESTEP help='where is compiled Joshua' \
+  defvar JOSHUASTEP type=reqstep inherit=BINARIZESTEP help='where is compiled Joshua' \
   defvar JOSHUA inherit=JOSHUASTEP help='where is compiled Joshua' \
-  defvar DATASTEP inherit=BINARIZESTEP help='where are dev.$SRC.gz and test.$SRC.gz' \
+  defvar DATASTEP type=reqstep inherit=BINARIZESTEP help='where are dev.$SRC.gz and test.$SRC.gz' \
   defvar SRC inherit=BINARIZESTEP help='source language code' \
   defvar TGT inherit=BINARIZESTEP help='target language code' \
   defvar FOR default='dev' help='what are we going to translate (dev|test)' \
@@ -57,7 +57,9 @@ ulimit -c 1 # core files limited to 1 byte
 gunzip -c $DATASTEPDIR/$FORFILE > src.txt || die "Cannot gunzip the source text"
 # Now extract the grammar for the given test set from the binarized corpus.
 # Note that the following Perl script submits its own child jobs to the cluster.
+# JOSHUA may exist when generating this script but it also must exist and be exported when parextract.pl is invoked!
 # JOSHUA_VERSION should be inherited from the $JOSHUASTEP but we now support only 1.3 anyway.
+export JOSHUA=$JOSHUA
 export JOSHUA_VERSION=1.3
 $STATMT/joshua-scripts/parextract.pl $BINARIZESTEPDIR src.txt grammar.raw `pwd`/parextract \\
 || die "Parallelized grammar extraction failed"
