@@ -9,7 +9,6 @@ set -o pipefail  # safer pipes
 PLAYGROUND=`eman path` # eman playground directory
 
 # Ensure all the required variables are set (or provide the default)
-# defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union ... resulted in too many columns but one can ask for it
 eman \
   defvar JOSHUASTEP type=reqstep help='where is compiled Joshua' \
   defvar ALIGNSTEP type=reqstep help='where is alignment.gz (only one column, use danalign seed!)' \
@@ -65,7 +64,7 @@ $STATMT/scripts/check_alignment.pl $TRAINS $TRAINT alignment.txt \\
 JAVA="java -Dfile.encoding=UTF8 -Xms26g -Xmx26g -cp $JOSHUABINDIR"
 # Output of binarization differs in Joshua 1.1 vs. 1.3.
 # However, the binarization command itself does not change so we do not need to check Joshua version here.
-\$JAVA joshua.corpus.suffix_array.Compile $TRAINS $TRAINT $ALIGNMENT `pwd` \\
+\$JAVA joshua.corpus.suffix_array.Compile $TRAINS $TRAINT alignment.txt `pwd` \\
 || die "Cannot run joshua.corpus.suffix_array.Compile";
 # Remove the temporary gunzipped file.
 rm -f alignment.txt

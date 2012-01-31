@@ -11,7 +11,7 @@ binmode(STDERR, ':utf8');
 use dzsys;
 
 my $steptype = $ARGV[0];
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -102,5 +102,30 @@ if($steptype =~ m/^(binarize|all)$/)
             $alignstep = $alignsteps[0];
         }
         dzsys::saferun("JOSHUASTEP=$joshuastep ALIGNSTEP=$alignstep eman init binarize --start --mem 31g") or die;
+    }
+}
+# Pro každý pár vytvořit a spustit dev i test krok extract, který vytáhne ze zarovnaného korpusu gramatiku (překladový model) pro daný zdrojový text.
+if($steptype =~ m/^(extract|all)$/)
+{
+    foreach my $pair (@pairs)
+    {
+        my ($src, $tgt) = @{$pair};
+        my $binarizestep = dzsys::chompticks("eman select t binarize v SRC=$src v TGT=$tgt");
+        # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
+        my @binarizesteps = split(/\s+/, $binarizestep);
+        if(scalar(@binarizesteps)==0)
+        {
+            die("No binarizestep found for $src-$tgt");
+        }
+        elsif(scalar(@binarizesteps)>1)
+        {
+            my $n = scalar(@binarizesteps);
+            print STDERR ("WARNING: $n binarizesteps found, using $binarizesteps[0]\n");
+            $binarizestep = $binarizesteps[0];
+        }
+        foreach my $for ('dev', 'test')
+        {
+            dzsys::saferun("BINARIZESTEP=$binarizestep FOR=$for eman init extract --start") or die;
+        }
     }
 }
