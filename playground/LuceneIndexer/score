@@ -6,4 +6,4 @@ do
   JAVA_ARGS=$JAVA_ARGS" -D"$i
 done
 
-java -Xms500M -Xmx2000M -cp LuceneIndexer.jar:lib/* cz.cuni.mff.ufal.lucene.DomainFilter score $filename $JAVA_ARGS
+java -Xms500M -Xmx2000M -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter score $filename

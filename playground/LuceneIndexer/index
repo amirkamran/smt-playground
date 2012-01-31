@@ -5,4 +5,4 @@ do
   JAVA_ARGS=$JAVA_ARGS" -D"$i
 done
 
-java -cp LuceneIndexer.jar:lib/* cz.cuni.mff.ufal.lucene.DomainFilter index $filename $JAVA_ARGS
+java -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter index $filename
