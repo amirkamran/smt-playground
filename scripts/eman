@@ -222,7 +222,7 @@ my $lock = undef;
 # all subdirs need to be known before helper commands
 guess_maindir();
 my $oldwd = chdir_to_maindir();
-my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars)$/ );
+my $autoreadonly = ( !$reindex && $cmd =~ /^(traceback|vars|succeed|fail|status)$/ );
 $autoreadonly = 1 if defined $ENV{"EMAN_READONLY"};
   # don't warn if readonly mode came from env.vars
 
@@ -605,6 +605,63 @@ if ($cmd eq "get-var") {
   exit $waserror;
 }
 
+if ($command eq "fail") {
+  mydie "usage: eman fail SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "FAILED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
+if ($command eq "succeed") {
+  mydie "usage: eman succeed SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "DONE");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
+if ($command eq "outdate") {
+  mydie "usage: eman outdate SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    chdir_to_stepdir($step);
+    save("eman.status", "OUTDATED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
+
+
+if ($cmd eq "abolish") {
+  mydie "usage: eman abolish STEPDIR ..." if 0 == scalar @ARGV;
+  foreach my $step (@ARGV) {
+    my $s = canon_stepdir($step);
+      # abolish is pickier wrt to input, so no guessing
+    chdir_to_stepdir($s);
+    for my $f (glob("*")) {
+      next if $f =~ /^eman\./;
+      next if $f =~ /^log\./;
+      if (-d $f) {
+        rmtree($f) or $waserror = 1;
+      } else {
+        unlink($f) or $waserror = 1;
+      }
+    }
+    save("eman.abolished", `date`);
+    save("eman.status", "ABOLISHED");
+    chdir_to_maindir();
+  }
+  exit $waserror;
+}
+
 # the following commands don't work with readonly
 print STDERR "Warning: running '$cmd' in read-only mode, make sure to reindex.\n"
   if $readonly;
@@ -711,62 +768,6 @@ if ($command eq "redo") {
   exit $waserror;
 }
 
-if ($command eq "fail") {
-  mydie "usage: eman fail SPEC ..." if 0 == scalar @ARGV;
-  foreach my $key (@ARGV) {
-    my $step = guess_step($key);
-    chdir_to_stepdir($step);
-    save("eman.status", "FAILED");
-    chdir_to_maindir();
-  }
-  exit $waserror;
-}
-
-if ($command eq "succeed") {
-  mydie "usage: eman succeed SPEC ..." if 0 == scalar @ARGV;
-  foreach my $key (@ARGV) {
-    my $step = guess_step($key);
-    chdir_to_stepdir($step);
-    save("eman.status", "DONE");
-    chdir_to_maindir();
-  }
-  exit $waserror;
-}
-
-if ($command eq "outdate") {
-  mydie "usage: eman outdate SPEC ..." if 0 == scalar @ARGV;
-  foreach my $key (@ARGV) {
-    my $step = guess_step($key);
-    chdir_to_stepdir($step);
-    save("eman.status", "OUTDATED");
-    chdir_to_maindir();
-  }
-  exit $waserror;
-}
-
-
-
-if ($cmd eq "abolish") {
-  mydie "usage: eman abolish STEPDIR ..." if 0 == scalar @ARGV;
-  foreach my $step (@ARGV) {
-    my $s = canon_stepdir($step);
-      # abolish is pickier wrt to input, so no guessing
-    chdir_to_stepdir($s);
-    for my $f (glob("*")) {
-      next if $f =~ /^eman\./;
-      next if $f =~ /^log\./;
-      if (-d $f) {
-        rmtree($f) or $waserror = 1;
-      } else {
-        unlink($f) or $waserror = 1;
-      }
-    }
-    save("eman.abolished", `date`);
-    save("eman.status", "ABOLISHED");
-    chdir_to_maindir();
-  }
-  exit $waserror;
-}
 
 if ($cmd eq "add-dir") {
   $waserror = ! add_dir(@ARGV);
