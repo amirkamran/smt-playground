@@ -1,0 +1,42 @@
+#!/bin/bash
+# eman seed for installing joshua
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+eman defvar JOSHUA default='/net/work/people/zeman/joshua-1.3' help='where is compiled Joshua' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# Obtain Joshua
+###!!! At the moment we only link to Dan's installation of Joshua 1.3.
+###!!! We will take care for the full installation procedure later.
+echo "Obtaining Joshua"
+ln -s $JOSHUA/bin/joshua joshua \\
+|| die "Failed to link to Joshua"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

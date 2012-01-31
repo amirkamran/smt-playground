@@ -1,0 +1,88 @@
+#!/bin/bash
+# eman seed for joshua corpus binarization
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+# defvar ALISYM default=gdf,revgdf,gdfa,revgdfa,left,right,int,union ... resulted in too many columns but one can ask for it
+eman \
+  defvar GIZASTEP type=reqstep help='where is GIZA/mGIZA and symal compiled' \
+  defvar ALIGNSTEP type=reqstep help='where is alignment.gz (only one column, use danalign seed!)' \
+  defvar DATASTEP inherit=ALIGNSTEP help='where are train.$SRC.gz and train.$TGT.gz' \
+  defvar SRC inherit=ALIGNSTEP help='source language code' \
+  defvar TGT inherit=ALIGNSTEP help='target language code' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+eman add-tag $SRC-$TGT .
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# convert the dependencies to absolute paths
+DATASTEPDIR=`eman path $DATASTEP`
+ALIGNSTEPDIR=`eman path $ALIGNSTEP`
+TRAINS=$DATASTEPDIR/train.$SRC.gz
+TRAINT=$DATASTEPDIR/train.$TGT.gz
+# While binarization can read gzipped training corpora, it cannot read gzipped alignment file.
+ALIGNMENT=alignment.txt
+gunzip -c $ALIGNSTEPDIR/alignment.gz > $ALIGNMENT
+
+# Run checks in the preparation phase
+[ -f $TRAINS ] && [ -f $TRAINT ] && [ -f $ALIGNMENT ] || exit 1
+
+# Emit the main script to be used in the running phase
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+export SCRIPTS_ROOTDIR=$GIZASTEPDIR/moses/scripts
+echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
+
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d \$tempdir ] || tempdir=/tmp
+  # the default
+
+$GIZAWRAPPER \\
+  $TRAINALS $TRAINALT \\
+  --nocompress \\
+  --lfactors=0 --rfactors=0 \\
+  --tempdir=\$tempdir \\
+  --bindir=$GIZASTEPDIR/bin \\
+  --dirsym=$ALISYM \\
+  --drop-bad-lines \\
+| cut -f1 \\
+| gzip -c > alignment.gz \
+|| die "Failed to align the corpus"
+
+alilen=\`zcat alignment.gz | wc -l\`
+srclen=\`cat $TRAINALS | wc -l\`
+[ \$alilen == \$srclen ] \
+  || die "Mismatched file lengths: ali \$alilen, src \$srclen"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
