@@ -92,7 +92,7 @@ $GIZAWRAPPER \\
 || die "Failed to align the corpus"
 
 alilen=\`zcat alignment.gz | wc -l\`
-srclen=\`wc -l $TRAINALS\`
+srclen=\`cat $TRAINALS | wc -l\`
 [ \$alilen == \$srclen ] \
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
 
