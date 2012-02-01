@@ -205,7 +205,11 @@ if ($register) {
         $force_info_update = 1;
       }
     } else {
-      die "Corpus $corp/$lang+$facts already exists!\n";
+      if ($entry->{factind} == -1) {
+        die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+      } else {
+        print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
+      }
     }
   }
 

@@ -1,12 +1,12 @@
-+- s.mert.fc3e16b2.20120201-0111
++- s.mert.1eb3d094.20120201-1346
 |  | DEVCORP=wmt10
 |  | GRIDFLAGS=
 |  | JOBS=15
 |  | MERTFLAGS=
 |  | MERTPRG=mert
-|  | MODELSTEP=s.model.c18555c1.20120201-0111
+|  | MODELSTEP=s.model.909b0b5f.20120201-1346
 |  | MOSESFLAGS=
-|  | MOSESSTEP=s.mosesgiza.452e5a73.20120131-0018
+|  | MOSESSTEP=s.mosesgiza.9164ab4c.20120201-1032
 |  | REFAUG=csNmT1+stc
 |  | SEARCH=cube
 |  | SRCAUG=enNmT1+stc
@@ -18,27 +18,28 @@
 |  | ZMERTMETRIC=
 |  | ZMERTSEMPOSBLEUWEIGHTS=
 |  | ZMERTSEMPOSSOURCE=
-|  +- s.model.c18555c1.20120201-0111
+|  +- s.model.909b0b5f.20120201-1346
 |  |  | CUTOFF=0
 |  |  | DECODINGSTEPS=t0-0
-|  |  | LMS="0:s.lm.b1aa11fb.20120131-0048"
-|  |  | MOSESSTEP=s.mosesgiza.452e5a73.20120131-0018
+|  |  | LMS="0:s.lm.153cb26c.20120201-1346"
+|  |  | MOSESSTEP=s.mosesgiza.9164ab4c.20120201-1032
 |  |  | RMSTEP=
 |  |  | SRCAUG=enNmT1+stc
 |  |  | TGTAUG=csNmT1+stc
 |  |  | THRESHOLD=
-|  |  | TMS=s.tm.d013f207.20120201-0111
-|  |  +- s.lm.b1aa11fb.20120131-0048
+|  |  | TMS=s.tm.825d6ed9.20120201-1346
+|  |  +- s.lm.153cb26c.20120201-1346
 |  |  |  | CORP=c-news
 |  |  |  | CORPAUG=csNmT1+stc
 |  |  |  | LMFLAGS=
 |  |  |  | ORDER=5
 |  |  |  | PARTS=1
-|  |  |  | SRILMSTEP=s.srilm.61c60c57.20120131-0018
-|  |  |  +- s.corpus.6eb0aee3.20120131-0048
+|  |  |  | SRILMSTEP=s.srilm.c66afbad.20120201-1032
+|  |  |  +- s.corpus.62951ab5.20120201-1346
 |  |  |  |  | COLUMN=-1
 |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  | DEPS=s.corpus.47b6fa54.20120131-0048
+|  |  |  |  | DEPS=s.corpus.9db0594b.20120201-1346
+|  |  |  |  | DERIVED=1
 |  |  |  |  | FACTOR=-1
 |  |  |  |  | FILENAME=corpus.txt.gz
 |  |  |  |  | OUTCORP=c-news
@@ -46,12 +47,13 @@
 |  |  |  |  | OUTLANG=csNmT1
 |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  | RUN_COMMAND="../tools/add_truecased_form.pl 0:1:0:1 --replace-form --no-info | reduce_factors.pl 0"
-|  |  |  |  | STEPNAME=s.corpus.47b6fa54.20120131-0048
+|  |  |  |  | STEPNAME=s.corpus.9db0594b.20120201-1346
 |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  +- s.corpus.47b6fa54.20120131-0048
+|  |  |  |  +- s.corpus.9db0594b.20120201-1346
 |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS="../s.corpus.c914a477.20120131-0048/corpus.txt.gz -1 0 ../s.corpus.c914a477.20120131-0048/corpus.txt.gz -1 1"
-|  |  |  |  |  | DEPS="s.corpus.c914a477.20120131-0048 s.corpus.c914a477.20120131-0048"
+|  |  |  |  |  | COMBINE_PARTS="../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 0 ../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 1"
+|  |  |  |  |  | DEPS="s.corpus.1580f679.20120201-1346 s.corpus.1580f679.20120201-1346"
+|  |  |  |  |  | DERIVED=1
 |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  | FILENAME=
 |  |  |  |  |  | OUTCORP=c-news
@@ -61,10 +63,11 @@
 |  |  |  |  |  | RUN_COMMAND=
 |  |  |  |  |  | STEPNAME=
 |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.c914a477.20120131-0048
+|  |  |  |  |  +- s.corpus.1580f679.20120201-1346
 |  |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  | DEPS=s.corpus.b0f8d208.20120131-0048
+|  |  |  |  |  |  | DEPS=s.corpus.f83eee90.20120201-1346
+|  |  |  |  |  |  | DERIVED=1
 |  |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  |  | FILENAME=corpus.txt.gz
 |  |  |  |  |  |  | OUTCORP=c-news
@@ -72,12 +75,13 @@
 |  |  |  |  |  |  | OUTLANG=csNmT1
 |  |  |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  | STEPNAME=s.corpus.b0f8d208.20120131-0048
+|  |  |  |  |  |  | STEPNAME=s.corpus.f83eee90.20120201-1346
 |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.b0f8d208.20120131-0048
+|  |  |  |  |  |  +- s.corpus.f83eee90.20120201-1346
 |  |  |  |  |  |  |  | COLUMN=1
 |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
+|  |  |  |  |  |  |  | DERIVED=1
 |  |  |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
 |  |  |  |  |  |  |  | OUTCORP=c-news
@@ -85,23 +89,23 @@
 |  |  |  |  |  |  |  | OUTLANG=csNm
 |  |  |  |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/csNm.scen"
-|  |  |  |  |  |  |  | STEPNAME=s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
 |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
 |  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
 |  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
 |  |  |  |  |  |  |  |  | FNRE="*train.gz"
 |  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  +- s.srilm.61c60c57.20120131-0018
-|  |  +- s.mosesgiza.452e5a73.20120131-0018
+|  |  |  +- s.srilm.c66afbad.20120201-1032
+|  |  +- s.mosesgiza.9164ab4c.20120201-1032
 |  |  |  | IRSTLMSTEP=
 |  |  |  | SRILMSTEP=
-|  |  +- s.tm.d013f207.20120201-0111
+|  |  +- s.tm.825d6ed9.20120201-1346
 |  |  |  | ALICORP=c-news
 |  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
-|  |  |  | ALISTEP=s.align.473abe0a.20120131-0131
+|  |  |  | ALISTEP=s.align.181ddb1c.20120201-1346
 |  |  |  | ALISYM=gdfa
-|  |  |  | BINARIES=s.mosesgiza.452e5a73.20120131-0018
+|  |  |  | BINARIES=s.mosesgiza.9164ab4c.20120201-1032
 |  |  |  | CUTOFF=0
 |  |  |  | DECODINGSTEPS=t0-0
 |  |  |  | SRCAUG=enNmT1+stc
@@ -110,162 +114,18 @@
 |  |  |  | TGTCORP=c-news
 |  |  |  | THRESHOLD=
 |  |  |  | TRAININGFLAGS=
-|  |  |  +- s.align.473abe0a.20120131-0131
+|  |  |  +- s.align.181ddb1c.20120201-1346
 |  |  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
 |  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
 |  |  |  |  | CORPUS=c-news
-|  |  |  |  | GIZASTEP=s.mosesgiza.452e5a73.20120131-0018
+|  |  |  |  | GIZASTEP=s.mosesgiza.9164ab4c.20120201-1032
 |  |  |  |  | SRCALIAUG=enNmT1+lemma
 |  |  |  |  | TGTALIAUG=csNmT1+lemma
-|  |  |  |  +- s.corpus.5a599f16.20120131-2322
+|  |  |  |  +- s.corpus.a1faf1c2.20120201-1346
 |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  | DEPS=s.corpus.938c2b85.20120131-0152
-|  |  |  |  |  | FACTOR=1
-|  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  | OUTFACTS=lemma
-|  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  | STEPNAME=s.corpus.938c2b85.20120131-0152
-|  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.938c2b85.20120131-0152
-|  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  | COMBINE_PARTS="../s.corpus.88bd9978.20120131-0048/corpus.txt.gz -1 0 ../s.corpus.c95249dc.20120131-0048/corpus.txt.gz -1 -1"
-|  |  |  |  |  |  | DEPS="s.corpus.88bd9978.20120131-0048 s.corpus.c95249dc.20120131-0048"
-|  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  | FILENAME=
-|  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  | OUTFACTS=form+lemma
-|  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  | RUN_COMMAND=
-|  |  |  |  |  |  | STEPNAME=
-|  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  |  | STEPNAME=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  |  | COLUMN=2
-|  |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  |  | DEPS=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  |  | OUTLANG=enNm
-|  |  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/enNm.scen"
-|  |  |  |  |  |  |  |  | STEPNAME=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  |  +- s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  |  |  +- s.corpus.c95249dc.20120131-0048
-|  |  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  |  |  | FACTOR=1
-|  |  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=lemma
-|  |  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  |  |  | STEPNAME=s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  |  | DEPS=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  |  |  | STEPNAME=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  |  +- s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  |  |  | COLUMN=2
-|  |  |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  |  |  | DEPS=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  |  |  | OUTLANG=enNm
-|  |  |  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/enNm.scen"
-|  |  |  |  |  |  |  |  |  | STEPNAME=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  |  |  +- s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  +- s.corpus.c95249dc.20120131-0048
-|  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  | DEPS=s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  | FACTOR=1
-|  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  | OUTFACTS=lemma
-|  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  | STEPNAME=s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.88bd9978.20120131-0048
-|  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  | DEPS=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  | STEPNAME=s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.ad17da4a.20120131-0048
-|  |  |  |  |  |  |  | COLUMN=2
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  | OUTLANG=enNm
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/enNm.scen"
-|  |  |  |  |  |  |  | STEPNAME=s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.czeng.ca855684.20120105-1812
-|  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  +- s.corpus.ebdf2413.20120131-0048
-|  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  | DEPS=s.corpus.f60827dc.20120131-0048
+|  |  |  |  |  | DEPS=s.corpus.9db0594b.20120201-1346
+|  |  |  |  |  | DERIVED=1
 |  |  |  |  |  | FACTOR=1
 |  |  |  |  |  | FILENAME=corpus.txt.gz
 |  |  |  |  |  | OUTCORP=c-news
@@ -273,13 +133,14 @@
 |  |  |  |  |  | OUTLANG=csNmT1
 |  |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  | STEPNAME=s.corpus.f60827dc.20120131-0048
+|  |  |  |  |  | STEPNAME=s.corpus.9db0594b.20120201-1346
 |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.f60827dc.20120131-0048
-|  |  |  |  |  |  | COLUMN=
-|  |  |  |  |  |  | COMBINE_PARTS="../s.corpus.9f2bee2a.20120131-0048/corpus.txt.gz -1 0 ../s.corpus.9f2bee2a.20120131-0048/corpus.txt.gz -1 1"
-|  |  |  |  |  |  | DEPS="s.corpus.9f2bee2a.20120131-0048 s.corpus.9f2bee2a.20120131-0048"
-|  |  |  |  |  |  | FACTOR=
+|  |  |  |  |  +- s.corpus.9db0594b.20120201-1346
+|  |  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  |  | COMBINE_PARTS="../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 0 ../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 1"
+|  |  |  |  |  |  | DEPS="s.corpus.1580f679.20120201-1346 s.corpus.1580f679.20120201-1346"
+|  |  |  |  |  |  | DERIVED=1
+|  |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  |  | FILENAME=
 |  |  |  |  |  |  | OUTCORP=c-news
 |  |  |  |  |  |  | OUTFACTS=form+lemma
@@ -288,10 +149,11 @@
 |  |  |  |  |  |  | RUN_COMMAND=
 |  |  |  |  |  |  | STEPNAME=
 |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.9f2bee2a.20120131-0048
+|  |  |  |  |  |  +- s.corpus.1580f679.20120201-1346
 |  |  |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.corpus.a72c37b1.20120131-0048
+|  |  |  |  |  |  |  | DEPS=s.corpus.f83eee90.20120201-1346
+|  |  |  |  |  |  |  | DERIVED=1
 |  |  |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  |  |  | FILENAME=corpus.txt.gz
 |  |  |  |  |  |  |  | OUTCORP=c-news
@@ -299,12 +161,13 @@
 |  |  |  |  |  |  |  | OUTLANG=csNmT1
 |  |  |  |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  |  | STEPNAME=s.corpus.a72c37b1.20120131-0048
+|  |  |  |  |  |  |  | STEPNAME=s.corpus.f83eee90.20120201-1346
 |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.corpus.a72c37b1.20120131-0048
+|  |  |  |  |  |  |  +- s.corpus.f83eee90.20120201-1346
 |  |  |  |  |  |  |  |  | COLUMN=1
 |  |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  |  | DEPS=s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
+|  |  |  |  |  |  |  |  | DERIVED=1
 |  |  |  |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
 |  |  |  |  |  |  |  |  | OUTCORP=c-news
@@ -312,16 +175,63 @@
 |  |  |  |  |  |  |  |  | OUTLANG=csNm
 |  |  |  |  |  |  |  |  | OUTLINECOUNT=197053
 |  |  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/csNm.scen"
-|  |  |  |  |  |  |  |  | STEPNAME=s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
 |  |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  |  +- s.czeng.ca855684.20120105-1812
+|  |  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
 |  |  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
 |  |  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
 |  |  |  |  |  |  |  |  |  | FNRE="*train.gz"
 |  |  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  +- s.mosesgiza.452e5a73.20120131-0018
+|  |  |  |  +- s.corpus.ccf47d58.20120201-1346
+|  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  | COMBINE_PARTS=
+|  |  |  |  |  | DEPS=s.corpus.4b7a0814.20120201-1346
+|  |  |  |  |  | DERIVED=1
+|  |  |  |  |  | FACTOR=1
+|  |  |  |  |  | FILENAME=corpus.txt.gz
+|  |  |  |  |  | OUTCORP=c-news
+|  |  |  |  |  | OUTFACTS=lemma
+|  |  |  |  |  | OUTLANG=enNmT1
+|  |  |  |  |  | OUTLINECOUNT=197053
+|  |  |  |  |  | RUN_COMMAND=cat
+|  |  |  |  |  | STEPNAME=s.corpus.4b7a0814.20120201-1346
+|  |  |  |  |  | TAKE_FROM_COMMAND=
+|  |  |  |  |  +- s.corpus.4b7a0814.20120201-1346
+|  |  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  |  | COMBINE_PARTS=
+|  |  |  |  |  |  | DEPS=s.corpus.f037cfc7.20120201-1346
+|  |  |  |  |  |  | DERIVED=1
+|  |  |  |  |  |  | FACTOR=-1
+|  |  |  |  |  |  | FILENAME=corpus.txt.gz
+|  |  |  |  |  |  | OUTCORP=c-news
+|  |  |  |  |  |  | OUTFACTS=form+lemma+tag
+|  |  |  |  |  |  | OUTLANG=enNmT1
+|  |  |  |  |  |  | OUTLINECOUNT=197053
+|  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
+|  |  |  |  |  |  | STEPNAME=s.corpus.f037cfc7.20120201-1346
+|  |  |  |  |  |  | TAKE_FROM_COMMAND=
+|  |  |  |  |  |  +- s.corpus.f037cfc7.20120201-1346
+|  |  |  |  |  |  |  | COLUMN=2
+|  |  |  |  |  |  |  | COMBINE_PARTS=
+|  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
+|  |  |  |  |  |  |  | DERIVED=1
+|  |  |  |  |  |  |  | FACTOR=-1
+|  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
+|  |  |  |  |  |  |  | OUTCORP=c-news
+|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
+|  |  |  |  |  |  |  | OUTLANG=enNm
+|  |  |  |  |  |  |  | OUTLINECOUNT=197053
+|  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/enNm.scen"
+|  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
+|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
+|  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
+|  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
+|  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
+|  |  |  |  |  |  |  |  | FNRE="*train.gz"
+|  |  |  |  |  |  |  |  | SECTION=news
+|  |  |  |  +- s.mosesgiza.9164ab4c.20120201-1032
 |  |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  |  | SRILMSTEP=
-|  |  |  +- s.mosesgiza.452e5a73.20120131-0018
+|  |  |  +- s.mosesgiza.9164ab4c.20120201-1032
 |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  | SRILMSTEP=
