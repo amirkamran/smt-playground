@@ -32,6 +32,8 @@ cd giza-pp || die "Failed to chdir to giza-pp"
 ## Not patching, otherwise giza often segfaults
 #patch -p1 < ../../../src/giza-pp.patch-for-300words \
 #  || die "Failed to patch GIZA"
+patch -p1 < ../../../src/giza-pp.patch-against-binsearch \
+  || die "Failed to patch GIZA"
 cd GIZA++-v2 && make -j4 && make -j4 snt2cooc.out && cd ../ || die "GIZA failed"
 cd mkcls-v2 && make -j4 && cd ../ || die "mkcls failed"
 cd ../ || die "chdir back failed"

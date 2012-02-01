@@ -71,14 +71,14 @@ sub collect_tokens {
     push @out, (defined $self->{tokenmap}->{$tokenre} ? $self->{tokenmap}->{$tokenre} : $tokenre);
   }
 
-  if ($flags =~ /f/) {
+  if ($flags =~ /f/) {  # first occurrence only
     return () if 0 == scalar @out;
     return $out[0];
-  } elsif ($flags =~ /u/) {
+  } elsif ($flags =~ /u/) {  # uniq the occurrences
     return () if 0 == scalar @out;
     my %uniq = map { ($_, 1) } @out;
     return sort {$a cmp $b} keys %uniq;
-  } elsif ($flags =~ /c/) {
+  } elsif ($flags =~ /c/) {  # count the number of occurrences
     return () if 0 == scalar @out;
     return ( scalar(@out)."*".$out[0] );
   } else {

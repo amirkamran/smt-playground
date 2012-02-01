@@ -1,0 +1,11 @@
+# A sample config file for eman autotags, i.e. short descriptive tags created
+# automatically from step variables using regexes
+# One line of this file is called a 'rule' and it can create one autotag.
+# The autotag is constructed using of sequence of regexes, each applied on the
+# output of the previous one, starting with the vars string.
+
+# Steptype	/find/replace/	...and in the result /find/replace/
+lm	/CORP=(.*)/LM$1/
+align	/ALILABEL=(.*)/ALI$1/
+tm	/ALISYM=(.*)/ALI$1/
+
