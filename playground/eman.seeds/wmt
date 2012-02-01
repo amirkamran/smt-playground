@@ -55,7 +55,7 @@ zcat corpus.sgml.gz \\
 
 nl=\$(zcat corpus.txt.gz | wc -l)
 
-$PLAYGROUND/corpman register -- corpus.txt.gz -1 $SECTION "$OUTLANG"_txt untoken \$nl" \\
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $SECTION "$OUTLANG"_txt untoken \$nl \\
 || die "Failed to register corpus"
 
 rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
