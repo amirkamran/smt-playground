@@ -1,0 +1,5 @@
++- s.czeng.a8d1498f.20120201-1016
+|  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
+|  | FILTER_THRESHOLD=0.0
+|  | FNRE="*train.gz"
+|  | SECTION=news
