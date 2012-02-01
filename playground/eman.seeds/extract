@@ -34,10 +34,7 @@ DATASTEPDIR=`eman path $DATASTEP`
 BINARIZESTEPDIR=`eman path $BINARIZESTEP`
 
 # Run checks in the preparation phase
-for i in source.corpus target.corpus common.vocab source.suffixes target.suffixes alignment.grids lexicon.counts lexprobs.txt frequentPhrases ; do
-  [ -f $BINARIZESTEPDIR/$i ] || die "File $BINARIZESTEPDIR/$i not found"
-done
-[ -f $DATASTEPDIR/$FORFILE ] || die "File $DATASTEPDIR/$FORFILE not found"
+# The input files may not yet exist if the previous steps are still running so we must check their existence inside eman.command.
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
@@ -53,6 +50,11 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
+# Check that the input files exist.
+for i in source.corpus target.corpus common.vocab source.suffixes target.suffixes alignment.grids lexicon.counts lexprobs.txt frequentPhrases ; do
+  [ -f $BINARIZESTEPDIR/\$i ] || die "File $BINARIZESTEPDIR/\$i not found"
+done
+[ -f $DATASTEPDIR/$FORFILE ] || die "File $DATASTEPDIR/$FORFILE not found"
 # The source text for which the grammar will be extracted must be gunzipped first.
 gunzip -c $DATASTEPDIR/$FORFILE > src.txt || die "Cannot gunzip the source text"
 # Now extract the grammar for the given test set from the binarized corpus.
