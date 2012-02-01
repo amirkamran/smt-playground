@@ -1,0 +1,98 @@
+#!/bin/bash
+# eman seed for running zmert with parallelized joshua
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+eman \
+  defvar LMSTEP type=reqstep help='where is the language model' \
+  defvar LMORDER inherit=LMSTEP:ORDER help='order of the language model' \
+  defvar EXTRACTSTEP type=reqstep help='where is the extracted grammar for the dev set' \
+  defvar EXTRACTFOR inherit=EXTRACTSTEP:FOR help='what are we going to translate (dev|test)' \
+  defvar JOSHUASTEP type=reqstep inherit=EXTRACTSTEP help='where is compiled Joshua' \
+  defvar JOSHUA inherit=JOSHUASTEP help='where is compiled Joshua' \
+  defvar SRC inherit=EXTRACTSTEP help='source language code' \
+  defvar TGT inherit=EXTRACTSTEP help='target language code' \
+|| exit 1
+[ "$EXTRACTFOR" == "dev" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for dev data"
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+eman add-tag $SRC-$TGT .
+echo SETTING eman.tag: `cat eman.tag`
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# convert the dependencies to absolute paths
+LMSTEPDIR=`eman path $LMSTEP`
+EXTRACTSTEPDIR=`eman path $EXTRACTSTEP`
+
+# Prepare the script to run the decoder.
+WORKDIR=`pwd`
+cat << KONEC > decoder.sh
+#!/bin/bash
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+$STATMT/joshua-scripts/parcoder.pl $WORKDIR/decoder-config.txt $WORKDIR/src.txt $WORKDIR/nbest-oov.txt $WORKDIR/parcoder >> $WORKDIR/parcoder.out 2>&1 \\
+|| die "Parallelized Joshua decoder failed"
+# Joshua 1.3 appends '_OOV' to every out-of-vocabulary word. This is good for
+# error analysis but less so for evaluation: it can decrease BLEU score.
+sed 's/_OOV//g' < $WORKDIR/nbest-oov.txt > $WORKDIR/nbest.txt \\
+|| die "Stripping _OOV suffixes failed"
+KONEC
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# JOSHUA may exist when generating this script but it also must exist and be exported when parextract.pl is invoked!
+# JOSHUA_VERSION should be inherited from the $JOSHUASTEP but we now support only 1.3 anyway.
+export JOSHUA=$JOSHUA
+export JOSHUA_VERSION=1.3
+export DECODER_CONFIG_FILE=\`pwd\`/decoder-config.txt
+export ZMERT_CONFIG_FILE=\`pwd\`/zmert-config.txt
+cp $STATMT/joshua-scripts/experiment-template/mert/params.txt . || die "Failed to copy params.txt with initial MERT weights"
+# Write the decoder configuration file.
+echo "lm_file=$LMSTEPDIR/corpus.lm" > \$DECODER_CONFIG_FILE
+echo "order=$LMORDER" >> \$DECODER_CONFIG_FILE
+echo "tm_file=$EXTRACTSTEPDIR/grammar.gz" >> \$DECODER_CONFIG_FILE
+echo "glue_file=$JOSHUA/grammars/hiero.glue" >> \$DECODER_CONFIG_FILE
+echo >> \$DECODER_CONFIG_FILE
+echo '# Rest of configuration copied from default configuration file:' >> \$DECODER_CONFIG_FILE
+grep -vP '(lm_file|order|tm_file|glue_file)\s*=' $STATMT/joshua-scripts/experiment-template/mert/decoder-config.txt >> \$DECODER_CONFIG_FILE
+# Write the zmert configuration file.
+echo -dir \`pwd\` > \$ZMERT_CONFIG_FILE
+echo >> \$ZMERT_CONFIG_FILE
+echo '# Rest of configuration copied from default configuration file:' >> \$ZMERT_CONFIG_FILE
+grep -vP '(-dir)\s*=' $STATMT/joshua-scripts/experiment-template/mert/zmert-config.txt >> \$ZMERT_CONFIG_FILE
+# Remove temporary files from any previous Zmert runs. They might cause the current run to fail.
+rm -f ZMERT.temp.* || die "Failed to remove temporary files from previous Zmert runs";
+# Run Zmert.
+java -cp $JOSHUA/bin joshua.zmert.ZMERT -maxMem 500 \$ZMERT_CONFIG_FILE > zmert.out || die "Zmert failed";
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

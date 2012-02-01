@@ -11,7 +11,7 @@ binmode(STDERR, ':utf8');
 use dzsys;
 
 my $steptype = $ARGV[0];
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|lm|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|lm|zmert|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -103,7 +103,18 @@ if($steptype =~ m/^(lm|all)$/)
     {
         my ($src, $tgt) = @{$pair};
         my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
-        dzsys::saferun("SRILMSTEP=$srilmstep DATASTEP=$datastep ORDER=6 eman init srilm --start") or die;
+        dzsys::saferun("SRILMSTEP=$srilmstep DATASTEP=$datastep ORDER=6 eman init danlm --start") or die;
+    }
+}
+# Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
+if($steptype =~ m/^(zmert|all)$/)
+{
+    foreach my $pair (@pairs)
+    {
+        my ($src, $tgt) = @{$pair};
+        my $lmstep = find_step('danlm', "v SRC=$src v TGT=$tgt");
+        my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=dev");
+        dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
     }
 }
 

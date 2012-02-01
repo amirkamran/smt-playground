@@ -4,6 +4,8 @@
 # (this solution is probably temporary and the pipeline will later be made more compatible)
 # binarization now excluded, because there are different (KenLM/IrstLM)
 # binarization options
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>, based on code by Ondřej Bojar and Aleš Tamchyna
+# License: GNU GPL
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -11,9 +13,13 @@ set -o pipefail  # safer pipes
 PLAYGROUND=`eman path` # eman playground directory
 
 # Ensure all the required variables are set (or provide the default)
+# Although a language model is trained on target language only, we may have different models for different
+# source languages because the parallel corpora differ and we use the target side of a particular parallel corpus.
+# That is why we identify the source language here, too.
 eman \
   defvar SRILMSTEP type=reqstep help='where is compiled srilm' \
   defvar DATASTEP type=reqstep help='where is trainlm.$TGT.gz' \
+  defvar SRC inherit=DATASTEP help='source language code' \
   defvar TGT inherit=DATASTEP help='target language code' \
   defvar ORDER help='order of the language model' \
   defvar PARTS default='1' help='build a huge lm in N parts' \
