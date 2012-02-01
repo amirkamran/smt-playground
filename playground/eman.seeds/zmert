@@ -24,8 +24,7 @@ eman \
 eval `eman bash-loadvars`
 [ "$EXTRACTFOR" == "dev" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for dev data"
 
-eman add-tag $SRC-$TGT .
-echo SETTING eman.tag: `cat eman.tag`
+echo $SRC-$TGT > eman.tag
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0

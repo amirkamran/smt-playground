@@ -1,0 +1,86 @@
+#!/bin/bash
+# eman seed for running Joshua decoder on test data and computing the BLEU score
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+eman \
+  defvar MERTSTEP type=reqstep help='where are the tuned weights of the model' \
+  defvar EXTRACTSTEP type=reqstep help='where is the extracted grammar for the test set' \
+  defvar EXTRACTFOR inherit=EXTRACTSTEP:FOR help='what are we going to translate (dev|test)' \
+  defvar DATASTEP type=reqstep inherit=EXTRACTSTEP help='where are test.$SRC.gz and test.$TGT.gz' \
+  defvar JOSHUASTEP type=reqstep inherit=EXTRACTSTEP help='where is compiled Joshua' \
+  defvar JOSHUA inherit=JOSHUASTEP help='where is compiled Joshua' \
+  defvar SRC inherit=EXTRACTSTEP help='source language code' \
+  defvar TGT inherit=EXTRACTSTEP help='target language code' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+[ "$EXTRACTFOR" == "test" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for test data"
+
+echo $SRC-$TGT > eman.tag
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# convert the dependencies to absolute paths
+DATASTEPDIR=`eman path $DATASTEP`
+MERTSTEPDIR=`eman path $MERTSTEP`
+EXTRACTSTEPDIR=`eman path $EXTRACTSTEP`
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# There must be the ZMERT-generated config file with the tuned weights.
+export MERTRESULT=$MERTSTEPDIR/decoder-config.txt.ZMERT.final
+[ -f $MERTRESULT ] || die "$MERTRESULT not found"
+# Copy the config file with the tuned weights to the working folder.
+# On the fly, make it point to the new grammar rather than the one extracted for dev set.
+echo "tm_file=$EXTRACTSTEPDIR/grammar.gz" > decoder-config.txt
+# We output N best hypotheses for dev set but we only want 1 best hypothesis for test set.
+echo "top_n=1" >> decoder-config.txt
+cat $MERTRESULT | grep -vP '(tm_file|top_n)\s*=' >> decoder-config.txt \\
+|| die "Cannot copy $MERTRESULT"
+gunzip -c $DATASTEPDIR/test.$SRC.gz > test.$SRC.txt || die "Failed to gunzip the source test file"
+# Run the decoder.
+$STATMT/joshua-scripts/parcoder.pl decoder-config.txt test.$SRC.txt test.joshua-nbest.$TGT.txt parcoder \\
+|| die "Parallelized Joshua decoder failed"
+# Although we changed the configuration so that the decoder outputs 1-best output (top_n=1),
+# the output will be in N-best format. Change it to simple text.
+$STATMT/joshua-scripts/get_1best_from_Nbest.pl test.joshua-nbest.$TGT.txt test.joshua-oov.$TGT.txt \\
+|| die "Failed to convert Joshua output from N-best to 1-best"
+# Joshua 1.3 appends '_OOV' to every out-of-vocabulary word. This is good for
+# error analysis but less so for evaluation: it can decrease BLEU score.
+sed 's/_OOV//g' < test.joshua-oov.$TGT.txt > test.joshua.$TGT.txt \\
+|| die "Failed to remove _OOV suffixes from Joshua output"
+# Compute the BLEU score of the system output.
+# BEWARE! We are comparing the translation of the preprocessed source to the preprocessed target.
+# Instead, we should postprocess the output and compare it to the original target.
+gunzip -c $DATASTEPDIR/test.$TGT.gz > test.$TGT.txt || die "Failed to gunzip the reference translation of the test file"
+java -cp $JOSHUA/bin joshua.util.JoshuaEval -cand test.joshua.$TGT.txt -ref test.$TGT.txt \\
+|| die "Failed to compute the BLEU score"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

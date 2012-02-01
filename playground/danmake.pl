@@ -11,7 +11,7 @@ binmode(STDERR, ':utf8');
 use dzsys;
 
 my $steptype = $ARGV[0];
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|lm|zmert|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|lm|zmert|test|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -115,6 +115,17 @@ if($steptype =~ m/^(zmert|all)$/)
         my $lmstep = find_step('danlm', "v SRC=$src v TGT=$tgt");
         my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=dev");
         dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
+    }
+}
+# Pro každý pár vytvořit a spustit krok daneval, který přeloží testovací data a spočítá BLEU skóre.
+if($steptype =~ m/^(test|all)$/)
+{
+    foreach my $pair (@pairs)
+    {
+        my ($src, $tgt) = @{$pair};
+        my $mertstep = find_step('zmert', "v SRC=$src v TGT=$tgt");
+        my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=test");
+        dzsys::saferun("MERTSTEP=$mertstep EXTRACTSTEP=$tmstep eman init daneval --start") or die;
     }
 }
 
