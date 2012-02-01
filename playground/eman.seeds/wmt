@@ -4,6 +4,8 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
+PLAYGROUND=$(eman path)
+
 # Ensure all the required variables are set (or provide the default)
 eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
                  help='where are WMT dev/test files' \
@@ -53,9 +55,8 @@ zcat corpus.sgml.gz \\
 
 nl=\$(zcat corpus.txt.gz | wc -l)
 
-echo "corpus.txt.gz;-1;$SECTION;$OUTLANG""_txt;untoken;\$nl" \\
-| tr ';' '\t' > corpman.info \\
-|| die "Failed to create corpman.info"
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $SECTION "$OUTLANG"_txt untoken \$nl" \\
+|| die "Failed to register corpus"
 
 rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 

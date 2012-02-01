@@ -4,6 +4,8 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
+PLAYGROUND=$(eman path)
+
 # Ensure all the required variables are set (or provide the default)
 eman defvar CZENG_SOURCEDIR default='/net/data/czeng10-public-release' \
                  help='where is CzEng 1.0, untarred' \
@@ -45,10 +47,10 @@ eval zcat $CZENG_SOURCEDIR/data.plaintext-format/$FNRE \\
 
 nl=\$(zcat corpus.cs-en.txt.gz | wc -l)
 
-(echo "corpus.cs-en.txt.gz;1;c-$SECTION;cs_txt;untoken;\$nl"; \\
- echo "corpus.cs-en.txt.gz;2;c-$SECTION;en_txt;untoken;\$nl") \\
-| sed 's/- /-/' | tr ';' '\t' > corpman.info \\
-|| die "Failed to create corpman.info"
+$PLAYGROUND/corpman register -- corpus.cs-en.txt.gz 1 c-$SECTION cs_txt untoken \$nl \\
+|| die "Failed to register corpus"
+$PLAYGROUND/corpman register -- corpus.cs-en.txt.gz 2 c-$SECTION en_txt untoken \$nl \\
+|| die "Failed to register corpus"
 
 rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 

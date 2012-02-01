@@ -37,6 +37,7 @@
 |  |  |  | SRILMSTEP=s.srilm.9a438e81.20120125-1313
 |  |  |  +- s.corpus.f2036040.20120130-0842
 |  |  |  |  | COLUMN=-1
+|  |  |  |  | DERIVED=0
 |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  | DEPS=
 |  |  |  |  | FACTOR=-1
@@ -75,6 +76,7 @@
 |  |  |  |  | TGTALIAUG=en+form
 |  |  |  |  +- s.corpus.f2036040.20120130-0842
 |  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  | DERIVED=0
 |  |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  |  | DEPS=
 |  |  |  |  |  | FACTOR=-1
@@ -88,6 +90,7 @@
 |  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/en.gz"
 |  |  |  |  +- s.corpus.f905ead9.20120130-0842
 |  |  |  |  |  | COLUMN=-1
+|  |  |  |  |  | DERIVED=0
 |  |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  |  | DEPS=
 |  |  |  |  |  | FACTOR=-1

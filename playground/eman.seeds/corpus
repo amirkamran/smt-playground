@@ -12,6 +12,8 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
+PLAYGROUND=`eman path` # eman playground directory
+
 # Ensure all the required variables are set (or provide the default)
 eman defvar RUN_COMMAND default='' \
      defvar COMBINE_PARTS default='' \
@@ -25,6 +27,7 @@ eman defvar RUN_COMMAND default='' \
      defvar OUTFACTS help='output factors sequence' \
      defvar OUTLINECOUNT help='forward check: expected number of lines' \
      defvar DEPS default='' help='steps we rely on' \
+     defvar DERIVED default='0' help='is the corpus derived from an existing one' \
 || exit 1
 
 # Set local bash variables
@@ -44,8 +47,8 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 
 # Create corpman info, the last field "1" indicates that this corpus is derived
 # automatically
-echo "corpus.txt.gz	-1	$OUTCORP	$OUTLANG	$OUTFACTS	$OUTLINECOUNT	1" \
-> corpman.info
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS $OUTLINECOUNT $DERIVED \
+|| die "Can't register corpus"
 
 options=0
 [ -z "$RUN_COMMAND" ] || options=$((options+1))

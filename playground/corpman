@@ -13,6 +13,9 @@ use warnings;
 use Getopt::Long;
 use File::Path;
 use File::Basename;
+use File::NFSLock;
+use Fcntl qw(LOCK_EX LOCK_SH);
+use Cwd;
 use YAML;
 
 binmode(STDIN, ":utf8");
@@ -21,6 +24,7 @@ binmode(STDERR, ":utf8");
 
 my $MYPATH = File::Spec->rel2abs(__FILE__);
 my $mydir = dirname($MYPATH);
+my $workdir = getcwd();
 
 my $indexfile = "corpman.index";
 my $verbose = 0;
@@ -30,6 +34,7 @@ my $start = 0;
 my $wait = 0;
 my $dumpcmd = 0;
 my $dump = 0;
+my $register = 0;
 my $fakeno = 1; # the step number when for dry-runs
 
 GetOptions(
@@ -44,6 +49,7 @@ GetOptions(
 
 sub usage {
   print STDERR "usage: $0 corpname/lang+fact1+fact2+fact3
+    or $0 register file column corpname lang fact1+fact2+fact3 linecount derived
 Find or construct a factored corpus given a corpus description.
 Allowed corpus descriptions:
    corpname/lang+fact1+fact2
@@ -64,10 +70,13 @@ Options:
 ";
 }
 
-my $descr = shift;
+if (defined $ARGV[0] && $ARGV[0] eq "register") {
+  shift;
+  $register = 1;
+}
 
 # Early warning about bad usage
-if (! defined $descr && ! $reindex) {
+if (! defined $ARGV[0] && ! $reindex) {
   usage();
   exit 1;
 }
@@ -78,7 +87,6 @@ $start = 1 if $wait;
 $init = 1 if $start; # start implies to init
 
 die "Incompatible requests: --dump and --cmd" if $dumpcmd && $dump;
-
 
 # constants:
 my $yes_derived = 1;
@@ -178,59 +186,120 @@ foreach my $line (split /\n/, $rulestext) {
 
 exit 1 if $err;
 
-if (! defined $descr) {
-  print STDERR "No corpus request. Exiting.\n";
-  exit;
-}
+if ($register) {
+  my ($file, $column, $corp, $lang, $facts, $linecount, $derived) = @ARGV;
 
-my $corp;
-my $lang;
-my $facts;
-if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
-  $corp = $1;
-  $lang = $2;
-  $facts = $3;
-} else {
- die "Bad descr format: $descr";
-}
-
-$facts =~ s/\|/+/g;
-
-
-my ($stepname, $filename, $column)
-  = build_exact_factors($corp, $lang, $facts);
-
-if ($wait) {
-  my $status = load_step_status($stepname);
-  if ($status ne "DONE") {
-    safesystem("eman wait $stepname")
-      or die "Failed to wait for $stepname to finish."
+  # all previous items are defined if the last one is
+  if (! defined $linecount) {
+    usage();
+    exit 1;
   }
-}
 
-if ($dumpcmd) {
-  my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
-  print "$maygunzip $mydir/$stepname/$filename";
-  print " | cut -f $column" if $column != -1;
-  print "\n";
-} elsif ($dump) {
-  my $h = my_open("$mydir/$stepname/$filename");
-  if ($column == -1) {
-    print while <$h>;
-  } else {
-    while (<$h>) {
-      chomp;
-      my @cols = split /\t/;
-      print $cols[$column-1], "\n";
+  my $stepname = basename($workdir);
+  my $force_info_update = 0;
+
+  my $entry = $index->{$corp}->{$lang}->{$facts};
+  if (defined $entry) {
+    if ($entry->{stepname} eq $stepname) {
+      if ($entry->{linecount} == -1) {
+        $force_info_update = 1;
+      }
+    } else {
+      die "Corpus $corp/$lang+$facts already exists!\n";
     }
   }
-  close $h;
+
+  # add corpus to index
+  add_entry_incl_entries_of_separate_factors(
+      $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
+
+  # save the updated index
+  saveidx($index);
+
+  my $do_update_info = 1;
+
+  # update corpman.info in the step directory
+  my @info_current;
+  if (-e "$workdir/corpman.info") {
+    @info_current = split /\n/, load_file("$workdir/corpman.info");
+  }
+  my $identical = grep /\t$corp\t$lang\t$facts/, @info_current;
+  if ($identical) {
+    if ($force_info_update) {
+      @info_current = grep {
+        $_ !~ m/\t$corp\t$lang\t$facts\t-1/
+      } @info_current;
+    } else {
+      print STDERR "Corpus $corp/$lang+$facts already in corpman.info.\n";
+      $do_update_info = 0;
+    }
+  }
+
+  if ($do_update_info) {
+    my $new_info_line = join("\t",
+        $file, $column, $corp, $lang, $facts, $linecount, $derived);
+    push @info_current, $new_info_line;
+    save_file("$workdir/corpman.info", join("\n", @info_current));
+  }
 } else {
-  # print the details: stepname, filename and column
-  print $stepname, "\t", $filename, "\t", $column, "\n";
+  # user wants a corpus
+  my $descr = $ARGV[0];
+
+  if (! defined $descr) {
+    print STDERR "No corpus description. Exiting.\n";
+    exit;
+  }
+  
+  my $corp;
+  my $lang;
+  my $facts;
+  if ($descr =~ /^(.+?)\/(.+?)\+(.*)$/) {
+    $corp = $1;
+    $lang = $2;
+    $facts = $3;
+  } else {
+    die "Bad descr format: $descr";
+  }
+  
+  $facts =~ s/\|/+/g;
+
+  my ($stepname, $filename, $column)
+    = build_exact_factors($corp, $lang, $facts);
+  
+  if ($wait) {
+    my $status = load_step_status($stepname);
+    if ($status ne "DONE") {
+      safesystem("eman wait $stepname")
+        or die "Failed to wait for $stepname to finish."
+    }
+  }
+  
+  if ($dumpcmd) {
+    my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
+    print "$maygunzip $mydir/$stepname/$filename";
+    print " | cut -f $column" if $column != -1;
+    print "\n";
+  } elsif ($dump) {
+    my $h = my_open("$mydir/$stepname/$filename");
+    if ($column == -1) {
+      print while <$h>;
+    } else {
+      while (<$h>) {
+        chomp;
+        my @cols = split /\t/;
+        print $cols[$column-1], "\n";
+      }
+    }
+    close $h;
+  } else {
+    # print the details: stepname, filename and column
+    print $stepname, "\t", $filename, "\t", $column, "\n";
+  }
 }
 
 sub build_exact_factors {
+  my ($corp, $lang, $facts) = @_;
+
   # runs lazy_build and extracts the required factor if necessary
   my $entry = lazy_build($corp, $lang, $facts);
   print STDERR "Called build_exact_factors @_\n" if $verbose;
@@ -239,7 +308,7 @@ sub build_exact_factors {
     return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
   } else {
     # not quite, we need to restrict the given factor
-    my $stepname = run_or_fake_corpus_step("DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
+    my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
     my $filename = "corpus.txt.gz";
     my $column = -1;
     return ($stepname, $filename, $column);
@@ -256,7 +325,13 @@ sub lazy_build {
 
   # check if the whole corpus happens to be ready
   my $entry = $index->{$corp}->{$lang}->{$facts};
-  return $entry if defined $entry;
+  if (defined $entry) {
+    if ($entry->{linecount} == -1) {
+      die "The corpus $corp/$lang+$facts was registered, but is not ready yet\n";
+    } else {
+      return $entry;
+    }
+  }
     # here is the laziness: $entry->{factind} may be != -1, i.e. asking to
     # extract a factor
 
@@ -281,7 +356,7 @@ sub lazy_build {
     }
     my $stepname = run_or_fake_corpus_step("DEPS='@deps' TAKE_FROM_COMMAND='("
       .join("; ", @parts)
-      .")' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
+      .")' DERIVED=1 OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
@@ -325,7 +400,7 @@ sub lazy_build {
     }
     # build a step that combines all these
 
-    my $stepname = run_or_fake_corpus_step("DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
+    my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS='@deps' COMBINE_PARTS='@parts' OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", \@deps);
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
@@ -358,7 +433,7 @@ sub build_using_rules {
 
   # apply the rule
   my $linecount = $subentry->{"linecount"};
-  my $stepname = run_or_fake_corpus_step("DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", [$subentry->{"stepname"}]);
+  my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", [$subentry->{"stepname"}]);
   my $filename = "corpus.txt.gz";
   my $column = -1;
 
@@ -572,13 +647,22 @@ sub loadidx {
   # load the index file and hash it there and back
   my $idx;
   if (-e $indexfile) {
+    # get shared lock
+    my $lock = File::NFSLock->new($indexfile, LOCK_SH, 10, 30*60); 
+    die "Failed to obtain lock on $indexfile" if ! defined $lock;
     $idx = Load(load_file($indexfile)."\n"); # YAML to Load the string
+    $lock->unlock();
   }
   return $idx;
 }
 sub saveidx {
   my $idx = shift;
+  # get exclusive lock
+  my $lock = File::NFSLock->new($indexfile, LOCK_EX, 10, 30*60); 
+  die "Failed to obtain lock on $indexfile" if ! defined $lock;
   my $h = my_save($indexfile);
   print $h YAML::Dump($idx);
   close $h;
+
+  $lock->unlock();
 }

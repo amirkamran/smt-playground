@@ -52,9 +52,8 @@ zcat $fn \\
 
 nl=\$(zcat corpus.txt.gz | wc -l)
 
-echo "corpus.txt.gz;-1;$SECTION;$OUTLANG""_txt;untoken;\$nl" \\
-| tr ';' '\t' > corpman.info \\
-|| die "Failed to create corpman.info"
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $SECTION "$OUTLANG"_txt untoken \$nl" \\
+|| die "Failed to register corpus"
 
 rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
