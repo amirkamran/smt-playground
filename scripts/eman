@@ -89,6 +89,7 @@ my $show_log = 0;
 my $show_jobid = 0;
 my $list_only_steps_with_no_users = 0;
 my $show_disk_usage = 0;
+my $print_created_step = 0; # for machine use of eman init/clone
 my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
 my $do_start = 0;
@@ -155,6 +156,7 @@ my %options = (
   "reuse=s@" => \$reuse,
   "all-avoid!" => \$avoid_all,
   "start!" => \$do_start,
+  "print-created-step!" => \$print_created_step,
   "reindex" => \$reindex,
   "queue=s"=>\$queue,
   "priority=i"=>\$priority,
@@ -676,6 +678,7 @@ if ($cmd eq "init") {
   my $s = init($steptype);
   $waserror = ! defined $s;
   $waserror = ! start($s) if defined $s && $do_start;
+  print $s, "\n" if $print_created_step && defined $s;
   exit $waserror;
 }
 
@@ -698,6 +701,7 @@ if ($cmd eq "clone") {
     my $news = init(get_steptype($srcstep), \@usevars, $srcstep);
     $waserror = 1 if ! defined $news;
     $waserror = ! start($news) if defined $news && $do_start;
+    print $news, "\n" if $print_created_step && defined $news;
   } else {
     print STDERR "Loading recipe from stdin.\n";
     my $recipestr = load("-");
@@ -707,8 +711,14 @@ if ($cmd eq "clone") {
     my $newtopstep = init_by_recipe($recipe, $depmap);
     $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
     if (defined $newtopstep) {
-      $show_status = 1;
-      traceback("NEW ", $newtopstep);
+      if ($print_created_step) {
+        # we don't print the traceback if we are printing top step name
+        # the traceback would mess stdout
+        print $newtopstep, "\n";
+      } else {
+        $show_status = 1;
+        traceback("NEW ", $newtopstep);
+      }
     }
   }
   exit $waserror;
@@ -1137,7 +1147,7 @@ sub prepare {
 
   my $prevdir = chdir_to_stepdir($s);
   my $ok = 1;
-  $ok = safesystem("eval \$(cat eman.vars) EMAN_READONLY=yes ./eman.seed");
+  $ok = safesystem("eval \$(cat eman.vars) EMAN_READONLY=yes ./eman.seed >&2");
   print STDERR "Step $s prepared, checking required files.\n" if $verbose;
   if (! -e "eman.command") {
     $ok = 0;
@@ -2013,6 +2023,53 @@ sub compare_steps {
     return $second_time <=> $first_time;
   }
 }
+
+# routines for autotags
+my $autotag_rules = load_autotag_rules("eman.autotags");
+# autotag_rules->{steptype} = [ [list of regexes producing one tag],
+#   [list of regexes producing another tag] ]
+
+# One line of the config file is called a 'rule' and it can create one autotag.
+# The autotag is constructed using of sequence of regexes, each applied on the
+# output of the previous one, starting with the vars string.
+
+sub load_autotag_rules {
+  my $inf = shift;
+  my $h = my_open($inf);
+  my $out;
+  while(<$h>) {
+    chomp;
+    next if /^\s*#/ || /^\s*$/;
+    my @cols = split / *\t */;
+    my $steptype = shift @cols;
+    $out->{$steptype} = [] if !defined $out->{$steptype};
+    push @{$out->{$steptype}}, \@cols;
+  }
+  close $h;
+  return $out;
+}
+
+sub reindex_direct_autotags {
+  # for all steps, removes all autotags and recreates them
+  # does not add autotags of the dependencies, thus called 'direct' autotags
+  $idx->{'STEP_TO_AUTOTAGS'} = undef; # delete old
+  foreach my $step (all_steps()) {
+    my $steptype = get_steptype($step);
+    next if ! defined $autotag_rules->{$steptype};
+    my $varsstr = load_vars_str($step);
+    foreach my $rules (@{$autotag_rules->{$steptype}}) {
+      foreach my $rule (@$rules) {
+        my $tag = $varsstr;
+        foreach my $regex (@{$rule}) {
+          eval "\$tag =~ $regex;";
+        }
+        next if $tag eq ""; # blank tag is removed
+        $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag} ++;
+      }
+    }
+  }
+}
+# end of routines for autotags
 
 sub select_steps {
   my @args = @_;
