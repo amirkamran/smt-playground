@@ -11,7 +11,7 @@ binmode(STDERR, ':utf8');
 use dzsys;
 
 my $steptype = $ARGV[0];
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|lm|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs;
@@ -65,19 +65,7 @@ if($steptype =~ m/^(align|all)$/)
     foreach my $pair (@pairs)
     {
         my ($src, $tgt) = @{$pair};
-        my $datastep = dzsys::chompticks("eman select t dandata v SRC=$src v TGT=$tgt");
-        # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-        my @datasteps = split(/\s+/, $datastep);
-        if(scalar(@datasteps)==0)
-        {
-            die("No datastep found for $src-$tgt");
-        }
-        elsif(scalar(@datasteps)>1)
-        {
-            my $n = scalar(@datasteps);
-            print STDERR ("WARNING: $n datasteps found, using $datasteps[0]\n");
-            $datastep = $datasteps[0];
-        }
+        my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
         dzsys::saferun("GIZASTEP=$gizastep DATASTEP=$datastep eman init danalign --start --mem 20g") or die;
     }
 }
@@ -88,19 +76,7 @@ if($steptype =~ m/^(binarize|all)$/)
     foreach my $pair (@pairs)
     {
         my ($src, $tgt) = @{$pair};
-        my $alignstep = dzsys::chompticks("eman select t danalign v SRC=$src v TGT=$tgt");
-        # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-        my @alignsteps = split(/\s+/, $alignstep);
-        if(scalar(@alignsteps)==0)
-        {
-            die("No alignstep found for $src-$tgt");
-        }
-        elsif(scalar(@alignsteps)>1)
-        {
-            my $n = scalar(@alignsteps);
-            print STDERR ("WARNING: $n alignsteps found, using $alignsteps[0]\n");
-            $alignstep = $alignsteps[0];
-        }
+        my $alignstep = find_step('danalign', "v SRC=$src v TGT=$tgt");
         dzsys::saferun("JOSHUASTEP=$joshuastep ALIGNSTEP=$alignstep eman init binarize --start --mem 31g") or die;
     }
 }
@@ -110,22 +86,50 @@ if($steptype =~ m/^(extract|all)$/)
     foreach my $pair (@pairs)
     {
         my ($src, $tgt) = @{$pair};
-        my $binarizestep = dzsys::chompticks("eman select t binarize v SRC=$src v TGT=$tgt");
-        # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-        my @binarizesteps = split(/\s+/, $binarizestep);
-        if(scalar(@binarizesteps)==0)
-        {
-            die("No binarizestep found for $src-$tgt");
-        }
-        elsif(scalar(@binarizesteps)>1)
-        {
-            my $n = scalar(@binarizesteps);
-            print STDERR ("WARNING: $n binarizesteps found, using $binarizesteps[0]\n");
-            $binarizestep = $binarizesteps[0];
-        }
+        my $binarizestep = find_step('binarize', "v SRC=$src v TGT=$tgt");
         foreach my $for ('dev', 'test')
         {
             dzsys::saferun("BINARIZESTEP=$binarizestep FOR=$for eman init extract --start") or die;
         }
     }
+}
+# Pro každý pár vytvořit a spustit krok lm, který natrénuje jazykový model.
+# Poznámka: I když se jazykový model trénuje pouze na cílovém jazyku, model pro páry cs-en a de-en nemusí být stejný,
+# protože pro trénování využíváme cílovou stranu paralelního korpusu a ten není pro všechny páry shodný.
+if($steptype =~ m/^(lm|all)$/)
+{
+    my $srilmstep = dzsys::chompticks('eman ls srilm');
+    foreach my $pair (@pairs)
+    {
+        my ($src, $tgt) = @{$pair};
+        my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
+        dzsys::saferun("SRILMSTEP=$srilmstep DATASTEP=$datastep ORDER=6 eman init srilm --start") or die;
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde předcházející krok, na kterém závisíme. Vypíše varování, pokud daným
+# kritériím odpovídá několik kroků nebo žádný krok.
+#------------------------------------------------------------------------------
+sub find_step
+{
+    my $steptype = shift;
+    my $emanselect = shift;
+    my $step = dzsys::chompticks("eman select t $steptype $emanselect");
+    # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
+    my @steps = split(/\s+/, $step);
+    my $n = scalar(@steps);
+    if($n==0)
+    {
+        my $for = " for $emanselect" if($emanselect);
+        die("No $steptype step found$for");
+    }
+    elsif($n>1)
+    {
+        print STDERR ("WARNING: $n $steptype steps found, using $steps[0]\n");
+        $step = $steps[0];
+    }
+    return $step;
 }

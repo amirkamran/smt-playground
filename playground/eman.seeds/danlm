@@ -1,0 +1,129 @@
+#!/bin/bash
+# eman seed for constructing an n-gram language model
+# differs from lm in that it takes the training corpus from a location predefined by Dan
+# (this solution is probably temporary and the pipeline will later be made more compatible)
+# binarization now excluded, because there are different (KenLM/IrstLM)
+# binarization options
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar SRILMSTEP type=reqstep help='where is compiled srilm' \
+  defvar DATASTEP type=reqstep help='where is trainlm.$TGT.gz' \
+  defvar TGT inherit=DATASTEP help='target language code' \
+  defvar ORDER help='order of the language model' \
+  defvar PARTS default='1' help='build a huge lm in N parts' \
+  defvar LMFLAGS default='' help='flags for ngram-count like -unk' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Remember the core settings as out tag
+eman add-tag $TGT.$ORDER .
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Emit the main script to be used in the running phase
+
+KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`
+
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
+# convert the dependencies to absolute paths
+SRILMDIR=`eman path $SRILMSTEP`
+DATASTEPDIR=`eman path $DATASTEP`
+TRAINLMT=$DATASTEPDIR/trainlm.$TGT.gz
+
+cat << KONEC > eman.command
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# init grid environment; sometimes needed for ./augment.pl
+. /net/projects/SGE/user/sge_profile
+
+SRILMDIR1="\$(cat $SRILMDIR/srilm.path)/bin/"
+SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
+
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
+
+echo "Using this ngram-count:"
+which ngram-count || die "No ngram-count"
+echo "Using this make-big-lm:"
+which make-big-lm || die "No make-big-lm"
+
+ln -s $TRAINLMT corpus.text.gz
+
+echo Generating model from corpus...
+if [ $PARTS == 1 ]; then
+  echo "Simple counting"
+  if zcat corpus.text.gz | ngram-count -order $ORDER \\
+    -text - \\
+    -lm corpus.lm \\
+    $LMFLAGS \\
+    -interpolate -kndiscount; then
+    echo "Succeeded."
+  else
+    echo Second attempt, skip bigrams in knsmoothing
+    zcat corpus.text.gz | ngram-count -order $ORDER \\
+      -text - \\
+      $LMFLAGS \\
+      -lm corpus.lm \\
+      -interpolate $KNDISCOUNTSFROMTHREE \\
+    || die "ngram-count FAILED even with bigrams not knsmoothed"
+  fi
+else
+  partstempdir=\$(mktemp -d $tempdir/exp.lm.XXXXXX)
+  echo Counting in $PARTS parts, tempdir=\$partstempdir
+  zcat corpus.text.gz | split_even $PARTS \$partstempdir/part --gzip \
+  || die "Splitting FAILED"
+  ls \$partstempdir/part*.gz > \$tempdir/filelist
+
+  echo Making batch counts
+  make-batch-counts \$partstempdir/filelist 1 zcat \$partstempdir \\
+    -order $ORDER \\
+    $LMFLAGS \\
+    -interpolate -kndiscount \\
+    || die "make-batch-counts FAILED"
+
+  echo Merging batch counts
+  merge-batch-counts \$partstempdir \\
+    || die "merge-batch-counts FAILED"
+
+  make-big-lm -read \$partstempdir/*.ngrams.gz \\
+    -name \$partstempdir/biglm \\
+    -order $ORDER \\
+    $LMFLAGS \\
+    -interpolate -kndiscount \\
+    -lm \`pwd\`/corpus.lm \\
+    || die "make-big-lm FAILED"
+
+  echo Removing \$partstempdir
+  rm -rf \$partstempdir
+fi
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
