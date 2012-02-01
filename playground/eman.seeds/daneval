@@ -31,6 +31,7 @@ echo $SRC-$TGT > eman.tag
 # convert the dependencies to absolute paths
 DATASTEPDIR=`eman path $DATASTEP`
 MERTSTEPDIR=`eman path $MERTSTEP`
+MERTRESULT=$MERTSTEPDIR/decoder-config.txt.ZMERT.final
 EXTRACTSTEPDIR=`eman path $EXTRACTSTEP`
 
 cat << KONEC > eman.command
@@ -47,7 +48,6 @@ renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
 # There must be the ZMERT-generated config file with the tuned weights.
-export MERTRESULT=$MERTSTEPDIR/decoder-config.txt.ZMERT.final
 [ -f $MERTRESULT ] || die "$MERTRESULT not found"
 # Copy the config file with the tuned weights to the working folder.
 # On the fly, make it point to the new grammar rather than the one extracted for dev set.
@@ -57,8 +57,12 @@ echo "top_n=1" >> decoder-config.txt
 cat $MERTRESULT | grep -vP '(tm_file|top_n)\s*=' >> decoder-config.txt \\
 || die "Cannot copy $MERTRESULT"
 gunzip -c $DATASTEPDIR/test.$SRC.gz > test.$SRC.txt || die "Failed to gunzip the source test file"
+# JOSHUA may exist when generating this script but it also must exist and be exported when parextract.pl is invoked!
+# JOSHUA_VERSION should be inherited from the $JOSHUASTEP but we now support only 1.3 anyway.
+export JOSHUA=$JOSHUA
+export JOSHUA_VERSION=1.3
 # Run the decoder.
-$STATMT/joshua-scripts/parcoder.pl decoder-config.txt test.$SRC.txt test.joshua-nbest.$TGT.txt parcoder \\
+$STATMT/joshua-scripts/parcoder.pl \$mydir/decoder-config.txt \$mydir/test.$SRC.txt \$mydir/test.joshua-nbest.$TGT.txt \$mydir/parcoder \\
 || die "Parallelized Joshua decoder failed"
 # Although we changed the configuration so that the decoder outputs 1-best output (top_n=1),
 # the output will be in N-best format. Change it to simple text.
