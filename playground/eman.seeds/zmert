@@ -15,13 +15,14 @@ eman \
   defvar EXTRACTFOR inherit=EXTRACTSTEP:FOR help='what are we going to translate (dev|test)' \
   defvar JOSHUASTEP type=reqstep inherit=EXTRACTSTEP help='where is compiled Joshua' \
   defvar JOSHUA inherit=JOSHUASTEP help='where is compiled Joshua' \
+  defvar DATASTEP type=reqstep inherit=EXTRACTSTEP help='where are dev.$SRC.gz and dev.$TGT.gz' \
   defvar SRC inherit=EXTRACTSTEP help='source language code' \
   defvar TGT inherit=EXTRACTSTEP help='target language code' \
 || exit 1
-[ "$EXTRACTFOR" == "dev" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for dev data"
 
 # Set local bash variables
 eval `eman bash-loadvars`
+[ "$EXTRACTFOR" == "dev" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for dev data"
 
 eman add-tag $SRC-$TGT .
 echo SETTING eman.tag: `cat eman.tag`
@@ -30,6 +31,7 @@ echo SETTING eman.tag: `cat eman.tag`
 [ -z "$INIT_ONLY" ] || exit 0
 
 # convert the dependencies to absolute paths
+DATASTEPDIR=`eman path $DATASTEP`
 LMSTEPDIR=`eman path $LMSTEP`
 EXTRACTSTEPDIR=`eman path $EXTRACTSTEP`
 
@@ -48,6 +50,7 @@ $STATMT/joshua-scripts/parcoder.pl $WORKDIR/decoder-config.txt $WORKDIR/src.txt 
 sed 's/_OOV//g' < $WORKDIR/nbest-oov.txt > $WORKDIR/nbest.txt \\
 || die "Stripping _OOV suffixes failed"
 KONEC
+chmod a+x decoder.sh || die "Failed to change permissions of decoder.sh"
 
 cat << KONEC > eman.command
 # This is the command to be run here
@@ -79,13 +82,18 @@ echo '# Rest of configuration copied from default configuration file:' >> \$DECO
 grep -vP '(lm_file|order|tm_file|glue_file)\s*=' $STATMT/joshua-scripts/experiment-template/mert/decoder-config.txt >> \$DECODER_CONFIG_FILE
 # Write the zmert configuration file.
 echo -dir \`pwd\` > \$ZMERT_CONFIG_FILE
+echo -cmd decoder.sh >> \$ZMERT_CONFIG_FILE
 echo >> \$ZMERT_CONFIG_FILE
 echo '# Rest of configuration copied from default configuration file:' >> \$ZMERT_CONFIG_FILE
-grep -vP '(-dir)\s*=' $STATMT/joshua-scripts/experiment-template/mert/zmert-config.txt >> \$ZMERT_CONFIG_FILE
+grep -vP '(-dir|-cmd)\s' $STATMT/joshua-scripts/experiment-template/mert/zmert-config.txt >> \$ZMERT_CONFIG_FILE
+# Copy the development data to the working folder.
+gunzip -c $DATASTEPDIR/dev.$SRC.gz > src.txt || die "Failed to gunzip development data source"
+gunzip -c $DATASTEPDIR/dev.$TGT.gz > ref.txt || die "Failed to gunzip development data reference"
 # Remove temporary files from any previous Zmert runs. They might cause the current run to fail.
 rm -f ZMERT.temp.* || die "Failed to remove temporary files from previous Zmert runs";
 # Run Zmert.
-java -cp $JOSHUA/bin joshua.zmert.ZMERT -maxMem 500 \$ZMERT_CONFIG_FILE > zmert.out || die "Zmert failed";
+echo Running Z-mert...
+java -cp $JOSHUA/bin joshua.zmert.ZMERT -maxMem 500 \$ZMERT_CONFIG_FILE > zmert.out || ( cat zmert.out ; die "Zmert failed" )
 
 # Standard command footer
 echo Done.
