@@ -22,90 +22,82 @@ set -o pipefail  # safer pipes
 # Note that we also require STATMT, which is constant w.r.t. individual experiments.
 # However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
 # It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
-if [ -z "$STATMT" ] ; then
-  echo "You must set: "
-  echo "  \$STATMT to the root of your working copy of the StatMT repository (one level above playground)"
-  echo "  \$SRC to the code of the source language"
-  echo "  \$TGT to the code of the target language"
-  exit 1
-fi
+[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
 SCRIPTS=$STATMT/scripts
 eman defvar SRC help='source language code' \
      defvar TGT help='target language code' \
+     defvar IMPORTCORPUS default='' help='empty/yes: do we want to work with same data as someone else?' \
+     defvar TRALS type='optstep' default='' help='source side of training data for alignment' \
+     defvar TRALT type='optstep' default='' help='target side of training data for alignment' \
+     defvar TRTMS type='optstep' default='' help='source side of training data for translation model' \
+     defvar TRTMT type='optstep' default='' help='target side of training data for translation model' \
+     defvar TRLMT type='optstep' default='' help='training data for target language model' \
+     defvar DEVS  type='optstep' default='' help='source side of development data' \
+     defvar DEVT  type='optstep' default='' help='target side of development data' \
+     defvar TESTS type='optstep' default='' help='source side of test data' \
+     defvar TESTT type='optstep' default='' help='target side of test data' \
 || exit 1
 
-# Check that we know the language pair and can select data for it.
-perl -e "\$s = $SRC; \$t = $TGT; "'die "Unknown language pair $s-$t" unless("$s-$t" =~ m/^(cs-en|en-cs|de-en|en-de|es-en|en-es|fr-en|en-fr)$/)' || exit 1
 # Select the corpora according to the language pair.
-if   [ "$SRC-$TGT" == "cs-en" ] || [ "$SRC-$TGT" == "en-cs" ] ; then
-  export TRAINTM=news-commentary-v6.cs-en+europarl-v6.cs-en
-elif [ "$SRC-$TGT" == "de-en" ] || [ "$SRC-$TGT" == "en-de" ] ; then
-  export TRAINTM=news-commentary-v6.de-en+europarl-v6.de-en
-elif [ "$SRC-$TGT" == "es-en" ] || [ "$SRC-$TGT" == "en-es" ] ; then
-  export TRAINTM=news-commentary-v6.es-en+europarl-v6.es-en
-elif [ "$SRC-$TGT" == "fr-en" ] || [ "$SRC-$TGT" == "en-fr" ] ; then
-  export TRAINTM=news-commentary-v6.fr-en+europarl-v6.fr-en
+if [ -z "$IMPORTCORPUS" ] ; then
+  # Check that we know the language pair and can select data for it.
+  perl -e "\$s = $SRC; \$t = $TGT; "'die "Unknown language pair $s-$t" unless("$s-$t" =~ m/^(cs-en|en-cs|de-en|en-de|es-en|en-es|fr-en|en-fr)$/)' || exit 1
+  if   [ "$SRC-$TGT" == "cs-en" ] || [ "$SRC-$TGT" == "en-cs" ] ; then
+    export TRAINTM=news-commentary-v6.cs-en+europarl-v6.cs-en
+  elif [ "$SRC-$TGT" == "de-en" ] || [ "$SRC-$TGT" == "en-de" ] ; then
+    export TRAINTM=news-commentary-v6.de-en+europarl-v6.de-en
+  elif [ "$SRC-$TGT" == "es-en" ] || [ "$SRC-$TGT" == "en-es" ] ; then
+    export TRAINTM=news-commentary-v6.es-en+europarl-v6.es-en
+  elif [ "$SRC-$TGT" == "fr-en" ] || [ "$SRC-$TGT" == "en-fr" ] ; then
+    export TRAINTM=news-commentary-v6.fr-en+europarl-v6.fr-en
+  fi
+  export TRAINLM=$TRAINTM
+  export DEV=newstest2008
+  export TEST=newstest2011
+  # We still use the old augment.pl to fetch the data.
+  # Find steps with prepared links to augmented corpora
+  # (so that augment.pl needs not be called again, it takes ages).
+  ###!!! Make sure that the step exists and that there is just one such step.
+  export TRAINALSSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$SRC+lcstem4\"`
+  echo   TRAINALSSTEP=$TRAINALSSTEP
+  export TRAINALTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+lcstem4\"`
+  echo   TRAINALTSTEP=$TRAINALTSTEP
+  export TRAINTMSSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$SRC+stc\"`
+  echo   TRAINTMSSTEP=$TRAINTMSSTEP
+  export TRAINTMTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+stc\"`
+  echo   TRAINTMTSTEP=$TRAINTMTSTEP
+  export TRAINLMTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+stc\"`
+  echo   TRAINLMTSTEP=$TRAINLMTSTEP
+  export DEVSSTEP=`eman select t augment v ACDESC=\"$DEV/$SRC+stc\"`
+  echo   DEVSSTEP=$DEVSSTEP
+  export DEVTSTEP=`eman select t augment v ACDESC=\"$DEV/$TGT+stc\"`
+  echo   DEVTSTEP=$DEVTSTEP
+  export TESTSSTEP=`eman select t augment v ACDESC=\"$TEST/$SRC+stc\"`
+  echo   TESTSSTEP=$TESTSSTEP
+  export TESTTSTEP=`eman select t augment v ACDESC=\"$TEST/$TGT+stc\"`
+  echo   TESTTSTEP=$TESTTSTEP
+  eman \
+    defvar TRAINALSSTEP type=reqstep help="where is training/$SRC+lcstem4" \
+    defvar TRAINALTSTEP type=reqstep help="where is training/$TGT+lcstem4" \
+    defvar TRAINTMSSTEP type=reqstep help="where is training/$SRC+stc" \
+    defvar TRAINTMTSTEP type=reqstep help="where is training/$TGT+stc" \
+    defvar TRAINLMTSTEP type=reqstep help="where is training/$TGT+stc" \
+    defvar DEVSSTEP     type=reqstep help="where is dev/$SRC+stc" \
+    defvar DEVTSTEP     type=reqstep help="where is dev/$TGT+stc" \
+    defvar TESTSSTEP    type=reqstep help="where is test/$SRC+stc" \
+    defvar TESTTSTEP    type=reqstep help="where is test/$TGT+stc" \
+  || exit 1
+  # convert the dependencies to absolute paths
+  TRAINALSSTEPDIR=`eman path $TRAINALSSTEP`
+  TRAINALTSTEPDIR=`eman path $TRAINALTSTEP`
+  TRAINTMSSTEPDIR=`eman path $TRAINTMSSTEP`
+  TRAINTMTSTEPDIR=`eman path $TRAINTMTSTEP`
+  TRAINLMTSTEPDIR=`eman path $TRAINLMTSTEP`
+  DEVSSTEPDIR=`eman path $DEVSSTEP`
+  DEVTSTEPDIR=`eman path $DEVTSTEP`
+  TESTSSTEPDIR=`eman path $TESTSSTEP`
+  TESTTSTEPDIR=`eman path $TESTTSTEP`
 fi
-export TRAINLM=$TRAINTM
-export DEV=newstest2008
-export TEST=newstest2011
-# Old obsolete variables with descriptions for augment.pl
-TRAINALS=$TRAINTM/$SRC+lcstem4
-TRAINALT=$TRAINTM/$TGT+lcstem4
-TRAINTMS=$TRAINTM/$SRC+stc
-TRAINTMT=$TRAINTM/$TGT+stc
-TRAINLMT=$TRAINLM/$TGT+stc
-DEVS=$DEV/$SRC+stc
-DEVT=$DEV/$TGT+stc
-TESTS=$TEST/$SRC+stc
-TESTT=$TEST/$TGT+stc
-# We still use the old augment.pl to fetch the data.
-# (But we may no more need these variables here when augmenting has been isolated into its own steps.)
-AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
-AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
-AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
-# Find steps with prepared links to augmented corpora
-# (so that augment.pl needs not be called again, it takes ages).
-###!!! Make sure that the step exists and that there is just one such step.
-export TRAINALSSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$SRC+lcstem4\"`
-echo   TRAINALSSTEP=$TRAINALSSTEP
-export TRAINALTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+lcstem4\"`
-echo   TRAINALTSTEP=$TRAINALTSTEP
-export TRAINTMSSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$SRC+stc\"`
-echo   TRAINTMSSTEP=$TRAINTMSSTEP
-export TRAINTMTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+stc\"`
-echo   TRAINTMTSTEP=$TRAINTMTSTEP
-export TRAINLMTSTEP=`eman select t augment v ACDESC=\"$TRAINTM/$TGT+stc\"`
-echo   TRAINLMTSTEP=$TRAINLMTSTEP
-export DEVSSTEP=`eman select t augment v ACDESC=\"$DEV/$SRC+stc\"`
-echo   DEVSSTEP=$DEVSSTEP
-export DEVTSTEP=`eman select t augment v ACDESC=\"$DEV/$TGT+stc\"`
-echo   DEVTSTEP=$DEVTSTEP
-export TESTSSTEP=`eman select t augment v ACDESC=\"$TEST/$SRC+stc\"`
-echo   TESTSSTEP=$TESTSSTEP
-export TESTTSTEP=`eman select t augment v ACDESC=\"$TEST/$TGT+stc\"`
-echo   TESTTSTEP=$TESTTSTEP
-eman \
-  defvar TRAINALSSTEP type=reqstep help="where is training/$SRC+lcstem4" \
-  defvar TRAINALTSTEP type=reqstep help="where is training/$TGT+lcstem4" \
-  defvar TRAINTMSSTEP type=reqstep help="where is training/$SRC+stc" \
-  defvar TRAINTMTSTEP type=reqstep help="where is training/$TGT+stc" \
-  defvar TRAINLMTSTEP type=reqstep help="where is training/$TGT+stc" \
-  defvar DEVSSTEP     type=reqstep help="where is dev/$SRC+stc" \
-  defvar DEVTSTEP     type=reqstep help="where is dev/$TGT+stc" \
-  defvar TESTSSTEP    type=reqstep help="where is test/$SRC+stc" \
-  defvar TESTTSTEP    type=reqstep help="where is test/$TGT+stc" \
-|| exit 1
-# convert the dependencies to absolute paths
-TRAINALSSTEPDIR=`eman path $TRAINALSSTEP`
-TRAINALTSTEPDIR=`eman path $TRAINALTSTEP`
-TRAINTMSSTEPDIR=`eman path $TRAINTMSSTEP`
-TRAINTMTSTEPDIR=`eman path $TRAINTMTSTEP`
-TRAINLMTSTEPDIR=`eman path $TRAINLMTSTEP`
-DEVSSTEPDIR=`eman path $DEVSSTEP`
-DEVTSTEPDIR=`eman path $DEVTSTEP`
-TESTSSTEPDIR=`eman path $TESTSSTEP`
-TESTTSTEPDIR=`eman path $TESTTSTEP`
 
 # Set local bash variables.
 eval `eman bash-loadvars`
@@ -128,15 +120,58 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 
-ln -s $TRAINALSSTEPDIR/corpus.gz trainal.$SRC.gz || die "Failed to link to source alignment training file"
-ln -s $TRAINALTSTEPDIR/corpus.gz trainal.$TGT.gz || die "Failed to link to target alignment training file"
-ln -s $TRAINTMSSTEPDIR/corpus.gz train.$SRC.gz   || die "Failed to link to source training file"
-ln -s $TRAINTMTSTEPDIR/corpus.gz train.$TGT.gz   || die "Failed to link to target training file"
-ln -s $TRAINLMTSTEPDIR/corpus.gz trainlm.$TGT.gz || die "Failed to link to target language model training file"
-ln -s $DEVSSTEPDIR/corpus.gz dev.$SRC.gz         || die "Failed to link to source development file"
-ln -s $DEVTSTEPDIR/corpus.gz dev.$TGT.gz         || die "Failed to link to target development file"
-ln -s $TESTSSTEPDIR/corpus.gz test.$SRC.gz       || die "Failed to link to source test file"
-ln -s $TESTTSTEPDIR/corpus.gz test.$TGT.gz       || die "Failed to link to target test file"
+if [ "$IMPORTCORPUS" == "yes" ] ; then
+  # Unlike symlinks, with hardlinks we will later be able to move cleaned files over these.
+  if [ -n "$TRALS" ] ; then
+    stepdir=\`eman path $TRALS\`
+    ln -s \$stepdir/corpus.txt.gz trainal.$SRC.gz  || die "Failed to link to source alignment training file"
+  fi
+  if [ -n "$TRALT" ] ; then
+    stepdir=\`eman path $TRALT\`
+    ln -s \$stepdir/corpus.txt.gz trainal.$TGT.gz  || die "Failed to link to target alignment training file"
+  fi
+  ###!!! Abych byl schopen pustit svůj vlastní alignment, potřebuju aspoň ta data nahoře.
+  ###!!! Korpusy pro TM nezískám, dokud nepustím s.tm, a ten nepustím, dokud nedodám nějaký alignment.
+  ###!!! Proto zatím do trénovacích dat pro TM dávám náhražku, aby vůbec něco běželo.
+  if [ -n "$TRALS" ] ; then
+    stepdir=\`eman path $TRALS\`
+    ln -s \$stepdir/corpus.txt.gz train.$SRC.gz    || die "Failed to link to source training file"
+  fi
+  if [ -n "$TRALT" ] ; then
+    stepdir=\`eman path $TRALT\`
+    ln -s \$stepdir/corpus.txt.gz train.$TGT.gz    || die "Failed to link to target training file"
+  fi
+  if [ -n "$TRLMT" ] ; then
+    stepdir=\`eman path $TRLMT\`
+    ln -s \$stepdir/corpus.txt.gz trainlm.$TGT.gz  || die "Failed to link to target language model training file"
+  fi
+  if [ -n "$DEVS" ] ; then
+    stepdir=\`eman path $DEVS\`
+    ln -s \$stepdir/corpus.txt.gz dev.$SRC.gz      || die "Failed to link to source development file"
+  fi
+  if [ -n "$DEVT" ] ; then
+    stepdir=\`eman path $DEVT\`
+    ln -s \$stepdir/corpus.txt.gz dev.$TGT.gz      || die "Failed to link to target development file"
+  fi
+  if [ -n "$TESTS" ] ; then
+    stepdir=\`eman path $TESTS\`
+    ln -s \$stepdir/corpus.txt.gz test.$SRC.gz     || die "Failed to link to source test file"
+  fi
+  if [ -n "$TESTT" ] ; then
+    stepdir=\`eman path $TESTT\`
+    ln -s \$stepdir/corpus.txt.gz test.$TGT.gz     || die "Failed to link to target test file"
+  fi
+else
+  ln -s $TRAINALSSTEPDIR/corpus.gz trainal.$SRC.gz || die "Failed to link to source alignment training file"
+  ln -s $TRAINALTSTEPDIR/corpus.gz trainal.$TGT.gz || die "Failed to link to target alignment training file"
+  ln -s $TRAINTMSSTEPDIR/corpus.gz train.$SRC.gz   || die "Failed to link to source training file"
+  ln -s $TRAINTMTSTEPDIR/corpus.gz train.$TGT.gz   || die "Failed to link to target training file"
+  ln -s $TRAINLMTSTEPDIR/corpus.gz trainlm.$TGT.gz || die "Failed to link to target language model training file"
+  ln -s $DEVSSTEPDIR/corpus.gz dev.$SRC.gz         || die "Failed to link to source development file"
+  ln -s $DEVTSTEPDIR/corpus.gz dev.$TGT.gz         || die "Failed to link to target development file"
+  ln -s $TESTSSTEPDIR/corpus.gz test.$SRC.gz       || die "Failed to link to source test file"
+  ln -s $TESTTSTEPDIR/corpus.gz test.$TGT.gz       || die "Failed to link to target test file"
+fi
 # Clean training data and alignment of sentences of 100 or more words.
 # Longer sentences sometimes make binarization fail.
 $SCRIPTS/clean-corpus-dan.pl -min 1 -max 99 trainal.$SRC.gz trainal.$TGT.gz train.$SRC.gz train.$TGT.gz \\
