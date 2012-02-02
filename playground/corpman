@@ -202,6 +202,8 @@ if ($register) {
   if (defined $entry) {
     if ($entry->{stepname} eq $stepname) {
       if ($entry->{linecount} == -1) {
+        $entry->{linecount} = $linecount;
+        saveidx($index);
         $force_info_update = 1;
       }
     } else {
@@ -211,14 +213,14 @@ if ($register) {
         print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
       }
     }
+  } else {
+    # add corpus to index
+    add_entry_incl_entries_of_separate_factors(
+        $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
+    # save the updated index
+    saveidx($index);
   }
 
-  # add corpus to index
-  add_entry_incl_entries_of_separate_factors(
-      $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
-
-  # save the updated index
-  saveidx($index);
 
   my $do_update_info = 1;
 
