@@ -1,0 +1,36 @@
+2012-02-02
+
+Some semi-manual preparations:
+
+** Essential: the raw corpora:
+
+czengall=c-news+c-techdoc+c-fiction+c-subtitles+c-eu+c-paraweb+c-navajo
+monoall=monoeurop+mononcomm+mononews07+mononews08+mononews09+mononews10+mononews11
+
+for y in 08 09 10 11 11raw; do for l in cs en; do
+  echo OUTLANG=$l SECTION=wmt$y eman init wmt --start
+done; done
+
+for s in `echo $czengall | tr + ' ' | sed 's/c-//g' `; do
+  echo SECTION=$s eman init czeng --start
+done
+
+for l in en cs; do for c in `echo $monoall | tr + ' '`; do
+  echo OUTLANG=$l SECTION=$c eman init wmtmono --start
+done; done
+
+** Optional: pre-generate for mert etc.
+
+for l in en cs; do for c in wmt08 wmt09 wmt10 wmt11 wmt11raw; do
+  echo ./corpman $c/$l"NmT1"+stc --start
+done; done
+
+** Optional: pre-generate for align and mixlm
+
+corps=`echo $czengall | tr '+' ' '`
+corps=`echo $monoall | tr '+' ' '`
+for l in cs en; do
+  for c in $corps; do 
+    echo CORP=$c CORPAUG="$l"NmT1+stc ORDER=6 SRILMSTEP=s.srilm.117f0cfe.20120202-0037 eman init lm --mem=30g --start
+  done
+done
