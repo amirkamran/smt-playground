@@ -4,6 +4,8 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
+PLAYGROUND=$(eman path)
+
 # Ensure all the required variables are set (or provide the default)
 eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
                  help='where are WMT mono training files' \
