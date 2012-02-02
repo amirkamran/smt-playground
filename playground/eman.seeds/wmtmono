@@ -17,6 +17,7 @@ eman defvar WMT_SOURCEDIR default='/net/data/WMT12' \
 eval `eman bash-loadvars`
 
 # mapping of our short names (e.g. wmt09) to filename masks
+bnmonoall=*$OUTLANG*gz
 bnmononews07=news.2007.$OUTLANG*gz
 bnmononews08=news.2008.$OUTLANG*gz
 bnmononews09=news.2009.$OUTLANG*gz
@@ -27,8 +28,11 @@ bnmononcomm=news-commentary*.$OUTLANG.gz
 eval "bn=\$bn$SECTION"
 [ -z "$bn" ] && die "Unrecognized \$SECTION $SECTION"
 
-fn=`find $WMT_SOURCEDIR -name "$bn"`
-[ -e "$fn" ] || die "Failed to find corpus for $SECTION $OUTLANG (searched for $bn, got $fn)"
+fn=`find $WMT_SOURCEDIR -name "$bn" | tr '\n' ' '`
+for f in $fn; do
+  [ -e "$f" ] \
+  || die "Failed to find corpus for $SECTION $OUTLANG (searched for $bn, got $f)"
+done
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
