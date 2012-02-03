@@ -130,15 +130,12 @@ if [ "$IMPORTCORPUS" == "yes" ] ; then
     stepdir=\`eman path $TRALT\`
     ln -s \$stepdir/corpus.txt.gz trainal.$TGT.gz  || die "Failed to link to target alignment training file"
   fi
-  ###!!! Abych byl schopen pustit svůj vlastní alignment, potřebuju aspoň ta data nahoře.
-  ###!!! Korpusy pro TM nezískám, dokud nepustím s.tm, a ten nepustím, dokud nedodám nějaký alignment.
-  ###!!! Proto zatím do trénovacích dat pro TM dávám náhražku, aby vůbec něco běželo.
-  if [ -n "$TRALS" ] ; then
-    stepdir=\`eman path $TRALS\`
+  if [ -n "$TRTMS" ] ; then
+    stepdir=\`eman path $TRTMS\`
     ln -s \$stepdir/corpus.txt.gz train.$SRC.gz    || die "Failed to link to source training file"
   fi
-  if [ -n "$TRALT" ] ; then
-    stepdir=\`eman path $TRALT\`
+  if [ -n "$TRTMT" ] ; then
+    stepdir=\`eman path $TRTMT\`
     ln -s \$stepdir/corpus.txt.gz train.$TGT.gz    || die "Failed to link to target training file"
   fi
   if [ -n "$TRLMT" ] ; then
