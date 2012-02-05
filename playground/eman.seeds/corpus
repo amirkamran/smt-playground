@@ -58,6 +58,10 @@ options=0
 [ "$options" -eq 1 ] || die "Bad usage: Needed exactly one of RUN_COMMAND, COMBINE_PARTS and TAKE_FROM_COMMAND, got $options"
 
 if [ ! -z "$RUN_COMMAND" ]; then
+  [ ! -z "$STEPNAME" ] \
+    || die "Please define \$STEPNAME, indicating where the source corpus is."
+  [ -d "../$STEPNAME" ] \
+    || die "The directory with input (../\$STEPNAME) not found"
   inf="../$STEPNAME/$FILENAME"
   # we're not checking -e because the dep may not be done yet
   if [ "$JOBS" == 0 ]; then
