@@ -668,6 +668,44 @@ if ($cmd eq "abolish") {
   exit $waserror;
 }
 
+if ($cmd eq "prepare") {
+  my $step = shift;
+  mydie "usage: eman prepare STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  $waserror = ! prepare($s);
+  exit $waserror;
+}
+
+if ($cmd eq "run") {
+  my $step = shift;
+  mydie "usage: eman run STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  $waserror = ! submit($s);
+  exit $waserror;
+}
+
+if ($cmd eq "continue") {
+  my $step = shift;
+  mydie "usage: eman continue STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  chdir_to_stepdir($s);
+  my $stat = load_status($s);
+  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)."
+    if $stat ne "FAILED";
+  save("eman.status", "PREPARED"); # fake our status
+  $waserror = ! submit($s);
+  exit $waserror;
+}
+
+if ($cmd eq "start") {
+  my $step = shift;
+  mydie "usage: eman run STEPDIR" if ! defined $step;
+  my $s = guess_step($step); # happily guess the exact step
+  $waserror = ! start($s);
+  exit $waserror;
+}
+
+
 # the following commands don't work with readonly
 print STDERR "Warning: running '$cmd' in read-only mode, make sure to reindex.\n"
   if $readonly;
@@ -721,44 +759,6 @@ if ($cmd eq "clone") {
       }
     }
   }
-  exit $waserror;
-}
-
-if ($cmd eq "prepare") {
-  my $step = shift;
-  mydie "usage: eman prepare STEPDIR" if ! defined $step;
-  my $s = guess_step($step); # happily guess the exact step
-  $waserror = ! prepare($s);
-  exit $waserror;
-}
-
-if ($cmd eq "run") {
-  my $step = shift;
-  mydie "usage: eman run STEPDIR" if ! defined $step;
-  my $s = guess_step($step); # happily guess the exact step
-  $waserror = ! submit($s);
-  exit $waserror;
-}
-
-if ($cmd eq "continue") {
-  my $step = shift;
-  mydie "usage: eman continue STEPDIR" if ! defined $step;
-  my $s = guess_step($step); # happily guess the exact step
-  chdir_to_stepdir($s);
-  my $stat = load_status($s);
-  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)."
-    if $stat ne "FAILED";
-  save("eman.status", "PREPARED"); # fake our status
-  $waserror = ! submit($s);
-  exit $waserror;
-}
-
-
-if ($cmd eq "start") {
-  my $step = shift;
-  mydie "usage: eman run STEPDIR" if ! defined $step;
-  my $s = guess_step($step); # happily guess the exact step
-  $waserror = ! start($s);
   exit $waserror;
 }
 
