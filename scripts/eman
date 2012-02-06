@@ -97,6 +97,11 @@ my $do_start = 0;
 my $subst = undef;
 my $avoid = undef;
 my $reuse = undef;
+my $fictional_reuse = undef; # when cloning from a text recipe, we sometimes
+# need to say that a step is already available where it actually it not but
+# where we know the init phase of the depending step will solve it somehow.
+# With corpman, this happens quite often when there are more ways to create a
+# corpus.
 my $avoid_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 $readonly = 1 if defined $ENV{"EMAN_READONLY"};
@@ -155,6 +160,7 @@ my %options = (
   "s|subst=s@" => \$subst,
   "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
+  "fictional-reuse=s@" => \$fictional_reuse,
   "all-avoid!" => \$avoid_all,
   "start!" => \$do_start,
   "print-created-step!" => \$print_created_step,
@@ -173,6 +179,8 @@ GetOptions(%options) or exit 1;
 
 my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
+my %fictional_reuse = map { ($_,1) } @$fictional_reuse
+  if defined $fictional_reuse;
 
 # colorize regex outputs if substituting and output is terminal (or wished)
 if ($colorize || (!defined $colorize && -t STDOUT)) {
@@ -939,6 +947,10 @@ sub init_by_recipe {
     print STDERR "Forced to --reuse: $recipe->{name}\n";
     return $recipe->{"name"};
   }
+  if ($fictional_reuse{$recipe->{"name"}}) {
+    print STDERR "Forced to --fictional-reuse: $recipe->{name}\n";
+    return $recipe->{"name"};
+  }
 
   # print "INIT_BY_RECIPE: $recipe->{name}\n";
 
@@ -1039,7 +1051,7 @@ sub init_by_recipe {
   } else {
     # init a new step using the vars
     my $steptype = get_steptype($recipe->{"name"});
-    print STDERR "Initing new step: $steptype\n";
+    print STDERR "Initing new step $steptype for the $recipe->{name} in the recipe.\n";
     my $newstep = init($steptype, \@newvars, $recipe->{"name"});
     # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
     return $newstep;
