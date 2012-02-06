@@ -3,4 +3,4 @@ do
   JAVA_ARGS=$JAVA_ARGS" -D"$i
 done
 
-java -Xms500M -Xmx2000M -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter score
+java -Xms500M -Xmx12000M -XX:-UseGCOverheadLimit -cp LuceneIndexer.jar:lib/* $JAVA_ARGS cz.cuni.mff.ufal.lucene.DomainFilter score

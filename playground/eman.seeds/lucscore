@@ -1,0 +1,80 @@
+#!/bin/bash
+# eman step to score baseline translation
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+LUCSCOREDIR=`pwd` # actual directory (lucindexscore)
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+   defvar LUCINDEXSTEP type=reqstep default='' help='where created lucene index is' \
+   defvar MERTSTEP default='' type=reqstep help='output of baseline translation' \
+   defvar CUT default='3' help='cut-off limit for lucene' \
+   defvar OPTIONS default='' help='options for lucene filtering' \
+   defvar REFAUG inherit=MERTSTEP help='lang+factor for reference file in mertstep' \
+   defvar TESTCORP inherit=MERTSTEP help='baseline translation of test file from mertstep' \
+   defvar SRCCORP inherit=LUCINDEXSTEP help='large monolingual corpora used in lucindexstep' \
+   defvar OUTCORP default='output.gz' help='filename of the output' \
+   defvar OUTLANG default='' help='language of output' \
+   defvar OUTFACTORS default='' help='factors of output' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+MERTSTEPDIR=`eman path $MERTSTEP`
+LUCINDEXSTEPDIR=`eman path $LUCINDEXSTEP`
+
+# Check our input
+[ -z "$MERTSTEP" ] || [ -e $MERTSTEPDIR/evaluation.opt.txt ] \
+|| die "\$MERTSTEP/evaluation.opt.out not found"
+
+[ -z "$LUCINDEXSTEP" ] || [ -e $LUCINDEXSTEPDIR/indexes ] \
+|| die "\$LUCINDEXSTEP/indexes not found"
+
+
+# other vars, not influencing exact output
+JOBS=${JOBS:-30}
+SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
+
+cmd="cd $PLAYGROUND/LuceneIndexer && ./score-join $MERTSTEPDIR/evaluation.opt.txt $CUT $LUCINDEXSTEPDIR/indexes $LUCSCOREDIR/output.info" 
+
+FILENAME=$SRCCORP-lucscore-$TESTCORP-$TARGETLANG-$MERTSTEP-$TARGETFACTS-$CUT
+
+# Don`t continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "============================"
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\` 
+echo "============================"
+
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+$cmd || die "Failed to filter index"
+gzip $LUCSCOREDIR/output.info
+
+zcat $LUCSCOREDIR/output.info.gz | cut -f 3 | gzip -c > $LUCSCOREDIR/$OUTCORP 
+LINECOUNT=`zcat $LUCSCOREDIR/output.info.gz | wc -l`
+
+echo "$OUTCORP	2	$FILENAME	sentids	sentid	$LINECOUNT" > $LUCSCOREDIR/corpman.info 
+echo "$OUTCORP	3	$FILENAME	$OUTLANG	$OUTFACTORS	$LINECOUNT" >> $LUCSCOREDIR/corpman.info
+
+echo Done.
+eman succeed \$mydir
+
+echo "============================"
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "============================"
+
+KONEC
+

@@ -1,0 +1,22 @@
+#!/bin/bash
+#./score-join input-file 3 index output-file
+# Take input file, split it to the sentences, find 3 most similiar sentences for each sentence in input-file in index and print concatenated output 
+
+i=$(($i+1));
+while read line; do 
+	echo $line > temp-$i;
+	qsubmit --jobname=lucene-test-$i -l mf=16g "./score inputfile=temp-$i lucene.index.directory=$3 output.lines=$2 > temp-out-$i";
+	sleep 60;
+	i=$(($i+1));
+done < $1
+
+while [ `qstat | grep lucene | wc -l` -gt 0 ]; do
+	echo "`date`: Waiting for lucene";
+	sleep 30;
+done
+
+touch $4;
+i=$(($i-1))
+for j in `seq 1 $i`; do
+	cat temp-out-$j >> $4
+done
