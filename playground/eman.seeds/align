@@ -102,7 +102,7 @@ srclen=\`zcat corpus.src.gz | wc -l\`
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
   
 
-echo "Aligned, now create corpman info."
+echo "Aligned, now register alignments in corpman."
 i=1
 for s in $(echo $ALISYMS | tr , ' '); do \\
   $PLAYGROUND/corpman register -- alignment.gz \$i $CORPUS \$s-$ALILABEL ali \$srclen \\
