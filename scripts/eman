@@ -25,6 +25,7 @@ use Digest::MD5 qw(md5_hex);
 use Fcntl qw(LOCK_EX LOCK_NB);
 use File::NFSLock;
 use FindBin qw($Bin);
+use List::Util qw(min);
 my $eman = $Bin."/".basename($0); # full path to ourselves
 
 # command name abbreviations, identities provided for commands with no abbrevs
@@ -2086,9 +2087,9 @@ sub select_steps {
           $error = 1;
           last;
         }
-        @steps  = @steps[0 .. $n - 1];
+        @steps  = @steps[0 .. min($n - 1, $#steps)];
       }
-      when ("lh") { @steps = @steps[0 .. 9]; }
+      when ("lh") { @steps = @steps[0 .. min(9, $#steps)]; }
       when ("s") {
         my $status = shift @args;
         if (! $status) {
