@@ -3,7 +3,7 @@
 
 function die() { echo "$@" >&2; exit 1; }
 
-s=`eman guess "$1"`
+s=`eman guess --readonly "$1"`
 [ -d "$s" ] || die "Bad step specifier: $1"
 
 logf=`ls -t $s/log.o* 2>/dev/null | head -n1`

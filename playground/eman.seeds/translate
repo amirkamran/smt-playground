@@ -54,12 +54,12 @@ srccorpstep=$($PLAYGROUND/corpman --init $TESTCORP/$SRCAUG | cut -f1)
 
 eman add-deps . $srccorpstep $tgtcorpstep
 
-OUTLANG=`echo $REFAUG | cut -d'+' -f1`
-UNTOKFACT="$STEPNAME-untok"
-TOKFACT="$STEPNAME-$(echo $REFAUG | cut -d'+' -f2-)"
-ALIFACT="$STEPNAME-ali"
+OUTLANG=`echo $REFAUG | cut -d'+' -f1`_$STEPNAME
+DETOKFACT=untok
+TOKFACT="$(echo $REFAUG | cut -d'+' -f2-)"
+ALIFACT="ali"
 
-UNTOKAUG="$OUTLANG+$UNTOKFACT" eman defvar UNTOKAUG
+DETOKAUG="$OUTLANG+$DETOKFACT" eman defvar DETOKAUG
 TOKAUG="$OUTLANG+$TOKFACT" eman defvar TOKAUG
 OUTALIAUG="$OUTLANG+$ALIFACT" eman defvar OUTALIAUG
 
@@ -69,7 +69,7 @@ $PLAYGROUND/corpman register -- translated.gz \
   -1 $TESTCORP $OUTLANG $TOKFACT -1 0 \
 || die "Can't register corpus"
 $PLAYGROUND/corpman register -- translated.untok.gz \
-  -1 $TESTCORP $OUTLANG $UNTOKFACT -1 0 \
+  -1 $TESTCORP $OUTLANG $DETOKFACT -1 0 \
 || die "Can't register corpus"
 $PLAYGROUND/corpman register -- alignment.gz \
   -1 $TESTCORP $OUTLANG $ALIFACT -1 0 \
@@ -169,7 +169,7 @@ $PLAYGROUND/corpman register -- translated.gz \
   -1 $TESTCORP $OUTLANG $TOKFACT \$linecount 0 \
 || die "Can't register linecount of the translated corpus"
 $PLAYGROUND/corpman register -- translated.untok.gz \
-  -1 $TESTCORP $OUTLANG $UNTOKFACT \$linecount 0 \
+  -1 $TESTCORP $OUTLANG $DETOKFACT \$linecount 0 \
 || die "Can't register linecount of the translated corpus"
 $PLAYGROUND/corpman register -- alignment.gz \
   -1 $TESTCORP $OUTLANG $ALIFACT \$linecount 0 \
