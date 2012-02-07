@@ -8,13 +8,18 @@ set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
 [ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+SMTSCR=$STATMT/scripts
 eman \
   defvar MERTSTEP type=reqstep help='where are the tuned weights of the model' \
   defvar EXTRACTSTEP type=reqstep help='where is the extracted grammar for the test set' \
   defvar EXTRACTFOR inherit=EXTRACTSTEP:FOR help='what are we going to translate (dev|test)' \
   defvar DATASTEP type=reqstep inherit=EXTRACTSTEP help='where are test.$SRC.gz and test.$TGT.gz' \
+  defvar SGMLSRC help='path to the original source file in SGML' \
+  defvar SGMLREF help='path to the original reference file in SGML' \
   defvar JOSHUASTEP type=reqstep inherit=EXTRACTSTEP help='where is compiled Joshua' \
   defvar JOSHUA inherit=JOSHUASTEP help='where is compiled Joshua' \
+  defvar GIZASTEP type=reqstep help='where is compiled Moses including BLEU scorer' \
+  defvar SCORERS default="BLEU;PER;TER;CDER" \
   defvar SRC inherit=EXTRACTSTEP help='source language code' \
   defvar TGT inherit=EXTRACTSTEP help='target language code' \
 || exit 1
@@ -29,10 +34,16 @@ echo $SRC-$TGT > eman.tag
 [ -z "$INIT_ONLY" ] || exit 0
 
 # convert the dependencies to absolute paths
+GIZASTEPDIR=`eman path $GIZASTEP`
+EVALUATOR=$GIZASTEPDIR/moses/mert/evaluator
 DATASTEPDIR=`eman path $DATASTEP`
 MERTSTEPDIR=`eman path $MERTSTEP`
 MERTRESULT=$MERTSTEPDIR/decoder-config.txt.ZMERT.final
 EXTRACTSTEPDIR=`eman path $EXTRACTSTEP`
+
+gunzip $STATMT/src/testbleu.gz -c > ./testbleu \
+|| die "Cannot extract testbleu binary!"
+chmod +x ./testbleu
 
 cat << KONEC > eman.command
 # This is the command to be run here
@@ -78,6 +89,23 @@ sed 's/_OOV//g' < test.joshua-oov.$TGT.txt > test.joshua.$TGT.txt \\
 gunzip -c $DATASTEPDIR/test.$TGT.gz > test.$TGT.txt || die "Failed to gunzip the reference translation of the test file"
 java -cp $JOSHUA/bin joshua.util.JoshuaEval -cand test.joshua.$TGT.txt -ref test.$TGT.txt \\
 || die "Failed to compute the BLEU score"
+# Detokenize and capitalize the output text. That is the way a human user wants to get it. And also the way we are to submit it.
+# We may also want to normalize punctuation (convert Unicode quotation marks to undirected ASCII ") to get the data as similar as possible to what mteval-v11b will consider.
+# However, we probably only want to do this with one of our contrastive submissions, while the primary result should have correct punctuation for the human evaluators.
+# $SMTSCR/normalize-punctuation.pl $TGT
+sysname=uk-dan
+( cat test.joshua.$TGT.txt | $SMTSCR/capitalize_sentences.pl | $SMTSCR/detokenizer.pl | $SMTSCR/wrap-xml.pl $TGT $SGMLSRC \$sysname > test.joshua.$TGT.sgml ) || "Detokenization failed"
+# The following two evaluators do not perform their own tokenization.
+# We thus evaluate tokenized output against tokenized reference. (We do not want to lose score points for punctuation tokens.)
+# Ondřej's testbleu ought to be much faster than the Moses evaluator below.
+( ./testbleu test.$TGT.txt < test.joshua.$TGT.txt | tee BLEU ) \\
+|| die "Testbleu evaluator failed"
+# Than the widely used mteval-v11b
+( $SMTSCR/mteval-v11b.pl -r $SGMLREF -s $SGMLSRC -t test.joshua.$TGT.sgml ) \\
+|| die "MTeval failed"
+# Now also the Moses evaluator.
+( $EVALUATOR --sctype "$SCORERS" --reference test.$TGT.txt --candidate test.joshua.$TGT.txt --bootstrap 1000 --rseed 1234 | tee scores ) \\
+|| die "Moses evaluator failed"
 
 # Standard command footer
 echo Done.
