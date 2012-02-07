@@ -178,8 +178,8 @@ fi
 [ \$success == 1 ] || die "THERE WERE ERRORS!! See above."
 
 echo "Getting phrase counts..."
-zwc -l model/*.gz | tee phrase-counts
- 
+( $PLAYGROUND/tools/zwc -l model/*.gz | tee phrase-counts ) || die "Failed to count phrases"
+
 
 # Standard command footer
 echo Done.
