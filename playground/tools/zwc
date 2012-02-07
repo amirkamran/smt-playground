@@ -1,0 +1,244 @@
+#!/usr/bin/perl
+# The Missing Textutils, Ondrej Bojar, obo@cuni.cz
+# http://www.cuni.cz/~obo/textutils
+#
+# 'zwc' is a word counting utility (wc) on (normal and) compressed files.
+# Allows also counting words in each column separately.
+# Allows also grouping using a column value (but always within each file).
+# Allows also quick estimate based on the beginning of the file.
+#
+# $Id: zwc,v 1.2 2012-01-23 08:36:16 bojar Exp $
+
+use strict;
+use Getopt::Long;
+
+my $fl = undef;
+my @glob = ();
+my $countw = 0;
+my $countc = 0;
+my $countb = 0;
+my $countl = 0;
+my $countcw = 0;
+my $ensure_input_col_count = undef;
+my $total_only = 0;
+my $groupcol = undef;
+my $utf = 0;
+my $estimate = 0;
+my $estimate_time_limit = 10; # estimate in 10 seconds
+my $estimate_at_perc = 50; # estimate once at 50% of bytes read
+GetOptions(
+  "fl|filelist=s" => \$fl,
+  "g|glob=s" => \@glob,
+  "utf" => \$utf,  # input is in utf8
+  "l" => \$countl,  # lines
+  "w" => \$countw,  # words (delimited by white space)
+  "c" => \$countc,  # utf-8 characters if --utf or bytes by default, incl. \n
+  "b" => \$countb,  # bytes
+  "cw|count-words-in-columns" => \$countcw,
+  "ensure-input-col-count=i" => \$ensure_input_col_count,
+  "tot|total-only" => \$total_only,
+  "group=i" => \$groupcol,
+  "estimate" => \$estimate,
+  "estimate-time-limit=i" => \$estimate_time_limit,
+  "estimate-at-perc=i" => \$estimate_at_perc,
+) or exit 1;
+
+if (!$countw && !$countc && !$countl && !$countcw && !$countb) {
+  # default is to count words, chars and lines
+  $countw = $countc = $countl = 1;
+}
+
+$groupcol-- if defined $groupcol;
+
+my @fl = ();
+if (defined $fl) {
+  if ($fl eq "-") {
+    *IN = *STDIN;
+  } else {
+    open IN, $fl or die "Can't read $fl";
+  }
+  while (<IN>) {
+    chomp;
+    push @fl, $_;
+  }
+  if ($fl ne "-") {
+    close(IN);
+  }
+} else {
+  push @ARGV, "-" if 0 == scalar @ARGV;
+}
+
+my $totc = 0;
+my $totb = 0;
+my $totw = 0;
+my $totl = 0;
+my @totcw = ();
+
+@totcw = map {0} (1..$ensure_input_col_count)
+  if defined $ensure_input_col_count;
+
+foreach my $f (@ARGV, (map {(glob($_));} @glob), @fl) {
+  runwc($f);
+}
+
+if ($total_only) {
+  print "$totl\t" if $countl;
+  print "$totw\t" if $countw;
+  print "$totc\t" if $countc;
+  print "$totb\t" if $countb;
+  print join("\t", map { $_ || 0 } @totcw)."\t" if $countcw;
+  print "\n";
+}
+
+sub runwc {
+  my $f = shift;
+  my $totbytes = 0;
+  my $opn;
+  if ( -e $f ) {
+    my $ft = `file '$f'`;
+    # file might not recognize some files!
+    if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+      $opn = "zcat '$f' |";
+      if ($estimate) {
+	my $sizes = `gzip -l --quiet '$f'`;
+	chomp $sizes;
+	if ($sizes =~ /^\s*[0-9]+\s+([0-9]+)\s+([-0-9.]*)%/) {
+          $totbytes = $1;
+	  my $ratio = $2;
+	  print STDERR "## Estimate very unreliable on poorly compressed files: $f; comp.rat. $ratio\n" if $ratio < 50;
+	} else {
+	  die "Failed to get uncompressed size from $sizes";
+	}
+      }
+    } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+      $opn = "bzcat '$f' |";
+      die "Cannot --estimate for bzipped files" if $estimate;
+    } else {
+      $opn = "$f";
+      $totbytes = -S $f;
+    }
+  } elsif ( $f eq "-" ) {
+    $opn = "-";
+  } else {
+    die "Not found: $f";
+  }
+  open INF, $opn or die "Can't read: $opn";
+  binmode(INF, ":utf8") if $utf;
+  my $l = 0;
+  my $w = 0;
+  my $c = 0;
+  my $b = 0;
+  my @cw = ();
+  my $groupdata = undef;
+  my $starttime = time();
+  my $early_stop = 0;
+  while (<INF>) {
+    if ($estimate && $l % 1000 == 0 && $b > 0) {
+      # consider stopping
+      if ($estimate_time_limit  && (time()-$starttime) > $estimate_time_limit) {
+        $early_stop = "after $estimate_time_limit seconds";
+        last;
+      }
+      if ($estimate_at_perc && $b/$totbytes*100 > $estimate_at_perc) {
+        $early_stop = sprintf("at %.1f%% of bytes", $b/$totbytes*100);
+        last;
+      }
+    }
+    $l++;
+    my $neww = 0;
+    my $newc = 0;
+    my $newb = 0;
+    my @newcw = ();
+    if ($countw) {
+      $neww = scalar(split /\s+/, trim($_));
+      $w += $neww;
+    }
+    if ($countc) {
+      $newc = length($_);
+      $c += $newc;
+    }
+    if ($countb || $estimate) {
+      $newb = do { use bytes; length($_) };
+      $b += $newb;
+    }
+    if ($countcw || defined $groupcol) {
+      my @line = split /\t/;
+      chomp $line[-1];
+
+      if ($countcw) {
+        die "$f:$l: Unexpected number of columns: got "
+	  .scalar(@line).", expected ".$ensure_input_col_count
+	  if defined $ensure_input_col_count
+	    && $ensure_input_col_count != scalar(@line);
+        for(my $i=0; $i<=$#line; $i++) {
+          $newcw[$i] = scalar(split /\s+/, trim($line[$i]));
+          $cw[$i] += $newcw[$i];
+        }
+      }
+
+      if (defined $groupcol) {
+        # collect counts to per-group statistics
+	my $group = trim($line[$groupcol]);
+	my @new = (
+	  $countl ? (1) : (),
+	  $countw ? ($neww) : (),
+	  $countc ? ($newc) : (),
+	  $countb ? ($newb) : (),
+	  $countcw ? (@newcw) : ()
+	);
+	for(my $i=0; $i<scalar @new; $i++) {
+	  $groupdata->{$group}->[$i] += $new[$i];
+	}
+      }
+    }
+  }
+  close INF;
+
+  my $scale = $totbytes / $b if $early_stop;
+  if ($early_stop) {
+    print STDERR "# stopped $early_stop, estimating the total\n";
+    $b = $totbytes; # this is exact
+    $c = int($c*$scale);
+    $l = int($l*$scale);
+    $w = int($w*$scale);
+    if ($countcw) {
+      map { int($_*$scale) } @cw;
+    }
+  }
+
+  if (!$total_only) {
+    if (defined $groupcol) {
+      foreach my $group (sort {$a cmp $::b} keys %$groupdata) {
+        if ($early_stop) {
+	  print STDERR "# group information not reliable with --estimate\n";
+	  map { int( ($_ || 0) * $scale ) } @{$groupdata->{$group}};
+	}
+        print join("\t", (map {$_ || 0 } @{$groupdata->{$group}}, $group, $f));
+	print "\n";
+      }
+    } else {
+      print "$l\t" if $countl;
+      print "$w\t" if $countw;
+      print "$c\t" if $countc;
+      print "$b\t" if $countb;
+      print join("\t", map { $_ || 0 } @cw)."\t" if $countcw;
+      print $f;
+      print "\n";
+    }
+  }
+  $totc += $c;
+  $totb += $b;
+  $totl += $l;
+  $totw += $w;
+  for(my $i=0; $i<@cw; $i++) {
+    $totcw[$i] += $cw[$i];
+  }
+}
+
+
+sub trim {
+  my $s = shift;
+  $s =~ s/^\s+//;
+  $s =~ s/\s+$//;
+  return $s;
+}
