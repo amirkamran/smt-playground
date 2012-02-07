@@ -406,7 +406,7 @@ if ($cmd eq "defvar") {
   }
   exit $waserror;
 }
-## End of helper commands for bash scripting.
+## End of commands that don't manipulate index.
 
 
 ## Decide if we will lock the index
@@ -822,42 +822,69 @@ sub collect {
     # print STDERR "\n\n";
     foreach my $f (@files) {
       my $step = $f; $step =~ s/\/.*//;
-      my $res = undef;
+      my $name_to_res = undef;
       if ($regexorcmd =~ /^CMD:(.*)\$\$(.*)/) {
         # e.g. "CMD: du -sh $$"
-        $res = `$1 $f $2`;
+        my $res = `$1 $f $2`;
         chomp $res;
-        $res =~ s/\n+/ /;
+        if ($name eq "*") {
+          # assume the command emits name\tvalue pairs
+          foreach my $pair (split /\n/, $res) {
+            my ($k, $val) = split /\t/, $pair;
+            $name_to_res->{$k} = $val;
+          }
+        } else {
+          # whole output is the value
+          $res =~ s/\n+/ /;
+          $name_to_res->{$name} = $res;
+        }
       }
       elsif ($regexorcmd =~ /^CMD: *(.*)/) {
-        $res = `cat $f | $1`;
+        my $res = `cat $f | $1`;
         chomp $res;
-        $res =~ s/\n+/ /;
+        if ($name eq "*") {
+          # assume the command emits name\tvalue pairs
+          foreach my $pair (split /\n/, $res) {
+            my ($k, $val) = split /\t/, $pair;
+            $name_to_res->{$k} = $val;
+          }
+        } else {
+          # whole output is the value
+          $res =~ s/\n+/ /;
+          $name_to_res->{$name} = $res;
+        }
       } else {
         my $cont = load($f);
         if ($cont =~ /$regexorcmd/) {
-          $res = $1;
+          $name_to_res->{$name} = $1;
         } else {
           print STDERR "$f:Missed result for $name, no match of /$regexorcmd/";
           $ok = 0;
           next;
         }
       }
-      if (defined $got->{$step}->{$name} && $got->{$step}->{$name} ne $res) {
-        print STDERR "$f:Conflicting result for $name:"
-          ." $res vs. previous $got->{$step}->{$name}\n";
-        $ok = 0;
-      } else {
-        $got->{$step}->{$name} = $res;
+      # emit all obtained scores
+      foreach my $k (keys %$name_to_res) {
+        my $res = $name_to_res->{$k};
+        if (defined $got->{$step}->{$k} && $got->{$step}->{$k} ne $res) {
+          print STDERR "$f:Conflicting result for $k:"
+            ." $res vs. previous $got->{$step}->{$k}\n";
+          $ok = 0;
+        } else {
+          $got->{$step}->{$k} = $res;
+        }
+        my $tag = $knowntag{$step};
+        if (!defined $knowntag{$step}) {
+          $tag = load("$step/eman.tag");
+        }
+        $knowntag{$step} = $tag;
+        print $outh $step, "\t", $k, "\t", $res, "\t", $tag, "\n";
       }
-      my $tag = $knowntag{$step};
-      if (!defined $knowntag{$step}) {
-        $tag = load("$step/eman.tag");
-        print $outh $step, "\t", "TAG", "\t", $tag, "\n"; # emit also tag
-      }
-      $knowntag{$step} = $tag;
-      print $outh $step, "\t", $name, "\t", $res, "\t", $tag, "\n";
     }
+  }
+  foreach my $step (keys %knowntag) {
+    # emit also all tags
+    print $outh $step, "\t", "TAG", "\t", $knowntag{$step}, "\n";
   }
   close $outh;
   return $ok;
