@@ -139,7 +139,7 @@ if ( ! -e $indexfile || $reindex ) {
       next if $line eq "";
       my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
         = split /\t/, trim($line);
-      die "Bad entry $fn: $line" if $linecount !~ /^[0-9]+$/;
+      die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
       add_entry_incl_entries_of_separate_factors(
         $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
     }
