@@ -30,7 +30,8 @@ PLAYGROUND=`eman path`
 
 if [ -z "$ALISTEP" ]; then
   echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL"
-  export ALISTEP=`$PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali | cut -f1`
+  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --bashvars=ALISTEP=stepname)
+  export ALISTEP
   echo "Found ALISTEP=$ALISTEP"
   eman add-dep . "$ALISTEP" || die "Failed to depend on alistep $ALISTEP"
   eman defvar ALISTEP

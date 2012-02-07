@@ -2,6 +2,7 @@ This file lists known problems of eman, eman seeds and corpman
 --------------------------------------------------------------
 
 * Default vs. empty variables may cause problems in cloning.
+  [FIXED]
   Variables of individual steps can be explicitly blank or they can be
   undefined, taking the default value. Eman always stores all variables in
   eman.vars, but when cloning tracebacks, it searches for steps with a given
@@ -10,6 +11,9 @@ This file lists known problems of eman, eman seeds and corpman
   existing one. The existing step is not recognized as matching to the vars
   listed in the traceback, because they differ in non-mentioned variables (with
   default values).
+  The fix: eman does init such a step but it will notice the duplication and
+  remove it immediately after initing. One of the older usable steps will be
+  used.
 
 * Two means of dependencies cause confusion.
   Corpman knows how to construct trees of steps to prepare the corpus it
@@ -41,7 +45,27 @@ This file lists known problems of eman, eman seeds and corpman
     - This can happen if D2 forgets to add the corpus obtained from corpman
       during the init phase to its dependencies.
 
-  One more example of the problem:
+  Another hard example:
+  As above, we have *a traceback* where a downstream step D requires (and
+  depends on) a corpus C (with the specifier mycorp/mylang+myfact) created
+  from another corpus B in the traceback. Let's assume that corpman
+  rules allows the creation of mycorp/mylang+myfact differently, from step A,
+  and that this is actually how mycorp/mylang+myfact was created in the current
+  playground, leading to C'. When we try to clone the traceback, we get an
+  error that C can't be made because C' already has that particular corpus.
+
+  Wrong solution: we can't use --reuse or --avoid because none of the steps
+  mentioned in the traceback don't exist yet.
+
+  Solution: manually *remove* the corpus C from the traceback. Eman will assume
+  D has all prerequisites ready and during the init of D, corpman will provide
+  C' for mycorp/mylang+myfact. So the traceback of the successfully inited D
+  will be different from the original text-only traceback.
+  There is now a switch for this purpose in eman. Simply say
+  --fictional-reuse=C. This will make eman 'reuse' corpus C, i.e. assume D has
+  all prerequisites ready, just as we wanted.
+
+  And another example of the problem:
   s.mert now uses only corpman and does not put its dev and test corpora into
   dependencies. When cloning a scenario in a clean playground, the 'prepare'
   phase of s.mert suddenly waits for the corpora to get ready. If they were in

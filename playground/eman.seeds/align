@@ -32,12 +32,21 @@ GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # add source and target corpora to deps
-srccorpstep=$($PLAYGROUND/corpman --init $CORPUS/$SRCALIAUG | cut -f1)
+eval $($PLAYGROUND/corpman --init $CORPUS/$SRCALIAUG --bashvars=srccorpstep=stepname,srccorplen=linecount)
 [ ! -z "$srccorpstep" ] || die "Missing source corpus"
-tgtcorpstep=$($PLAYGROUND/corpman --init $CORPUS/$TGTALIAUG | cut -f1)
+eval $($PLAYGROUND/corpman --init $CORPUS/$TGTALIAUG --bashvars=tgtcorpstep=stepname,tgtcorplen=linecount)
 [ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
 
+[ $tgtcorplen == $srccorplen ] || die "Mismatching corpora lengths: src $srccorplen lines, tgt $tgtcorplen"
+
 eman add-deps . $srccorpstep $tgtcorpstep
+
+i=1
+for s in $(echo $ALISYMS | tr , ' '); do \
+  $PLAYGROUND/corpman register -- alignment.gz $i $CORPUS $s-$ALILABEL ali $srccorplen \
+  || die "Failed to register corpus"
+  i=$(($i+1))
+done
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0

@@ -36,6 +36,8 @@ my $dumpcmd = 0;
 my $dump = 0;
 my $register = 0;
 my $fakeno = 1; # the step number when for dry-runs
+my @bashvars = ();
+my $readonly = 0;
 
 GetOptions(
   "reindex!" => \$reindex,
@@ -45,6 +47,8 @@ GetOptions(
   "cmd!" => \$dumpcmd,
   "dump!" => \$dump,
   "verbose!" => \$verbose,
+  "read-only|readonly!" => \$readonly,
+  "bashvars=s" => \@bashvars,
 ) or exit 1;
 
 sub usage {
@@ -67,6 +71,10 @@ Options:
                  implies --wait
   --dump     ... dump the corpus to stdout, implies --wait
   --reindex  ... search all subdirs for corpman.info files
+  --bashvars=STEP=stepname,LINES=linecount
+             ... emits a string for bash eval that sets bash variables STEP
+                 to the output step name, LINES to corpus linecount etc.
+             ... disables the default three-column output
 ";
 }
 
@@ -242,6 +250,7 @@ if ($register) {
   }
 
   if ($do_update_info) {
+    $derived = "" if ! defined $derived;
     my $new_info_line = join("\t",
         $file, $column, $corp, $lang, $facts, $linecount, $derived);
     push @info_current, $new_info_line;
@@ -269,8 +278,9 @@ if ($register) {
   
   $facts =~ s/\|/+/g;
 
+  my $entry = build_exact_factors($corp, $lang, $facts);
   my ($stepname, $filename, $column)
-    = build_exact_factors($corp, $lang, $facts);
+    = ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
   
   if ($wait) {
     my $status = load_step_status($stepname);
@@ -298,8 +308,21 @@ if ($register) {
     }
     close $h;
   } else {
-    # print the details: stepname, filename and column
-    print $stepname, "\t", $filename, "\t", $column, "\n";
+    if (0 < scalar @bashvars) {
+      foreach my $bv (@bashvars) {
+        foreach my $outvar_internalvar (split /,/, $bv) {
+	  my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
+	  my $internalval = $entry->{$internalvar};
+	  die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
+	  print $outvar, "=", $internalval, "\n";
+	  die "Space or tab in value of $outvar (coming from $internalvar): $internalval\n"
+	    if $internalval =~ /\s/;
+	}
+      }
+    } else {
+      # print default details: stepname, filename and column
+      print $stepname, "\t", $filename, "\t", $column, "\n";
+    }
   }
 }
 
@@ -311,13 +334,16 @@ sub build_exact_factors {
   print STDERR "Called build_exact_factors @_\n" if $verbose;
   if ($entry->{"factind"} == -1) {
     # great, the given column contains exactly the factors we asked for
-    return ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
+    return $entry;
   } else {
     # not quite, we need to restrict the given factor
     my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
-    my $filename = "corpus.txt.gz";
-    my $column = -1;
-    return ($stepname, $filename, $column);
+    my $outentry = $entry;
+    # fake output entry values
+    $outentry->{"stepname"} = $stepname;
+    $outentry->{"filename"} = "corpus.txt.gz";
+    $outentry->{"column"}= -1;
+    return $outentry;
   }
 }
 
@@ -333,7 +359,7 @@ sub lazy_build {
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{linecount} == -1) {
-      die "The corpus $corp/$lang+$facts was registered, but is not ready yet\n";
+      die "The corpus $corp/$lang+$facts was registered, but it is not ready yet.\n";
     } else {
       return $entry;
     }
