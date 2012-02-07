@@ -1008,6 +1008,38 @@ sub init_by_recipe {
   $avoid{$recipe->{"name"}}=1 if $avoid_all;
     # --all-avoid forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
+  $knownstep = find_usable_step_given_hash($hash);
+
+  if (defined $knownstep) {
+    print STDERR "Reusing existing step: $knownstep\n";
+    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
+    return $knownstep;
+  } else {
+    # init a new step using the vars
+    my $steptype = get_steptype($recipe->{"name"});
+    print STDERR "Initing new step $steptype for the $recipe->{name} in the recipe.\n";
+    my $newstep = init($steptype, \@newvars, $recipe->{"name"});
+    # Double check that initing the new step did not lead to exacty the known
+    # step. This can happen due to default or blank variable values -- they are
+    # not mentioned in the traceback (so we don't find the known step in the
+    # first place).
+    my $oldknownstep = find_usable_step_given_hash($idx->{$newstep});
+    if (defined $oldknownstep && $oldknownstep ne $newstep) {
+      print STDERR "The new $newstep is identical to $oldknownstep. Removing the new $newstep.\n";
+      rmtree($newstep) or die "Warning: failed to remove $newstep.";
+      remove_step_from_index($newstep);
+      $newstep = $oldknownstep;
+    }
+
+    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
+    return $newstep;
+  }
+}
+
+sub find_usable_step_given_hash {
+  my $hash = shift;
+
+  my $knownstep = undef; # output placeholder
   my $knownsteps = $idx->{$hash};
   my $knownstep_ctime;
   if (defined $knownsteps) {
@@ -1043,19 +1075,7 @@ sub init_by_recipe {
         if $verbose;
     }
   }
-
-  if (defined $knownstep) {
-    print STDERR "Reusing existing step: $knownstep\n";
-    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
-    return $knownstep;
-  } else {
-    # init a new step using the vars
-    my $steptype = get_steptype($recipe->{"name"});
-    print STDERR "Initing new step $steptype for the $recipe->{name} in the recipe.\n";
-    my $newstep = init($steptype, \@newvars, $recipe->{"name"});
-    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
-    return $newstep;
-  }
+  return $knownstep;
 }
 
 
@@ -1933,6 +1953,16 @@ sub add_hash_to_index {
   } else {
     $idx->{$hash} = [$stepname];
   }
+}
+sub remove_step_from_index {
+  # this is used only in init() when we realize the step was already available
+  # so we assume there is no jid entry for the step
+  my $stepname = shift;
+  my $hash = $idx->{$stepname};
+  delete $idx->{$stepname};
+  delete $idx->{$stepname."path"};
+  my @removed = grep { $_ ne $stepname } @{$idx->{$hash}};
+  $idx->{$hash} = [ @removed ];
 }
 
 
