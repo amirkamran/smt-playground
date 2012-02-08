@@ -30,6 +30,7 @@ my $workdir = getcwd();
 my %expand_abbrev = qw(
   ls list
   reg register
+  reindex reindex
 );
 # all expanded names are also allowed:
 foreach my $val (values %expand_abbrev) {
@@ -97,6 +98,8 @@ if (! defined $cmd && ! $reindex) {
   usage();
   exit 1;
 }
+
+$reindex = 1 if defined $cmd && $cmd eq "reindex";
 
 # switch implications
 $wait = 1 if $dumpcmd || $dump;
@@ -203,7 +206,15 @@ foreach my $line (split /\n/, $rulestext) {
 
 exit 1 if $waserror;
 
-if ($cmd eq "register") {
+if (! defined $cmd) {
+  print STDERR "Nothing to do.\n";
+  exit;
+}
+  
+if ($cmd eq "reindex") {
+  print STDERR "Reindexed.\n";
+  exit;
+} elsif ($cmd eq "register") {
   my ($file, $column, $corp, $lang, $facts, $linecount, $derived) = @ARGV;
 
   # all previous items are defined if the last one is
@@ -279,11 +290,6 @@ if ($cmd eq "register") {
   # user wants a corpus
   my $descr = $cmd;
 
-  if (! defined $descr) {
-    print STDERR "No corpus description. Exiting.\n";
-    exit;
-  }
-  
   my $corp;
   my $lang;
   my $facts;
