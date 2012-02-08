@@ -1,13 +1,16 @@
 package cz.cuni.mff.ufal.lucene;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -40,6 +43,7 @@ public class DomainFilter {
 	static Properties config = new Properties();
 	static Version luceneVersion = Version.LUCENE_35;
 	Analyzer analyzer = null;
+	String encoding = "UTF8";
 
 	public DomainFilter() throws IllegalArgumentException, SecurityException,
 			InstantiationException, IllegalAccessException,
@@ -50,6 +54,7 @@ public class DomainFilter {
 		analyzer = (Analyzer) Class.forName(analyzerClass)
 				.getConstructor(new Class[] { Version.class })
 				.newInstance(luceneVersion);
+		encoding = config.getProperty("encoding");
 	}
 
 	public static void main(String args[]) throws Exception {
@@ -74,8 +79,12 @@ public class DomainFilter {
 			indexer.index(filename);
 			break;
 		case SCORE:
-			DomainFilter scorer = new DomainFilter();
-			scorer.score(filename);
+			DomainFilter sc1 = new DomainFilter();
+			sc1.score(filename, false);
+			break;
+		case SCORE_SENTENCE:
+			DomainFilter sc2 = new DomainFilter();
+			sc2.score(filename, true);
 			break;
 		case HELP:
 		default:
@@ -91,13 +100,13 @@ public class DomainFilter {
 		if(filename!=null && !filename.equals("")) {		
 			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
 				input = new BufferedReader(new InputStreamReader(
-						new GZIPInputStream(new FileInputStream(filename))));
+						new GZIPInputStream(new FileInputStream(filename)), Charset.forName(encoding)));
 			} else {
 				input = new BufferedReader(new InputStreamReader(
-						new FileInputStream(filename)));
+						new FileInputStream(filename), Charset.forName(encoding)));
 			}
 		} else {
-			input = new BufferedReader(new InputStreamReader(System.in));
+			input = new BufferedReader(new InputStreamReader(System.in, Charset.forName(encoding)));
 			consoleInput = true;
 		}
 		deleteDir(new File(config.getProperty("lucene.index.directory")));
@@ -121,21 +130,31 @@ public class DomainFilter {
 		writer.close();
 	}
 
-	private void score(String filename) throws FileNotFoundException,
+	private void score(String filename, boolean sentenceBySentence) throws FileNotFoundException,
 			IOException, ParseException {
 		BufferedReader input = null;
 		boolean consoleInput = false;
+		int i = 0;
+		
+		BufferedWriter outputWriter = new BufferedWriter(new OutputStreamWriter(System.out, Charset.forName(encoding)));
+		String outputFormat[] = config.getProperty("output.format").split("\\|");
+		OutputFields outputFields[] = new OutputFields[outputFormat.length];
+		String delimiter = config.getProperty("output.seperator");
+		for (i = 0; i < outputFormat.length; i++) {
+			outputFields[i] = OutputFields.valueOf(outputFormat[i]);
+		}
+
 		
 		if(filename!=null && !filename.equals("")) {		
 			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
 				input = new BufferedReader(new InputStreamReader(
-						new GZIPInputStream(new FileInputStream(filename))));
+						new GZIPInputStream(new FileInputStream(filename)), Charset.forName(encoding)));
 			} else {
 				input = new BufferedReader(new InputStreamReader(
-						new FileInputStream(filename)));
+						new FileInputStream(filename), Charset.forName(encoding)));
 			}
 		} else {
-			input = new BufferedReader(new InputStreamReader(System.in));
+			input = new BufferedReader(new InputStreamReader(System.in, Charset.forName(encoding)));
 			consoleInput = true;
 		}
 
@@ -153,18 +172,42 @@ public class DomainFilter {
 		input.close();
 
 		IndexReader indexReader = getReader();
+		
+		
+		int outputLines = Integer.MAX_VALUE;
 
-		int i = 0;
+		try {
+			outputLines = Integer.parseInt(config.getProperty("output.lines"));
+		} catch (Exception e) {
+			
+		}
+
+		if (outputLines == 0)
+			outputLines = Integer.MAX_VALUE;
+	
+		int ngramUpto = 1;
+		try {
+			ngramUpto = Integer.parseInt(config.getProperty("query.ngram.upto"));
+		} catch (Exception e) {
+			
+		}
+		
+		int nbest = 1;
+		try {
+			nbest = Integer.parseInt(config.getProperty("score.nbest"));
+		} catch (Exception e) {
+			
+		}
+		
 
 		for (String l : lines) {
 
-			NGramExtractor ngramExtractor = new NGramExtractor(3);
+			NGramExtractor ngramExtractor = new NGramExtractor(ngramUpto);
 			ngramExtractor.calculateNGrams(l);
 
 			BooleanQuery query = new BooleanQuery();
 
-			ArrayList<String> ngrams = ngramExtractor.getNGramsUpto(Integer
-					.parseInt(config.getProperty("query.ngram.upto")));
+			ArrayList<String> ngrams = ngramExtractor.getNGramsUpto(ngramUpto);
 			for (String ngram : ngrams) {
 				// queryString.append('"').append(ngram.toString()).append('"').append(" OR ");
 				query.add(new TermQuery(new Term(IndexedFields.TEXT.toString(),
@@ -178,61 +221,71 @@ public class DomainFilter {
 
 			IndexSearcher searcher = new IndexSearcher(indexReader);
 
-			TopDocs matches = searcher.search(query, Integer.MAX_VALUE);
+			TopDocs matches = null;
+			
+			if(sentenceBySentence) {
+				matches = searcher.search(query, nbest);
+			} else {
+				matches = searcher.search(query, outputLines);
+			}
 			// System.out.println("Query # " + ++i + " :: Hits=" +
 			// matches.totalHits + " :: MaxScore=" + matches.getMaxScore());
 
 			for (ScoreDoc scoreDoc : matches.scoreDocs) {
 				Document document = searcher.doc(scoreDoc.doc);
 				String documentID = document.get(IndexedFields.ID.toString());
-				float score = scoreDoc.score;
-				if (results.containsKey(documentID)) {
-					Result prevScore = results.get(documentID);
-					prevScore.setScore(prevScore.getScore() + score);
-				} else {
-					results.put(documentID, new Result(document, score));
+								
+				if(sentenceBySentence) {
+					Result doc = new Result(document, scoreDoc.score);	
+
+					for (i = 0; i < outputFields.length - 1; i++) {
+						outputWriter.write(doc.get(outputFields[i]));
+						outputWriter.write(delimiter);
+					}
+		
+					outputWriter.write(doc.get(outputFields[i]));
+					outputWriter.newLine();
+					outputWriter.flush();					
+					
+				} else {				
+					float score = scoreDoc.score / lines.size();
+					if (results.containsKey(documentID)) {
+						Result prevScore = results.get(documentID);
+						prevScore.setScore(prevScore.getScore() + score);
+					} else {
+						results.put(documentID, new Result(document, score));
+					}
+					
 				}
 			}
+			
+			if(sentenceBySentence) outputWriter.newLine();
 
 		}
+		
+		if(!sentenceBySentence) {
 
-		ArrayList<Result> sortedResults = new ArrayList<Result>(
-				results.values());
-
-		Collections.sort(sortedResults);
-
-		String outputFormat[] = config.getProperty("output.format")
-				.split("\\|");
-		OutputFields outputFields[] = new OutputFields[outputFormat.length];
-		for (i = 0; i < outputFormat.length; i++) {
-			outputFields[i] = OutputFields.valueOf(outputFormat[i]);
-		}
-
-		String delimiter = config.getProperty("output.seperator");
-
-		int outputLines = sortedResults.size();
-
-		try {
-
-			outputLines = Integer.parseInt(config.getProperty("output.lines"));
-			if (outputLines == 0 || outputLines > sortedResults.size())
-				outputLines = sortedResults.size();
-
-		} catch (Exception e) {
-			outputLines = sortedResults.size();
-		}
-
-		for (int n = 0; n < outputLines; n++) {
-
-			Result doc = sortedResults.get(n);
-
-			for (i = 0; i < outputFields.length - 1; i++) {
-				System.out.print(doc.get(outputFields[i]));
-				System.out.print(delimiter);
+			ArrayList<Result> sortedResults = new ArrayList<Result>(
+					results.values());
+	
+			Collections.sort(sortedResults);
+				
+			for (int n = 0; n < outputLines & n < sortedResults.size(); n++) {
+	
+				Result doc = sortedResults.get(n);
+	
+				for (i = 0; i < outputFields.length - 1; i++) {
+					outputWriter.write(doc.get(outputFields[i]));
+					outputWriter.write(delimiter);
+				}
+	
+				outputWriter.write(doc.get(outputFields[i]));
+				outputWriter.newLine();
+				outputWriter.flush();
 			}
-
-			System.out.println(doc.get(outputFields[i]));
 		}
+		
+		outputWriter.close();
 	}
 
 	private IndexWriter getWriter() throws IOException {
@@ -316,6 +369,19 @@ public class DomainFilter {
 		} catch (Exception e) {
 		}
 
+		try {
+			String temp = System.getProperty("encoding");
+			config.setProperty("encoding", temp);
+		} catch (Exception e) {
+		}
+		
+		try {
+			String temp = System.getProperty("score.nbest");
+			config.setProperty("score.nbest", temp);
+		} catch(Exception e) {
+			
+		}
+
 	}
 
 	private static void help() {
@@ -332,7 +398,7 @@ public class DomainFilter {
 	};
 
 	enum Options {
-		INDEX, SCORE, HELP
+		INDEX, SCORE, SCORE_SENTENCE, HELP
 	};
 
 	class Result implements Comparable<Result> {
