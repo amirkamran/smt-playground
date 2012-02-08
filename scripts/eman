@@ -13,6 +13,7 @@ use strict;
 use warnings;
 use 5.010;
 use YAML;
+use File::Temp qw/tempfile/;
 use Carp;
 use Term::ANSIColor;
 use Getopt::Long;
@@ -23,7 +24,7 @@ use File::Spec;
 use Cwd qw/cwd abs_path/;
 use Digest::MD5 qw(md5_hex);
 use Fcntl qw(LOCK_EX LOCK_NB);
-use File::NFSLock;
+# use File::NFSLock;
 use FindBin qw($Bin);
 use List::Util qw(min);
 my $eman = $Bin."/".basename($0); # full path to ourselves
@@ -422,9 +423,11 @@ if ($readonly || $autoreadonly
 } else {
   # obtain lock for index file, keep it locked until we know
   # the command is read-only
-  $lock = File::NFSLock->new($indexfile, LOCK_EX, 10, 30*60);
-  die "Failed to obtain lock for $indexfile, try --read-only."
-    if !defined $lock;
+# We are not locking any more, we will simply create the index somewhere else
+# and move it to its place atomically.
+#  $lock = File::NFSLock->new($indexfile, LOCK_EX, 10, 30*60);
+#  die "Failed to obtain lock for $indexfile, try --read-only."
+#    if !defined $lock;
 }
 
 # Load and update index, possibly also saving it
@@ -2035,9 +2038,15 @@ sub loadidx {
 }
 sub saveidx {
   my $idx = shift;
-  my $h = my_save($indexfile);
+  my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>$maindir);
+  print STDERR "Saving index to $tempname\n" if $debug;
+  binmode($h, ":utf8");
+  # my $h = my_save($indexfile);
   print $h YAML::Dump($idx);
   close $h;
+  print STDERR "Moving index from $tempname to $indexfile\n" if $debug;
+  rename($tempname, $indexfile)
+    or print STDERR "Failed to move $tempname to $indexfile";
 }
 
 sub get_hash_from_dir {
