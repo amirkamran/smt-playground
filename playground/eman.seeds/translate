@@ -184,8 +184,9 @@ echo ./moses -input-file ./corpus.src -config ./filtered-for-eval-opt/moses.ini 
 #  | head -c 300k \\
 #  > translated.verbose
 
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`

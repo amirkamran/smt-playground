@@ -1,58 +1,66 @@
 #!/bin/bash
+# eman seed for constructing an n-gram language model by mixing
+# several LMs for best perplexity on a heldout text
 
-function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
 
-set -o pipefail
+PLAYGROUND=`eman path` # eman playground directory
 
-if [ -z "$LMS" ] \
-|| [ -z "$BINARIES" ] \
-|| [ -z "$HELDOUT" ]; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$LMS to colon-delimited list of lm experiments"
-  echo "  \$HELDOUT to the shortname of corpus"
-  echo "And optionally: "
-  echo "  \$BINARIZE=yes to binarize the model"
-  echo "  \$PROMISEAUGMATCH=yes to ignore difference in corpaugs"
-  exit 1
-fi
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar SRILMSTEP default='' \
+    help='where is srilm compiled (default to inherit from first lm)' \
+  defvar MOSESSTEP type=reqstep help='where is moses (for ems scripts)' \
+  defvar LMS help='colon-delimited list of lm steps' \
+  defvar HELDOUT help='the shortname of corpus' \
+  defvar PROMISEAUGMATCH default='no' help='yes to ignore difference in corpaugs' \
+|| exit 1
 
-SCRIPTS_ROOTDIR="`cat ../$BINARIES/scripts.rootdir`"
-BINDIR="`pwd`/../$BINARIES/bin/"
+# Set local bash variables
+eval `eman bash-loadvars`
 
-if [ ! -f ../$BINARIES/srilm.path ]; then
-  echo "SRILM not found in $BINARIES"
-  exit 1
-fi
+# inherit from the first km
+lmone=`echo $LMS | cut -d: -f1`
 
-SRILMDIR1="`cat ../$BINARIES/srilm.path`/bin/"
-SRILMDIR2="`cat ../$BINARIES/srilm.path`/bin/i686/"
+eman \
+  defvar SRILMSTEP type='reqstep' default="$(eman get-var $lmone SRILMSTEP)" \
+    help="Failed to inherit from $lmone" \
+  defvar ORDER default="$(eman get-var $lmone ORDER)" \
+    help="Failed to inherit from $lmone" \
+  defvar CORPAUG default="$(eman get-var $lmone CORPAUG)" \
+    help="Failed to inherit from $lmone" \
+|| exit 1
 
-if [ x$BINARIZE == xyes ]; then
-  if [ ! -f ../$BINARIES/irstlm.path ]; then
-    echo "Asking for LM binarization and IRSTLM not found in $BINARIES";
-    exit 1
-  fi
-  IRSTLMDIR="`cat ../$BINARIES/irstlm.path`/bin/"
-  lmtypetag=.blm
-else
-  lmtypetag=
-fi
+# Set (update) local bash variables
+eval `eman bash-loadvars`
 
-echo $BINARIES > eman.deps
+eman add-deps . $SRILMSTEP $(echo $LMS | tr : ' ') \
+|| die "Failed to resolve some dependencies"
+
+MOSESSTEPDIR=$(eman path $MOSESSTEP)
+SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
+
+SRILMSTEPDIR=$(eman path $SRILMSTEP)
+SRILMDIR1=$SRILMSTEPDIR/srilm/bin/
+SRILMDIR2=$SRILMSTEPDIR/srilm/bin/i686/
 
 first=1
 for lmexp in ${LMS//:/ }; do
-  echo $lmexp >> eman.deps # add the dependency
-  [ -d ../$lmexp ] || die "Not found: $lmexp"
-  thisorder=`cat ../$lmexp/var-ORDER`
-  thisaug=`cat ../$lmexp/eman.vars | grep CORPAUG | cut -d= -f2`
+  lmdir=$(eman path $lmexp)
+  [ ! -z "$lmdir" ] || die "Eman failed to find the path for $lmexp"
+  [ -d $lmdir ] || die "Not found: $lmdir"
+  thisorder=`eman get-var $lmexp ORDER`
+  thisaug=`eman get-var $lmexp CORPAUG`
+  thiscorp=`eman get-var $lmexp CORP`
   if [ $first == 1 ] ; then
-    NAMELIST=`cat ../$lmexp/var-CORP`
+    NAMELIST=$thiscorp
+    LMFILES=$lmdir/corpus.lm
     first=0
   else
     # extend the list
-    NAMELIST=$NAMELIST++`cat ../$lmexp/var-CORP`
+    NAMELIST=$NAMELIST++$thiscorp
+    LMFILES=$LMFILES:$lmdir/corpus.lm
   fi
   if [ -z "$ORDER" ] ; then
     ORDER=$thisorder
@@ -68,66 +76,60 @@ done
 [ ! -z $ORDER ] || die "Failed to determine LM order"
 [ ! -z $CORPAUG ] || die "Failed to determine LM augment"
 
+# add also out combined name to our vars -- if mixlm was to be used on us again
+CORP=$NAMELIST eman defvar CORP
+
 # Remember the core settings
 echo MIX.$NAMELIST+$CORPAUG.$ORDER$lmtypetag > eman.tag
-
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-LMS=$LMS
-HELDOUT=$HELDOUT
-CORPAUG=$CORPAUG
-ORDER=$ORDER
-BINARIZE=$BINARIZE
-KONEC
-
-echo $ORDER > var-ORDER
-echo $NAMELIST > var-CORP
 
 
 TMP=/mnt/h/tmp
 
 
 cat << KONEC > eman.command
-# This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment; sometimes needed for ./augment.pl
 . /net/projects/SGE/user/sge_profile
 
-mydir=\`pwd\`
+SRILMDIR1="$SRILMSTEPDIR/bin/"
+SRILMDIR2="$SRILMSTEPDIR/bin/i686/"
 
-renice 10 \$\$
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-set -o pipefail
-
-export PATH=\$PATH:$BINDIR
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-echo WORKSPACE: $WORKSPACE
-export WORKSPACE=$WORKSPACE
-
-export PATH=$SRILMDIR1:$SRILMDIR2:\$PATH
-
 echo "Using this ngram-count:"
-which ngram
+which ngram-count
 
-HELDOUTSOURCE=\`../augmented_corpora/augment.pl $HELDOUT/$CORPAUG\`
-echo "Got HELDOUTSOURCE: \$HELDOUTSOURCE"
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
 
-[ -s "\$HELDOUTSOURCE" ] || die "Failed to prepare heldout corpus";
+mkcorpus $HELDOUT/$CORPAUG heldout
 
-../../scripts/wiseln \$HELDOUTSOURCE heldout.text.gz \
-  || die "Failed to make local backup of corpus \$HELDOUTSOURCE"
-
-zcat heldout.text.gz > heldout.text
+zcat corpus.heldout.gz > corpus.heldout
 
 first=1
-for lmexp in ${LMS//:/ }; do
-  thisfile=../\$lmexp/corpus.lm
+for thisfile in ${LMFILES//:/ }; do
   [ -e \$thisfile ] || thisfile=\$thisfile.gz
   [ -e \$thisfile ] || die "Not a valid lm: \$lmexp, corpus.lm(.gz) missing"
   if [ \$first == 1 ] ; then
@@ -143,7 +145,7 @@ echo Prepared filelist: \$FILELIST
 
 echo Mixing LMS...
 \$SCRIPTS_ROOTDIR/ems/support/interpolate-lm.perl \\
-  --tuning heldout.text \\
+  --tuning corpus.heldout \\
   --name corpus.lm \\
   --lm \$FILELIST \\
   --srilm=$SRILMDIR2 \\
@@ -152,13 +154,9 @@ echo Mixing LMS...
 
 gzip corpus.lm || die "Gzip failed"
 
-if [ x$BINARIZE == xyes ]; then
-  $IRSTLMDIR/compile-lm corpus.lm corpus.blm \\
-  || die "Binarization FAILED"
-fi
-
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`

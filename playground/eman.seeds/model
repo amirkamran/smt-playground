@@ -36,7 +36,8 @@ eman \
 # Set (update) local bash variables
 eval `eman bash-loadvars`
 
-eman add-deps . $MOSESSTEP
+eman add-deps . $MOSESSTEP $(echo $TMS | tr : ' ') \
+|| die "Failed to add some deps"
 
 ### updated up to here
 
@@ -59,7 +60,6 @@ else
 fi
 
 for tm in `echo $TMS | tr ':' ' '`; do
-  echo $tm >> eman.deps
   tmtag=$tmtag"TM"`eman tag $tm`
 done
 
