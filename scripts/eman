@@ -102,6 +102,8 @@ my $fictional_reuse = undef; # when cloning from a text recipe, we sometimes
 # where we know the init phase of the depending step will solve it somehow.
 # With corpman, this happens quite often when there are more ways to create a
 # corpus.
+my $ignore = undef; # like avoid but may include just steptype, not fully
+                    # qualified steps
 my $avoid_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 $readonly = 1 if defined $ENV{"EMAN_READONLY"};
@@ -161,6 +163,7 @@ my %options = (
   "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
   "fictional-reuse=s@" => \$fictional_reuse,
+  "ignore=s@" => \$ignore,
   "all-avoid!" => \$avoid_all,
   "start!" => \$do_start,
   "print-created-step!" => \$print_created_step,
@@ -181,6 +184,7 @@ my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
 my %fictional_reuse = map { ($_,1) } @$fictional_reuse
   if defined $fictional_reuse;
+my %ignore = map { ($_,1) } @$ignore if defined $ignore;
 
 # colorize regex outputs if substituting and output is terminal (or wished)
 if ($colorize || (!defined $colorize && -t STDOUT)) {
@@ -1619,6 +1623,10 @@ sub traceback_to_recipe {
 sub traceback {
   my $prefix = shift;
   my $step = shift;
+
+  return if $avoid{$step} || $ignore{$step};
+    # explicit avoiding of individual steps
+  return if $ignore{get_steptype($step)}; # avoiding steps of a given type
 
   my $indent = $show_tree_in_traceback ? "+- " : "";
   print "$prefix$indent$step\n";
