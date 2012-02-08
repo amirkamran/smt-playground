@@ -97,13 +97,15 @@ my $do_start = 0;
 my $subst = undef;
 my $avoid = undef;
 my $reuse = undef;
-my $fictional_reuse = undef; # when cloning from a text recipe, we sometimes
+my $ignore = undef; # like avoid but may include just steptype, not fully
+                    # qualified steps
+# Also used when cloning from a text recipe: we sometimes
 # need to say that a step is already available where it actually it not but
 # where we know the init phase of the depending step will solve it somehow.
 # With corpman, this happens quite often when there are more ways to create a
-# corpus.
-my $ignore = undef; # like avoid but may include just steptype, not fully
-                    # qualified steps
+# corpus. Cloning a traceback with exact steps leading to a corpus may fail
+# beucase the corpus exists but it was created differently. So when cloning
+# such a traceback, just --ignore=corpus.
 my $avoid_all = 0;
 my $readonly = 0; # don't save anything, e.g. when browsing sb. elses exps
 $readonly = 1 if defined $ENV{"EMAN_READONLY"};
@@ -162,7 +164,6 @@ my %options = (
   "s|subst=s@" => \$subst,
   "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
-  "fictional-reuse=s@" => \$fictional_reuse,
   "ignore=s@" => \$ignore,
   "all-avoid!" => \$avoid_all,
   "start!" => \$do_start,
@@ -182,8 +183,6 @@ GetOptions(%options) or exit 1;
 
 my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
 my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
-my %fictional_reuse = map { ($_,1) } @$fictional_reuse
-  if defined $fictional_reuse;
 my %ignore = map { ($_,1) } @$ignore if defined $ignore;
 
 # colorize regex outputs if substituting and output is terminal (or wished)
@@ -974,16 +973,19 @@ sub init_by_recipe {
   my $depmap = shift;
   confess "implementation error: undef depmap" if !defined $depmap;
 
-  if ($reuse{$recipe->{"name"}}) {
-    print STDERR "Forced to --reuse: $recipe->{name}\n";
-    return $recipe->{"name"};
+  my $thisname = $recipe->{"name"};
+  my $thissteptype = get_steptype($thisname);
+
+  if ($reuse{$thisname}) {
+    print STDERR "Forced to --reuse: $thisname\n";
+    return $thisname;
   }
-  if ($fictional_reuse{$recipe->{"name"}}) {
-    print STDERR "Forced to --fictional-reuse: $recipe->{name}\n";
-    return $recipe->{"name"};
+  if ($ignore{$thisname} || $ignore{$thissteptype}) {
+    print STDERR "Ignoring (kind of reusing): $thisname\n";
+    return $thisname;
   }
 
-  # print "INIT_BY_RECIPE: $recipe->{name}\n";
+  # print "INIT_BY_RECIPE: $thisname\n";
 
   # handle all dependencies
   my $olddeps = $recipe->{"deps"};
@@ -1029,27 +1031,26 @@ sub init_by_recipe {
 
   # check if such a step exists already
   my $knownstep;
-  my $hash = get_hash_from_vars_deps($recipe->{"name"}, \@newvars, \@newdeps);
+  my $hash = get_hash_from_vars_deps($thisname, \@newvars, \@newdeps);
   if ($debug) {
     print STDERR "CHECKING $hash:\n";
     print STDERR join("\n", @newvars)."\n";
     print STDERR join("\n", @newdeps)."\n";
   }
   # find suitable known step
-  $avoid{$recipe->{"name"}}=1 if $avoid_all;
+  $avoid{$thisname}=1 if $avoid_all;
     # --all-avoid forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
   $knownstep = find_usable_step_given_hash($hash);
 
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
-    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
+    # print "LEAVING INIT_BY_RECIPE: $thisname\n";
     return $knownstep;
   } else {
     # init a new step using the vars
-    my $steptype = get_steptype($recipe->{"name"});
-    print STDERR "Initing new step $steptype for the $recipe->{name} in the recipe.\n";
-    my $newstep = init($steptype, \@newvars, $recipe->{"name"});
+    print STDERR "Initing new step $thissteptype (for $thisname in the recipe).\n";
+    my $newstep = init($thissteptype, \@newvars, $thisname);
     # Double check that initing the new step did not lead to exacty the known
     # step. This can happen due to default or blank variable values -- they are
     # not mentioned in the traceback (so we don't find the known step in the
@@ -1062,7 +1063,7 @@ sub init_by_recipe {
       $newstep = $oldknownstep;
     }
 
-    # print "LEAVING INIT_BY_RECIPE: $recipe->{name}\n";
+    # print "LEAVING INIT_BY_RECIPE: $thisname\n";
     return $newstep;
   }
 }
@@ -2622,8 +2623,9 @@ You can use the following filters in eman select:
   s <status>       ... only steps with status <status>
   v <VAR>=<value>  ... only steps with variable <VAR> that
                        has value <value>
+  vre <regex>      ... only steps where the variable file matches <regex>
 
-The result depends on the order of fitlers, e.g.:
+The result (and speed) depends on the order of fitlers, e.g.:
 
 eman select t mert l 10 # output last 10 merts
 eman select l 10 t mert # output merts that were among 10 latest steps
