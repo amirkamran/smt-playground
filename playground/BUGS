@@ -16,13 +16,13 @@ This file lists known problems of eman, eman seeds and corpman
   used.
 
 * Two means of dependencies cause confusion.
+  [SOLUTION AVAILABLE]
   Corpman knows how to construct trees of steps to prepare the corpus it
-  was asked for. These trees then become visible in eman tracebacks. However,
-  cloning of these tracebacks is not well tested and I'm afraid that eman
-  unnecessarily regenerates many of these corpman steps.
-  What's worse: having two copies of the same corpus confuses corpman.
+  was asked for. These trees then usually become visible in eman tracebacks.
+  The two conflicting means of dependency then come from corpman (the rules and
+  existing corpora imply how other corpora are derived) and eman (the
+  tracebacks explicitly say how to construct the needed corpora).
 
-  Discussion and proposed countermeasures:
   Assume two steps: a downstream one (D) and a corpus one (C) created by
   corpman on demand of D. Now let's clone the traceback of D, modifying the
   underlying corpus parameters (e.g. switching to lowercase). When cloning a
@@ -39,14 +39,15 @@ This file lists known problems of eman, eman seeds and corpman
       phrase* already.
   - Dependencies of D2 will include C2.
     - This can happen if eman too eagerly adds C2 into D2's dependencies when
-      cloning it. Eman simply should not do this and instead rely on D2 to
-      create its dependencies as implied by the variables.
+      cloning it. Eman simply should not do this (it does not do it) and
+      instead rely on D2 to create its dependencies as implied by the
+      variables.
   - Dependencies of D2 don't include C3.
     - This can happen if D2 forgets to add the corpus obtained from corpman
       during the init phase to its dependencies.
 
-  Another hard example:
-  As above, we have *a traceback* where a downstream step D requires (and
+  Another example:
+  As above, we have a text traceback where a downstream step D requires (and
   depends on) a corpus C (with the specifier mycorp/mylang+myfact) created
   from another corpus B in the traceback. Let's assume that corpman
   rules allows the creation of mycorp/mylang+myfact differently, from step A,
@@ -54,23 +55,33 @@ This file lists known problems of eman, eman seeds and corpman
   playground, leading to C'. When we try to clone the traceback, we get an
   error that C can't be made because C' already has that particular corpus.
 
-  Wrong solution: we can't use --reuse or --avoid because none of the steps
-  mentioned in the traceback don't exist yet.
-
   Solution: manually *remove* the corpus C from the traceback. Eman will assume
   D has all prerequisites ready and during the init of D, corpman will provide
   C' for mycorp/mylang+myfact. So the traceback of the successfully inited D
   will be different from the original text-only traceback.
-  There is now a switch for this purpose in eman. Simply say
-  --fictional-reuse=C. This will make eman 'reuse' corpus C, i.e. assume D has
-  all prerequisites ready, just as we wanted.
 
-  And another example of the problem:
-  s.mert now uses only corpman and does not put its dev and test corpora into
-  dependencies. When cloning a scenario in a clean playground, the 'prepare'
-  phase of s.mert suddenly waits for the corpora to get ready. If they were in
-  the traceback, the prepare would probably assume the corpora will be ready
-  once the step runs and preparation would be instant.
+  To remove a subtree from the traceback, use --ignore=STEP or
+  --ignore=STEPTYPE. This switch is recognized both when creating the text
+  traceback (eman tracebakc) as well as when cloning from a text traceback
+  (eman clone).
+
+  In our example, using --ignore=C or --ignore=corpus will make eman 'reuse'
+  corpus C, i.e. assume D has all prerequisites ready, just as we wanted. Note
+  though that the stepname of C will not be replaced by the name of C' anywhere
+  in the traceback.
+
+  Note: We can't use --reuse or --avoid instead of --ignore because none of the
+  steps mentioned in the traceback don't exist yet.
+
+
+  What if we tried avoiding the issue by *not* putting corpora into
+  dependencies, so they would not appear in tracebacks at all? This will work
+  but still somehow feels unnatural. (The mert seed now does that.)
+
+  Note: you should avoid using 'corpman --dump' in the init phase like
+  s.mert does now. When cloning a scenario in a clean playground, the
+  'prepare' phase of s.mert suddenly waits quite long for the corpora to get
+  completely finished.
 
 * Unclear, how to assign corpus names for similar corpora
   Assume a parallel corpus of two sections: subtitles and news. You can
