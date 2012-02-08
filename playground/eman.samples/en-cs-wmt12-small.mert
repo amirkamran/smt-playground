@@ -1,237 +1,91 @@
-+- s.mert.1eb3d094.20120201-1346
-|  | DEVCORP=wmt10
-|  | GRIDFLAGS=
-|  | JOBS=15
-|  | MERTFLAGS=
-|  | MERTPRG=mert
-|  | MODELSTEP=s.model.909b0b5f.20120201-1346
-|  | MOSESFLAGS=
-|  | MOSESSTEP=s.mosesgiza.9164ab4c.20120201-1032
-|  | REFAUG=csNmT1+stc
-|  | SEARCH=cube
-|  | SRCAUG=enNmT1+stc
-|  | STACK=
-|  | TAGPREF=
++- s.evaluator.8102edfc.20120207-1611
+|  | MOSESSTEP=s.mosesgiza.b6073a00.20120202-0037
+|  | REFAUGS=csNmT1+stc
+|  | SCORERS="BLEU;PER;TER;CDER"
 |  | TESTCORP=wmt11
-|  | TREEXSTEP=
-|  | ZMERTFLAGS=
-|  | ZMERTMETRIC=
-|  | ZMERTSEMPOSBLEUWEIGHTS=
-|  | ZMERTSEMPOSSOURCE=
-|  +- s.model.909b0b5f.20120201-1346
-|  |  | CUTOFF=0
-|  |  | DECODINGSTEPS=t0-0
-|  |  | LMS="0:s.lm.153cb26c.20120201-1346"
-|  |  | MOSESSTEP=s.mosesgiza.9164ab4c.20120201-1032
-|  |  | RMSTEP=
+|  | TRANSAUG=csNmT1_s.translate.b17f203d.20120207-1604+stc
+|  | TRANSSTEP=s.translate.b17f203d.20120207-1604
+|  +- s.mosesgiza.b6073a00.20120202-0037
+|  |  | IRSTLMSTEP=
+|  |  | SRILMSTEP=
+|  +- s.translate.b17f203d.20120207-1604
+|  |  | DETOKAUG=csNmT1_s.translate.b17f203d.20120207-1604+untok
+|  |  | ITER=
+|  |  | MERTSTEP=s.mert.272f2f67.20120207-0013
+|  |  | MOSESSTEP=s.mosesgiza.b6073a00.20120202-0037
+|  |  | OUTALIAUG=csNmT1_s.translate.b17f203d.20120207-1604+ali
+|  |  | REFAUG=csNmT1+stc
+|  |  | SEARCH=cube
 |  |  | SRCAUG=enNmT1+stc
-|  |  | TGTAUG=csNmT1+stc
-|  |  | THRESHOLD=
-|  |  | TMS=s.tm.825d6ed9.20120201-1346
-|  |  +- s.lm.153cb26c.20120201-1346
-|  |  |  | CORP=c-news
-|  |  |  | CORPAUG=csNmT1+stc
-|  |  |  | LMFLAGS=
-|  |  |  | ORDER=5
-|  |  |  | PARTS=1
-|  |  |  | SRILMSTEP=s.srilm.c66afbad.20120201-1032
-|  |  |  +- s.corpus.62951ab5.20120201-1346
-|  |  |  |  | COLUMN=-1
-|  |  |  |  | COMBINE_PARTS=
-|  |  |  |  | DEPS=s.corpus.9db0594b.20120201-1346
-|  |  |  |  | DERIVED=1
-|  |  |  |  | FACTOR=-1
-|  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  | OUTCORP=c-news
-|  |  |  |  | OUTFACTS=stc
-|  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  | RUN_COMMAND="../tools/add_truecased_form.pl 0:1:0:1 --replace-form --no-info | reduce_factors.pl 0"
-|  |  |  |  | STEPNAME=s.corpus.9db0594b.20120201-1346
-|  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  +- s.corpus.9db0594b.20120201-1346
-|  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS="../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 0 ../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 1"
-|  |  |  |  |  | DEPS="s.corpus.1580f679.20120201-1346 s.corpus.1580f679.20120201-1346"
-|  |  |  |  |  | DERIVED=1
-|  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  | FILENAME=
-|  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  | OUTFACTS=form+lemma
-|  |  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  | RUN_COMMAND=
-|  |  |  |  |  | STEPNAME=
-|  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.1580f679.20120201-1346
-|  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  | DEPS=s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  | STEPNAME=s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  |  | COLUMN=1
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  | OUTLANG=csNm
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/csNm.scen"
-|  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  +- s.srilm.c66afbad.20120201-1032
-|  |  +- s.mosesgiza.9164ab4c.20120201-1032
-|  |  |  | IRSTLMSTEP=
-|  |  |  | SRILMSTEP=
-|  |  +- s.tm.825d6ed9.20120201-1346
-|  |  |  | ALICORP=c-news
-|  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
-|  |  |  | ALISTEP=s.align.181ddb1c.20120201-1346
-|  |  |  | ALISYM=gdfa
-|  |  |  | BINARIES=s.mosesgiza.9164ab4c.20120201-1032
-|  |  |  | CUTOFF=0
-|  |  |  | DECODINGSTEPS=t0-0
+|  |  | TESTCORP=wmt11
+|  |  | TOKAUG=csNmT1_s.translate.b17f203d.20120207-1604+stc
+|  |  +- s.mert.272f2f67.20120207-0013
+|  |  |  | DEVCORP=wmt10
+|  |  |  | GRIDFLAGS=
+|  |  |  | JOBS=15
+|  |  |  | MERTFLAGS=
+|  |  |  | MERTPRG=mert
+|  |  |  | MODELSTEP=s.model.3e28def7.20120207-0013
+|  |  |  | MOSESFLAGS=
+|  |  |  | MOSESSTEP=s.mosesgiza.b6073a00.20120202-0037
+|  |  |  | REFAUG=csNmT1+stc
+|  |  |  | SEARCH=cube
 |  |  |  | SRCAUG=enNmT1+stc
-|  |  |  | SRCCORP=c-news
-|  |  |  | TGTAUG=csNmT1+stc
-|  |  |  | TGTCORP=c-news
-|  |  |  | THRESHOLD=
-|  |  |  | TRAININGFLAGS=
-|  |  |  +- s.align.181ddb1c.20120201-1346
-|  |  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
-|  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
-|  |  |  |  | CORPUS=c-news
-|  |  |  |  | GIZASTEP=s.mosesgiza.9164ab4c.20120201-1032
-|  |  |  |  | SRCALIAUG=enNmT1+lemma
-|  |  |  |  | TGTALIAUG=csNmT1+lemma
-|  |  |  |  +- s.corpus.a1faf1c2.20120201-1346
-|  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  | DEPS=s.corpus.9db0594b.20120201-1346
-|  |  |  |  |  | DERIVED=1
-|  |  |  |  |  | FACTOR=1
-|  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  | OUTFACTS=lemma
-|  |  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  | STEPNAME=s.corpus.9db0594b.20120201-1346
-|  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.9db0594b.20120201-1346
-|  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  | COMBINE_PARTS="../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 0 ../s.corpus.1580f679.20120201-1346/corpus.txt.gz -1 1"
-|  |  |  |  |  |  | DEPS="s.corpus.1580f679.20120201-1346 s.corpus.1580f679.20120201-1346"
-|  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  | FILENAME=
-|  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  | OUTFACTS=form+lemma
-|  |  |  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  | RUN_COMMAND=
-|  |  |  |  |  |  | STEPNAME=
-|  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.1580f679.20120201-1346
-|  |  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  | OUTLANG=csNmT1
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  |  | STEPNAME=s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.corpus.f83eee90.20120201-1346
-|  |  |  |  |  |  |  |  | COLUMN=1
-|  |  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  |  | OUTLANG=csNm
-|  |  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/csNm.scen"
-|  |  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  +- s.corpus.ccf47d58.20120201-1346
-|  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  | DEPS=s.corpus.4b7a0814.20120201-1346
-|  |  |  |  |  | DERIVED=1
-|  |  |  |  |  | FACTOR=1
-|  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  | OUTFACTS=lemma
-|  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  | RUN_COMMAND=cat
-|  |  |  |  |  | STEPNAME=s.corpus.4b7a0814.20120201-1346
-|  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  +- s.corpus.4b7a0814.20120201-1346
-|  |  |  |  |  |  | COLUMN=-1
-|  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  | DEPS=s.corpus.f037cfc7.20120201-1346
-|  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  | FILENAME=corpus.txt.gz
-|  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  | OUTLANG=enNmT1
-|  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  | RUN_COMMAND="../../scripts/further-tokenize-factored.pl"
-|  |  |  |  |  |  | STEPNAME=s.corpus.f037cfc7.20120201-1346
-|  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  +- s.corpus.f037cfc7.20120201-1346
-|  |  |  |  |  |  |  | COLUMN=2
-|  |  |  |  |  |  |  | COMBINE_PARTS=
-|  |  |  |  |  |  |  | DEPS=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  | DERIVED=1
-|  |  |  |  |  |  |  | FACTOR=-1
-|  |  |  |  |  |  |  | FILENAME=corpus.cs-en.txt.gz
-|  |  |  |  |  |  |  | OUTCORP=c-news
-|  |  |  |  |  |  |  | OUTFACTS=form+lemma+tag
-|  |  |  |  |  |  |  | OUTLANG=enNm
-|  |  |  |  |  |  |  | OUTLINECOUNT=197053
-|  |  |  |  |  |  |  | RUN_COMMAND="../tools/runtreex.sh ../treex_scenarios/enNm.scen"
-|  |  |  |  |  |  |  | STEPNAME=s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  | TAKE_FROM_COMMAND=
-|  |  |  |  |  |  |  +- s.czeng.9540030c.20120201-1155
-|  |  |  |  |  |  |  |  | CZENG_SOURCEDIR="/net/data/czeng10-public-release"
-|  |  |  |  |  |  |  |  | FILTER_THRESHOLD=0.0
-|  |  |  |  |  |  |  |  | FNRE="*train.gz"
-|  |  |  |  |  |  |  |  | SECTION=news
-|  |  |  |  +- s.mosesgiza.9164ab4c.20120201-1032
+|  |  |  | STACK=
+|  |  |  | TAGPREF=
+|  |  |  | TREEXSTEP=
+|  |  |  | ZMERTFLAGS=
+|  |  |  | ZMERTMETRIC=
+|  |  |  | ZMERTSEMPOSBLEUWEIGHTS=
+|  |  |  | ZMERTSEMPOSSOURCE=
+|  |  |  +- s.model.3e28def7.20120207-0013
+|  |  |  |  | CUTOFF=0
+|  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  | LMS="0:s.lm.608df574.20120207-0004"
+|  |  |  |  | MOSESSTEP=s.mosesgiza.b6073a00.20120202-0037
+|  |  |  |  | RMSTEP=
+|  |  |  |  | SRCAUG=enNmT1+stc
+|  |  |  |  | TGTAUG=csNmT1+stc
+|  |  |  |  | THRESHOLD=
+|  |  |  |  | TMS=s.tm.527c9342.20120207-0012
+|  |  |  |  +- s.lm.608df574.20120207-0004
+|  |  |  |  |  | CORP=c-news
+|  |  |  |  |  | CORPAUG=csNmT1+stc
+|  |  |  |  |  | LMFLAGS=
+|  |  |  |  |  | ORDER=5
+|  |  |  |  |  | PARTS=1
+|  |  |  |  |  | SRILMSTEP=s.srilm.117f0cfe.20120202-0037
+|  |  |  |  |  +- s.srilm.117f0cfe.20120202-0037
+|  |  |  |  +- s.mosesgiza.b6073a00.20120202-0037
 |  |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  |  | SRILMSTEP=
-|  |  |  +- s.mosesgiza.9164ab4c.20120201-1032
-|  |  |  |  | IRSTLMSTEP=
-|  |  |  |  | SRILMSTEP=
+|  |  |  |  +- s.tm.527c9342.20120207-0012
+|  |  |  |  |  | ALICORP=c-news
+|  |  |  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
+|  |  |  |  |  | ALISTEP=s.align.dec45f74.20120206-0111
+|  |  |  |  |  | ALISYM=gdfa
+|  |  |  |  |  | BINARIES=s.mosesgiza.b6073a00.20120202-0037
+|  |  |  |  |  | CUTOFF=0
+|  |  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  |  | SRCAUG=enNmT1+stc
+|  |  |  |  |  | SRCCORP=c-news
+|  |  |  |  |  | TGTAUG=csNmT1+stc
+|  |  |  |  |  | TGTCORP=c-news
+|  |  |  |  |  | THRESHOLD=
+|  |  |  |  |  | TRAININGFLAGS=
+|  |  |  |  |  +- s.align.dec45f74.20120206-0111
+|  |  |  |  |  |  | ALILABEL=enNmT1-lemma-csNmT1-lemma
+|  |  |  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
+|  |  |  |  |  |  | CORPUS=c-news
+|  |  |  |  |  |  | GIZASTEP=s.mosesgiza.b6073a00.20120202-0037
+|  |  |  |  |  |  | SRCALIAUG=enNmT1+lemma
+|  |  |  |  |  |  | TGTALIAUG=csNmT1+lemma
+|  |  |  |  |  |  +- s.mosesgiza.b6073a00.20120202-0037
+|  |  |  |  |  |  |  | IRSTLMSTEP=
+|  |  |  |  |  |  |  | SRILMSTEP=
+|  |  |  |  |  +- s.mosesgiza.b6073a00.20120202-0037
+|  |  |  |  |  |  | IRSTLMSTEP=
+|  |  |  |  |  |  | SRILMSTEP=
+|  |  +- s.mosesgiza.b6073a00.20120202-0037
+|  |  |  | IRSTLMSTEP=
+|  |  |  | SRILMSTEP=

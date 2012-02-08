@@ -78,16 +78,6 @@ $PLAYGROUND/corpman register -- alignment.gz \
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-# clone some importnant executables
-$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || exit 1
-
-TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
-if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
-       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
-  echo "Defaulting to 'en' as the targetlang for detokenizer."
-  TARGETLAN_FOR_DETOKENIZER=en
-fi
-
 MOSESPARALLEL="$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 
 if [ $JOBS == 0 ]; then
@@ -117,6 +107,17 @@ function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+# clone some importnant executables
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || exit 1
+
+TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
+if ! echo "test" | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
+       -u -l \$TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+  echo "Defaulting to 'en' as the targetlang for detokenizer."
+  TARGETLAN_FOR_DETOKENIZER=en
+fi
+
 
 function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
@@ -158,7 +159,7 @@ gzip alignment
 
 echo "Detokenizing translation"
 zcat translated.gz \\
-| \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+| \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l \$TARGETLAN_FOR_DETOKENIZER \\
 | gzip -c \\
 > translated.untok.gz \\
 || die "Failed to detokenize"
