@@ -16,7 +16,7 @@ eman \
   defvar TESTCORP inherit=TRANSSTEP help="the translated corpus" \
   defvar TRANSAUG inherit=TRANSSTEP:TOKAUG help="translation language+factors" \
   defvar REFAUGS inherit=TRANSSTEP:REFAUG \
-    help="reference language+factors; use ';' to delimit multiple references" \
+    help="reference language+factors; use ':' to delimit multiple references" \
 || exit 1
 
 # Set local bash variables
@@ -24,6 +24,10 @@ eval `eman bash-loadvars`
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
+
+MOSESSTEPDIR=`eman path $MOSESSTEP `
+
+EVALUATOR=$MOSESSTEPDIR/moses/mert/evaluator
 
 cat << KONEC > eman.command
 # This is the command to be run here
@@ -38,11 +42,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-MERTSTEPDIR=\`eman path $MERTSTEP \`
-MOSESSTEPDIR=\`eman path $MOSESSTEP \`
-
-EVALUATOR=\$MOSESSTEPDIR/moses/mert/evaluator
-[ -x \$EVALUATOR ] || die "Missing: \$EVALUATOR"
+[ -x $EVALUATOR ] || die "Missing: $EVALUATOR"
 
 function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
@@ -61,10 +61,9 @@ function mkcorpus() {
 mkcorpus $TESTCORP/$TRANSAUG translation
 gunzip corpus.translation.gz
 
-REFAUGS=`echo "$REFAUGS" | tr ';' ' '`
 REFERENCES=''
 idx=0
-for i in \$REFAUGS; do
+for i in $(echo "$REFAUGS" | tr ':' ' '); do
   mkcorpus $TESTCORP/\$i reference.\$idx
   gunzip corpus.reference.\$idx.gz
   REFERENCES="\$REFERENCES,corpus.reference.\$idx"
@@ -72,13 +71,12 @@ for i in \$REFAUGS; do
 done
 
 REFERENCES=\`echo \$REFERENCES | sed 's/^,//'\`
-CANDIDATE=corpus.translation
 
-echo "Running \$EVALUATOR"
-\$EVALUATOR \\
+echo "Running $EVALUATOR"
+$EVALUATOR \\
     --sctype "$SCORERS" \\
     --reference \$REFERENCES \\
-    --candidate \$CANDIDATE \\
+    --candidate corpus.translation \\
     --bootstrap 1000 \\
     --rseed 1234 \\
     | tee  scores \\
