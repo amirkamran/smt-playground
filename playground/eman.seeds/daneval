@@ -101,7 +101,7 @@ sysname=uk-dan
 ( ./testbleu test.$TGT.txt < test.joshua.$TGT.txt | tee BLEU ) \\
 || die "Testbleu evaluator failed"
 # Than the widely used mteval-v11b
-( $SMTSCR/mteval-v11b.pl -r $SGMLREF -s $SGMLSRC -t test.joshua.$TGT.sgml ) \\
+( $SMTSCR/mteval-v13a.pl -r $SGMLREF -s $SGMLSRC -t test.joshua.$TGT.sgml ) \\
 || die "MTeval failed"
 # Now also the Moses evaluator.
 ( $EVALUATOR --sctype "$SCORERS" --reference test.$TGT.txt --candidate test.joshua.$TGT.txt --bootstrap 1000 --rseed 1234 | tee scores ) \\
