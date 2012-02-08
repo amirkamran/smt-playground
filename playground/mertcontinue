@@ -13,7 +13,7 @@ e=`eman guess $1`
 
 [ -d $e ] || die "Not an experiment: $e";
 
-perl -i~ -pe 's/^(.*(clone_moses|absolutize_moses|wiseln.*(moses|scorenbest|testbleu)))/# $1/; s/(mert-moses.pl)/$1 --continue/;' $e/eman.command \
+perl -i~ -pe 's/^(.*(mkcorpus|clone_moses|absolutize_moses|wiseln.*(moses|scorenbest|testbleu)))/# $1/; s/(mert-moses.pl)/$1 --continue/;' $e/eman.command \
 || die "Failed to modify eman.command"
 
 #rm -rf $e/mert-tuning/filtered
