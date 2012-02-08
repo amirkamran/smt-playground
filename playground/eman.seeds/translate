@@ -151,6 +151,7 @@ $MOSESPARALLELIZER \\
   -input-file ./corpus.src \\
   -alignment-output-file ./alignment \
   -config ./filtered-for-eval/moses.ini \\
+| sed 's/^ *//;s/ *\$//' \
 | gzip -c \\
 > translated.gz \\
 || die "Failed to translate"
