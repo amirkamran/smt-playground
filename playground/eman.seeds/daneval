@@ -95,7 +95,7 @@ java -cp $JOSHUA/bin joshua.util.JoshuaEval -cand test.joshua.$TGT.txt -ref test
 # $SMTSCR/normalize-punctuation.pl $TGT
 sysname=uk-dan
 ( cat test.joshua.$TGT.txt | $SMTSCR/capitalize_sentences.pl | $SMTSCR/detokenizer.pl | $SMTSCR/wrap-xml.pl $TGT $SGMLSRC \$sysname > test.joshua.$TGT.sgml ) || "Detokenization failed"
-# The following two evaluators do not perform their own tokenization.
+# The testblue and Moses evaluators do not perform their own tokenization.
 # We thus evaluate tokenized output against tokenized reference. (We do not want to lose score points for punctuation tokens.)
 # Ondřej's testbleu ought to be much faster than the Moses evaluator below.
 ( ./testbleu test.$TGT.txt < test.joshua.$TGT.txt | tee BLEU ) \\

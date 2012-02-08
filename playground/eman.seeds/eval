@@ -66,8 +66,11 @@ gunzip corpus.translation.gz
 mkcorpus $TESTCORP/$REFAUG reference
 gunzip corpus.reference.gz
 
-./testbleu corpus.reference < corpus.translation | tee BLEU
-|| die "evaluator exit code is not 0"
+# The testblue and Moses evaluators do not perform their own tokenization.
+# We thus evaluate tokenized output against tokenized reference. (We do not want to lose score points for punctuation tokens.)
+# Ondřej's testbleu ought to be much faster than the Moses evaluator below.
+( ./testbleu corpus.reference < corpus.translation | tee BLEU ) \\
+|| die "Testbleu evaluator failed"
 
 # Standard command footer
 echo Done.
