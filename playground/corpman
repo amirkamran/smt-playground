@@ -26,6 +26,17 @@ my $MYPATH = File::Spec->rel2abs(__FILE__);
 my $mydir = dirname($MYPATH);
 my $workdir = getcwd();
 
+# command name abbreviations, identities provided for commands with no abbrevs
+my %expand_abbrev = qw(
+  ls list
+  reg register
+);
+# all expanded names are also allowed:
+foreach my $val (values %expand_abbrev) {
+  $expand_abbrev{$val} = $val;
+}
+
+
 my $indexfile = "corpman.index";
 my $verbose = 0;
 my $reindex = 0;
@@ -78,13 +89,11 @@ Options:
 ";
 }
 
-if (defined $ARGV[0] && $ARGV[0] eq "register") {
-  shift;
-  $register = 1;
-}
+my $cmd = shift;
+$cmd = $expand_abbrev{$cmd} if defined $cmd && defined $expand_abbrev{$cmd};
 
 # Early warning about bad usage
-if (! defined $ARGV[0] && ! $reindex) {
+if (! defined $cmd && ! $reindex) {
   usage();
   exit 1;
 }
@@ -110,7 +119,7 @@ my $index;
 #          factind=>factor_index_within_the_file, -1 indicates the whole file
 #          linecount=>number_of_lines}
 # where 'fact' *can* be a specification of several factors: 
-my $err = 0;
+my $waserror = 0;
 
 # chdir to main dir
 chdir($mydir) or die "Failed to chdir to $mydir";
@@ -145,7 +154,7 @@ if ( ! -e $indexfile || $reindex ) {
     }
   }
   close INDFILES;
-  exit 1 if $err;
+  exit 1 if $waserror;
   saveidx($index);
 } else {
   # load existing index
@@ -167,7 +176,7 @@ foreach my $line (split /\n/, $rulestext) {
     = split /\t/, trim($line);
   if ($inlang eq "*" xor $outlang eq "*") {
     print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
-    $err++;
+    $waserror++;
   }
   $infacts =~ s/\|/+/g;
   $outfacts =~ s/\|/+/g;
@@ -192,9 +201,9 @@ foreach my $line (split /\n/, $rulestext) {
   }
 }
 
-exit 1 if $err;
+exit 1 if $waserror;
 
-if ($register) {
+if ($cmd eq "register") {
   my ($file, $column, $corp, $lang, $facts, $linecount, $derived) = @ARGV;
 
   # all previous items are defined if the last one is
@@ -256,9 +265,19 @@ if ($register) {
     push @info_current, $new_info_line;
     save_file("$workdir/corpman.info", join("\n", @info_current));
   }
+} elsif ($cmd eq "list") {
+  # list all variants of the given corpus or of all corpora
+  my ($corp) = @ARGV;
+  if (defined $corp) {
+    list_corp_variants($corp);
+  } else {
+    foreach my $c (sort {$a cmp $b} keys %$index) {
+      list_corp_variants($c);
+    }
+  }
 } else {
   # user wants a corpus
-  my $descr = $ARGV[0];
+  my $descr = $cmd;
 
   if (! defined $descr) {
     print STDERR "No corpus description. Exiting.\n";
@@ -311,18 +330,48 @@ if ($register) {
     if (0 < scalar @bashvars) {
       foreach my $bv (@bashvars) {
         foreach my $outvar_internalvar (split /,/, $bv) {
-	  my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
-	  my $internalval = $entry->{$internalvar};
-	  die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
-	  print $outvar, "=", $internalval, "\n";
-	  die "Space or tab in value of $outvar (coming from $internalvar): $internalval\n"
-	    if $internalval =~ /\s/;
-	}
+          my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
+          my $internalval = $entry->{$internalvar};
+          die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
+          print $outvar, "=", $internalval, "\n";
+          die "Space or tab in value of $outvar (coming from $internalvar): $internalval\n"
+            if $internalval =~ /\s/;
+        }
       }
     } else {
       # print default details: stepname, filename and column
       print $stepname, "\t", $filename, "\t", $column, "\n";
     }
+  }
+}
+
+exit ($waserror != 0);
+# end of main
+
+sub list_corp_variants {
+  my $corpname = shift;
+  foreach my $l (keys %{$index->{$corpname}}) {
+    my %knownfacts = ();
+    my $linecount = undef;
+    foreach my $facts (keys %{$index->{$corpname}->{$l}}) {
+      my $entry = $index->{$corpname}->{$l}->{$facts};
+      foreach my $f (split /[\|\+]/, $facts) {
+        $knownfacts{$f} = 1;
+      }
+      if ($entry->{"linecount"} != -1) {
+        if (!defined $linecount) {
+          $linecount = $entry->{"linecount"};
+        } else {
+          if ($linecount != $entry->{"linecount"}) {
+            print STDERR "$corpname/$l+$facts: Mismatching number of lines. Expected $linecount, got $entry->{linecount}.\n";
+            $waserror = 1;
+          }
+        }
+      }
+    }
+    print $corpname, "/", $l, "+", join("+", sort {$a cmp $b} keys %knownfacts);
+    print "\t", $linecount;
+    print "\n";
   }
 }
 
@@ -516,7 +565,7 @@ sub add_rule {
       ."from $newrule->{inlang}+$newrule->{infacts}"
       ." vs. "
       ."from $oldrule->{inlang}+$oldrule->{infacts}\n";
-    $err = 1;
+    $waserror = 1;
   } else {
     $rules->{$outlang}->{$outfacts} = $newrule;
   }
@@ -570,7 +619,7 @@ sub add_entry {
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ." vs "
       ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n";
-    $err = 1;
+    $waserror = 1;
   } else {
     $index->{$corpname}->{$lang}->{$facts} = $newentry;
   }
