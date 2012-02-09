@@ -2177,9 +2177,18 @@ sub reindex_direct_autotags {
         foreach my $varline (split /\n/, $varsstr) {
           next if $varline eq "";
           my $tag = $varline;
+	  my $first_regex = 1;
           foreach my $regex (@{$rule}) {
             print STDERR "Eval:  \$tag =~ s$regex;\n" if $debug;
-            eval "\$tag =~ s$regex  or \$tag = '';";
+	    if ($first_regex) {
+	      # the first regex is also a selector, if it does not find
+	      # anything, skip the whole line
+              eval "\$tag =~ s$regex  or \$tag = '';";
+	      $first_regex = 0;
+	    } else {
+	      # all right to leave the tag unchanged
+              eval "\$tag =~ s$regex;";
+	    }
           }
           next if $tag eq ""; # blank tag is removed
           $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag} ++;
