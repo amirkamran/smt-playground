@@ -1,0 +1,17 @@
+# These are eman rules for producing 2D tables from eman.results
+# Sections between TABLE and ENDTABLE are interpreted
+
+TABLE
+# all result lines matching any of these regexps are dropped
+forbidden: OUTDATED TAG Snts
+# result lines have to match all of these regexpsto survive
+required: evaluator 
+# cols of the table are constructed by collecting these regexps
+cols: BLEU TER CDER PER
+# rows of the table are constructed by collecting these regexps
+rows: DEV.*   ([0-9]+)gr
+# rows of the table are sorted by BLEU (the column with this exact name)
+rowsort: BLEU
+colsort: BLEU
+verbose: 0
+ENDTABLE
