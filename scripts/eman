@@ -32,6 +32,7 @@ my $eman = $Bin."/".basename($0); # full path to ourselves
 # command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
   retag retag
+  tab tabulate
   ls list
   sel select
   cl clone
@@ -495,6 +496,13 @@ if ($cmd eq "guess") {
     print $step."\n";
   }
   exit 0;
+}
+
+if ($cmd eq "tabulate") {
+  # beautifying all collected results
+  $lock->unlock() if defined $lock;
+  $waserror = !tabulate();
+  exit $waserror;
 }
 
 if ($cmd eq "collect") {
@@ -2236,6 +2244,287 @@ sub add_inherited_autotags {
   return $indexed;
 }
 # end of routines for autotags
+
+
+
+# routines for tablemaker
+package Summarizer;
+sub interpret {
+  my $self = shift; # supply attributes
+  my $lines = shift;
+
+  $self->{required} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  $self->{forbidden} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  $self->{rows} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  $self->{cols} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+
+
+
+  $self->{reqtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{required} ];
+  $self->{forbtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{forbidden} ];
+  $self->{rowtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{rows} ];
+  $self->{coltoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{cols} ];
+
+  $self->{blankvalue} ||= "-";
+  $self->{verbose} ||= 0;
+
+  bless $self;
+  my $table = $self->scan($lines);
+  return $table;
+}
+
+sub collect_tokens {
+  # given a regular expression, collect all occurrences of it
+  # special flags can be given using a few letters followed by ^ (not part of
+  # the regexp), e.g. u^mytoken to set 'uniq' flag
+  # Flags:
+  #   u ... uniq, ignore repetitive occurrences of the token
+  #   c ... uniq -c, count repetitive occurrences of the token
+  #   i ... insensitive, ignore case # not yet implemented
+  #   f ... first occurrence only, don't collect all
+  my $self = shift;
+  my $origtokenre = shift;
+  my $line = shift;
+  my @out = ();
+
+  # remove flags from origtokenre
+  $origtokenre =~ s/^([uicf])\^//;
+  my $flags = $1;
+  $flags = "" if ! defined $flags;
+
+  print STDERR "Searching for $origtokenre in $line.\n" if $debug;
+  while ($line =~ /$origtokenre/) {
+    my @matches = map {substr $line, $-[$_], $+[$_] - $-[$_]} (1..$#-);
+    # delete this token occurrence
+    my $oldline = $line;
+    substr($line, $-[0], $+[0] - $-[0], "");
+    die "Avoiding loop with re $origtokenre and line: $line" if $line eq $oldline;
+    my $tokenre = $origtokenre;
+    if ($tokenre =~ /\(/) {
+      print STDERR "Token $tokenre MATCHES: @matches\n" if $debug;
+      foreach my $m (@matches) {
+        $tokenre =~ s/\([^\(\)]+\)/$m/;
+      }
+    }
+    push @out, (defined $self->{tokenmap}->{$tokenre} ? $self->{tokenmap}->{$tokenre} : $tokenre);
+  }
+
+  if ($flags =~ /f/) {  # first occurrence only
+    return () if 0 == scalar @out;
+    return $out[0];
+  } elsif ($flags =~ /u/) {  # uniq the occurrences
+    return () if 0 == scalar @out;
+    my %uniq = map { ($_, 1) } @out;
+    return sort {$a cmp $b} keys %uniq;
+  } elsif ($flags =~ /c/) {  # count the number of occurrences
+    return () if 0 == scalar @out;
+    return ( scalar(@out)."*".$out[0] );
+  } else {
+    return @out;
+  }
+}
+
+sub scan {
+  my $self = shift;
+  my $lines = shift;
+
+  my $out = "";
+
+  $out .= "Common properties: ".join(" ", @{$self->{reqtoksf}})."\n";
+  $out .= "Forbidden properties: ".join(" ", @{$self->{forbtoksf}})."\n";
+
+  my $col_to_pick = $self->{data_column};
+
+  my %coldef; my %rowdef;
+  my @coldef; my @rowdef;
+  my %table;
+  my %tableinfo;
+  my %used = ();
+  LINE: foreach my $line (@$lines) {
+    foreach my $r (@{$self->{reqtoksf}}) {
+      if ($line !~ /$r/) {
+        $out .= "Removing due to missing $r: ".$line."\n"
+          if $self->{verbose} >= 2;
+        next LINE;
+      }
+    }
+    foreach my $f (@{$self->{forbtoksf}}) {
+      if ($line =~ /$f/) {
+        $out .= "Removing due to forbidden $f: ".$line."\n"
+          if $self->{verbose} >= 2;
+        next LINE;
+      }
+    }
+    $out .= "Picking rowids and colids from: ".$line."\n"
+      if $self->{verbose} >= 3;
+    my @rowid = ();
+    foreach my $temprt (@{$self->{rowtoksf}}) {
+      my $rt = $temprt;
+      push @rowid, ($self->collect_tokens($rt, $line));
+    }
+    my @colid = ();
+    foreach my $ct (@{$self->{coltoksf}}) {
+      push @colid, ($self->collect_tokens($ct, $line));
+    }
+    
+    my $rowid = "@rowid";
+    my $colid = "@colid";
+    $out .= "  got: $rowid   and   $colid\n"
+      if $self->{verbose} >= 3;
+    if (!defined $rowdef{$rowid}) {
+      push @rowdef, $rowid;
+      $rowdef{$rowid} = 1;
+    }
+    if (!defined $coldef{$colid}) {
+      push @coldef, $colid;
+      $coldef{$colid} = 1;
+    }
+    my $pos = "$rowid\t$colid";
+    my $value = main::field($line, $col_to_pick);
+    my $thisinfo = $line;
+    if (defined $table{$pos} 
+      && ($table{$pos} ne $value || $self->{verbose}>0)) {
+      sub move_last_col_to_front {
+        my $cols = shift;
+        my @cols = split /\t/, $cols;
+        my $last = pop @cols;
+        unshift @cols, $last;
+        return join("\t", @cols);
+      }
+      $out .= "Replaced: ".$tableinfo{$pos}."\n";
+      $out .= "With new: ".$thisinfo."\n";
+      delete $used{"@rowid\t@colid\t$tableinfo{$pos}"};
+    }
+    if (defined $self->{collectdelim}) {
+      $table{$pos} .= $self->{collectdelim} if defined $table{$pos};
+      $table{$pos} .= $value;
+    } else {
+      $table{$pos} = $value;
+    }
+    $tableinfo{$pos} = $thisinfo;
+    $used{"@rowid\t@colid\t$line"} = 1;
+  }
+  $out .= "\n".join("", map {"Using: ".$_."\n"} sort keys %used)
+    if ($self->{verbose} || defined $rowdef{""} || defined $coldef{""})
+      && ($self->{verbose} >= 0);
+  $out .= "\n";
+  # Print column headers
+  foreach my $col (@coldef) {
+    $out .= "\t$col";
+  }
+  $out .= "\n";
+  my @sortedrowdef;
+  if (defined $self->{sortcol}) {
+    @sortedrowdef = sort {
+          ( $table{"$a\t$self->{sortcol}"} || 0 )
+      <=> ($table{"$b\t$self->{sortcol}"} || 0 ) } @rowdef;
+  } else {
+    @sortedrowdef = @rowdef;
+  }
+  # Prepare the table
+  my @tab;
+  my @mark;
+  for(my $r=0; $r<=$#sortedrowdef; $r++) {
+    my $row = $sortedrowdef[$r];
+    my $val_to_colidx = undef;
+    for(my $c=0; $c<=$#coldef; $c++) {
+      my $col = $coldef[$c];
+      my $pos = "$row\t$col";
+      $tab[$r][$c] =
+        defined $table{$pos} ? $table{$pos} : $self->{"blankvalue"};
+      push @{$val_to_colidx->{$tab[$r][$c]}}, $c;
+    }
+    my @sortedvals = sort {$b<=>$a } keys %$val_to_colidx;
+    foreach my $c (@{$val_to_colidx->{$sortedvals[0]}}) {
+      $mark[$r][$c] = "^"; # mark this node as horizontal maximum
+    }
+  }
+  for(my $c=0; $c<=$#coldef; $c++) {
+    my $val_to_rowidx = undef;
+    for(my $r=0; $r<=$#sortedrowdef; $r++) {
+      push @{$val_to_rowidx->{$tab[$r][$c]}}, $r;
+    }
+    my @sortedvals = sort {$b<=>$a} keys %$val_to_rowidx;
+    foreach my $r (@{$val_to_rowidx->{$sortedvals[0]}}) {
+      $mark[$r][$c] = defined$mark[$r][$c]?"*":">";
+        # mark this node as ultimate or vertical maximum
+    }
+  }
+
+  # Print the table
+  for(my $r=0; $r<=$#sortedrowdef; $r++) {
+    my $row = $sortedrowdef[$r];
+    $out .= "$row";
+    for(my $c=0; $c<=$#coldef; $c++) {
+      $out .= "\t$tab[$r][$c]";
+      $out .= $mark[$r][$c]
+        if defined $self->{print_marks} && defined $mark[$r][$c];
+    }
+    $out .= "\n";
+  }
+  $out .= "\n";
+  return $out;
+}
+package main;
+
+
+sub tabulate {
+  # convert eman.tabulate into eman.niceresults
+  my @results = grep { /./ } split /\n/, load("eman.results");
+  my $inf = "eman.tabulate";
+  my $h = my_open($inf);
+  my $outh = my_save("eman.niceresults");
+  my $nr = 0;
+  my $waserror = 0;
+  while (<$h>) {
+    $nr++;
+    if (/^TABLE$/) {
+      my $startnr = $nr;
+      my $gotend = 0;
+      my $specs = {};
+      while (<$h>) {
+        $nr++;
+        next if /^\s*#/ || /^\s*$/; # skip comments and blank lines
+        chomp;
+        if (/^ENDTABLE$/) {
+          $gotend = 1;
+          last;
+        }
+        print STDERR "$nr: $_\n";
+        if (/^TABLE/) {
+          print STDERR "$inf:$nr: Warning TABLE within TABLE starting at $startnr\n";
+          $waserror ++;
+          next;
+        }
+        if (/^(forbidden|required|cols|rows|rowsort|colsort|verbose):(.*)$/) {
+          my $k = $1;
+          my $v = $2;
+          $specs->{$k} .= "\n" if defined $specs->{$k};
+          $specs->{$k} .= $v;
+        } else {
+          print STDERR "$inf:$nr:Unrecognized line: $_\n";
+          $waserror ++;
+        }
+      }
+      die "$inf:$nr: End of file in TABLE starting at $startnr" if ! $gotend;
+      $specs->{"data_column"} = 2;
+      foreach my $attr (qw(rows cols)) {
+        if (!defined $specs->{$attr}) {
+          print STDERR "$inf:$nr:Required attribute $attr missing.\n";
+          $waserror ++;
+        }
+      }
+      print $outh Summarizer::interpret($specs, \@results);
+    } else {
+      print $outh $_;
+    }
+  }
+  close $h;
+  close $outh;
+  return ! $waserror;
+}
+# end of routines for tablemaker
+
 
 sub select_steps {
   my @args = @_;
