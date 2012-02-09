@@ -31,6 +31,7 @@ my $eman = $Bin."/".basename($0); # full path to ourselves
 
 # command name abbreviations, identities provided for commands with no abbrevs
 my %expand_abbrev = qw(
+  retag retag
   ls list
   sel select
   cl clone
@@ -437,6 +438,11 @@ if ($cmd eq "reindex" || $reindex) {
 } else {
   $idx = loadidx();
 }
+# routines for autotags
+my $autotag_rules = undef; # to be loaded by load_autotag_rules("eman.autotags");
+# autotag_rules->{steptype} = [ [list of regexes producing one tag],
+#   [list of regexes producing another tag] ]
+
 
 foreach my $subdir (@subdirs) {
   my @steps = glob("$subdir/$dirprefix*.*.[0-9]*");
@@ -461,6 +467,13 @@ foreach my $subdir (@subdirs) {
   }
 }
 
+if ($cmd eq "retag") {
+  # reindex implies also refreshing autotags
+  $autotag_rules = load_autotag_rules("eman.autotags");
+  reindex_direct_autotags();
+  exit 1 if $waserror;
+}
+
 #print STDERR "done here\n";
 
 saveidx($idx) if ! $readonly;
@@ -468,6 +481,7 @@ chdir($oldwd) or die "Failed to chdir back to $oldwd";
 ## End of updating the index
 
 exit 0 if $cmd eq "reindex"; # the job has been done already
+exit 0 if $cmd eq "retag"; # the job has been done already
 
 
 ## handle all the various commands
@@ -1572,13 +1586,18 @@ sub print_short {
   my $s = shift;
 
   print $s;
-  print "\t".load_status($s) if $show_status;
+  print "\t", load_status($s) if $show_status;
   if ($show_tag) {
+    print "\t";
     my $tags = load_tag_hash($s);
-    print "\t".join(" ", sort {$a cmp $b} keys %$tags);
+    my $autotags = $idx->{"STEP_TO_AUTOTAGS"}->{$s};
+    print join(" ",
+      ( sort {$a cmp $b} keys %$tags ),
+      ( sort {$a cmp $b} keys %$autotags ),
+    );
   }
-  print "\t".(load_jobid($s) || "") if $show_jobid;
-  print "\t".show_disk_usage($s) if $show_disk_usage;
+  print "\t", (load_jobid($s) || "") if $show_jobid;
+  print "\t", show_disk_usage($s) if $show_disk_usage;
   print "\n";
   print_vars("  ", $s) if $show_vars;
   print_log("  ", $s) if $show_log;
@@ -2113,25 +2132,32 @@ sub compare_steps {
 }
 
 # routines for autotags
-my $autotag_rules = load_autotag_rules("eman.autotags");
-# autotag_rules->{steptype} = [ [list of regexes producing one tag],
-#   [list of regexes producing another tag] ]
 
 # One line of the config file is called a 'rule' and it can create one autotag.
 # The autotag is constructed using of sequence of regexes, each applied on the
 # output of the previous one, starting with the vars string.
 
 sub load_autotag_rules {
+# autotag_rules->{steptype} = [ [list of regexes producing one tag],
+#   [list of regexes producing another tag] ]
   my $inf = shift;
   my $h = my_open($inf);
   my $out;
+  my $nr = 0;
   while(<$h>) {
+    $nr++;
     chomp;
     next if /^\s*#/ || /^\s*$/;
     my @cols = split / *\t */;
     my $steptype = shift @cols;
-    $out->{$steptype} = [] if !defined $out->{$steptype};
-    push @{$out->{$steptype}}, \@cols;
+    my $source = shift @cols;
+    if ($source ne "var") {
+      print STDERR $inf, ":", $nr, ": Bad source '$source'.\n";
+      $waserror++;
+    }
+    $out->{$steptype}->{$source} = [] if !defined $out->{$steptype}->{$source};
+    push @{$out->{$steptype}->{$source}}, [ @cols ];
+    print STDERR "Autotag rules based on $source of $steptype: $_\n" if $debug;
   }
   close $h;
   return $out;
@@ -2145,16 +2171,24 @@ sub reindex_direct_autotags {
     my $steptype = get_steptype($step);
     next if ! defined $autotag_rules->{$steptype};
     my $varsstr = load_vars_str($step);
-    foreach my $rules (@{$autotag_rules->{$steptype}}) {
-      foreach my $rule (@$rules) {
-        my $tag = $varsstr;
-        foreach my $regex (@{$rule}) {
-          eval "\$tag =~ $regex;";
+    if (defined $autotag_rules->{$steptype}->{"var"}) {
+      # there are some tags to be created from individual variables
+      foreach my $rule (@{$autotag_rules->{$steptype}->{"var"}}) {
+        foreach my $varline (split /\n/, $varsstr) {
+          next if $varline eq "";
+          my $tag = $varline;
+          foreach my $regex (@{$rule}) {
+            print STDERR "Eval:  \$tag =~ s$regex;\n" if $debug;
+            eval "\$tag =~ s$regex  or \$tag = '';";
+          }
+          next if $tag eq ""; # blank tag is removed
+          $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag} ++;
         }
-        next if $tag eq ""; # blank tag is removed
-        $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag} ++;
       }
     }
+    # if (defined $autotag_rules->{$steptype}->{"inhertags"}) {
+    # this is another option: constructing tags from inherited autotags
+    # however, this needs to be applied only after inheriting...
   }
 }
 # end of routines for autotags
@@ -2393,7 +2427,7 @@ sub field {
 
 sub var_bash_escape {
   my $s = shift;
-  return $s if $s =~ /^[-[:alnum:]._+,]*$/;
+  return $s if $s =~ /^[-[:alnum:]:._+,]*$/;
   $s =~ s/\\/\\\\/g;
   $s =~ s/"/\\"/g;
   return '"'.$s.'"';
