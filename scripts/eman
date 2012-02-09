@@ -844,12 +844,12 @@ sub collect {
   foreach my $line (split /\n/, $resconf) {
     my ($name, $glob, $regexorcmd) = map { s/^ +//; s/ +$//; $_ }
                                      split /\t/, $line;
-    my @files = glob($glob);
+    my @files = ( map { glob($_."/".$glob) } @subdirs);
     # print STDERR "$name ($glob):\n";
     # print STDERR join("\n", @files);
     # print STDERR "\n\n";
     foreach my $f (@files) {
-      my $step = $f; $step =~ s/\/.*//;
+      my $step = guess_stepname_from_pathname($f); #$f; $step =~ s/\/.*//;
       my $name_to_res = undef;
       if ($regexorcmd =~ /^CMD:(.*)\$\$(.*)/) {
         # e.g. "CMD: du -sh $$"
@@ -913,7 +913,8 @@ sub collect {
   }
   foreach my $step (keys %knowntag) {
     # emit also all tags
-    print $outh $step, "\t", "TAG", "\t", $knowntag{$step}, "\n";
+    print $outh $step, "\t", load_status($step), "\t",
+      "TAG", "\t", $knowntag{$step}, "\n";
   }
   close $outh;
   return $ok;
@@ -1891,7 +1892,7 @@ sub guess_stepname_from_dir {
   # search upwards in the tree
   # since subdirectories are supported, this is a heuristic based on stepname format
   my $oldwd = cwd();
-  chdir $dir or die "Failed to guess stepdir from $dir (nonexistent)";
+  chdir $dir or die "Failed to guess stepdir from $dir (not a dir)";
   my $up = "./";
   my $out = undef;
   while ( -d $up && ! -e $up."/".$seedsdir) {
@@ -1904,6 +1905,15 @@ sub guess_stepname_from_dir {
   }
   chdir($oldwd) or die "Failed chdir back to $oldwd";
   return $out;
+}
+
+sub guess_stepname_from_pathname {
+  my $pathname = shift;
+  if ( -d $pathname ) {
+    return guess_stepname_from_dir($pathname);
+  } else {
+    return guess_stepname_from_dir(dirname($pathname));
+  }
 }
 
 
