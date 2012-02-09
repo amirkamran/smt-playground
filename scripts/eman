@@ -906,7 +906,8 @@ sub collect {
           $tag = compiled_tag_string($step);
         }
         $knowntag{$step} = $tag;
-        print $outh $step, "\t", $k, "\t", $res, "\t", $tag, "\n";
+        print $outh $step, "\t", load_status($step), "\t",
+	  $k, "\t", $res, "\t", $tag, "\n";
       }
     }
   }
@@ -2257,6 +2258,8 @@ sub interpret {
   $self->{forbidden} =~ s/^[ \n\t]*|[ \n\t]*$//g;
   $self->{rows} =~ s/^[ \n\t]*|[ \n\t]*$//g;
   $self->{cols} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  $self->{rowsort} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  $self->{colsort} =~ s/^[ \n\t]*|[ \n\t]*$//g;
 
 
 
@@ -2292,8 +2295,11 @@ sub collect_tokens {
   my $flags = $1;
   $flags = "" if ! defined $flags;
 
+  $origtokenre =~ s/^(\^)//;
+  my $match_token_start_re = (defined $1 && $1 eq "^" ? "\\s" : "");
+
   print STDERR "Searching for $origtokenre in $line.\n" if $debug;
-  while ($line =~ /$origtokenre/) {
+  while ($line =~ /$match_token_start_re$origtokenre/) {
     my @matches = map {substr $line, $-[$_], $+[$_] - $-[$_]} (1..$#-);
     # delete this token occurrence
     my $oldline = $line;
@@ -2344,19 +2350,19 @@ sub scan {
     foreach my $r (@{$self->{reqtoksf}}) {
       if ($line !~ /$r/) {
         $out .= "Removing due to missing $r: ".$line."\n"
-          if $self->{verbose} >= 2;
+          if $self->{verbose} >= 3;
         next LINE;
       }
     }
     foreach my $f (@{$self->{forbtoksf}}) {
       if ($line =~ /$f/) {
         $out .= "Removing due to forbidden $f: ".$line."\n"
-          if $self->{verbose} >= 2;
+          if $self->{verbose} >= 3;
         next LINE;
       }
     }
     $out .= "Picking rowids and colids from: ".$line."\n"
-      if $self->{verbose} >= 3;
+      if $self->{verbose} >= 4;
     my @rowid = ();
     foreach my $temprt (@{$self->{rowtoksf}}) {
       my $rt = $temprt;
@@ -2370,7 +2376,7 @@ sub scan {
     my $rowid = "@rowid";
     my $colid = "@colid";
     $out .= "  got: $rowid   and   $colid\n"
-      if $self->{verbose} >= 3;
+      if $self->{verbose} >= 4;
     if (!defined $rowdef{$rowid}) {
       push @rowdef, $rowid;
       $rowdef{$rowid} = 1;
@@ -2383,16 +2389,9 @@ sub scan {
     my $value = main::field($line, $col_to_pick);
     my $thisinfo = $line;
     if (defined $table{$pos} 
-      && ($table{$pos} ne $value || $self->{verbose}>0)) {
-      sub move_last_col_to_front {
-        my $cols = shift;
-        my @cols = split /\t/, $cols;
-        my $last = pop @cols;
-        unshift @cols, $last;
-        return join("\t", @cols);
-      }
+        && ($table{$pos} ne $value || $self->{verbose} >= 2)) {
       $out .= "Replaced: ".$tableinfo{$pos}."\n";
-      $out .= "With new: ".$thisinfo."\n";
+      $out .= "    With: ".$thisinfo."\n";
       delete $used{"@rowid\t@colid\t$tableinfo{$pos}"};
     }
     if (defined $self->{collectdelim}) {
@@ -2400,70 +2399,101 @@ sub scan {
       $table{$pos} .= $value;
     } else {
       $table{$pos} = $value;
+      # $out.="REGISTERING: $pos  ==> $value\n";
     }
     $tableinfo{$pos} = $thisinfo;
     $used{"@rowid\t@colid\t$line"} = 1;
   }
   $out .= "\n".join("", map {"Using: ".$_."\n"} sort keys %used)
     if ($self->{verbose} || defined $rowdef{""} || defined $coldef{""})
-      && ($self->{verbose} >= 0);
-  $out .= "\n";
-  # Print column headers
-  foreach my $col (@coldef) {
-    $out .= "\t$col";
-  }
+      && ($self->{verbose} >= 1);
   $out .= "\n";
   my @sortedrowdef;
-  if (defined $self->{sortcol}) {
-    @sortedrowdef = sort {
-          ( $table{"$a\t$self->{sortcol}"} || 0 )
-      <=> ($table{"$b\t$self->{sortcol}"} || 0 ) } @rowdef;
+  if (defined $self->{rowsort}) {
+    @sortedrowdef = sort { # $out.="SORT\na: $a\t$self->{rowsort}\n";
+          ( take_just_number($table{"$b\t$self->{rowsort}"}) || 0 )
+      <=> ( take_just_number($table{"$a\t$self->{rowsort}"}) || 0 ) } @rowdef;
   } else {
     @sortedrowdef = @rowdef;
+  }
+  my @sortedcoldef;
+  if (defined $self->{colsort}) {
+    @sortedcoldef = sort { # $out.="SORT\na: $a\t$self->{colsort}\n";
+          ( take_just_number($table{"$self->{colsort}\t$b"}) || 0 )
+      <=> ( take_just_number($table{"$self->{colsort}\t$a"}) || 0 ) } @coldef;
+  } else {
+    @sortedcoldef = @coldef;
   }
   # Prepare the table
   my @tab;
   my @mark;
+  my $firstcolwidth = 0;
+  my @colwidth = map {length($_)} @coldef;
   for(my $r=0; $r<=$#sortedrowdef; $r++) {
     my $row = $sortedrowdef[$r];
+    $firstcolwidth = length($row) if length($row) > $firstcolwidth;
     my $val_to_colidx = undef;
-    for(my $c=0; $c<=$#coldef; $c++) {
-      my $col = $coldef[$c];
+    for(my $c=0; $c<=$#sortedcoldef; $c++) {
+      my $col = $sortedcoldef[$c];
       my $pos = "$row\t$col";
-      $tab[$r][$c] =
-        defined $table{$pos} ? $table{$pos} : $self->{"blankvalue"};
-      push @{$val_to_colidx->{$tab[$r][$c]}}, $c;
+      my $thisval = defined $table{$pos} ? $table{$pos} : $self->{"blankvalue"};
+      $tab[$r][$c] = $thisval;
+      push @{$val_to_colidx->{$thisval}}, $c;
+      $colwidth[$c] = length($thisval) if length($thisval) > $colwidth[$c];
     }
-    my @sortedvals = sort {$b<=>$a } keys %$val_to_colidx;
+    my @sortedvals = sort {take_just_number($b)<=>take_just_number($a)}
+                     keys %$val_to_colidx;
     foreach my $c (@{$val_to_colidx->{$sortedvals[0]}}) {
       $mark[$r][$c] = "^"; # mark this node as horizontal maximum
     }
   }
-  for(my $c=0; $c<=$#coldef; $c++) {
+  for(my $c=0; $c<=$#sortedcoldef; $c++) {
     my $val_to_rowidx = undef;
     for(my $r=0; $r<=$#sortedrowdef; $r++) {
       push @{$val_to_rowidx->{$tab[$r][$c]}}, $r;
     }
-    my @sortedvals = sort {$b<=>$a} keys %$val_to_rowidx;
+    my @sortedvals = sort {take_just_number($b)<=>take_just_number($a)}
+                       keys %$val_to_rowidx;
     foreach my $r (@{$val_to_rowidx->{$sortedvals[0]}}) {
       $mark[$r][$c] = defined$mark[$r][$c]?"*":">";
         # mark this node as ultimate or vertical maximum
     }
   }
 
+  # Print column headers
+  $out .= " " x $firstcolwidth; # pad the first column of the first row
+  for(my $c=0; $c<=$#sortedcoldef; $c++) {
+    my $col = $sortedcoldef[$c];
+    my $pad = " " x ($colwidth[$c] - length($col));
+    $out .= "\t$col$pad";
+    $out .= " " if $self->{print_max_marks};
+  }
+  $out .= "\n";
+
   # Print the table
   for(my $r=0; $r<=$#sortedrowdef; $r++) {
     my $row = $sortedrowdef[$r];
-    $out .= "$row";
-    for(my $c=0; $c<=$#coldef; $c++) {
-      $out .= "\t$tab[$r][$c]";
-      $out .= $mark[$r][$c]
-        if defined $self->{print_marks} && defined $mark[$r][$c];
+    my $pad = " " x ($firstcolwidth - length($row));
+    $out .= "$row$pad";
+    for(my $c=0; $c<=$#sortedcoldef; $c++) {
+      my $thisval = $tab[$r][$c];
+      my $pad = " " x ($colwidth[$c] - length($thisval));
+      $out .= "\t$pad$thisval";
+      if ($self->{print_max_marks}) {
+        $out .= defined $mark[$r][$c] ? $mark[$r][$c] : " ";
+      }
     }
     $out .= "\n";
   }
   $out .= "\n";
   return $out;
+}
+sub take_just_number {
+  my $s = shift;
+  my $outs = $s;
+  $outs =~ s/[^-.0-9].*//;
+  return $outs if $outs ne "";
+  return $s;
 }
 package main;
 
@@ -2490,13 +2520,12 @@ sub tabulate {
           $gotend = 1;
           last;
         }
-        print STDERR "$nr: $_\n";
         if (/^TABLE/) {
           print STDERR "$inf:$nr: Warning TABLE within TABLE starting at $startnr\n";
           $waserror ++;
           next;
         }
-        if (/^(forbidden|required|cols|rows|rowsort|colsort|verbose):(.*)$/) {
+        if (/^(forbidden|required|cols|rows|rowsort|colsort|verbose|print_max_marks):(.*)$/) {
           my $k = $1;
           my $v = $2;
           $specs->{$k} .= "\n" if defined $specs->{$k};
@@ -2507,7 +2536,7 @@ sub tabulate {
         }
       }
       die "$inf:$nr: End of file in TABLE starting at $startnr" if ! $gotend;
-      $specs->{"data_column"} = 2;
+      $specs->{"data_column"} = 3;
       foreach my $attr (qw(rows cols)) {
         if (!defined $specs->{$attr}) {
           print STDERR "$inf:$nr:Required attribute $attr missing.\n";
