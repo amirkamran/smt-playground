@@ -467,10 +467,10 @@ foreach my $subdir (@subdirs) {
   }
 }
 
-if ($cmd eq "retag") {
+if ($cmd eq "retag" || $cmd eq "reindex") {
   # reindex implies also refreshing autotags
   $autotag_rules = load_autotag_rules("eman.autotags");
-  reindex_direct_autotags();
+  reindex_autotags();
   exit 1 if $waserror;
 }
 
@@ -2168,7 +2168,7 @@ sub load_autotag_rules {
   return $out;
 }
 
-sub reindex_direct_autotags {
+sub reindex_autotags {
   # for all steps, removes all autotags and recreates them
   # does not add autotags of the dependencies, thus called 'direct' autotags
   $idx->{'STEP_TO_AUTOTAGS'} = undef; # delete old
@@ -2204,6 +2204,36 @@ sub reindex_direct_autotags {
     # this is another option: constructing tags from inherited autotags
     # however, this needs to be applied only after inheriting...
   }
+  # Add indirect tags
+  my $indexed;
+  foreach my $step (all_steps()) {
+    next if $indexed->{$step};
+    $indexed = add_inherited_autotags($indexed, $step);
+  }
+}
+
+sub add_inherited_autotags {
+  my $indexed = shift;
+  my $step = shift;
+  my $deps = load_depsarr($step);
+  $deps = [] if !defined $deps;
+  print STDERR "$step: @$deps\n" if $debug;
+  foreach my $dep (@$deps) {
+    print STDERR "for $step: $dep: ", compiled_tag_string($dep), "\n" if $debug;
+    # ensure all predecessors inherited theirtags
+    $indexed = add_inherited_autotags($indexed, $dep)
+      if ! $indexed->{$dep};
+    # inherit our tags from the dep
+    # TODO here is the place to control what is being inherited
+    # based on autotag rules
+    foreach my $tag (keys %{$idx->{'STEP_TO_AUTOTAGS'}->{$dep}}) {
+      print STDERR "  + $tag\n" if $debug;
+      $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag}
+        += $idx->{'STEP_TO_AUTOTAGS'}->{$dep}->{$tag};
+    }
+  }
+  $indexed->{$step} = 1;
+  return $indexed;
 }
 # end of routines for autotags
 
