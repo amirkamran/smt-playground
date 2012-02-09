@@ -9,4 +9,6 @@ lm	var	/CORP=(.*?)/LM$1/m
 lm	var	/ORDER=(.*)/$1gr/
 align	var	/ALILABEL=(.*)/ALI$1/
 tm	var	/ALISYM=(.*)/ALI$1/
-
+mert	var	/.*pairwise-ranked.*/PRO/
+mert	var	/.*--sctype=([^" =]*).*/towards-$1/	/;/+/g
+mert	var	/DEVCORP=(.*)/DEV$1/
