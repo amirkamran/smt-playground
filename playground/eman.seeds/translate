@@ -16,6 +16,7 @@ eman \
   defvar ITER default='' \
     help="which MERT iteration weights to use; default is the final set" \
   defvar SEARCH default=cube help='the search type (beam or cube)' \
+  defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
 || exit 1
 
 eval `eman bash-loadvars`
