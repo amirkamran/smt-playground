@@ -832,7 +832,7 @@ sub collect {
   my $outh = my_save($resultsfile);
   my $ok = 1;
   my $got;
-  my %knowntag; # a cache of tags
+  my %knowntag; # a local cache of tags
   foreach my $line (split /\n/, $resconf) {
     my ($name, $glob, $regexorcmd) = map { s/^ +//; s/ +$//; $_ }
                                      split /\t/, $line;
@@ -895,7 +895,7 @@ sub collect {
         }
         my $tag = $knowntag{$step};
         if (!defined $knowntag{$step}) {
-          $tag = load("$step/eman.tag");
+          $tag = compiled_tag_string($step);
         }
         $knowntag{$step} = $tag;
         print $outh $step, "\t", $k, "\t", $res, "\t", $tag, "\n";
@@ -1587,15 +1587,7 @@ sub print_short {
 
   print $s;
   print "\t", load_status($s) if $show_status;
-  if ($show_tag) {
-    print "\t";
-    my $tags = load_tag_hash($s);
-    my $autotags = $idx->{"STEP_TO_AUTOTAGS"}->{$s};
-    print join(" ",
-      ( sort {$a cmp $b} keys %$tags ),
-      ( sort {$a cmp $b} keys %$autotags ),
-    );
-  }
+  print "\t", compiled_tag_string($s) if $show_tag;
   print "\t", (load_jobid($s) || "") if $show_jobid;
   print "\t", show_disk_usage($s) if $show_disk_usage;
   print "\n";
@@ -1659,7 +1651,7 @@ sub traceback {
     push @kws, $jid if defined $jid && $jid ne "-";
   }
   push @kws, load_status($step) || "" if $show_status;
-  push @kws, load_tag($step) || "" if $show_tag;
+  push @kws, compiled_tag_string($step) || "" if $show_tag;
   $indent = $show_tree_in_traceback ? "|  | " : "";
   print $prefix.$indent."Job: @kws\n" if 0 < scalar @kws;
   my $deps = load_depsarr($step);
@@ -1784,6 +1776,19 @@ sub load_tag_hash {
   my %out = map { ($_, 1) } split /(\s|\n)+/, load_tag($step);
   return \%out;
 }
+
+sub compiled_tag_string {
+  # used when displaying tags, includes autotags and manual tags
+  my $step = shift;
+  my $tags = load_tag_hash($step);
+  my $autotags = $idx->{"STEP_TO_AUTOTAGS"}->{$step};
+  return join(" ",
+    ( sort {$a cmp $b} keys %$tags ),
+    ( sort {$a cmp $b} keys %$autotags ),
+  );
+}
+  
+
 sub load_depsarr {
   my $step = shift;
   my $depsstr = try_load(absolutize_within_stepdir($step, "eman.deps"));
