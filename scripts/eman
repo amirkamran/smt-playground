@@ -2500,8 +2500,10 @@ sub scan {
 }
 sub take_just_number {
   my $s = shift;
+  return if !defined $s;
   my $outs = $s;
   $outs =~ s/[^-.0-9].*//;
+  return 0 if $outs eq "-";
   return $outs if $outs ne "";
   return $s;
 }
