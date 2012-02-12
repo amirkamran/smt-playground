@@ -6,17 +6,17 @@ set -o pipefail # safer pipes
 
 PLAYGROUND=`eman path` # eman playground directory
 LUCSCOREDIR=`pwd` # actual directory (lucindexscore)
+STEPNAME=$(basename $(pwd))
+
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-   defvar LUCINDEXSTEP type=reqstep default='' help='where created lucene index is' \
-   defvar MERTSTEP default='' type=reqstep help='output of baseline translation' \
+   defvar INDEXDIR default='' help='directory with lucene index' \
+   defvar SRCCORP default='' help='corpora according which should be searched' \
+   defvar SRCAUG default='' help='lang+factor of SRCCORP' \
    defvar CUT default='3' help='cut-off limit for lucene' \
    defvar OPTIONS default='' help='options for lucene filtering' \
-   defvar REFAUG inherit=MERTSTEP help='lang+factor for reference file in mertstep' \
-   defvar TESTCORP inherit=MERTSTEP help='baseline translation of test file from mertstep' \
-   defvar SRCCORP inherit=LUCINDEXSTEP help='large monolingual corpora used in lucindexstep' \
-   defvar OUTCORP default='output.gz' help='filename of the output' \
+   defvar OUTCORP same.as='STEPNAME' help='filename of the output' \
    defvar OUTLANG default='' help='language of output' \
    defvar OUTFACTORS default='' help='factors of output' \
 || exit 1
@@ -24,24 +24,21 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-MERTSTEPDIR=`eman path $MERTSTEP`
-LUCINDEXSTEPDIR=`eman path $LUCINDEXSTEP`
-
 # Check our input
-[ -z "$MERTSTEP" ] || [ -e $MERTSTEPDIR/evaluation.opt.txt ] \
-|| die "\$MERTSTEP/evaluation.opt.out not found"
+[ -e $PLAYGROUND/$INDEXDIR/indexes ] \
+|| die "\$INDEXDIR not found"
 
-[ -z "$LUCINDEXSTEP" ] || [ -e $LUCINDEXSTEPDIR/indexes ] \
-|| die "\$LUCINDEXSTEP/indexes not found"
+$PLAYGROUND/corpman $SRCCORP/$SRCAUG \
+  || die "$SRCCORP/$SRCAUG not found"
 
+# Preregister corpora
+$PLAYGROUND/corpman register -- output-txt.txt.gz \
+  -1	$OUTCORP-txt	$OUTLANG	$OUTFACTORS	-1	0 \
+|| die "Can't register corpus"
 
-# other vars, not influencing exact output
-JOBS=${JOBS:-30}
-SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
-
-cmd="cd $PLAYGROUND/LuceneIndexer && ./score-join $MERTSTEPDIR/evaluation.opt.txt $CUT $LUCINDEXSTEPDIR/indexes $LUCSCOREDIR/output.info" 
-
-FILENAME=$SRCCORP-lucscore-$TESTCORP-$TARGETLANG-$MERTSTEP-$TARGETFACTS-$CUT
+$PLAYGROUND/corpman register -- output-lineids.txt.gz \
+  -1	$OUTCORP-lineids	$OUTLANG	$OUTFACTORS	-1	0 \
+|| die "Can't register corpus"
 
 # Don`t continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
@@ -58,14 +55,33 @@ mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
-$cmd || die "Failed to filter index"
-gzip $LUCSCOREDIR/output.info
+$PLAYGROUND/corpman $SRCCORP/$SRCAUG --dump | gzip -c > corpus.txt.gz \\
+  || die "Failed to find corpus $SRCCORP/$SRCAUG"
 
-zcat $LUCSCOREDIR/output.info.gz | cut -f 3 | gzip -c > $LUCSCOREDIR/$OUTCORP 
-LINECOUNT=`zcat $LUCSCOREDIR/output.info.gz | wc -l`
+cd $PLAYGROUND/LuceneIndexer \\
+  || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
 
-echo "$OUTCORP	2	$FILENAME	sentids	sentid	$LINECOUNT" > $LUCSCOREDIR/corpman.info 
-echo "$OUTCORP	3	$FILENAME	$OUTLANG	$OUTFACTORS	$LINECOUNT" >> $LUCSCOREDIR/corpman.info
+./scoreBySentence inputfile=$LUCSCOREDIR/corpus.txt.gz lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes score.nbest=$CUT $OPTIONS | gzip -c > $LUCSCOREDIR/output.txt.gz \\
+  || die "Failed to filter index"
+
+cd $LUCSCOREDIR \\
+  || die "Failed to chdir to $LUCSCOREDIR"
+
+zcat output.txt.gz | cut -f 3 | grep -v '^$' | gzip -c > output-txt.txt.gz \\
+  || die "Failed to filter text"
+
+zcat output.txt.gz | cut -f 1 | grep -v '^$' | gzip -c > output-lines.txt.gz \\
+  || die "Failed to filter linenums"
+
+LINECOUNT=`zcat output-txt.txt.gz | wc -l`
+
+$PLAYGROUND/corpman register -- output-txt.txt.gz \
+  -1	$OUTCORP-txt	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \
+|| die "Can't register linecount of the filtered corpus"
+
+$PLAYGROUND/corpman register -- output-lines.txt.gz \
+  -1	$OUTCORP-lineid	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \
+|| die "Can't register linecount of the filtered corpus"
 
 echo Done.
 eman succeed \$mydir
