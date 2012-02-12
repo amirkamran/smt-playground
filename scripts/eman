@@ -364,7 +364,7 @@ if ($cmd eq "defvar") {
           my ($var) = grep { $_ =~ m/^$fromvar=/ }
                       split(/\n/, $parent_vars_str);
           if (defined $var) {
-            $usevalue = (split('=', $var))[1];
+            $usevalue = (split('=', $var, 2))[1];
             $usevalue = var_bash_unescape($usevalue);
           }
         }
