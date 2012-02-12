@@ -1068,7 +1068,13 @@ sub init_by_recipe {
   $avoid{$thisname}=1 if $avoid_all;
     # --all-avoid forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
-  $knownstep = find_usable_step_given_hash($hash);
+  if (defined $idx->{$thisname} && $idx->{$thisname} eq $hash
+      && step_good_to_reuse($thisname)) {
+    print STDERR "The given $thisname actually fits.\n" if $debug;
+    $knownstep = $thisname;
+  } else {
+    $knownstep = find_usable_step_given_hash($hash);
+  }
 
   if (defined $knownstep) {
     print STDERR "Reusing existing step: $knownstep\n";
@@ -1114,9 +1120,7 @@ sub find_usable_step_given_hash {
         $knownstep = $k;
         last;
       }
-      if (-d $k && step_valid($k)
-        && load_status($k) !~ /FAILED|NONEXISTENT|OUTDATED|ABOLISHED/
-        ) {
+      if (step_good_to_reuse($k)) {
         push @usable, $k;
         my $this_ctime = -C $k;
         # of all the usable, select the oldest
@@ -1135,6 +1139,14 @@ sub find_usable_step_given_hash {
     }
   }
   return $knownstep;
+}
+
+sub step_good_to_reuse {
+  my $step = shift;
+  return (-d $step # XXX should fix for subdirs
+    && step_valid($step)
+    && load_status($step) !~ /FAILED|NONEXISTENT|OUTDATED|ABOLISHED/
+  );
 }
 
 
