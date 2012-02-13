@@ -6,8 +6,8 @@ set -o pipefail # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-   defvar SRCCORP default='' help='input monolingual corpus in target language' \
-   defvar SRCAUG default='' help='lang+factors' \
+   defvar SRCCORP help='input corpus to filter' \
+   defvar SRCAUG help='lang+factors' \
 || exit 1
 
 # Set local bash variables
@@ -35,8 +35,22 @@ mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
-$PLAYGROUND/corpman $SRCCORP/$SRCAUG --dump | gzip -c > corpus.txt.gz \\
-  || die "Failed to find corpus $SRCCORP/$SRCAUG"
+
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
+
+mkcorpus $SRCCORP/$SRCAUG txt
 
 mkdir indexes \\
   || die "Failed to mkdir indexes"

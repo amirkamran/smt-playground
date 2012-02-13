@@ -376,6 +376,7 @@ sub list_corp_variants {
       }
     }
     print $corpname, "/", $l, "+", join("+", sort {$a cmp $b} keys %knownfacts);
+    $linecount = -1 if !defined $linecount;
     print "\t", $linecount;
     print "\n";
   }

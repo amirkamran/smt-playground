@@ -34,3 +34,13 @@ for l in cs en; do
     echo CORP=$c CORPAUG="$l"NmT1+stc ORDER=6 SRILMSTEP=s.srilm.117f0cfe.20120202-0037 eman init lm --mem=30g --start
   done
 done
+
+
+
+** BUGs to examine:
+
+- why it failed only this late: s.translate.75547d7e.20120212-0052
+  ...well, sge starts jobs even if their prerequisites fail => the translate learns hard that the mert has failed
+
+- why s.lm.568a11d1.20120212-0027 got prepfailed for this mert: s.mert.13368143.20120212-0100
+  ... can't tell, perhaps corpman index locking?
