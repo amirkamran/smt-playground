@@ -1,0 +1,48 @@
++- s.lm.2eea55af.20120213-0340
+|  | CORP=cs-filtered
+|  | CORPAUG=cs+form
+|  | LMFLAGS=
+|  | ORDER=3
+|  | PARTS=1
+|  | SRILMSTEP=s.srilm.60f017ad.20120204-2147
+|  +- s.corpus.6d41893b.20120213-0326
+|  |  | COLUMN=-1
+|  |  | DERIVED=0
+|  |  | COMBINE_PARTS=
+|  |  | DEPS=
+|  |  | FACTOR=-1
+|  |  | FILENAME=
+|  |  | OUTCORP=cs-filtered
+|  |  | OUTFACTS=form
+|  |  | OUTLANG=cs
+|  |  | OUTLINECOUNT=8999
+|  |  | RUN_COMMAND=
+|  |  | STEPNAME=
+|  |  | TAKE_FROM_COMMAND="zcat ../s.lucscore.b9f4022e.20120213-0253/output-txt.txt.gz"
+|  |  +- s.lucscore.b9f4022e.20120213-0253
+|  |  |  | INDEXDIR=s.lucindex.625c6ddc.20120213-0137
+|  |  |  | SRCCORP=cs-to-filter
+|  |  |  | SRCAUG=cs+form
+|  |  |  | OUTCORP=cs-filtered
+|  |  |  | OUTLANG=cs
+|  |  |  | OUTFACTORS=form
+|  |  |  | CUT=
+|  |  |  | OPTIONS=
+|  |  |  +- s.corpus.7a54d385.20120213-0243
+|  |  |  |  | COLUMN=-1
+|  |  |  |  | DERIVED=0
+|  |  |  |  | COMBINE_PARTS=
+|  |  |  |  | DEPS=
+|  |  |  |  | FACTOR=-1
+|  |  |  |  | FILENAME=
+|  |  |  |  | OUTCORP=cs-to-filter
+|  |  |  |  | OUTFACTS=form
+|  |  |  |  | OUTLANG=cs
+|  |  |  |  | OUTLINECOUNT=3003
+|  |  |  |  | RUN_COMMAND=
+|  |  |  |  | STEPNAME=
+|  |  |  |  | TAKE_FROM_COMMAND="/ha/work/people/galuscakova/statmt2/playgound/corpman --dump wmt11/cs_txt+untoken"
+|  |  |  +- s.lucindex.625c6ddc.20120213-0137
+|  |  |  |  | SRCAUG=cs_txt+untoken
+|  |  |  |  | SRCCORP=monoall
+|  +- s.srilm.60f017ad.20120204-2147
