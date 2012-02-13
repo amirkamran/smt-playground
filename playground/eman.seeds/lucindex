@@ -58,6 +58,7 @@ mkdir indexes \\
 cd $PLAYGROUND/LuceneIndexer \\
   || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
 
+echo "Indexing $SRCCORP/$SRCAUG"
 ./index inputfile=$WORKDIR/corpus.txt.gz lucene.index.directory=$WORKDIR/indexes \\
 || die "Failed to prepare the index"
 
