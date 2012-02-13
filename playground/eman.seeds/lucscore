@@ -11,33 +11,42 @@ STEPNAME=$(basename $(pwd))
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-   defvar INDEXDIR default='' help='directory with lucene index' \
-   defvar SRCCORP default='' help='corpora according which should be searched' \
-   defvar SRCAUG default='' help='lang+factor of SRCCORP' \
+   defvar INDEXDIR type=reqstep help='directory with lucene index' \
+   defvar SRCCORP help='the "query corpus" according which should be searched' \
+   defvar SRCAUG inherit=INDEXDIR help='lang+factor of SRCCORP' \
    defvar CUT default='3' help='cut-off limit for lucene' \
    defvar OPTIONS default='' help='options for lucene filtering' \
-   defvar OUTCORP same.as='STEPNAME' help='filename of the output' \
-   defvar OUTLANG default='' help='language of output' \
-   defvar OUTFACTORS default='' help='factors of output' \
+   defvar OUTCORP default='' help='corpus of the output, constructed from INDEXDIR-corpus and this step name' \
+   defvar OUTLANG default='' help='language of output, taken from SRCAUG by default' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-# Check our input
-[ -e $PLAYGROUND/$INDEXDIR/indexes ] \
-|| die "\$INDEXDIR not found"
+# construct OUTCORP
+export OUTCORP=$(eman get-var $INDEXDIR SRCCORP)-$STEPNAME
+export OUTLANG=$(echo $SRCAUG | cut -d+ -f1)
 
-$PLAYGROUND/corpman $SRCCORP/$SRCAUG \
-  || die "$SRCCORP/$SRCAUG not found"
+# Store the calculated values
+eman defvar OUTCORP \
+     defvar OUTLANG
+
+# Check our input
+# Can't check for this: at init phase, the indexes are not there yet
+#[ -e $PLAYGROUND/$INDEXDIR/indexes ] \
+#|| die "\$INDEXDIR not found"
+
+# should run --init and add thecorpus to our deps XXX
+# $PLAYGROUND/corpman $SRCCORP/$SRCAUG \
+#  || die "$SRCCORP/$SRCAUG not found"
 
 # Preregister corpora
 $PLAYGROUND/corpman register -- output-txt.txt.gz \
-  -1	$OUTCORP-txt	$OUTLANG	$OUTFACTORS	-1	0 \
+  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	-1	0 \
 || die "Can't register corpus"
 
 $PLAYGROUND/corpman register -- output-lineids.txt.gz \
-  -1	$OUTCORP-lineids	$OUTLANG	$OUTFACTORS	-1	0 \
+  -1	$OUTCORP	lineids	id	-1	0 \
 || die "Can't register corpus"
 
 # Don`t continue if we are not preparing the step yet
@@ -50,42 +59,60 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\` 
 echo "============================"
-
 mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
-$PLAYGROUND/corpman $SRCCORP/$SRCAUG --dump | gzip -c > corpus.txt.gz \\
-  || die "Failed to find corpus $SRCCORP/$SRCAUG"
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
+
+mkcorpus $SRCCORP/$SRCAUG query
 
 cd $PLAYGROUND/LuceneIndexer \\
   || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
 
-./scoreBySentence inputfile=$LUCSCOREDIR/corpus.txt.gz lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes score.nbest=$CUT $OPTIONS | gzip -c > $LUCSCOREDIR/output.txt.gz \\
-  || die "Failed to filter index"
+echo "Finding lines in $INDEXDIR that best match $SRCCORP"
+./scoreBySentence inputfile=$LUCSCOREDIR/corpus.query.gz \\
+    lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
+    score.nbest=$CUT \\
+    $OPTIONS \\
+| gzip -c > $LUCSCOREDIR/output.txt.gz \\
+|| die "Failed to filter index"
 
 cd $LUCSCOREDIR \\
   || die "Failed to chdir to $LUCSCOREDIR"
 
-zcat output.txt.gz | cut -f 3 | grep -v '^$' | gzip -c > output-txt.txt.gz \\
+zcat output.txt.gz | cut -f 3 | grep -v '^$' \\
+| gzip -c > output-txt.txt.gz \\
   || die "Failed to filter text"
 
-zcat output.txt.gz | cut -f 1 | grep -v '^$' | gzip -c > output-lines.txt.gz \\
+zcat output.txt.gz | cut -f 1 | grep -v '^$' \\
+| gzip -c > output-lines.txt.gz \\
   || die "Failed to filter linenums"
 
 LINECOUNT=`zcat output-txt.txt.gz | wc -l`
 
-$PLAYGROUND/corpman register -- output-txt.txt.gz \
-  -1	$OUTCORP-txt	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \
+$PLAYGROUND/corpman register -- output-txt.txt.gz \\
+  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \\
 || die "Can't register linecount of the filtered corpus"
 
-$PLAYGROUND/corpman register -- output-lines.txt.gz \
-  -1	$OUTCORP-lineid	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \
+$PLAYGROUND/corpman register -- output-lines.txt.gz \\
+  -1	$OUTCORP	lineids	id	$LINECOUNT	0 \
 || die "Can't register linecount of the filtered corpus"
 
 echo Done.
 eman succeed \$mydir
-
 echo "============================"
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
