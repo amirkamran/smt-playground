@@ -1795,7 +1795,9 @@ sub load_tag {
 }
 sub load_tag_hash {
   my $step = shift;
-  my %out = map { ($_, 1) } split /(\s|\n)+/, load_tag($step);
+  my $tagstr = load_tag($step);
+  return {} if ! defined $tagstr;
+  my %out = map { ($_, 1) } split /(\s|\n)+/, $tagstr;
   return \%out;
 }
 
