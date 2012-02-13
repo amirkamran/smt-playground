@@ -274,7 +274,8 @@ if ($cmd eq "reindex") {
     my $new_info_line = join("\t",
         $file, $column, $corp, $lang, $facts, $linecount, $derived);
     push @info_current, $new_info_line;
-    save_file("$workdir/corpman.info", join("\n", @info_current));
+    my %uniq_info = map { ($_, 1) } @info_current;
+    save_file("$workdir/corpman.info", join("\n", sort keys %uniq_info));
   }
 } elsif ($cmd eq "list") {
   # list all variants of the given corpus or of all corpora
