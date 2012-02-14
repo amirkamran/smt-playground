@@ -12,7 +12,7 @@ eman \
   defvar MOSESSTEP type=reqstep inherit=TRANSSTEP \
     help="the step containing compiled tools" \
   defvar TESTCORP inherit=TRANSSTEP help="the translated corpus" \
-  defvar TRANSAUG inherit=TRANSSTEP:UNTOKAUG help="translation language+factors" \
+  defvar TRANSAUG inherit=TRANSSTEP:TOKAUG help="translation language+factors" \
   defvar REFAUG inherit=TRANSSTEP \
     help="reference language+factors" \
 || exit 1

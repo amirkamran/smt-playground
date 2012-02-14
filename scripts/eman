@@ -2209,6 +2209,7 @@ sub reindex_autotags {
     my $steptype = get_steptype($step);
     next if ! defined $autotag_rules->{$steptype};
     my $varsstr = load_vars_str($step);
+    next if ! defined $varsstr;
     if (defined $autotag_rules->{$steptype}->{"var"}) {
       # there are some tags to be created from individual variables
       foreach my $rule (@{$autotag_rules->{$steptype}->{"var"}}) {
