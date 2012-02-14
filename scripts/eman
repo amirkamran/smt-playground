@@ -2655,7 +2655,11 @@ sub select_steps {
   if ($error) {
     mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
   } else {
-    return list([@steps]);
+    if ($steps[0]) {
+      return list([@steps]);
+    } else {
+      return 1;
+    }
   }
 }
 
