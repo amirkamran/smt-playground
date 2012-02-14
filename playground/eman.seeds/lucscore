@@ -41,16 +41,20 @@ eman defvar OUTCORP \
 #  || die "$SRCCORP/$SRCAUG not found"
 
 # Preregister corpora
-$PLAYGROUND/corpman register -- output-txt.txt.gz \
+$PLAYGROUND/corpman register -- output.txt.gz \
   -1	$OUTCORP	$OUTLANG	$OUTFACTORS	-1	0 \
 || die "Can't register corpus"
 
-$PLAYGROUND/corpman register -- output-lineids.txt.gz \
+$PLAYGROUND/corpman register -- output.lineids.gz \
   -1	$OUTCORP	lineids	id	-1	0 \
 || die "Can't register corpus"
 
 # Don`t continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
+
+# UFAL custom or default temp dir
+TEMPDIR=/mnt/h/tmp
+[ -d $TEMPDIR ] || TEMPDIR=/tmp
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -87,28 +91,28 @@ echo "Finding lines in $INDEXDIR that best match $SRCCORP"
     lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
     score.nbest=$CUT \\
     $OPTIONS \\
-| gzip -c > $LUCSCOREDIR/output.txt.gz \\
+| gzip -c > $LUCSCOREDIR/output.gz \\
 || die "Failed to filter index"
 
 cd $LUCSCOREDIR \\
   || die "Failed to chdir to $LUCSCOREDIR"
 
-zcat output.txt.gz | cut -f 3 | grep -v '^$' \\
-| gzip -c > output-txt.txt.gz \\
+zcat output.gz | cut -f 3 | grep -v '^$' \\
+| sort -u --compress-program=gzip -T $TEMPDIR \\
+| gzip -c > output.txt.gz \\
   || die "Failed to filter text"
 
-zcat output.txt.gz | cut -f 1 | grep -v '^$' \\
-| gzip -c > output-lines.txt.gz \\
+zcat output.gz | cut -f 1 | grep -v '^$' \\
+| sort -u \\
+| gzip -c > output.lineids.gz \\
   || die "Failed to filter linenums"
 
-LINECOUNT=`zcat output-txt.txt.gz | wc -l`
-
-$PLAYGROUND/corpman register -- output-txt.txt.gz \\
-  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	$LINECOUNT	0 \\
+$PLAYGROUND/corpman register -- output.txt.gz \\
+  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	\$(zcat output.txt.gz | wc -l)	0 \\
 || die "Can't register linecount of the filtered corpus"
 
-$PLAYGROUND/corpman register -- output-lines.txt.gz \\
-  -1	$OUTCORP	lineids	id	$LINECOUNT	0 \
+$PLAYGROUND/corpman register -- output.lineids.gz \\
+  -1	$OUTCORP	lineids	id	\$(zcat output.lineids.gz | wc -l)	0 \
 || die "Can't register linecount of the filtered corpus"
 
 echo Done.
