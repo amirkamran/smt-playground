@@ -470,8 +470,10 @@ foreach my $subdir (@subdirs) {
 
 if ($cmd eq "retag" || $cmd eq "reindex") {
   # reindex implies also refreshing autotags
-  $autotag_rules = load_autotag_rules("eman.autotags");
-  reindex_autotags();
+  if (-e "eman.autotags") {
+    $autotag_rules = load_autotag_rules("eman.autotags");
+    reindex_autotags();
+  }
   exit 1 if $waserror;
 }
 
