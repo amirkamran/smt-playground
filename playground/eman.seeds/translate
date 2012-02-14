@@ -16,6 +16,7 @@ eman \
   defvar ITER default='' \
     help="which MERT iteration weights to use; default is the final set" \
   defvar SEARCH default=cube help='the search type (beam or cube)' \
+  defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
 || exit 1
 
@@ -26,8 +27,6 @@ MOSESSTEPDIR=$(eman path $MOSESSTEP)
 MERTSTEPDIR=$(eman path $MERTSTEP)
 MOSESCMD="$MOSESSTEPDIR/bin/moses"
 SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts/"
-
-JOBS=${JOBS:-10}
 
 if [ ! -z "$ITER" ]; then
   iterprefix=run$(($ITER+1)).
