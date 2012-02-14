@@ -13,8 +13,9 @@ use warnings;
 use Getopt::Long;
 use File::Path;
 use File::Basename;
-use File::NFSLock;
-use Fcntl qw(LOCK_EX LOCK_SH);
+use File::Temp qw/tempfile/;
+# use File::NFSLock;
+# use Fcntl qw(LOCK_EX LOCK_SH);
 use Cwd;
 use YAML;
 
@@ -129,7 +130,7 @@ chdir($mydir) or die "Failed to chdir to $mydir";
 
 if ( ! -e $indexfile || $reindex ) {
   print STDERR "Indexing...\n" if $verbose;
-  open INDFILES, "find -L -maxdepth 2 -name corpman.info |"
+  open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
     or die "Can't search for corpora";
   while (<INDFILES>) {
     chomp;
@@ -257,11 +258,11 @@ if ($cmd eq "reindex") {
   if (-e "$workdir/corpman.info") {
     @info_current = split /\n/, load_file("$workdir/corpman.info");
   }
-  my $identical = grep /\Q\t$corp\t$lang\t$facts/, @info_current;
+  my $identical = grep /\t\Q$corp\E\t\Q$lang\E\t\Q$facts/, @info_current;
   if ($identical) {
     if ($force_info_update) {
       @info_current = grep {
-        $_ !~ m/\Q\t$corp\t$lang\t$facts\t(-1|$linecount)/
+        $_ !~ m/\t\Q$corp\E\t\Q$lang\E\t\Q$facts\E\t(-1|$linecount)/
       } @info_current;
     } else {
       print STDERR "Corpus $corp/$lang+$facts already in corpman.info.\n";
@@ -738,22 +739,15 @@ sub loadidx {
   # load the index file and hash it there and back
   my $idx;
   if (-e $indexfile) {
-    # get shared lock
-    my $lock = File::NFSLock->new($indexfile, LOCK_SH, 10, 30*60); 
-    die "Failed to obtain lock on $indexfile" if ! defined $lock;
     $idx = Load(load_file($indexfile)."\n"); # YAML to Load the string
-    $lock->unlock();
   }
   return $idx;
 }
 sub saveidx {
   my $idx = shift;
-  # get exclusive lock
-  my $lock = File::NFSLock->new($indexfile, LOCK_EX, 10, 30*60); 
-  die "Failed to obtain lock on $indexfile" if ! defined $lock;
-  my $h = my_save($indexfile);
+  my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>cwd());
+  binmode($h, ":utf8");
   print $h YAML::Dump($idx);
   close $h;
-
-  $lock->unlock();
+  rename($tempname, $indexfile);
 }
