@@ -1,0 +1,78 @@
+#!/bin/bash
+# eman step to select filtered lines according to index
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+   defvar LINENUMS default='' help='file with selected linenums' \
+   defvar SRCCORP default='' help='input corpus to select lines from' \
+   defvar SRCAUG default='' help='lang+factors of input' \
+   defvar OUTCORP same_as='' help='filename of the output' \
+   defvar OUTLANG default='' help='language of output' \
+   defvar OUTFACTORS default='' help='factors of output' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Preregister corpora
+$PLAYGROUND/corpman register -- output.txt.gz \
+  -1    $OUTCORP        $OUTLANG        $OUTFACTORS     -1      0 \
+|| die "Can't register corpus"
+
+# Don`t continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+# UFAL custom or default temp dir
+TEMPDIR=/mnt/h/tmp
+[ -d $TEMPDIR ] || TEMPDIR=/tmp
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "============================"
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\` 
+echo "============================"
+
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
+
+mkcorpus $SRCCORP/$SRCAUG input
+
+zcat corpus.input.gz | $PLAYGROUND/../scripts/greplines $PLAYGROUND/$LINENUMS | gzip -c > output.txt.gz
+
+$PLAYGROUND/corpman register -- output.txt.gz \\
+  -1    $OUTCORP        $OUTLANG        $OUTFACTORS     \$(zcat output.txt.gz | wc -l)  0 \\
+|| die "Can't register linecount of the filtered corpus"
+
+echo Done.
+eman succeed \$mydir
+
+echo "============================"
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "============================"
+
+KONEC
+

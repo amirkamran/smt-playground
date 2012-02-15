@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+# The Missing Textutils, Ondrej Bojar, obo@cuni.cz
+# http://www.cuni.cz/~obo/textutils
+#
+# 'greplines' selects the lines identified by their position (order) in file.
+#
+# $Id: greplines,v 1.10 2009-09-20 14:16:42 bojar Exp $
+#
+
+use Getopt::Long;
+use strict;
+
+my $inverse = 0;
+my $print_numbers = 0;
+my $help = 0;
+my $args = 0;
+my $startnr = 1;
+my $preserve_order = 0;
+GetOptions(
+  "numbers"=>\$print_numbers,
+  "inverse" => \$inverse,
+  "args" => \$args,
+  "start=i" => \$startnr,
+  "preserve-order" => \$preserve_order,
+) or exit 1;
+
+if ($help || 0 == scalar @ARGV) {
+  print STDERR "usage: greplines file_with_lines
+Prints out only the specified lines of stdin to stdout.
+--inverse  .. to print lines except those listed in file_with_lines
+--args ... read numbers to print from args, not from files listed as args
+--start=N  ... lines are numbered from N
+--preserve-order ... load all selected lines to memory, dump afterwards in
+                     order of the numbers given
+";
+  exit 1;
+}
+
+my %wanted;
+my $cnt = 0;
+while (my $arg = shift @ARGV) {
+  if ($args) {
+    foreach my $lineno (split /\s*,\s*/, $arg) {
+      $cnt++;
+      $wanted{$lineno} = $cnt;
+    }
+  } else {
+    my $hdl = my_open($arg);
+    while (<$hdl>) {
+      chomp;
+      foreach my $lineno (split /\s+/) {
+        $cnt++;
+        $wanted{$lineno} = $cnt;
+      }
+    }
+    close $hdl;
+  }
+}
+print STDERR "$cnt lines are going to be ".($inverse?"skipped":"printed out").".\n";
+
+my $nr = $startnr;
+my %mem = ();
+while (<>) {
+  if ($wanted{$nr} xor $inverse) {
+    my $out = "";
+    $out .= "$nr:" if $print_numbers;
+    $out .= "$_";
+    if ($preserve_order) {
+      $mem{$wanted{$nr}} = $out;
+    } else {
+      print $out;
+    }
+  }
+  $nr++;
+}
+
+if ($preserve_order) {
+  foreach my $k (sort {$a<=>$b} keys %mem) {
+    print $mem{$k};
+  }
+}
+
+
+sub my_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  die "Not found: $f" if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file '$f'`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat '$f' |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat '$f' |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or die "Can't open '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}

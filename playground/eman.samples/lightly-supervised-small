@@ -41,7 +41,7 @@
 |  |  |  |  | OUTLINECOUNT=3003
 |  |  |  |  | RUN_COMMAND=
 |  |  |  |  | STEPNAME=
-|  |  |  |  | TAKE_FROM_COMMAND="/ha/work/people/galuscakova/statmt2/playgound/corpman --dump wmt11/cs_txt+untoken"
+|  |  |  |  | TAKE_FROM_COMMAND="/ha/work/people/galuscakova/statmt2/playground/corpman --dump wmt11/cs_txt+untoken"
 |  |  |  +- s.lucindex.625c6ddc.20120213-0137
 |  |  |  |  | SRCAUG=cs_txt+untoken
 |  |  |  |  | SRCCORP=monoall
