@@ -692,11 +692,11 @@ sub add_entry {
     }
   }
 
-  print STDERR "Conflicting sources for $corpname/$lang+$facts: "
-    ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
-    ." vs "
-    ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n"
-    ."Detail ($conflict_type): $msg\n"
+  print STDERR "Conflict ($conflict_type) for $corpname/$lang+$facts: "
+    ."$newentry->{stepname} vs $oldentry->{stepname}. $msg\n"
+    # ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
+    # ." vs "
+    # ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n"
     if defined $msg;
 
   if ($should_die) {
