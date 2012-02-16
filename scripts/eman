@@ -2283,14 +2283,11 @@ sub interpret {
   my $self = shift; # supply attributes
   my $lines = shift;
 
-  $self->{required} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-  $self->{forbidden} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-  $self->{rows} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-  $self->{cols} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-  $self->{rowsort} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-  $self->{colsort} =~ s/^[ \n\t]*|[ \n\t]*$//g;
-
-
+  for my $f (qw/required forbidden rows cols rowsort colsort print_max_marks/) {
+    # define as blank and trim
+    $self->{$f} = "" if !defined $self->{$f};
+    $self->{$f} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  }
 
   $self->{reqtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{required} ];
   $self->{forbtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{forbidden} ];
