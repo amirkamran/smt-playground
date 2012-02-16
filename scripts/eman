@@ -2106,6 +2106,7 @@ sub saveidx {
   print STDERR "Moving index from $tempname to $indexfile\n" if $debug;
   rename($tempname, $indexfile)
     or print STDERR "Failed to move $tempname to $indexfile";
+  chmod 0644, $indexfile;
 }
 
 sub get_hash_from_dir {

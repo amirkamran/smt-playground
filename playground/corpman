@@ -750,4 +750,5 @@ sub saveidx {
   print $h YAML::Dump($idx);
   close $h;
   rename($tempname, $indexfile);
+  chmod 0644, $indexfile;
 }
