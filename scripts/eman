@@ -1146,7 +1146,8 @@ sub find_usable_step_given_hash {
 
 sub step_good_to_reuse {
   my $step = shift;
-  return (-d get_stepdir($step)
+  my $stepdir = get_stepdir($step);
+  return (defined $stepdir && -d $stepdir
     && step_valid($step)
     && load_status($step) !~ /FAILED|NONEXISTENT|OUTDATED|ABOLISHED/
   );
