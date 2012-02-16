@@ -13,6 +13,7 @@ cols: ^BLEU  u^stem[0-9] u^form u^truestem
 rows: DEV.*   ([0-9]+)gr
 rows: u^en_reord allmarkers preps svo2sov assuf u^hf
 rows: plmarkers objmarkers
+rows: u^ta_split
 # rows of the table are sorted by BLEU (the column with this exact name)
 rowsort: BLEU
 # cols of the table are sorted by the row with this exact name:

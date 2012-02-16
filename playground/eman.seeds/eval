@@ -43,9 +43,6 @@ gunzip $PLAYGROUND/../src/testbleu.gz -c > ./testbleu \
 || die "Cannot extract testbleu binary!"
 chmod +x ./testbleu
 
-EVALUATOR=\$MOSESSTEPDIR/moses/mert/evaluator
-[ -x \$EVALUATOR ] || die "Missing: \$EVALUATOR"
-
 function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))

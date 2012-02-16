@@ -14,5 +14,4 @@ mert	var	/.*--sctype=([^" =]*).*/towards-$1/	/;/+/g
 mert	var	/DEVCORP=(.*)/DEV$1/
 corpus	var	/OUTLANG=ta/Tamil/
 corpus	var	/OUTLANG=hi/Hindi/
-model	var	/.*(ta_stemmed|en_reord).*/$1/
-eval	var	
+model	var	/.*(ta_split|en_reord).*/$1/
