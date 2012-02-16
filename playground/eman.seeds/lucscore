@@ -24,8 +24,10 @@ eman \
 eval `eman bash-loadvars`
 
 # construct OUTCORP
+#!!! PREPISU SA POVODNE ???
 export OUTCORP=$(eman get-var $INDEXDIR SRCCORP)-$STEPNAME
 export OUTLANG=$(echo $SRCAUG | cut -d+ -f1)
+export OUTFACTORS=$(echo $SRCAUG | cut -d+ -f2)
 
 # Store the calculated values
 eman defvar OUTCORP \
