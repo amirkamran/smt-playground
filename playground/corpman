@@ -53,6 +53,7 @@ my @bashvars = ();
 my $readonly = 0;
 
 GetOptions(
+  "rootdir=s" => \$mydir,
   "reindex!" => \$reindex,
   "init!" => \$init,
   "start!" => \$start,
@@ -594,6 +595,7 @@ sub add_entry_incl_entries_of_separate_factors {
     "column" => $column,
     "factind" => -1,
     "linecount" => $linecount,
+    "isderived" => $mayderived,
   };
   add_entry($corpname, $lang, $facts, $newentry, $mayderived);
 
@@ -609,6 +611,7 @@ sub add_entry_incl_entries_of_separate_factors {
           "column" => $column,
           "factind" => $factind,
           "linecount" => $linecount,
+          "isderived" => $mayderived,
         },
         $yes_derived
         );
@@ -627,18 +630,74 @@ sub add_entry {
       ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
       ."\n" if $verbose;
   my $oldentry = $index->{$corpname}->{$lang}->{$facts};
-  if (defined $oldentry && !$isderived) {
-    print STDERR "Conflicing sources for $corpname/$lang+$facts: "
-      ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
-      ." vs "
-      ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n";
+  my $should_die = undef;
+  my $msg = undef;
+  my $useentry = $newentry;
+  my $conflict_type = "--";
+  if (defined $oldentry) {
+    # there are several types of conflicting sources.
+    # Where do the entries come from:
+    # A: manually created corpora (these have isderived==0)
+    # B: automatic corpora of "all factors" (these have isderived==1 and factind==-1
+    # C: automatic corpora of "all factors" (these have isderived==1 and factind!=-1
+    # Possible conflicts:
+    # old entry, new entry, resolution
+    # AA  die
+    # AB  die
+    # AC  die
+    # BA  die
+    # BB  die
+    # BC  prefer B (directly usable, C would require one more factor selection)
+    # CA  die
+    # CB  prefer B (directly usable, C would require one more factor selection)
+    # CC  warn, use any
+
+    my $oldtype = get_entry_source_type($oldentry);
+    my $newtype = get_entry_source_type($newentry);
+    $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
+    if ($oldtype eq "A" || $newtype eq "A") {
+      $should_die = 1;
+      $msg = "Conflict involving a manually created corpus.";
+    } else {
+      if ($conflict_type eq "BB") {
+        $should_die = 1;
+        $msg = "Conflicting derived corpora, you should never derive the same set of factors";
+        $useentry = $oldentry;
+      } elsif ($conflict_type eq "CC") {
+        $should_die = 0;
+        my $useentry = $oldentry;
+        $msg = "Conflicting derived corpora, randomly picking $useentry->{stepname}";
+      } elsif ($conflict_type eq "BC" || $conflict_type eq "CB") {
+        $should_die = 0;
+        $useentry = ($oldtype eq "B" ? $oldentry : $newentry);
+      } else {
+        die "Unimplemented, should never happen.";
+      }
+    }
+  }
+
+  print STDERR "Conflicting sources for $corpname/$lang+$facts: "
+    ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
+    ." vs "
+    ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n"
+    ."Detail ($conflict_type): $msg\n"
+    if defined $msg;
+
+  if ($should_die) {
     $waserror = 1;
   } else {
-    $index->{$corpname}->{$lang}->{$facts} = $newentry;
+    $index->{$corpname}->{$lang}->{$facts} = $useentry;
   }
 }
 
-
+sub get_entry_source_type {
+  # returns A, B, or C, see above
+  my $entry = shift;
+  my $isderived = $entry->{"isderived"} || 0;
+  return "A" if ! $isderived;
+  return "B" if $entry->{"factind"} == -1;
+  return "C";
+}
 
 sub my_open {
   my $f = shift;
