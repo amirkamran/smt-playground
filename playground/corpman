@@ -390,7 +390,11 @@ sub build_exact_factors {
   # runs lazy_build and extracts the required factor if necessary
   my $entry = lazy_build($corp, $lang, $facts);
   print STDERR "Called build_exact_factors @_\n" if $verbose;
-  if ($entry->{"factind"} == -1) {
+  print STDERR "  The factind of the entry: $entry->{factind}\n" if $verbose;
+  if ($entry->{"factind"} == -1
+      || ($entry->{"factind"} == 1 && $facts !~ /[+|]/)) {
+      # XXX this check should actually also accept cases like factid=="1,2,3"
+      # and factors contain 2 pluses...
     # great, the given column contains exactly the factors we asked for
     return $entry;
   } else {
