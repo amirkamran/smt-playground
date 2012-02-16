@@ -1086,6 +1086,7 @@ sub init_by_recipe {
     # init a new step using the vars
     print STDERR "Initing new step $thissteptype (for $thisname in the recipe).\n";
     my $newstep = init($thissteptype, \@newvars, $thisname);
+    return undef if ! defined $newstep;
     # Double check that initing the new step did not lead to exacty the known
     # step. This can happen due to default or blank variable values -- they are
     # not mentioned in the traceback (so we don't find the known step in the
