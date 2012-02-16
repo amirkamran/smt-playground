@@ -27,6 +27,7 @@ eman defvar RUN_COMMAND default='' \
      defvar OUTFACTS help='output factors sequence' \
      defvar OUTLINECOUNT help='forward check: expected number of lines' \
      defvar DEPS default='' help='steps we rely on' \
+     defvar JOBS default='15' help='how many jobs to submit, 0 to disable SGE' \
      defvar DERIVED default='0' help='is the corpus derived from an existing one' \
 || exit 1
 
@@ -37,7 +38,6 @@ eval `eman bash-loadvars`
 eman add-deps . $DEPS
 
 # other vars, not influencing exact output
-JOBS=${JOBS:-30}
 SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
   # even for big corpora, use at most 30k lines per job
 
