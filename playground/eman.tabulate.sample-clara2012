@@ -6,7 +6,7 @@ TABLE
 # all result lines matching any of these regexps are dropped
 forbidden: TAG Snts FAILED BLEUstd
 # result lines have to match all of these regexpsto survive
-required: mert Tamil
+required: eval Tamil
 # cols of the table are constructed by collecting these regexps
 cols: ^BLEU  u^stem
 # rows of the table are constructed by collecting these regexps
