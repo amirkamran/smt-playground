@@ -8,7 +8,7 @@ forbidden: TAG Snts FAILED BLEUstd
 # result lines have to match all of these regexpsto survive
 required: eval Tamil
 # cols of the table are constructed by collecting these regexps
-cols: ^BLEU  u^stem
+cols: ^BLEU  u^stem[0-9] u^form u^truestem
 # rows of the table are constructed by collecting these regexps
 rows: DEV.*   ([0-9]+)gr
 rows: u^en_reord allmarkers preps svo2sov assuf u^hf
