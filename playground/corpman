@@ -40,6 +40,8 @@ foreach my $val (values %expand_abbrev) {
 
 
 my $indexfile = "corpman.index";
+my $should_save_index = 0;
+  # when corpman creates some corpora, it should save the index
 my $verbose = 0;
 my $reindex = 0;
 my $init = 0;
@@ -309,6 +311,11 @@ if ($cmd eq "reindex") {
   my $entry = build_exact_factors($corp, $lang, $facts);
   my ($stepname, $filename, $column)
     = ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
+
+  # if some new corpora were created, let's save the index
+  # naturally, there is a risk of race conditions of two corpmans are running
+  # a corpman reindex every now and then would find any corpus duplicates
+  saveidx($index) if $should_save_index;
   
   if ($wait) {
     my $status = load_step_status($stepname);
@@ -399,13 +406,14 @@ sub build_exact_factors {
     # great, the given column contains exactly the factors we asked for
     return $entry;
   } else {
-    # not quite, we need to restrict the given factor
+    # not quite, we need to restrict to the given factor
     my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
     my $outentry = $entry;
     # fake output entry values
     $outentry->{"stepname"} = $stepname;
     $outentry->{"filename"} = "corpus.txt.gz";
     $outentry->{"column"}= -1;
+    $outentry->{"factind"}= -1;
     return $outentry;
   }
 }
@@ -559,6 +567,7 @@ sub run_or_fake_corpus_step {
   if ($out =~ /Inited: (s\.corpus\..*)/) {
     my $outstep = $1;
     print STDERR "corpman inited: $outstep\n";
+    $should_save_index = 1;
     return $outstep;
   } else {
     print STDERR "Failed to get stepname!\n";
@@ -828,6 +837,8 @@ sub saveidx {
   binmode($h, ":utf8");
   print $h YAML::Dump($idx);
   close $h;
+  print STDERR "Moving temp output index from $tempname to $indexfile\n"
+    if 1 || $verbose;
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
 }
