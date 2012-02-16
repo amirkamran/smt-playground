@@ -665,8 +665,24 @@ sub add_entry {
         $useentry = $oldentry;
       } elsif ($conflict_type eq "CC") {
         $should_die = 0;
-        my $useentry = $oldentry;
-        $msg = "Conflicting derived corpora, randomly picking $useentry->{stepname}";
+	# Don't report any conflict, just use the older one
+	my $olddate = (split /\./, $oldentry->{"stepname"})[3];
+	my $newdate = (split /\./, $newentry->{"stepname"})[3];
+	if ($olddate lt $newdate) {
+	  $useentry = $oldentry;
+	} else {
+	  my $oldseed = $oldentry->{"stepname"}."/eman.seed";
+	  my $newseed = $newentry->{"stepname"}."/eman.seed";
+	  if ( -e $oldseed && -e $newseed
+	    && -C $oldseed > -C $newseed) {
+	    $useentry = $oldentry;
+	  } else {
+	    $useentry = $newentry;
+	  }
+	}
+        $msg = "Conflicting derivable corpora, picking $useentry->{stepname}"
+	  if $verbose;
+
       } elsif ($conflict_type eq "BC" || $conflict_type eq "CB") {
         $should_die = 0;
         $useentry = ($oldtype eq "B" ? $oldentry : $newentry);
