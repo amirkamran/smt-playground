@@ -2012,7 +2012,10 @@ sub guess_step {
     }
     $step = guess_step_from_hashdate($dirs[0]) if 1==scalar @dirs;
   }
-  die "Failed to guess step from: $key\nTry --reindex." if !defined $step;
+  # only recommend --reindex if not already specified
+  my $try_reindex = $reindex ? "" : "\nTry --reindex.";
+
+  die "Failed to guess step from: $key$try_reindex" if !defined $step;
   return $step;
 }
 
