@@ -50,11 +50,12 @@ if echo "$DECODINGSTEPS" | grep , ; then
   exit 1
 fi
 
-if [ $SRCCORP == $TGTCORP ] ; then
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
-else
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
-fi
+eman add-tag "DEC$DECODINGSTEPS"
+#if [ $SRCCORP == $TGTCORP ] ; then
+#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
+#else
+#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
+#fi
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0

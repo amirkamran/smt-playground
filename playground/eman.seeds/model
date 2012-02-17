@@ -85,7 +85,8 @@ if [ ! -z "$THRESHOLD" ]; then
   SIGFILTERTAG=SIG$THRESHOLD"N"$CUTOFF
 fi
 
-echo "Unimplemented for the moment: creation of tags"
+# echo "Creation of tags" # actually, we don't want to add manual tags
+# automatically, autotags should be for this.
 #if [ $SRCCORP == $TGTCORP ] ; then
 #  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALIAUG.$tmtag.$lmtag.$DECODINGSTEPS$DOTREORDTAG$SIGFILTERTAG"
 #else
