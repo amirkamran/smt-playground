@@ -472,7 +472,7 @@ if ($cmd eq "retag" || $cmd eq "reindex") {
   # reindex implies also refreshing autotags
   if (-e "eman.autotags") {
     $autotag_rules = load_autotag_rules("eman.autotags");
-    reindex_autotags();
+    reindex_tags();
   }
   exit 1 if $waserror;
 }
@@ -1801,18 +1801,18 @@ sub load_tag_hash {
   my $step = shift;
   my $tagstr = load_tag($step);
   return {} if ! defined $tagstr;
-  my %out = map { ($_, 1) } split /(\s|\n)+/, $tagstr;
+  my %out = map { ($_, 1) } grep { /./ && $_ ne " "} split /(\s|\n)+/, $tagstr;
   return \%out;
 }
 
 sub compiled_tag_string {
   # used when displaying tags, includes autotags and manual tags
   my $step = shift;
-  my $tags = load_tag_hash($step);
-  my $autotags = $idx->{"STEP_TO_AUTOTAGS"}->{$step};
+  # my $tags = load_tag_hash($step);
+  my $tags = $idx->{"STEP_TO_ALLTAGS"}->{$step};
   return join(" ",
     ( sort {$a cmp $b} keys %$tags ),
-    ( sort {$a cmp $b} keys %$autotags ),
+    # ( sort {$a cmp $b} keys %$autotags ),
   );
 }
   
@@ -2206,11 +2206,17 @@ sub load_autotag_rules {
   return $out;
 }
 
-sub reindex_autotags {
+sub reindex_tags {
   # for all steps, removes all autotags and recreates them
-  # does not add autotags of the dependencies, thus called 'direct' autotags
-  $idx->{'STEP_TO_AUTOTAGS'} = undef; # delete old
+
+  $idx->{'STEP_TO_DIRECT_AUTOTAGS'} = undef; # delete old
+  $idx->{'STEP_TO_ALLTAGS'} = undef; # delete old
+  # first add 'direct' tags, i.e. manual tags and autotags implied by the rules
+  # to individual steps
   foreach my $step (all_steps()) {
+    # first copy step manual tags to the index
+    $idx->{'STEP_TO_ALLTAGS'}->{$step} = load_tag_hash($step);
+    # then add the direct autotags
     my $steptype = get_steptype($step);
     next if ! defined $autotag_rules->{$steptype};
     my $varsstr = load_vars_str($step);
@@ -2235,7 +2241,8 @@ sub reindex_autotags {
 	    }
           }
           next if $tag eq ""; # blank tag is removed
-          $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag} ++;
+          $idx->{'STEP_TO_DIRECT_AUTOTAGS'}->{$step}->{$tag} ++;
+          $idx->{'STEP_TO_ALLTAGS'}->{$step}->{$tag} ++;
         }
       }
     }
@@ -2243,15 +2250,15 @@ sub reindex_autotags {
     # this is another option: constructing tags from inherited autotags
     # however, this needs to be applied only after inheriting...
   }
-  # Add indirect tags
+  # Add indirect tags, i.e. tags inherited from steps above
   my $indexed;
   foreach my $step (all_steps()) {
     next if $indexed->{$step};
-    $indexed = add_inherited_autotags($indexed, $step);
+    $indexed = add_inherited_tags($indexed, $step);
   }
 }
 
-sub add_inherited_autotags {
+sub add_inherited_tags {
   my $indexed = shift;
   my $step = shift;
   my $deps = load_depsarr($step);
@@ -2260,15 +2267,15 @@ sub add_inherited_autotags {
   foreach my $dep (@$deps) {
     print STDERR "for $step: $dep: ", compiled_tag_string($dep), "\n" if $debug;
     # ensure all predecessors inherited theirtags
-    $indexed = add_inherited_autotags($indexed, $dep)
+    $indexed = add_inherited_tags($indexed, $dep)
       if ! $indexed->{$dep};
     # inherit our tags from the dep
     # TODO here is the place to control what is being inherited
-    # based on autotag rules
-    foreach my $tag (keys %{$idx->{'STEP_TO_AUTOTAGS'}->{$dep}}) {
+    # based on a not-yet-specified types of rules in eman.autotag
+    foreach my $tag (keys %{$idx->{'STEP_TO_ALLTAGS'}->{$dep}}) {
       print STDERR "  + $tag\n" if $debug;
-      $idx->{'STEP_TO_AUTOTAGS'}->{$step}->{$tag}
-        += $idx->{'STEP_TO_AUTOTAGS'}->{$dep}->{$tag};
+      $idx->{'STEP_TO_ALLTAGS'}->{$step}->{$tag}
+        += $idx->{'STEP_TO_ALLTAGS'}->{$dep}->{$tag};
     }
   }
   $indexed->{$step} = 1;
