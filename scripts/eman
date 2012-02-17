@@ -285,6 +285,8 @@ if ($cmd eq "add-tag") {
     save("eman.tag", (defined $oldtag ? $oldtag." ".$newtag : $newtag));
     chdir($oldwd) or die "Failed to chdir back to $oldwd";
   }
+  chdir_to_maindir();
+  reindex_tags();
   exit $waserror;
 }
 
@@ -472,8 +474,8 @@ if ($cmd eq "retag" || $cmd eq "reindex") {
   # reindex implies also refreshing autotags
   if (-e "eman.autotags") {
     $autotag_rules = load_autotag_rules("eman.autotags");
-    reindex_tags();
   }
+  reindex_tags();
   exit 1 if $waserror;
 }
 
