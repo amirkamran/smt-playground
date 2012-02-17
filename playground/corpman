@@ -838,7 +838,7 @@ sub saveidx {
   print $h YAML::Dump($idx);
   close $h;
   print STDERR "Moving temp output index from $tempname to $indexfile\n"
-    if 1 || $verbose;
+    if $verbose;
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
 }

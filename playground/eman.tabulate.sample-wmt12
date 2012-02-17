@@ -17,5 +17,5 @@ rowsort: BLEU
 colsort: DEV.* 5gr 6gr
 verbose: 0
 # cells will have marks indicating: max in column (>), max in row (^), both (*)
-print_max_marks: 0
+print_max_marks: 1
 ENDTABLE
