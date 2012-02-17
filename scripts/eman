@@ -264,7 +264,7 @@ if (-e $subdirs_file) {
 chdir($oldwd) or die "Failed to chdir back to $oldwd";
 
 ## Helper commands for bash scripting of seeds
-## These commands do not need and manipulate index at all
+## These commands do not need index at all, they do not even read it
 
 if ($cmd eq "bash-loadvars") {
   my $varsstr = try_load("eman.vars");
@@ -272,22 +272,6 @@ if ($cmd eq "bash-loadvars") {
     if !defined $varsstr;
   print $varsstr."\n";
   exit 0;
-}
-
-if ($cmd eq "add-tag") {
-  mydie "usage: eman add-tag TAG [SPEC ...]" if 0 == scalar @ARGV;
-  my $newtag = shift;
-  push @ARGV, "." if 0 == scalar @ARGV; # operate on cwd if nothing given
-  foreach my $key (@ARGV) {
-    my $step = guess_step($key);
-    my $oldwd = chdir_to_stepdir($step);
-    my $oldtag = load_tag($step);
-    save("eman.tag", (defined $oldtag ? $oldtag." ".$newtag : $newtag));
-    chdir($oldwd) or die "Failed to chdir back to $oldwd";
-  }
-  chdir_to_maindir();
-  reindex_tags();
-  exit $waserror;
 }
 
 if ($cmd eq "add-deps") {
@@ -414,7 +398,7 @@ if ($cmd eq "defvar") {
   }
   exit $waserror;
 }
-## End of commands that don't manipulate index.
+## End of commands that don't need index at all.
 
 
 ## Decide if we will lock the index
@@ -491,7 +475,7 @@ exit 0 if $cmd eq "retag"; # the job has been done already
 
 ## handle all the various commands
 
-# the following commands are read-only
+# the following commands are read-only, that is they do not need to write index
 if ($cmd eq "guess") {
   # just guessing step directories
   $lock->unlock() if defined $lock;
@@ -750,6 +734,26 @@ if ($cmd eq "start") {
 # the following commands don't work with readonly
 print STDERR "Warning: running '$cmd' in read-only mode, make sure to reindex.\n"
   if $readonly;
+
+if ($cmd eq "add-tag") {
+  mydie "usage: eman add-tag TAG [SPEC ...]" if 0 == scalar @ARGV;
+  my $newtag = shift;
+  push @ARGV, "." if 0 == scalar @ARGV; # operate on cwd if nothing given
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+    my $oldwd = chdir_to_stepdir($step);
+    my $oldtag = load_tag($step);
+    save("eman.tag", (defined $oldtag ? $oldtag." ".$newtag : $newtag));
+    chdir($oldwd) or die "Failed to chdir back to $oldwd";
+  }
+  if (!$readonly) {
+    chdir_to_maindir();
+    reindex_tags();
+    saveidx($idx);
+  }
+  exit $waserror;
+}
+
 
 if ($cmd eq "init") {
   my $steptype = shift;
