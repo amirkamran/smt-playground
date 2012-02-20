@@ -1,9 +1,24 @@
 #!/bin/bash
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+[ ! -z "$2" ] || die "usage: $0 step1 step2"
+
+function get_scores_file() {
+  step=$(eman path $1)
+  if [ -e "$step"/scores ]; then
+    echo "$step"/scores
+  fi
+}
 
 tmpa=/tmp/difexp.$$.tmpa
 tmpb=/tmp/difexp.$$.tmpb
 echo "-- EXPERIMENT: $1" > $tmpa
 echo "++ EXPERIMENT: $2" > $tmpb
+scoresa=$(get_scores_file "$1")
+[ -e $scoresa ] && cat $scoresa | tt | prefix -- "-- " >> $tmpa
+scoresb=$(get_scores_file "$2")
+[ -e $scoresb ] && cat $scoresb | tt | prefix -- "++ " >> $tmpb
 if eman traceback "$1" --tag --vars >> $tmpa \
   && eman traceback "$2" --tag --vars >> $tmpb; then
   diff --unified=500 $tmpa $tmpb | less -S

@@ -12,3 +12,5 @@ tm	var	/ALISYM=(.*)/ALI$1/
 mert	var	/.*pairwise-ranked.*/PRO/
 mert	var	/.*--sctype=([^" =]*).*/towards-$1/	/;/+/g
 mert	var	/DEVCORP=(.*)/DEV$1/
+evaluator	var	/REFAUGS=(.*)/REF$1/
+lucscore	var	/CUT=(.*)/CUT$1/

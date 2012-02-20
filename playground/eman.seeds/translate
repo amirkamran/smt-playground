@@ -33,8 +33,9 @@ if [ ! -z "$ITER" ]; then
   itertag=ITER$ITER
 fi
 
-MERTTAG=$(eman tag $MERTSTEP | cut -f2 | sed 's/ *//g')
-eman add-tag "$MERTTAG""$itertag"TEST$TESTCORP .
+# avoid auto-adding of manual tags... use autotags
+#MERTTAG=$(eman tag $MERTSTEP | cut -f2 | sed 's/ *//g')
+#eman add-tag "$MERTTAG""$itertag"TEST$TESTCORP .
 
 case "$SEARCH" in
 beam)
