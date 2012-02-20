@@ -612,10 +612,15 @@ if ($cmd eq "select") {
 if ($cmd eq "path") {
   my $stepname = $ARGV[0];
   guess_maindir();
-  if (defined $stepname) {
-    print get_stepdir($stepname), "\n";
-  } else {
+  if (0 == scalar @ARGV) {
+    # print path of the playground
     print "$maindir\n";
+  } else {
+    # print paths of all steps given
+    foreach my $key (@ARGV) {
+      my $step = guess_step($key);
+      print get_stepdir($step), "\n" if defined $step;
+    }
   }
   exit $waserror;
 }
