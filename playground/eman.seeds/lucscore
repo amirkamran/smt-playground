@@ -23,15 +23,15 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-# construct OUTCORP
-#!!! PREPISU SA POVODNE ???
-export OUTCORP=$(eman get-var $INDEXDIR SRCCORP)-$STEPNAME
-export OUTLANG=$(echo $SRCAUG | cut -d+ -f1)
-export OUTFACTORS=$(echo $SRCAUG | cut -d+ -f2)
+# construct OUTCORP and friends (honor user's predefined values)
+export OUTCORP=${OUTCORP:-$(eman get-var $INDEXDIR SRCCORP)-$STEPNAME}
+export OUTLANG=${OUTLANG:-$(echo $SRCAUG | cut -d+ -f1)}
+export OUTFACTORS=${OUTFACTORS:-$(echo $SRCAUG | cut -d+ -f2-)}
 
 # Store the calculated values
 eman defvar OUTCORP \
-     defvar OUTLANG
+     defvar OUTLANG \
+     defvar OUTFACTORS
 
 # Check our input
 # Can't check for this: at init phase, the indexes are not there yet
