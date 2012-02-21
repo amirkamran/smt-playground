@@ -28,14 +28,14 @@ forbidden: OUTDATED TAG snts
 # result lines have to match all of these regexpsto survive
 required: evaluator BLEU devtesttable towards-CDER
 # cols of the table are constructed by collecting these regexps
-cols: ^wmt08 ^wmt09 ^wmt10 ^wmt11[^r] ^wmt11raw
+cols: DEVwmt08 DEVwmt09 DEVwmt10 DEVwmt11[^r] DEVwmt11raw
 # rows of the table are constructed by collecting these regexps
-rows: DEVwmt08 DEVwmt09 DEVwmt10 DEVwmt11[^r] DEVwmt11raw
+rows: ^wmt08 ^wmt09 ^wmt10 ^wmt11[^r] ^wmt11raw
 # rows of the table are sorted by BLEU (the column with this exact name)
 #rowsort: 
 # cols of the table are sorted by the row with this exact name:
 #colsort: 
-verbose: 4
+verbose: 0
 # cells will have marks indicating: max in column (>), max in row (^), both (*)
 print_max_marks: 1
 ENDTABLE

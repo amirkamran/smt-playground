@@ -62,6 +62,8 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
 * s.mosesgiza.ad93f520.20120221-1717: check that mert+evaluation work well
     cista evaluace asi ano s.evaluator.ae52bbc1.20120221-1755
     mert prave testuju: s.evaluator.11802b16.20120221-1804 (jako kontrast s 52f3ebbf.20120208-2202)
+    ...asi funguje dobre, BLEU podobne, cas podobny (trochu horsi, ale cluster
+      pretizen)
 
 Milos' suggestion to select sents from parallel corpus and tune towards them.
 
@@ -74,3 +76,4 @@ full table of
 * plnou tabulku dev-vs-test corpusu
 
 for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wmt11 wmt11raw; do if [ $dev != $test ]; then echo eman add-tag devtesttable '$('eman tb 11ccf590.20120208-1554 -s /wmt11/$test/ -s /wmt10/$dev/ --ignore=corpus '|' eman clone --start --print ')'; fi; done; done > clip2.sh
+...tohle je spatne, protoze to druhym regexem ovlivni prvni :-(
