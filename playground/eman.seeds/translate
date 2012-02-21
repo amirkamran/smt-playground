@@ -157,6 +157,7 @@ $MOSESPARALLELIZER \\
 > translated.gz \\
 || die "Failed to translate"
 
+sed -e 's/^ *//' -e 's/ *$//' -i alignment
 gzip alignment
 
 echo "Detokenizing translation"

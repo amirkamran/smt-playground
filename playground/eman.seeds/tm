@@ -140,7 +140,7 @@ if \\
 	    --alignment=custom \\
 	    --corpus=corpus/corpus \\
 	    --f src --e tgt \\
-        --score-options="--WordAlignment" \\
+      --phrase-word-alignment \\
         $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
   && echo "Now will filter translation models" \\
