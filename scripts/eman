@@ -2669,6 +2669,19 @@ sub select_steps {
         }
         @steps = @new_steps;
       }
+      when ("tre") {
+        my $tagexpr = shift @args;
+        if (! $tagexpr) {
+          $error = 1;
+          last;
+        }
+        my @new_steps;
+        for my $step (@steps) {
+          my $tagsstr = compiled_tag_string($step);
+          push @new_steps, $step if $tagsstr =~ $tagexpr;
+        }
+        @steps = @new_steps;
+      }
       default { $error = 1; }
     }
   }
