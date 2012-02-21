@@ -97,6 +97,7 @@ my $print_created_step = 0; # for machine use of eman init/clone
 my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
 my $do_start = 0;
+my $add_tag = undef; # for newly inited steps, add the given tags
 my $subst = undef;
 my $avoid = undef;
 my $reuse = undef;
@@ -169,6 +170,7 @@ my %options = (
   "reuse=s@" => \$reuse,
   "ignore=s@" => \$ignore,
   "all-avoid!" => \$avoid_all,
+  "add-tag|addtag=s@" => \$add_tag,
   "start!" => \$do_start,
   "print-created-step!" => \$print_created_step,
   "reindex" => \$reindex,
@@ -1215,14 +1217,10 @@ sub init {
 
     # tag: can be blank, non-blank must be valid
     my $tag = try_load("eman.tag");
-    if (defined $tag) {
-      if ($tag =~ /[\s\n]/ ) {
-        $ok = 0;
-        print STDERR "No whitespace allowed in $stepname/eman.tag: $tag\n";
-      }
-    } else {
-      save("eman.tag", ""); # save blank tag
-    }
+    $tag = "" if !defined $tag;
+    # merge add_tag values and existing tag values
+    my %tags = map { ($_, 1) } grep {/./} (split(/\s+/, $tag), @$add_tag);
+    save("eman.tag", join(" ", keys %tags));
 
     # deps: can be blank, non-blank must be valid
     my $deps = try_load("eman.deps");
