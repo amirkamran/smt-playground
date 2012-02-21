@@ -59,3 +59,18 @@ s.lucscore.4bf88452.20120213-2119       DONE    CUT10
 s.lucscore.7829a571.20120213-1805       DONE    CUT3
 s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
 
+* s.mosesgiza.ad93f520.20120221-1717: check that mert+evaluation work well
+    cista evaluace asi ano s.evaluator.ae52bbc1.20120221-1755
+    mert prave testuju: s.evaluator.11802b16.20120221-1804 (jako kontrast s 52f3ebbf.20120208-2202)
+
+Milos' suggestion to select sents from parallel corpus and tune towards them.
+
+full table of 
+
+* pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
+  s.evaluator.95057bdf.20120221-1507
+  s.evaluator.3980b577.20120221-1509
+
+* plnou tabulku dev-vs-test corpusu
+
+for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wmt11 wmt11raw; do if [ $dev != $test ]; then echo eman add-tag devtesttable '$('eman tb 11ccf590.20120208-1554 -s /wmt11/$test/ -s /wmt10/$dev/ --ignore=corpus '|' eman clone --start --print ')'; fi; done; done > clip2.sh

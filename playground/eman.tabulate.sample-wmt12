@@ -4,9 +4,9 @@
 ==== Basic experiments in four metrics ====
 TABLE
 # all result lines matching any of these regexps are dropped
-forbidden: OUTDATED TAG Snts
+forbidden: OUTDATED TAG Snts DEVwmt11raw
 # result lines have to match all of these regexpsto survive
-required: evaluator 
+required: evaluator DEVwmt11
 # cols of the table are constructed by collecting these regexps
 cols: ^BLEU ^TER ^CDER ^PER
 # rows of the table are constructed by collecting these regexps
@@ -16,6 +16,26 @@ rowsort: BLEU
 # cols of the table are sorted by the row with this exact name:
 colsort: DEV.* 5gr 6gr
 verbose: 0
+# cells will have marks indicating: max in column (>), max in row (^), both (*)
+print_max_marks: 1
+ENDTABLE
+
+
+==== Devset vs. Testset influence (small data) ====
+TABLE
+# all result lines matching any of these regexps are dropped
+forbidden: OUTDATED TAG snts
+# result lines have to match all of these regexpsto survive
+required: evaluator BLEU devtesttable towards-CDER
+# cols of the table are constructed by collecting these regexps
+cols: ^wmt08 ^wmt09 ^wmt10 ^wmt11[^r] ^wmt11raw
+# rows of the table are constructed by collecting these regexps
+rows: DEVwmt08 DEVwmt09 DEVwmt10 DEVwmt11[^r] DEVwmt11raw
+# rows of the table are sorted by BLEU (the column with this exact name)
+#rowsort: 
+# cols of the table are sorted by the row with this exact name:
+#colsort: 
+verbose: 4
 # cells will have marks indicating: max in column (>), max in row (^), both (*)
 print_max_marks: 1
 ENDTABLE

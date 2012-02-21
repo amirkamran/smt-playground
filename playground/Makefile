@@ -33,12 +33,8 @@ bleu:
 	> $@
 
 nicebleu: bleu
-	cat $< \
-	| cut -f 1,3- \
-	| dett \
-	| ./summarizer.pl \
-	| tt --utf \
-	> $@
+	eman tabulate || echo "Ignoring errors"
+	cp eman.niceresults $@
 
 modelstat:
 	make lsmodel | grep -v '^make' > $@.modeltmp
