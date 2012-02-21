@@ -2314,7 +2314,7 @@ sub interpret {
   my $self = shift; # supply attributes
   my $lines = shift;
 
-  for my $f (qw/required forbidden rows cols rowsort colsort print_max_marks/) {
+  for my $f (qw/required forbidden rows cols print_max_marks/) {
     # define as blank and trim
     $self->{$f} = "" if !defined $self->{$f};
     $self->{$f} =~ s/^[ \n\t]*|[ \n\t]*$//g;
@@ -2345,6 +2345,9 @@ sub collect_tokens {
   my $self = shift;
   my $origtokenre = shift;
   my $line = shift;
+
+  $line .= " "; # just to allow easier matching at EOL
+
   my @out = ();
 
   # remove flags from origtokenre
@@ -2471,7 +2474,7 @@ sub scan {
           ( take_just_number($table{"$b\t$self->{rowsort}"}) || 0 )
       <=> ( take_just_number($table{"$a\t$self->{rowsort}"}) || 0 ) } @rowdef;
   } else {
-    @sortedrowdef = @rowdef;
+    @sortedrowdef = sort {$a cmp $b } @rowdef;
   }
   my @sortedcoldef;
   if (defined $self->{colsort}) {
@@ -2479,7 +2482,7 @@ sub scan {
           ( take_just_number($table{"$self->{colsort}\t$b"}) || 0 )
       <=> ( take_just_number($table{"$self->{colsort}\t$a"}) || 0 ) } @coldef;
   } else {
-    @sortedcoldef = @coldef;
+    @sortedcoldef = sort { $a cmp $b } @coldef;
   }
   # Prepare the table
   my @tab;
