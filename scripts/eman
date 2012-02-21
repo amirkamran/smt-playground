@@ -3083,6 +3083,10 @@ eman stat `qstat | cut -c 1-8 | skip 2`
   # the skip command is available here:
   #   http://www.cuni.cz/~obo/textutils/#skip
 
+eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
+  # list all MERT steps that were used to construct EVAL steps tagged
+  # with the tag FOO
+
 =head2 Eman `select' query syntax
 
 You can use the following filters in eman select:
@@ -3096,6 +3100,7 @@ You can use the following filters in eman select:
   v <VAR>=<value>  ... only steps with variable <VAR> that
                        has value <value>
   vre <regex>      ... only steps where the variable file matches <regex>
+  tre <regex>      ... only steps where tags (incl. autotags) match <regex>
 
 The result (and speed) depends on the order of fitlers, e.g.:
 
