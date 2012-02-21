@@ -806,6 +806,8 @@ if ($cmd eq "clone") {
       } else {
         $show_status = 1;
         traceback("NEW ", $newtopstep);
+        print "Root: ", $newtopstep, "\n";
+        print STDERR "Traceback of NEW not reliable in --dry-run.\n" if $dryrun;
       }
     }
   }
@@ -822,10 +824,17 @@ if ($command eq "redo") {
   my $newtopstep = init_by_recipe($recipe, $depmap);
   $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
   if (defined $newtopstep) {
-    $show_status = 1;
-    traceback("OLD ", $s);
-    traceback("NEW ", $newtopstep);
-    print STDERR "Traceback of NEW not reliable in --dry-run.\n" if $dryrun;
+    if ($print_created_step) {
+      # we don't print the traceback if we are printing top step name
+      # the traceback would mess stdout
+      print $newtopstep, "\n";
+    } else {
+      $show_status = 1;
+      traceback("OLD ", $s);
+      traceback("NEW ", $newtopstep);
+      print "Root: ", $newtopstep, "\n";
+      print STDERR "Traceback of NEW not reliable in --dry-run.\n" if $dryrun;
+    }
   } else {
     $waserror = 1;
   }
