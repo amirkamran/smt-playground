@@ -1093,7 +1093,9 @@ sub init_by_recipe {
     # --all-avoid forbids reusing *input* steps
     # but it does not prohibit reusing freshly created steps
   if (defined $idx->{$thisname} && $idx->{$thisname} eq $hash
-      && step_good_to_reuse($thisname)) {
+      && step_good_to_reuse($thisname)
+      && !$avoid{$thisname}
+      ) {
     print STDERR "The given $thisname actually fits.\n" if $debug;
     $knownstep = $thisname;
   } else {
