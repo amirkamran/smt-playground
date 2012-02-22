@@ -96,21 +96,20 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
-
-mydir=\`pwd\`
+ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment
 . /net/projects/SGE/user/sge_profile
-
-set -o pipefail
-function die() { echo "\$@" | tee FAILED >&2; exit 1 ; }
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
 # clone some importnant executables
-$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || exit 1
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Moses missing"
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
 if ! echo "test" | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
