@@ -2317,6 +2317,11 @@ sub interpret {
     $self->{$f} = "" if !defined $self->{$f};
     $self->{$f} =~ s/^[ \n\t]*|[ \n\t]*$//g;
   }
+  for my $f (qw/rowsort colsort/) {
+    # trim only if defined
+    next if !defined $self->{$f};
+    $self->{$f} =~ s/^[ \n\t]*|[ \n\t]*$//g;
+  }
 
   $self->{reqtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{required} ];
   $self->{forbtoksf} = [ grep { /./ } split /[ \n\t]+/, $self->{forbidden} ];
