@@ -17,5 +17,7 @@ enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-fact
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNm	pluslemma	../../scripts/construct_improved_czech_lemma.pl
 csNmT1   	form|lemma|tag	csNmT1	pluslemma	../../scripts/construct_improved_czech_lemma.pl
+csNmT1   	tag	csNmT1	pos	../../scripts/stem_factor.pl --stem=2
+csNmT1   	tag	csNmT1	poscng	../../scripts/stem_factor.pl --stem=5
 
 ta_txt	untoken	ta	form	/home/bojar/diplomka/granty/emplus/wmt12/playground/s.moses.542a93b3.20120115-0115/moses/scripts/tokenizer/tokenizer.perl

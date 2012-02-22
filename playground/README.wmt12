@@ -67,11 +67,14 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
 
 Milos' suggestion to select sents from parallel corpus and tune towards them.
 
-full table of 
-
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
   s.evaluator.95057bdf.20120221-1507
   s.evaluator.3980b577.20120221-1509
+
+* poscng LM na news: s.mixlm.0449dcd3.20120222-1605
+  ... vyzkouset na velkych datech
+  !!! novy moses s.mosesgiza.ad93f520.20120221-1717 potrebuje recompilovat, maximalni rad LM jsem zvedl na 8, podle LM rozhodnu, jestli jeste vic
+  (lm/max_order.hh)
 
 * plnou tabulku dev-vs-test corpusu
 
