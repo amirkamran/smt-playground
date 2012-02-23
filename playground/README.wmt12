@@ -65,7 +65,12 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
     ...asi funguje dobre, BLEU podobne, cas podobny (trochu horsi, ale cluster
       pretizen)
 
-Milos' suggestion to select sents from parallel corpus and tune towards them.
+* Milos' suggestion to select sents from parallel corpus and tune towards them.
+  s.lucindex.93adf5eb.20120222-1912 indexes czeng based on english lemma
+    a z toho mam pak anglickou stranu: s.lucselect.2bbca1c5.20120223-1654
+    a ceskou stranu: s.lucselect.f2e293be.20120223-1656
+      korpus se jmenuje: wmt11-filt-s.lucscore.a34a212a.20120222-2339/enNmT1}+form+lemma+tag
+      XXX POZOR PREKLEP, ten musis opravit -- slozena zavorka
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
   s.evaluator.95057bdf.20120221-1507
@@ -80,3 +85,27 @@ Milos' suggestion to select sents from parallel corpus and tune towards them.
 
 for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wmt11 wmt11raw; do if [ $dev != $test ]; then echo eman add-tag devtesttable '$('eman tb 11ccf590.20120208-1554 -s /wmt11/$test/ -s /wmt10/$dev/ --ignore=corpus '|' eman clone --start --print ')'; fi; done; done > clip2.sh
 ...tohle je spatne, protoze to druhym regexem ovlivni prvni :-(
+... rucne jsem to dodelat
+
+* preklad z anglickeho lematu
+
+* systemy ke kombinovani:
+TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
+TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
+TODO
+TODO	2step
+s.evaluator.3243a7df.20120222-1809	small baseline
+s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
+s.evaluator.c30ec7fe.20120222-1847	small towards PER
+s.evaluator.d9f4e325.20120222-1849	small towards TER
+s.evaluator.850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+s.evaluator.21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+s.evaluator.1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+!!! pri vyrabeni musis reusnout mixlm, a musis prejit na novy mosesgiza, cili zhruba takto:
+MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 eman redo 18.09±0.59 --avoid=s.tm.c11f7cbf.20120211-0028 --start --add-tag=with-toa --disk=400g  --mem=40g --ign=mixlm
+
+A pri odvozovani dalsich variant ke kombinovani uz staci neco jako:
+DEVCORP=wmt08 eman redo s.evaluator.3243a7df.20120222-1809
+nebo
+MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
