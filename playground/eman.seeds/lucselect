@@ -9,15 +9,16 @@ PLAYGROUND=`eman path` # eman playground directory
 # Ensure all the required variables are set (or provide the default)
 eman \
    defvar LINENUMS default='' help='file with selected linenums' \
-   defvar SRCCORP default='' help='input corpus to select lines from' \
-   defvar SRCAUG default='' help='lang+factors of input' \
-   defvar OUTCORP same_as='' help='filename of the output' \
-   defvar OUTLANG default='' help='language of output' \
-   defvar OUTFACTORS default='' help='factors of output' \
+   defvar SRCCORP help='input corpus to select lines from' \
+   defvar CORPAUG help='lang+factors of input, also used for the output' \
+   defvar OUTCORP help='the name of the output corpus' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
+
+OUTLANG=$(echo $CORPAUG | cut -d+ -f1)
+OUTFACTORS=$(echo $CORPAUG | cut -d+ -f2-)
 
 # Preregister corpora
 $PLAYGROUND/corpman register -- output.txt.gz \
@@ -57,9 +58,11 @@ function mkcorpus() {
   fi
 }
 
-mkcorpus $SRCCORP/$SRCAUG input
+mkcorpus $SRCCORP/$CORPAUG input
 
-zcat corpus.input.gz | $PLAYGROUND/../scripts/greplines $PLAYGROUND/$LINENUMS | gzip -c > output.txt.gz
+zcat corpus.input.gz \\
+| $PLAYGROUND/../scripts/greplines $PLAYGROUND/$LINENUMS \\
+| gzip -c > output.txt.gz
 
 $PLAYGROUND/corpman register -- output.txt.gz \\
   -1    $OUTCORP        $OUTLANG        $OUTFACTORS     \$(zcat output.txt.gz | wc -l)  0 \\
