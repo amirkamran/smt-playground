@@ -1,5 +1,5 @@
 #!/bin/bash
-# eman step to select filtered lines from the original indexed corpus
+# eman step to select filtered lines according to index
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail # safer pipes
@@ -8,22 +8,17 @@ PLAYGROUND=`eman path` # eman playground directory
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-   defvar LUCSCORESTEP type=reqstep help='the lucscore step where the lines were selected' \
+   defvar LINENUMS default='' help='file with selected linenums' \
+   defvar SRCCORP help='input corpus to select lines from' \
    defvar CORPAUG help='lang+factors of input, also used for the output' \
-   defvar OUTCORP same_as='LUCSCORESTEP' help='the name of the output corpus' \
+   defvar OUTCORP help='the name of the output corpus' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-SRCCORP=$(eman get-var $(eman get-var $LUCSCORESTEP INDEXDIR) SRCCORP)
 OUTLANG=$(echo $CORPAUG | cut -d+ -f1)
 OUTFACTORS=$(echo $CORPAUG | cut -d+ -f2-)
-LINENUMS=$(eman path $LUCSCORESTEP)/output.lineids.gz
-
-# Checking if the source factors are available
-$PLAYGROUND/corpman $SRCCORP/$CORPAUG \
-  || die "Failed to find source corpus or factors: $SRCCORP/$CORPAUG"
 
 # Preregister corpora
 $PLAYGROUND/corpman register -- output.txt.gz \
@@ -65,12 +60,9 @@ function mkcorpus() {
 
 mkcorpus $SRCCORP/$CORPAUG input
 
-[ -e "$LINENUMS" ] || die "Can't read $LINENUMS"
-
 zcat corpus.input.gz \\
-| $PLAYGROUND/../scripts/greplines $LINENUMS \\
-| gzip -c > output.txt.gz \\
-|| die "Failed to select the lines"
+| $PLAYGROUND/../scripts/greplines $PLAYGROUND/$LINENUMS \\
+| gzip -c > output.txt.gz
 
 $PLAYGROUND/corpman register -- output.txt.gz \\
   -1    $OUTCORP        $OUTLANG        $OUTFACTORS     \$(zcat output.txt.gz | wc -l)  0 \\

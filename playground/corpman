@@ -430,7 +430,7 @@ sub lazy_build {
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{linecount} == -1) {
-      die "The corpus $corp/$lang+$facts was registered, but it is not ready yet.\n";
+      die "The corpus $corp/$lang+$facts was registered by $entry->{stepname}, but it is not ready yet.\n";
     } else {
       return $entry;
     }
