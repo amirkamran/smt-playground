@@ -14,9 +14,9 @@ eman \
 eval `eman bash-loadvars`
 
 PLAYGROUND=`eman path` # eman playground directory
-SRCCORPDIR=`eman path $SRCCORP`
 WORKDIR=$(pwd)
 
+echo "Checking if $SRCCORP/$SRCAUG is registered." >&2
 $PLAYGROUND/corpman $SRCCORP/$SRCAUG \
   || die "$SRCCORP/$SRCAUG not found"
 
