@@ -648,56 +648,57 @@ sub add_entry {
     # Where do the entries come from:
     # A: manually created corpora (these have isderived==0)
     # B: automatic corpora of "all factors" (these have isderived==1 and factind==-1
-    # C: automatic corpora of "all factors" (these have isderived==1 and factind!=-1
+    # C: automatic corpora of "selected factor" (these have isderived==1 and factind!=-1
     # Possible conflicts:
     # old entry, new entry, resolution
     # AA  die
     # AB  die
-    # AC  die
+    # AC  use C; this happens if there is a manually created corpus of more factors but we need to to select one factor from it
     # BA  die
     # BB  die
     # BC  prefer B (directly usable, C would require one more factor selection)
-    # CA  die
+    # CA  use C, as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
 
     my $oldtype = get_entry_source_type($oldentry);
     my $newtype = get_entry_source_type($newentry);
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
-    if ($oldtype eq "A" || $newtype eq "A") {
+    if ($conflict_type eq "AC" || $conflict_type eq "CA") {
+      $should_die = 0;
+      $useentry = ($oldtype eq "C" ? $oldentry : $newentry);
+    } elsif ($oldtype eq "A" || $newtype eq "A") {
       $should_die = 1;
       $msg = "Conflict involving a manually created corpus.";
-    } else {
-      if ($conflict_type eq "BB") {
-        $should_die = 1;
-        $msg = "Conflicting derived corpora, you should never derive the same set of factors";
+    } elsif ($conflict_type eq "BB") {
+      $should_die = 1;
+      $msg = "Conflicting derived corpora, you should never derive the same set of factors";
+      $useentry = $oldentry;
+    } elsif ($conflict_type eq "CC") {
+      $should_die = 0;
+      # Don't report any conflict, just use the older one
+      my $olddate = (split /\./, $oldentry->{"stepname"})[3];
+      my $newdate = (split /\./, $newentry->{"stepname"})[3];
+      if ($olddate lt $newdate) {
         $useentry = $oldentry;
-      } elsif ($conflict_type eq "CC") {
-        $should_die = 0;
-	# Don't report any conflict, just use the older one
-	my $olddate = (split /\./, $oldentry->{"stepname"})[3];
-	my $newdate = (split /\./, $newentry->{"stepname"})[3];
-	if ($olddate lt $newdate) {
-	  $useentry = $oldentry;
-	} else {
-	  my $oldseed = $oldentry->{"stepname"}."/eman.seed";
-	  my $newseed = $newentry->{"stepname"}."/eman.seed";
-	  if ( -e $oldseed && -e $newseed
-	    && -C $oldseed > -C $newseed) {
-	    $useentry = $oldentry;
-	  } else {
-	    $useentry = $newentry;
-	  }
-	}
-        $msg = "Conflicting derivable corpora, picking $useentry->{stepname}"
-	  if $verbose;
-
-      } elsif ($conflict_type eq "BC" || $conflict_type eq "CB") {
-        $should_die = 0;
-        $useentry = ($oldtype eq "B" ? $oldentry : $newentry);
       } else {
-        die "Unimplemented, should never happen.";
+        my $oldseed = $oldentry->{"stepname"}."/eman.seed";
+        my $newseed = $newentry->{"stepname"}."/eman.seed";
+        if ( -e $oldseed && -e $newseed
+          && -C $oldseed > -C $newseed) {
+          $useentry = $oldentry;
+        } else {
+          $useentry = $newentry;
+        }
       }
+      $msg = "Conflicting derivable corpora, picking $useentry->{stepname}"
+        if $verbose;
+
+    } elsif ($conflict_type eq "BC" || $conflict_type eq "CB") {
+      $should_die = 0;
+      $useentry = ($oldtype eq "B" ? $oldentry : $newentry);
+    } else {
+      die "Unimplemented, should never happen.";
     }
   }
 

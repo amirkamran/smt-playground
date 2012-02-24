@@ -107,8 +107,15 @@ $cmd | gzip -c > corpus.txt.gz \\
 echo "Checking output number of lines of corpus.txt.gz"
 nl=\$(zcat corpus.txt.gz | wc -l)
 
-[ "\$nl" -eq $OUTLINECOUNT ] \\
-|| die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
+if [ $OUTLINECOUNT -eq -1 ]; then
+  echo "Re-registering the corpus with \$nl lines."
+  $PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS \$nl $DERIVED \\
+    || die "Can't register corpus"
+else
+  # just a check
+  [ "\$nl" -eq $OUTLINECOUNT ] \\
+  || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
+fi
 
 rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
