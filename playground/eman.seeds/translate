@@ -134,7 +134,7 @@ function mkcorpus() {
 }
 
 mkcorpus $TESTCORP/$SRCAUG src
-gunzip corpus.src.gz
+gunzip -c corpus.src.gz > corpus.src
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\

@@ -57,13 +57,15 @@ eman add-tag "DEC$DECODINGSTEPS"
 #  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
 #fi
 
-# Stop here if we are just initing ourselves
-[ -z "$INIT_ONLY" ] || exit 0
-
 DECRYPT=$PLAYGROUND/tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
 DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
+[ ! -z "$DECRYPTEDSTEPS" ] \
+  || die "Failed to decrypt decoding steps $DECODINGSTEPS"
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
 
 cat << KONEC > eman.command
 # This is the command to be run here
