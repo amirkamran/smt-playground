@@ -69,8 +69,9 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
   s.lucindex.93adf5eb.20120222-1912 indexes czeng based on english lemma
     a z toho mam pak anglickou stranu: s.lucselect.2bbca1c5.20120223-1654
     a ceskou stranu: s.lucselect.f2e293be.20120223-1656
-      korpus se jmenuje: wmt11-filt-s.lucscore.a34a212a.20120222-2339/enNmT1}+form+lemma+tag
-      XXX POZOR PREKLEP, ten musis opravit -- slozena zavorka
+      korpus se jmenuje: wmt11-filt-s.lucscore.a34a212a.20120222-2339/enNmT1+form+lemma+tag
+    ...now evaluating on large data: s.evaluator.2006f524.20120223-2219
+    ... got a terrible 9.14±0.38 compared to the original 17.51±0.57
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
   s.evaluator.95057bdf.20120221-1507
@@ -99,6 +100,7 @@ s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER
 s.evaluator.d9f4e325.20120222-1849	small towards TER
 s.evaluator.850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+s.evaluator.2006f524.20120223-2219	18.07±0.56 towards lucselectedwmt11
 s.evaluator.21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
 s.evaluator.1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
 s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
