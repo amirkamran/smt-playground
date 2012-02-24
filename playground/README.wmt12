@@ -97,9 +97,10 @@ TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
 TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
 TODO
 TODO	2step
-	...I already started the second step: s.evaluator.26ceccd4.20120224-1333
-	   ...ale nemuze fungovat, nema idali!
-	... a krok 1 zkousim tady: s.evaluator.9e01bec3.20120224-1711
+	...I already started the second step:
+	    s.evaluator.952798f6.20120224-1804 (no idali -> bad score)
+            s.evaluator.3ef7883e.20120224-1927  with idali
+	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712
 s.evaluator.3243a7df.20120222-1809	small baseline
 s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER

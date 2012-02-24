@@ -29,18 +29,24 @@ eval `eman bash-loadvars`
 PLAYGROUND=`eman path`
 
 if [ -z "$ALISTEP" ]; then
-  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL"
-  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --bashvars=ALISTEP=stepname)
+  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+ali"
+  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --init --bashvars=ALISTEP=stepname)
   export ALISTEP
   echo "Found ALISTEP=$ALISTEP"
   eman add-dep . "$ALISTEP" || die "Failed to depend on alistep $ALISTEP"
   eman defvar ALISTEP
 fi
 
-[ "$(eman getvar $ALISTEP CORPUS)" == "$SRCCORP" ] \
-  || die "Nonmatching alistep: different corpus"
-[ "$(eman getvar $ALISTEP ALILABEL)" == "$ALILABEL" ] \
-  || die "Nonmatching alistep: different ALILABEL: our is $ALILABEL"
+# check (if the alistep is indeed an align step and not a trick like idali)
+# whether the corpus matches
+KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS)
+[ "$KNOWNALICORPUS" == "$SRCCORP" ] \
+  || [ "$KNOWNALICORPUS" == "" ] \
+  || die "Nonmatching alistep: different corpus: $KNOWNALICORPUS vs $SRCCORP"
+KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL)
+[ "$KNOWNALILABEL" == "$ALILABEL" ] \
+  || [ "$KNOWNALILABEL" == "" ] \
+  || die "Nonmatching alistep: different ALILABEL: $KNOWNALILABEL vs $ALILABEL"
 
 BINARIESDIR=`eman path $BINARIES`
 SCRIPTS_ROOTDIR="$BINARIESDIR/moses/scripts"
