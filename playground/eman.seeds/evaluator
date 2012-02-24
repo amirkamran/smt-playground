@@ -59,13 +59,13 @@ function mkcorpus() {
 }
 
 mkcorpus $TESTCORP/$TRANSAUG translation
-gunzip -c corpus.translation.gz > corpus.translation
+zcat corpus.translation.gz > corpus.translation
 
 REFERENCES=''
 idx=0
 for i in $(echo "$REFAUGS" | tr ':' ' '); do
   mkcorpus $TESTCORP/\$i reference.\$idx
-  gunzip -c corpus.reference.\$idx.gz > corpus.reference.\$idx
+  zcat corpus.reference.\$idx.gz > corpus.reference.\$idx
   REFERENCES="\$REFERENCES,corpus.reference.\$idx"
   idx=\$((\$idx + 1))
 done
