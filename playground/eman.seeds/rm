@@ -27,8 +27,9 @@ eval `eman bash-loadvars`
 PLAYGROUND=`eman path`
 
 if [ -z "$ALISTEP" ]; then
-  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL"
-  export ALISTEP=`$PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali | cut -f1`
+  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+ali"
+  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --init --bashvars=ALISTEP=stepname)
+  export ALISTEP
   echo "Found ALISTEP=$ALISTEP"
   eman add-dep . "$ALISTEP" || die "Failed to depend on alistep $ALISTEP"
   eman defvar ALISTEP
@@ -47,11 +48,12 @@ export REORDTAG=`echo "$REORDERING.r$REORDFACTORS" | sed 's/\([a-z][a-z]\)[a-z]*
 # save the calculated tag in eman vars
 eman defvar REORDTAG
 
-if [ $SRCCORP == $TGTCORP ] ; then
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.$REORDTAG"
-else
-  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.$REORDTAG"
-fi
+eman add-tag "REORD$REORDTAG"
+#if [ $SRCCORP == $TGTCORP ] ; then
+#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.$REORDTAG"
+#else
+#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.$REORDTAG"
+#fi
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0

@@ -72,8 +72,17 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
       korpus se jmenuje: wmt11-filt-s.lucscore.a34a212a.20120222-2339/enNmT1+form+lemma+tag
     ...now evaluating on large data: s.evaluator.2006f524.20120223-2219
     ... got a terrible 9.14±0.38 compared to the original 17.51±0.57
-    ... s.evaluator.d31ab912.20120224-1127 is a new attempt, tuning corpus only
-        from czeng-news
+    ... s.evaluator.05015f1f.20120224-1807 is a new attempt, tuning corpus only
+        from czeng-news; still worse, got 8.70±0.37
+
+* postproc. tectomt narazil na konflikt AB:
+13:29 tauri4 playground$cat s.corpus.6ee3eee0.20120224-1151/corpman.info 
+corpus.txt.gz   -1      c-all-tmt       csNmtmt lemma   14833358        1
+13:29 tauri4 playground$cat s.corpus.f90c0e19.20120224-0949/corpman.info 
+corpus.txt.gz   -1      c-all-tmt       csNminput+csNmtmt       form+lemma+tag  14833358        0
+corpus.txt.gz   1       c-all-tmt       csNminput       form+lemma+tag  14833358        0
+corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        0
+
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
   s.evaluator.95057bdf.20120221-1507
@@ -95,7 +104,9 @@ for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wm
 * systemy ke kombinovani:
 TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
 TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
-TODO
+TODO	rm:
+	baseline: s.evaluator.63481d21.20120224-1945
+	large 0a1-0a1: s.rm.0b38cbed.20120224-1942
 TODO	2step
 	...I already started the second step:
 	    s.evaluator.952798f6.20120224-1804 (no idali -> bad score)
