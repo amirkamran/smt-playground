@@ -82,6 +82,8 @@ corpus.txt.gz   -1      c-all-tmt       csNmtmt lemma   14833358        1
 corpus.txt.gz   -1      c-all-tmt       csNminput+csNmtmt       form+lemma+tag  14833358        0
 corpus.txt.gz   1       c-all-tmt       csNminput       form+lemma+tag  14833358        0
 corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        0
+ ... obesel jsem to nastavenim na derived
+ ... a ted spustim alignment: s.align.88f2b75f.20120226-0051
 
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
@@ -105,14 +107,21 @@ for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wm
 TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
 TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
 TODO	rm:
-	baseline: s.evaluator.63481d21.20120224-1945
-	large 0a1-0a1: s.rm.0b38cbed.20120224-1942
+	baseline: s.evaluator.63481d21.20120224-1945 12.22±0.45 vs baseline 12.23±0.46
+	large 0a1-0a1: s.evaluator.d09a808c.20120225-2205  18.10±0.55, so yes, negligibly better
+	  ... zkusim jeste vypnout obyc dist.
+	      s.evaluator.b1090d1a.20120226-0035   ... fixed d_6
+	      s.evaluator.f3eb18e6.20120226-0037   ... fixed d_0
 TODO	2step
 	...I already started the second step:
-	    s.evaluator.952798f6.20120224-1804 (no idali -> bad score)
+	    s.evaluator.952798f6.20120224-1804 
+	      ... no idali -> bad score, but actually better than idali:
+	          41.24±0.73
             s.evaluator.3ef7883e.20120224-1927  with idali
+	      ... translate nededi MOSESFLAGS, takze rozhazel poradi...
+	      ... oprava: s.evaluator.c5976607.20120226-0106: 38.54±0.68
 	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712
-s.evaluator.3243a7df.20120222-1809	small baseline
+s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
 s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER
 s.evaluator.d9f4e325.20120222-1849	small towards TER

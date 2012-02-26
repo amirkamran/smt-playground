@@ -18,6 +18,7 @@ eman \
   defvar SEARCH default=cube help='the search type (beam or cube)' \
   defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
+  defvar MOSESFLAGS default='' inherit=MERTSTEP help='further flags for moses' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -83,10 +84,11 @@ MOSESPARALLEL="$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 
 if [ $JOBS == 0 ]; then
   GRIDARGS=""
-  MOSESPARALLELIZER=""
+  MOSESMAYPARALLEL="./moses $SEARCHFLAG $MOSESFLAGS"
 else
-  GRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' -feed-decoder-via-stdin "
-  MOSESPARALLELIZER="$MOSESPARALLEL $GRIDARGS -decoder "
+  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
+  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
+  MOSESMAYPARALLEL="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -feed-decoder-via-stdin -decoder ./moses"
 fi
 
 cat << KONEC > eman.command
@@ -145,9 +147,7 @@ gunzip -c corpus.src.gz > corpus.src
 
 \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval ./moses.abs.ini corpus.src || die "Failed to filter"
 
-$MOSESPARALLELIZER \\
-  ./moses \\
-  $SEARCHFLAGS \\
+$MOSESMAYPARALLEL \\
   -input-file ./corpus.src \\
   -alignment-output-file ./alignment \
   -config ./filtered-for-eval/moses.ini \\
