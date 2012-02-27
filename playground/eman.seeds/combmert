@@ -1,42 +1,41 @@
 #!/bin/bash
 # eman seed for running mert to combine various mt systems
 
-function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
-set -o pipefail
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
 
-if [ -z "$SYSTEMS" ] || [ -z "$DEVCORP" ] \
-  || [ -z "$TARGMODEL" ] \
-  || [ -z "$TESTCORP" ] \
-  || [ -z "$SRCAUG" ] \
-  || [ -z "$REFAUG" ] \
-  ; then
-  echo "You must set: "
-  echo "  \$SYSTEMS to ':::'-delimited lists of translation steps (eval, mert, 2step, ...)"
-  echo "            each is expected to produce evaluation.opt.{out,ali}"
-  echo "            (and later allow eman tb -s /=TESTCORP\$/=...\$)"
-  echo "  \$TARGMODEL to the s.model. containing the moses.ini to apply on the target side"
-  echo "  \$DEVCORP to the corpus for tuning ... expected to match with SYSTEMS/TESTCORP"
-  echo "  \$TESTCORP to the corpus for evaluation (not used yet)"
-  echo "  \$SRCAUG to the source lang+factors"
-  echo "  \$REFAUG to the target (reference) lang+factors"
-  echo "and optionally"
-  echo "  \$BILANGFLAGS to things like --featset=arclevel,primarcs for bilang2rover"
-  echo "  \$MAKEBFLAGS to things like --force-similar-alignment for make_bilang_for_syscomb"
-  echo "  \$HYPLMORDER to something different from 3"
-  echo "  \$SEARCH to beam or cube"
-  echo "  \$MOSESFLAGS to any further flags"
-  echo "  \$MERTFLAGS to any further flags"
-  echo "  \$GRIDFLAGS to any further flags"
-  echo "  \$SERIAL to yes to disable qsub"
-  echo "  \$STACK to stacksize"
-  echo "  \$TAGPREF to tag prefix"
-  echo "  \$BINARIES to the dir of executables"
-  exit 1
-fi
+PLAYGROUND=$(eman path)
 
-USERBINARIES=$BINARIES
+eman \
+  defvar SYSTEMS \
+    help="':::'-delimited lists of translation steps (eval, mert, 2step, ...), each is expected to allow eman tb -s /=TESTCORP\$/=...\$)" \
+  defvar TARGMODELSTEP type=reqstep \
+    help="the s.model. containing the moses.ini to apply on the target side" \
+  defvar DEVCORP \
+    help="the corpus for tuning ... expected to match with SYSTEMS/TESTCORP" \
+  defvar SRCAUG default="" \
+    help="language+factors to translate" \
+  defvar REFAUG default="" \
+    help="language that will be created by translating" \
+  defvar BILANGFLAGS default="" \
+    help="things like --featset=arclevel,primarcs for bilang2rover" \
+  defvar MAKEBFLAGS default="" \
+    help="things like --force-similar-alignment for make_bilang_for_syscomb" \
+  defvar HYPLMORDER default=3 \
+    help="the order of the LM based on the hypotheses" \
+  defvar SEARCH default=cube help='the search type (beam or cube)' \
+  defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
+  defvar GRIDFLAGS default='' help='further flags for qsub' \
+  defvar MOSESFLAGS default=''  help='further flags for moses' \
+  defvar MOSESSTEP type=reqstep \
+    help="the step containing compiled tools" \
+|| exit 1
 
-echo $TAGPREF$SYSTEMS"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
+eval `eman bash-loadvars`
+
+#USERBINARIES=$BINARIES
+
+# echo $TAGPREF$SYSTEMS"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
 
 sid=1
 rm -f systems
@@ -44,91 +43,70 @@ rm -f eman.deps
 for s in `echo $SYSTEMS | sed 's/:::/ /g'`; do
   echo Including system $sid: $s
   echo $s >> systems
-  echo $s >> eman.deps
-  sysbinaries=`grep BINARIES ../$s/eman.vars | cut -d= -f2-`
-  if [ -z "$INHERBINARIES" ]; then
-    INHERBINARIES=$sysbinaries
-  else
-    if [ "$INHERBINARIES" != "$sysbinaries" ]; then
-      if [ -z "$USERBINARIES" ]; then
-        die "Conflicting binaries: $INHERBINARIES vs $sysbinaries, specify BINARIES=..."
-      else
-        # the user provides something, so the conflict does not matter
-        # just remember there are no unambiguous binaries to inherit
-        INHERBINARIES=conflicting
-      fi
-    fi
-  fi
+  eman add-deps . $s
+#  sysbinaries=`grep BINARIES ../$s/eman.vars | cut -d= -f2-`
+#  if [ -z "$INHERBINARIES" ]; then
+#    INHERBINARIES=$sysbinaries
+#  else
+#    if [ "$INHERBINARIES" != "$sysbinaries" ]; then
+#      if [ -z "$USERBINARIES" ]; then
+#        die "Conflicting binaries: $INHERBINARIES vs $sysbinaries, specify BINARIES=..."
+#      else
+#        # the user provides something, so the conflict does not matter
+#        # just remember there are no unambiguous binaries to inherit
+#        INHERBINARIES=conflicting
+#      fi
+#    fi
+#  fi
   sid=$(($sid+1))
 done
 numsystems=$(($sid-1))
 echo $numsystems > numsystems
 
-if [ -z "$USERBINARIES" ]; then
-  # inheriting, ignoring our SAVEBINARIES
-  BINARIES="$INHERBINARIES"
-else
-  # user has supplied the binaries
-  BINARIES=$USERBINARIES
-  if [ "$USERBINARIES" != "$INHERBINARIES" ]; then
-    # not unambiguously inherited, our go the deps.
-    echo $BINARIES >> eman.deps
-  fi
-fi
+#if [ -z "$USERBINARIES" ]; then
+#  # inheriting, ignoring our SAVEBINARIES
+#  BINARIES="$INHERBINARIES"
+#else
+#  # user has supplied the binaries
+#  BINARIES=$USERBINARIES
+#  if [ "$USERBINARIES" != "$INHERBINARIES" ]; then
+#    # not unambiguously inherited, our go the deps.
+#    echo $BINARIES >> eman.deps
+#  fi
+#fi
 
-SCRIPTS_ROOTDIR="`pwd`/../$BINARIES/moses/scripts"
-MOSESCMD="`pwd`/../$BINARIES/bin/moses"
-
-TESTBLEU=/home/bojar/diplomka/granty/euromatrix/treedecode/trunk/testbleu.asm
-
-[ ! -z "$SEARCH" ] || SEARCH=cube
-
-[ ! -z "$JOBS" ] || JOBS=15
-[ ! -z "$HYPLMORDER" ] || HYPLMORDER=3
+SCRIPTS_ROOTDIR="`eman path $MOSESSTEP`/moses/scripts"
+MOSESCMD="`eman path $MOSESSTEP`/bin/moses"
 
 [ $JOBS == 0 ] && SERIAL=yes
 
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-SYSTEMS=$SYSTEMS
-TARGMODEL=$TARGMODEL
-DEVCORP=$DEVCORP
-TESTCORP=$TESTCORP
-SRCAUG=$SRCAUG
-REFAUG=$REFAUG
-HYPLMORDER=$HYPLMORDER
-SEARCH=$SEARCH
-BILANGFLAGS="$BILANGFLAGS"
-MAKEBFLAGS="$MAKEBFLAGS"
-MERTFLAGS="$MERTFLAGS"
-GRIDFLAGS="$GRIDFLAGS"
-MOSESFLAGS="$MOSESFLAGS"
-SERIAL=$SERIAL
-STACK=$STACK
-KONEC
+firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
+
+# create local copies of the corpora
+$PLAYGROUND/corpman --dump $firstdevcorp/$SRCAUG > tuning.in \
+  || die "Failed to create tuning.in from $firstdevcorp/$SRCAUG"
+refidx=0
+for devcorp in $(echo $DEVCORP | tr ':' ' '); do
+  $PLAYGROUND/corpman --dump $devcorp/$REFAUG > tuning.ref.$refidx \
+    || die "Failed to create tuning.ref.$refidx from $devcorp/$REFAUG"
+  [ `wc -l < tuning.in` == `wc -l < tuning.ref.$refidx` ] \
+    || die "Mismatching number of lines in tuning.ref.$refidx taken from $devcorp/$REFAUG"
+  refidx=$(($refidx+1))
+done
+
+echo Checking tuning corp size
+[ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-# create local copies of the corpora
-../augmented_corpora/augment.pl --dump $DEVCORP/$SRCAUG > tuning.in || die "tuning.in"
-../augmented_corpora/augment.pl --dump $DEVCORP/$REFAUG > tuning.ref.0 || die "tuning.ref"
-#../augmented_corpora/augment.pl --dump $TESTCORP/$SRCAUG > evaluation.in || die "evaluation.in"
-#../augmented_corpora/augment.pl --dump $TESTCORP/$REFAUG > evaluation.ref.0 || die "evaluation.ref"
 
-#echo Checking tune and eval corp sizes
-#[ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
-#[ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
-
-#../../scripts/reduce_factors.pl 0 < evaluation.ref.0 > evaluation.ref.0.factor0 \
-#  || die "Failed to cut factor 0 of evaluation.ref.0"
-
-TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
-if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
-       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
-  echo "Defaulting to 'en' as the targetlang for detokenizer."
-  TARGETLAN_FOR_DETOKENIZER=en
-fi
+#TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
+#if ! echo "test" | $SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \
+#       -u -l $TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+#  echo "Defaulting to 'en' as the targetlang for detokenizer."
+#  TARGETLAN_FOR_DETOKENIZER=en
+#fi
 
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
@@ -142,8 +120,8 @@ if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
   MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
 else
-  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
-  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
+  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
+  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
   MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -decoder ./moses"
 fi
 
@@ -202,7 +180,7 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 # Construct empty-phrasetable
 echo -n "void ||| void ||| 0.0" \
-| ../$BINARIES/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
+| ../$MOSESSTEP/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
     -out empty-phrasetable
 
 # Construct the lattice from the hypotheses and the corpus

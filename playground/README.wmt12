@@ -139,8 +139,9 @@ t0-0 large s.evaluator.e2885ab9.20120227-1654
 
 TODO luc:
 0. vyrob velky prekladovy model lemma->lemma
-   ... s.evaluator.699ac218.20120227-0109 jako varianta 8a1ad56b.20120222-1511
+   ... s.evaluator.a910fa2d.20120227-2111 jako varianta 8a1ad56b.20120222-1511
 1. preloz enlem->cslem wmt12 *a* wmt09  ... dostanes wmt09a12cslemhyp
+   ... mam 4481ce81 a s.evaluator.34d8f8ba.20120227-2328
 2. profiltruj s.lucindex.cd643074.20120213-0903 podle wmt09a12cslemhyp, 500 vet
    ... dostanes 500monofilteredwmt09a12
 3. natrenuj mert na wmt09, ktery ma i LM nad 500monofilteredwmt09a12
@@ -159,6 +160,18 @@ ted podle toho filtruju data:
   s.lucscore.4c56d756.20120227-1603 (500)
 a pak podle toho pripravim korpus:
   s.lucselect.a446a3ca.20120227-1707 a s.lucselect.31d6c207.20120227-1714
+uz zkousim i lm:
+  s.lm.1da66e9f.20120227-2351 DONE (CUT=300)
+
+A ted co budu porovnavat:
+a) s.evaluator.d09a808c.20120225-2205  DEVwmt10 bez extraburtu TESTwmt10
+b) s.evaluator.0d395a5d.20120228-0026  DEVwmt09 bez extraburtu TESTwmt10
+c) s.evaluator.f1cb2157.20120228-0039  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
+d) evaluator.f1cb2157.20120228-0039  DEVwmt09, ale s synthlm09+12, TESTwmt09
+d) evaluator.e2bb0ec6.20120228-0048  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
+a-b porovnej, aby bylo videt, ze wmt09 a wmt10 nema vliv pri vyhodnocovani na
+  wmt11 (a stejne tak doufejme wmt12)
+  
 
 
 s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
@@ -192,6 +205,6 @@ MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
 
 SUBMISSIONS:
 
-s.evaluator.5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-s.evaluator.d5665a5d.20120227-1559 baseline t0-0
+* s.evaluator.5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+  s.evaluator.0352547d.20120227-1717 baseline t0-0
 
