@@ -11,6 +11,7 @@ use strict;
 use Getopt::Long;
 use File::Temp qw( tempfile tempdir );
 use File::Basename;
+use List::Util qw( min );
 
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
@@ -20,13 +21,15 @@ my $extract_outdir; # output directory of Moses phrase extractor
 my $scripts_rootdir;
 my $output_alignments = 0;
 my $tempdir = "/tmp/";
-my $outdir = "fix-oov";
+my $outdir = "reduce-oov";
+my $nbest = 0;
 my %translations; # hash of arrays containing possible translations for target words
 
 exit 1 if ! GetOptions(
   "e|extract-outdir=s" => \$extract_outdir,
   "s|scripts-rootdir=s" => \$scripts_rootdir,
   "a|output-alignments" => \$output_alignments,
+  "n|nbest=i" => \$nbest, # output only n best translations (0 to output all)
   "t|temp-dir=s" => \$tempdir,
   "o|output-dir=s" => \$outdir);
 
@@ -35,7 +38,7 @@ if (! $scripts_rootdir || ! $extract_outdir) {
       "and phrase extractor output directories\n";
 }
 
-safesystem("mkdir -p $outdir") || die "Failed to create output directory.\n";
+safesystem("mkdir -p $outdir") or die "Failed to create output directory.\n";
 
 my $oov_pl = "$scripts_rootdir/analysis/oov.pl";
 my $score = "$scripts_rootdir/training/phrase-extract/score";
@@ -51,6 +54,8 @@ if (-e "$extract_outdir/extract") { # non-factored model
     process_phrase_table($path, "$extract_outdir/lex.$factors", "." . $factors);
   }
 }
+
+print STDERR "Done.\n";
 
 sub process_phrase_table
 {
@@ -98,8 +103,8 @@ sub process_phrase_table
     my @line = split " ", $_;
     next if grep { $_ eq "NULL" } @line;
     print $lexical_table_aux_hdl "$line[0]\n";
-    $translations{$line[0]} = [] if ! $translations{$line[0]};
-    push @{ $translations{$line[0]} }, $line[1]; 
+    my %entry = ( translation => $line[1], prob => $line[2] );
+    push @{ $translations{$line[0]} }, \%entry; 
   }
   close $lexical_table_aux_hdl;
   close $lexical_table_hdl;
@@ -115,7 +120,16 @@ sub process_phrase_table
     my $line = $_;
     next if $line !~ m/^[0-9]/; # skip verbose info, only interested in OOV tokens
     my $token = (split "\t", $line)[1];
-    for my $translation (@{ $translations{$token} }) {
+
+    # only output n best translations?
+    if ($nbest) {
+      my @sorted = sort { $b->{prob} <=> $a->{prob} } @{ $translations{$token} };
+      @sorted = @sorted[0 .. min($#sorted, $nbest)];
+      $translations{$token} = \@sorted;
+    }
+
+    for my $entry (@{ $translations{$token} }) {
+      my $translation = $entry->{translation};
       print $output_hdl "$translation ||| $token ||| 0-0\n";
       print $output_inv_hdl "$token ||| $translation ||| 0-0\n";
       $new_tokens++;
@@ -128,34 +142,33 @@ sub process_phrase_table
   
   print STDERR "Sorting the new phrase table...\n";
   safesystem("LC_ALL=C sort -T $tempdir < $output_name > $outdir/extract$factors")
-    || die "Failed to sort the phrase table.\n";
+    or die "Failed to sort the phrase table.\n";
   safesystem("LC_ALL=C sort -T $tempdir < $output_inv_name > $outdir/extract$factors.inv")
-    || die "Failed to sort the phrase table.\n";
+    or die "Failed to sort the phrase table.\n";
   
   print STDERR "Running phrase score...\n";
   my $alignment_flag = $output_alignments ? " --WordAlignment " : "";
   safesystem("$score $outdir/extract$factors $lexical_table.f2e "
     . " $outdir/phrase-table$factors.f2e $alignment_flag") 
-    || die "Phrase score failed for $factors" . "f2e.\n";
+    or die "Phrase score failed for $factors" . "f2e.\n";
   safesystem("$score $outdir/extract$factors.inv $lexical_table.e2f "
     . " $outdir/phrase-table$factors.e2f $alignment_flag --Inverse") 
-    || die "Phrase score failed for $factors" . "e2f.\n";
+    or die "Phrase score failed for $factors" . "e2f.\n";
   safesystem("LC_ALL=C sort -T $tempdir < $outdir/phrase-table$factors.e2f "
     . " > $outdir/phrase-table$factors.e2f.sorted")
-    || die "Failed to sort the phrase table.\n";
+    or die "Failed to sort the phrase table.\n";
   safesystem("$consolidate $outdir/phrase-table$factors.f2e $outdir/phrase-table$factors.e2f.sorted "
     . " $outdir/phrase-table$factors") 
-    || die "Consolidate failed.\n";
+    or die "Consolidate failed.\n";
   
   # clean up
   safesystem("rm $outdir/phrase-table$factors.*");
+  unlink($output_name, $output_inv_name, $phrase_table_aux_name, $lexical_table_aux_name);
   
   # compress the final phrase table
   safesystem("(cd $outdir && gzip phrase-table$factors)")
-    || die "Failed to gzip the phrase table.\n";
+    or die "Failed to gzip the phrase table.\n";
 }
-
-print STDERR "Done.\n";
 
 # Ondrej's smart open
 sub try_open

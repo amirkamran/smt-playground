@@ -21,6 +21,7 @@ eman \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. t0a1-0+t1-1" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
+  defvar NBESTOOV default='0' help="output n-best lexical entries in reduce-oov.pl (0 = output all)" \
   defvar CUTOFF default=0 help="phrase-table cutoff" \
 || exit 1
 
@@ -151,6 +152,15 @@ if \\
       --phrase-word-alignment \\
         $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
+  && echo "Now will reduce phrase-table OOV" \\
+  && $PLAYGROUND/tools/reduce-oov.pl \\
+    --extract-outdir \$tempdir/model \\
+    --scripts-rootdir \$SCRIPTS_ROOTDIR \\
+    --output-alignments \\
+    --nbest $NBESTOOV \\
+    --output-dir \$tempdir/reduce-oov \\
+    --temp-dir /mnt/h/tmp \\
+  && mv \$tempdir/reduce-oov/* \$tempdir/model \\
   && echo "Now will filter translation models" \\
   && $PLAYGROUND/tools/filter-several-phrasetables.pl \\
         --srccorp=$SRCCORP --srcaug=$SRCAUG \\

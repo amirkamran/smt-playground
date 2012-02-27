@@ -42,6 +42,7 @@
 |  |  |  |  | DEPS=
 |  |  |  |  | FACTOR=-1
 |  |  |  |  | FILENAME=
+|  |  |  |  | JOBS=15
 |  |  |  |  | OUTCORP=sample-cs-en-mini-train
 |  |  |  |  | OUTFACTS=form
 |  |  |  |  | OUTLANG=en
@@ -81,6 +82,7 @@
 |  |  |  |  |  | DEPS=
 |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  | FILENAME=
+|  |  |  |  |  | JOBS=15
 |  |  |  |  |  | OUTCORP=sample-cs-en-mini-train
 |  |  |  |  |  | OUTFACTS=form
 |  |  |  |  |  | OUTLANG=en
@@ -95,6 +97,7 @@
 |  |  |  |  |  | DEPS=
 |  |  |  |  |  | FACTOR=-1
 |  |  |  |  |  | FILENAME=
+|  |  |  |  |  | JOBS=15
 |  |  |  |  |  | OUTCORP=sample-cs-en-mini-train
 |  |  |  |  |  | OUTFACTS=form
 |  |  |  |  |  | OUTLANG=cs
