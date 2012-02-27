@@ -84,6 +84,10 @@ corpus.txt.gz   1       c-all-tmt       csNminput       form+lemma+tag  14833358
 corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        0
  ... obesel jsem to nastavenim na derived
  ... a ted spustim alignment: s.align.88f2b75f.20120226-0051
+ ... alignment chcipl, jsou tam prazdne vety.
+ ... pripravuju novy korpus: s.corpus.d4fd0278.20120226-2233
+ ... oprava alignmentu: s.align.8cef9e10.20120227-1043
+ ... druha oprava: s.align.ddeaf9de.20120227-1419 (rucne jsem procistil ten korpus)
 
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
@@ -110,8 +114,8 @@ TODO	rm:
 	baseline: s.evaluator.63481d21.20120224-1945 12.22±0.45 vs baseline 12.23±0.46
 	large 0a1-0a1: s.evaluator.d09a808c.20120225-2205  18.10±0.55, so yes, negligibly better
 	  ... zkusim jeste vypnout obyc dist.
-	      s.evaluator.b1090d1a.20120226-0035   ... fixed d_6
-	      s.evaluator.f3eb18e6.20120226-0037   ... fixed d_0
+	      s.evaluator.b1090d1a.20120226-0035   ... fixed d_6   0.00±0.00
+	      s.evaluator.f3eb18e6.20120226-0037   ... fixed d_0   0.00±0.00
 TODO	2step
 	...I already started the second step:
 	    s.evaluator.952798f6.20120224-1804 
@@ -120,16 +124,63 @@ TODO	2step
             s.evaluator.3ef7883e.20120224-1927  with idali
 	      ... translate nededi MOSESFLAGS, takze rozhazel poradi...
 	      ... oprava: s.evaluator.c5976607.20120226-0106: 38.54±0.68
-	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712
+	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712 13.73±0.48
+	LARGE:
+	  step2: s.evaluator.a96300a0.20120227-1002
+	  step1: s.evaluator.a72e6171.20120227-0117
+
+TODO Turkova metoda:
+  - jednak na t0a1-0a1: s.evaluator.a430a4d2.20120227-1452
+  - ale take na t0-0: s.evaluator.6917354d.20120227-1451 (odvozeno z s.evaluator.bd7643b0.20120222-1906)
+
+To ENGLISH:
+t0-0 small s.evaluator.4c2791e7.20120227-1646
+t0-0 large s.evaluator.e2885ab9.20120227-1654
+
+TODO luc:
+0. vyrob velky prekladovy model lemma->lemma
+   ... s.evaluator.699ac218.20120227-0109 jako varianta 8a1ad56b.20120222-1511
+1. preloz enlem->cslem wmt12 *a* wmt09  ... dostanes wmt09a12cslemhyp
+2. profiltruj s.lucindex.cd643074.20120213-0903 podle wmt09a12cslemhyp, 500 vet
+   ... dostanes 500monofilteredwmt09a12
+3. natrenuj mert na wmt09, ktery ma i LM nad 500monofilteredwmt09a12
+4. preloz tim wmt12 (pro ucely finalni evaluace) nebo wmt11 (pro ucely moji
+   evaluace)
+5. pouzij to v combinovani, ktere vyladis na wmt09 a nasledne spustis na wmt11
+   nebo wmt12
+
+Protoze 0 jeste bezi zkousim aspon maly lematicky model. Pomoci nej jsem
+prelozil wmt09 (uz driv: s.evaluator.95057bdf.20120221-1507) a ted se pokusim
+prelozit wmt12 s.evaluator.bd7726e1.20120227-1528
+...z toho mam korpus s.corpus.54810283.20120227-1558:
+    synthwmt09a12/csNmT1+lemma
+ted podle toho filtruju data:
+  s.lucscore.9fa06e22.20120227-1602 (300)
+  s.lucscore.4c56d756.20120227-1603 (500)
+a pak podle toho pripravim korpus:
+  s.lucselect.a446a3ca.20120227-1707 a s.lucselect.31d6c207.20120227-1714
+
+
 s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
 s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER
 s.evaluator.d9f4e325.20120222-1849	small towards TER
 s.evaluator.850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
-s.evaluator.2006f524.20120223-2219	18.07±0.56 towards lucselectedwmt11
+s.evaluator.d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+NOs.evaluator.2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
 s.evaluator.21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
 s.evaluator.1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
 s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+s.evaluator.38c6acff.20120227-0125	large stc->stc+tag
+  a jeste jeho spravneji vyhodnocena varianta:
+    s.evaluator.c5cc09ae.20120227-0129
+    OPRAVA: s.evaluator.2e7b990b.20120227-0923
+      a z toho PRO: s.evaluator.0e493551.20120227-1410
+  ...dopadne tragicky, uletla word penalty (protoze jsou spatne reference)
+  ten s.evaluator.c5cc09ae.20120227-0129 zkousim ted taky nad poscng:
+    s.evaluator.92f4f256.20120227-1001
+    oprava: s.evaluator.70824cf2.20120227-1507
+
 !!! pri vyrabeni musis reusnout mixlm, a musis prejit na novy mosesgiza, cili zhruba takto:
 MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 eman redo 18.09±0.59 --avoid=s.tm.c11f7cbf.20120211-0028 --start --add-tag=with-toa --disk=400g  --mem=40g --ign=mixlm
 
@@ -137,3 +188,10 @@ A pri odvozovani dalsich variant ke kombinovani uz staci neco jako:
 DEVCORP=wmt08 eman redo s.evaluator.3243a7df.20120222-1809
 nebo
 MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
+
+
+SUBMISSIONS:
+
+s.evaluator.5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+s.evaluator.d5665a5d.20120227-1559 baseline t0-0
+

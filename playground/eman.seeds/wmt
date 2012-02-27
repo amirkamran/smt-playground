@@ -22,6 +22,7 @@ bnwmt09=newstest2009*src*$OUTLANG*sgm
 bnwmt10=newstest2010*src*$OUTLANG*sgm
 bnwmt11=newstest2011*src*$OUTLANG.sgm
 bnwmt11raw=newstest2011*src*$OUTLANG*raw*sgm
+bnwmt12=newstest2012*src*$OUTLANG.sgm
 eval "bn=\$bn$SECTION"
 [ -z "$bn" ] && die "Unrecognized \$SECTION $SECTION"
 

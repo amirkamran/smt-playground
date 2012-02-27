@@ -22,7 +22,7 @@ OUTFACTORS=$(echo $CORPAUG | cut -d+ -f2-)
 LINENUMS=$(eman path $LUCSCORESTEP)/output.lineids.gz
 
 # Checking if the source factors are available
-$PLAYGROUND/corpman $SRCCORP/$CORPAUG \
+$PLAYGROUND/corpman $SRCCORP/$CORPAUG --init \
   || die "Failed to find source corpus or factors: $SRCCORP/$CORPAUG"
 
 # Preregister corpora

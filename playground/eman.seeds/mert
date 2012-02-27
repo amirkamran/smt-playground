@@ -93,8 +93,8 @@ if [ $JOBS -eq 0 ]; then
   GRIDARGS=""
   MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
 else
-  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
-  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
+  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
+  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
 fi
 
 case "$SEARCH" in
