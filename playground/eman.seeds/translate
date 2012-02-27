@@ -1,6 +1,9 @@
 #!/bin/bash
 # translates the given corpus
 
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
 PLAYGROUND=$(eman path)
 
 eman \
