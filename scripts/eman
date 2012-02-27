@@ -97,6 +97,7 @@ my $print_created_step = 0; # for machine use of eman init/clone
 my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
 my $do_start = 0;
+my $do_outdate = 0;
 my $add_tag = undef; # for newly inited steps, add the given tags
 my $subst = undef;
 my $avoid = undef;
@@ -172,6 +173,7 @@ my %options = (
   "all-avoid!" => \$avoid_all,
   "add-tag|addtag=s@" => \$add_tag,
   "start!" => \$do_start,
+  "outdate!" => \$do_outdate,  # outdate the redone/cloned step (the *top* only)
   "print-created-step!" => \$print_created_step,
   "reindex" => \$reindex,
   "queue=s"=>\$queue,
@@ -669,9 +671,7 @@ if ($command eq "outdate") {
   mydie "usage: eman outdate SPEC ..." if 0 == scalar @ARGV;
   foreach my $key (@ARGV) {
     my $step = guess_step($key);
-    chdir_to_stepdir($step);
-    save("eman.status", "OUTDATED");
-    chdir_to_maindir();
+    do_outdate($step);
   }
   exit $waserror;
 }
@@ -792,6 +792,13 @@ if ($cmd eq "clone") {
     $waserror = 1 if ! defined $news;
     $waserror = ! start($news) if defined $news && $do_start;
     print $news, "\n" if $print_created_step && defined $news;
+    if ($do_outdate) {
+      if ($waserror) {
+        print STDERR "Not outdating $srcstep, there was an error.\n";
+      } else {
+        do_outdate($srcstep);
+      }
+    }
   } else {
     print STDERR "Loading recipe from stdin.\n";
     my $recipestr = load("-");
@@ -839,6 +846,13 @@ if ($command eq "redo") {
     }
   } else {
     $waserror = 1;
+  }
+  if ($do_outdate) {
+    if ($waserror) {
+      print STDERR "Not outdating $s, there was an error.\n";
+    } else {
+      do_outdate($s);
+    }
   }
   exit $waserror;
 }
@@ -2711,6 +2725,16 @@ sub select_steps {
     } else {
       return 1;
     }
+  }
+}
+
+sub do_outdate {
+  my $step = shift;
+  chdir_to_stepdir($step);
+  if ($dryrun) {
+    print STDERR "Not outdating $step in --dry-run.\n";
+  } else {
+    save("eman.status", "OUTDATED");
   }
 }
 
