@@ -186,7 +186,10 @@ if ($dump) {
 # If there are files that the other members created and failed to grant us access, we will get lots of error messages -
 # so we are redirecting them to /dev/null.
 chdir($basedir);
-system('chmod -R g+w . 2>/dev/null');
+###!!! This is not the correct way of doing it.
+###!!! Granting write access to *.factors folders is probably OK (although one could also use it to erase files inside)
+###!!! but a corpus file that we spent days with creating should better be write-protected.
+###!!!system('chmod -R g+w . 2>/dev/null');
 
 
 #------------------------------------------------------------------------------
@@ -194,7 +197,7 @@ system('chmod -R g+w . 2>/dev/null');
 sub find_info_file_including_aliases {
   my $corp = shift;
   my $lang = shift;
-  
+
   my $infofile = "$basedir/$corp/$lang.info";
   return $infofile if !$aliases || -e $infofile;
 
@@ -357,11 +360,11 @@ sub interpret_descr {
   } else {
    confess "Bad descr format: $descr";
   }
-  
+
   print STDERR "augment.pl: Interpreting descr $descr\n";
-  
+
   # Check the corpus file and the header:
-  
+
   my $corpbasefile = "$basedir/$corp/$lang.gz";
   my $corpinfofile = "$basedir/$corp/$lang.info";
   if (! -e $corpbasefile
@@ -403,7 +406,7 @@ sub find_alias_descr {
 
   my $default_corpus = undef;
   my $our_alias_lang = undef;
-  
+
   my $aliasfile = "$basedir/$corp/ALIASES";
   return undef if ! -e $aliasfile;
   my $h = my_open($aliasfile);

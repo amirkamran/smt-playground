@@ -23,15 +23,26 @@ SCRIPTS=$STATMT/scripts
 AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
 AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
 AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
-eman defvar ACDESC help='description of augmented corpus, e.g. newstest2008/en+lemma' \
+eman defvar OUTCORP  help='name of output corpus, e.g. newstest2008' \
+     defvar OUTLANG  help='language of output corpus, e.g. en' \
+     defvar OUTFACTS help='factor(s) of output corpus, e.g. lemma' \
 || exit 1
 # We still use the old augment.pl to fetch the data.
 AUGMENT=$STATMT/playground/augmented_corpora/augment.pl
 AUGMAKEFILE=$STATMT/playground/augmented_corpora/Makefile
-AUGDIR=/net/work/people/zeman/wmt/augmented_corpora
+AUGDIR=/net/data/augmented_corpora
+# Abbreviate some corpus names (de-cs, es-cs and fr-cs are already abbreviated in augmented_corpora, cs-en, de-en, es-en and fr-en are not).
+INCORP=`echo $OUTCORP | perl -pe 's/news-europarl-v7\.([a-z]+-en)/news-commentary-v7.$1+europarl-v7.$1/; s/news-europarl-v7\.([a-z]+-cs)/news-commentary-europarl-v7.$1/ ; s/(newstest2\d\d\d)/$1-v6b/'`
+ACDESC=$INCORP/$OUTLANG+$OUTFACTS
 
 # Set local bash variables.
 eval `eman bash-loadvars`
+
+# Create corpman.info so that this step can be located by corpman when searching for a specific corpus.
+# Fifth parameter after corpus.txt.gz: -1 ... we do not know the number of lines at the moment.
+# Sixth parameter after corpus.txt.gz: 0 ... this corpus is not automatically derived from another corpus.
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS -1 0 \
+|| die "Cannot register corpus"
 
 # Don't continue if we are not preparing the step yet.
 [ -z "$INIT_ONLY" ] || exit 0
@@ -55,7 +66,19 @@ renice 10 \$\$
 # because augment.pl may call "make" and the Makefile will call another
 # augment.pl, without being able to put through these arguments.
 echo "--dir=$AUGDIR --makefile=$AUGMAKEFILE" > $STATMT/playground/augmented_corpora/augment.pl.flags || die "Failed to save augment.pl.flags"
-ln -s \`$AUGMENT $ACDESC\` corpus.gz || die "Failed to augment $ACDESC and link to it"
+# We need to know whether $AUGMENT succeeded so we must first assign its output to a variable and then check the value.
+AUGPATH=\`$AUGMENT $ACDESC\`
+[ -e "\$AUGPATH" ] || die "Failed to augment $ACDESC"
+echo ln -s \$AUGPATH corpus.txt.gz
+ln -s \$AUGPATH corpus.txt.gz || die "Failed to link to the augmented corpus"
+# Get the number of lines and re-register the corpus.
+echo "Checking output number of lines of corpus.txt.gz"
+nl=\$(zcat corpus.txt.gz | wc -l)
+echo "Re-registering the corpus with \$nl lines."
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS \$nl 0 \\
+|| die "Cannot register corpus"
+# Remove corpman.index, force reindexing.
+rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
 # Standard command footer
 echo Done.
