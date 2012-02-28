@@ -130,7 +130,7 @@ my $qsub_available = undef;
 my $queue = undef;
 my $priority = -100; # use a lower priority by default
 my $exclude_comp = undef; # exclude a single computer
-my $mem = undef; # informative memory requirements
+my $mem = "6g"; # memory requirements
 my $disk = undef; # informative temp disk requirements
 my $time = undef; # time limit
 my @limits = ();  # other custom limits
@@ -179,7 +179,8 @@ my %options = (
   "queue=s"=>\$queue,
   "priority=i"=>\$priority,
   "exclude-comp=s"=>\$exclude_comp,
-  "mem=s"=>\$mem, # set e.g. to 10m or 4g
+  "mem:s"=>\$mem, # set e.g. to 10m or 4g; set to '' to run with no limits
+    # but risk killing the machine
   "disk=s"=>\$disk, # format: 10g
   "time=s"=>\$time, # format: hh:mm:ss
   "limit|l=s@"=>\@limits, # format, e.g.: h_stack=30M
@@ -1518,7 +1519,7 @@ sub submit {
     if (defined $time) {
       push @opts, ('-l', "h_rt=".$time);
     }
-    if (defined $mem) {
+    if (defined $mem && $mem ne "") {
       if ($env eq "rwth") {
         push @opts, ('-l', "h_vmem=".$mem);
       } else {
