@@ -18,6 +18,8 @@ eman \
   defvar ALISYM default='gdfa' help='which alignment to use for the translation model' \
   defvar ALILABEL inherit=ALISTEP \
     help="the custom label as given when creating the alignment" \
+  defvar ALIORREVALI default='ali' \
+    help="set to 'ali' for standard usecase but to 'revali' for revgdfa etc." \
   defvar DECODINGSTEPS help="specification of decoding steps, e.g. t0a1-0+t1-1" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
@@ -30,8 +32,8 @@ eval `eman bash-loadvars`
 PLAYGROUND=`eman path`
 
 if [ -z "$ALISTEP" ]; then
-  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+ali"
-  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --init --bashvars=ALISTEP=stepname)
+  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI"
+  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI --init --bashvars=ALISTEP=stepname)
   export ALISTEP
   echo "Found ALISTEP=$ALISTEP"
   eman add-dep . "$ALISTEP" || die "Failed to depend on alistep $ALISTEP"
@@ -112,7 +114,7 @@ mkcorpus $SRCCORP/$SRCAUG corpus.src
 mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-mkcorpus $ALICORP/$ALISYM-$ALILABEL+ali alignment.custom
+mkcorpus $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI alignment.custom
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
