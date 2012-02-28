@@ -26,7 +26,7 @@ my %opts = (
   verbose => 0,
   debug => 0,
   sync => 0,
-  mem=> undef,
+  mem=> "6g",
   disk=> undef,
   "time"=> undef,
   limits=> [],
@@ -68,7 +68,8 @@ my @optionspec = (
   "help|h",
   "sync|s",
   "priority|p=i",
-  "mem|m=s",
+  "mem|m:s", # set to e.g. 4gi (default 6g). Blank value means no limit but
+     # risk of killing the machine.
   "queue=s",
   "exclude-comp=s",
   "disk=s", # format: 10g
@@ -124,8 +125,10 @@ Continue failed runs: $0 --continue tempdir
                               command preserves the number of lines.
 Options passed to SGE:
   --priority=-200   ... scheduling priority
-  --mem=10g         ... -l mf, how much memory should be 'reserved' for the job
+  --mem=6g          ... -l mf, how much memory should be 'reserved' for the job
                         (job is delayed, until enough memory)
+                        and -l h_vmem, the maximum memory the job can take
+                        (job is killed if the memory is exceeded)
 No longer supported:
   --fan  ... shuffle input lines by giving consecutive lines to different jobs
 ";
@@ -570,7 +573,7 @@ KONEC
   # push @opts, map { -hold_jid => $_ } @{$opts{holds}};
   push @opts, (-q => $opts{queue}) if $opts{queue};
   push @opts, ('-hold_jid', $mayhold) if defined $mayhold;
-  if (defined $opts{mem}) {
+  if (defined $opts{mem} && $opts{mem} ne "") {
     push @opts, ('-hard', '-l', "mf=".$opts{mem}, '-l', 'h_vmem='.$opts{mem});
   }
   if (defined $opts{"exclude-comp"}) {
