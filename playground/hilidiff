@@ -1,19 +1,24 @@
 #!/bin/bash
 
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail
+
 e1="$1"
 e2="$2"
 
 inf=`./output "$e1" in`
-if [ -e "$inf.txt" ]; then
-  inf="$inf.txt"
-fi
-echo $inf
+reff=`./output "$e1" ref.0`
+hyp1=`./output "$e1"`
+hyp2=`./output "$e2"`
+for f in $inf $reff $hyp1 $hyp2; do
+  [ -e "$f" ] || die "Can't read $f"
+done
 
 tools/compare_translations/merge_src_ref_tst.pl \
-  src=$inf \
-  ref=`./output "$e1" ref.0` \
-  $e1=`./output "$e1"` \
-  $e2=`./output "$e2"` \
+  src=<(cat $inf | reduce_factors.pl 0) \
+  ref=$reff \
+  $e1=$hyp1 \
+  $e2=$hyp2 \
 | tools/compare_translations/sentence_compute.pl \
 | tools/compare_translations/sentence_sort.pl \
 | tools/compare_translations/to_ansi.pl \

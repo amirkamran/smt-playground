@@ -2,7 +2,10 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
-[ ! -z "$2" ] || die "usage: $0 step1 step2"
+[ ! -z "$2" ] || die "usage: $0 step1 step2 common-options"
+ina="$1"
+inb="$2"
+shift 2
 
 function get_scores_file() {
   step=$(eman path $1)
@@ -13,14 +16,14 @@ function get_scores_file() {
 
 tmpa=/tmp/difexp.$$.tmpa
 tmpb=/tmp/difexp.$$.tmpb
-echo "-- EXPERIMENT: $1" > $tmpa
-echo "++ EXPERIMENT: $2" > $tmpb
-scoresa=$(get_scores_file "$1")
+echo "-- EXPERIMENT: $ina" > $tmpa
+echo "++ EXPERIMENT: $inb" > $tmpb
+scoresa=$(get_scores_file "$ina")
 [ -e $scoresa ] && cat $scoresa | tt | prefix -- "-- " >> $tmpa
-scoresb=$(get_scores_file "$2")
+scoresb=$(get_scores_file "$inb")
 [ -e $scoresb ] && cat $scoresb | tt | prefix -- "++ " >> $tmpb
-if eman traceback "$1" --tag --vars >> $tmpa \
-  && eman traceback "$2" --tag --vars >> $tmpb; then
+if eman traceback "$ina" --tag --vars "$@" >> $tmpa \
+  && eman traceback "$inb" --tag --vars "$@" >> $tmpb; then
   diff --unified=500 $tmpa $tmpb | less -S
 fi
 rm -f $tmpa $tmpb

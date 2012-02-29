@@ -9,15 +9,27 @@ set -o pipefail
 [ ! -z "$1" ] || die "usage: $0 exp-identifier"
 
 suffix="$2"
-
-[ ! -z "$suffix" ] || suffix=opt.txt
+[ ! -z "$suffix" ] || suffix=""
 
 e=`eman guess $1`
-
 [ -d $e ] || die "Not an experiment: $e"
 
-out=$e/evaluation.$suffix
+case "$suffix" in
+in )
+  e=`eman tb --no-tree $e --ign=mert | grep translate`
+  fn=corpus.src
+  ;;
+ref*)
+  fn=corpus.reference.$(echo $suffix | cut -d. -f2)
+  ;;
+"" )
+  fn=corpus.translation
+esac
 
-[ -e $e ] || die "No output available"
+
+
+out=$e/$fn
+
+[ -e $out ] || die "No output available"
 
 echo $out

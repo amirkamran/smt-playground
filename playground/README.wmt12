@@ -88,6 +88,10 @@ corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        
  ... pripravuju novy korpus: s.corpus.d4fd0278.20120226-2233
  ... oprava alignmentu: s.align.8cef9e10.20120227-1043
  ... druha oprava: s.align.ddeaf9de.20120227-1419 (rucne jsem procistil ten korpus)
+     zkusil jsem eman cont s.align.ddeaf9de.20120227-1419 -queue '*@hyperion6*' -mem=30g
+ ... treti oprava s.align.c05c559f.20120228-1119
+
+ Finalni testset po prelozeni vypada takto: s.corpus.f9ed6639.20120228-1810
 
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
@@ -126,8 +130,10 @@ TODO	2step
 	      ... oprava: s.evaluator.c5976607.20120226-0106: 38.54±0.68
 	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712 13.73±0.48
 	LARGE:
-	  step2: s.evaluator.a96300a0.20120227-1002
+	  step2: s.evaluator.a96300a0.20120227-1002  77.40±0.58
 	  step1: s.evaluator.a72e6171.20120227-0117
+	         oprava: s.evaluator.2d1bd34d.20120228-1724
+		 oprava2: s.evaluator.0209bd0f.20120228-1814
 
 TODO Turkova metoda:
   - jednak na t0a1-0a1: s.evaluator.a430a4d2.20120227-1452
@@ -135,20 +141,54 @@ TODO Turkova metoda:
 
 To ENGLISH:
 t0-0 small s.evaluator.4c2791e7.20120227-1646
+  ... oprava: revertovany revali: s.evaluator.d692146c.20120228-1917
+  ... a jeste totez s alignmentem nereverznim: s.evaluator.0a1ba105.20120228-1205
 t0-0 large s.evaluator.e2885ab9.20120227-1654
+  ... zalozen na revgdfa, mizernych 17.23±0.49
+  ... oprava, ktera alignment otaci: s.evaluator.a1c0da6e.20120228-1924
+  ... oprava2: s.evaluator.a4c1d4e0.20120229-0722
+t0-0A1-0 large s.evaluator.d9c6fc17.20120228-1154
+  ... zabil jsem ho, je vadny...
+  ... oprava s revali: s.evaluator.5e11db8b.20120228-1937
+  ... druha oprava: s.evaluator.55c9776a.20120228-2328
 
 TODO luc:
 0. vyrob velky prekladovy model lemma->lemma
    ... s.evaluator.a910fa2d.20120227-2111 jako varianta 8a1ad56b.20120222-1511
 1. preloz enlem->cslem wmt12 *a* wmt09  ... dostanes wmt09a12cslemhyp
-   ... mam 4481ce81 a s.evaluator.34d8f8ba.20120227-2328
+   ... mam s.evaluator.4481ce81.20120227-2326 a s.evaluator.34d8f8ba.20120227-2328
+   ... a udelal jsem z toho korpus:
+       synth-large-wmt09a12/csNmT1+lemma (s.corpus.e8fd8e53.20120228-1230)
 2. profiltruj s.lucindex.cd643074.20120213-0903 podle wmt09a12cslemhyp, 500 vet
    ... dostanes 500monofilteredwmt09a12
+   filtrovani:
+     s.lucscore.08f2fb7f.20120228-1233  CUT=500
+     s.lucscore.8e25a19d.20120228-1235  CUT=300
+     s.lucscore.5f968916.20120228-1235  CUT=800
+   priprava korpusu:
+     s.lucselect.db0ee344.20120228-1515
+     s.lucselect.dfde9c06.20120228-1515
+     s.lucselect.6abcf9ba.20120228-1516
+   priprava LM:
+     s.lm.28bf8978.20120228-1521
+     s.lm.5185a11c.20120228-1522
+     s.lm.cf042915.20120228-1522
 3. natrenuj mert na wmt09, ktery ma i LM nad 500monofilteredwmt09a12
+     ...tyto tri jsou testovany na wmt11, takze zadne valne zlepseni mit nebudou
+     s.evaluator.b2f1c967.20120228-1544
+     s.evaluator.099dd5b7.20120228-1546
+     s.evaluator.e01a87c5.20120228-1548
 4. preloz tim wmt12 (pro ucely finalni evaluace) nebo wmt11 (pro ucely moji
    evaluace)
 5. pouzij to v combinovani, ktere vyladis na wmt09 a nasledne spustis na wmt11
    nebo wmt12
+
+Pro porovnani na DEV09, TEST12:
+15.77±0.55	CUT=500 	099dd5b7.20120228-1546
+15.90±0.55	CUT=300 	b2f1c967.20120228-1544
+?         	baseline	s.evaluator.bf1b8c6b.20120229-1017
+
+
 
 Protoze 0 jeste bezi zkousim aspon maly lematicky model. Pomoci nej jsem
 prelozil wmt09 (uz driv: s.evaluator.95057bdf.20120221-1507) a ted se pokusim
@@ -164,11 +204,14 @@ uz zkousim i lm:
   s.lm.1da66e9f.20120227-2351 DONE (CUT=300)
 
 A ted co budu porovnavat:
-a) s.evaluator.d09a808c.20120225-2205  DEVwmt10 bez extraburtu TESTwmt10
-b) s.evaluator.0d395a5d.20120228-0026  DEVwmt09 bez extraburtu TESTwmt10
-c) s.evaluator.f1cb2157.20120228-0039  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
+a) s.evaluator.d09a808c.20120225-2205  t0a1-0a1 DEVwmt10 TESTwmt11 18.10±0.55
+b) s.evaluator.0d395a5d.20120228-0026  t0a1-0a1 DEVwmt09 TESTwmt11 18.23±0.60
+c) s.evaluator.66079f26.20120228-1027  t0a1-0a1 DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu) 18.06±0.57
+f) s.evaluator.c731ba44.20120228-1024  DEVwmt09, ale s synthlm09+12, TESTwmt12
+   ... to by mel byt (maly) finalni 15.89±0.54
+Tyhle jsou nejake zmatene:
 d) evaluator.f1cb2157.20120228-0039  DEVwmt09, ale s synthlm09+12, TESTwmt09
-d) evaluator.e2bb0ec6.20120228-0048  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
+e) evaluator.e2bb0ec6.20120228-0048  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
 a-b porovnej, aby bylo videt, ze wmt09 a wmt10 nema vliv pri vyhodnocovani na
   wmt11 (a stejne tak doufejme wmt12)
   
@@ -205,6 +248,11 @@ MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
 
 SUBMISSIONS:
 
-* s.evaluator.5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-  s.evaluator.0352547d.20120227-1717 baseline t0-0
+16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+	...varianta: s.evaluator.e40db4bc.20120229-1114 DEVwmt11
+	...varianta:  DEVwmt11+extrarefs
+15.48±0.56  	0352547d.20120227-1717 baseline t0-0
+15.90±0.55*PG  	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
+            	...opticky pritom vypada trochu lepe nez 16.07
+            	
 
