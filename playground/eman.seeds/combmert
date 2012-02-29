@@ -22,13 +22,16 @@ eman \
   defvar MAKEBFLAGS default="" \
     help="things like --force-similar-alignment for make_bilang_for_syscomb" \
   defvar HYPLMORDER default=3 \
-    help="the order of the LM based on the hypotheses" \
+    help="the order of the LM based on the hypothesesm, default 3, zero to disable" \
   defvar SEARCH default=cube help='the search type (beam or cube)' \
   defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
   defvar MOSESFLAGS default=''  help='further flags for moses' \
   defvar MOSESSTEP type=reqstep \
     help="the step containing compiled tools" \
+  defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
+  defvar COMBMERTSTEP type=optstep \
+    help="the combmert where we optimized the weights" \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -75,8 +78,11 @@ echo $numsystems > numsystems
 #  fi
 #fi
 
-SCRIPTS_ROOTDIR="`eman path $MOSESSTEP`/moses/scripts"
-MOSESCMD="`eman path $MOSESSTEP`/bin/moses"
+# convert the dependencies to absolute paths
+SRILMDIR=`eman path $SRILMSTEP`
+MOSESSTEPDIR=$(eman path $MOSESSTEP)
+SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
+MOSESCMD="$MOSESSTEPDIR/bin/moses"
 
 [ $JOBS == 0 ] && SERIAL=yes
 
@@ -144,34 +150,29 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
-# init grid environment
+# init grid environment; sometimes needed for ./augment.pl
 . /net/projects/SGE/user/sge_profile
 
-mydir=\`pwd\`
+SRILMDIR1="\$(cat $SRILMDIR/srilm.path)/bin/"
+SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
 
-set -o pipefail
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-
-renice 10 \$\$
-
-# core files limited to 1 byte
-ulimit -c 1
+export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
+  # for ngram-count
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
-
-SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
-SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
-export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
-  # for ngram-count
 
 export MERTFLAGS="$MERTFLAGS"
 echo export MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
 ../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-../../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
@@ -180,7 +181,7 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 # Construct empty-phrasetable
 echo -n "void ||| void ||| 0.0" \
-| ../$MOSESSTEP/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
+| $MOSESSTEPDIR/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
     -out empty-phrasetable
 
 # Construct the lattice from the hypotheses and the corpus
@@ -199,46 +200,47 @@ done
 
 gzip hypcorpus.text || die "Failed to gzip hypcorpus.text"
 
-# Construct hyplm
-if zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
-    -text - \\
-    -lm hypcorpus.lm \\
-    $LMFLAGS \\
-    -interpolate -kndiscount; then
-  echo "hypcorpus.lm succeeded with knsmooth"
-else
-  zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
-    -text - \\
-    -lm hypcorpus.lm \\
-    $LMFLAGS \\
-    -interpolate \\
-  || die "Failed to prepare hypcorpus.lm"
+if [ $HYPLMORDER != 0 ]; then
+  # Construct hyplm
+  if zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
+      -text - \\
+      -lm hypcorpus.lm \\
+      $LMFLAGS \\
+      -interpolate -kndiscount; then
+    echo "hypcorpus.lm succeeded with knsmooth"
+  else
+    zcat hypcorpus.text.gz | ngram-count -order $HYPLMORDER \\
+      -text - \\
+      -lm hypcorpus.lm \\
+      $LMFLAGS \\
+      -interpolate \\
+    || die "Failed to prepare hypcorpus.lm"
+  fi
+  gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
 fi
-
-gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
 
 echo "Creating bilang (flags: $MAKEBFLAGS)"
 # create the input lattice as FSA
-../../scripts/make_bilang_for_syscomb.pl tuning.in system.*.outali.gz \\
+../../scripts/make_bilang_for_syscomb.pl $tuningevaluation.in system.*.outali.gz \\
     $MAKEBFLAGS \\
 | gzip -c \\
-> tuning.bilang.gz \\
+> $tuningevaluation.bilang.gz \\
 || die "Failed to make bilang"
 
-zcat tuning.bilang.gz \\
+zcat $tuningevaluation.bilang.gz \\
 | ../../scripts/bilang2rover.pl $numsystems \\
     --tokenize-at-underscore \\
     $BILANGFLAGS \\
 | gzip -c \\
-> tuning.fsa.gz
+> $tuningevaluation.fsa.gz
 
 
 # guess link parameter count
-linkparams=\$(zcat tuning.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
+linkparams=\$(zcat $tuningevaluation.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
 
 mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 ../tools/fix_moses_ini_for_syscomb.pl empty-phrasetable \\
-  hypcorpus.lm.gz \$HYPLMORDER \\
+  hypcorpus.lm.gz $HYPLMORDER \\
   --link-param-count=\$linkparams \\
   < moses.orig.ini > moses.ini \\
 || die "Failed to modify moses.ini"
@@ -247,48 +249,61 @@ mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
 
 
-zcat tuning.fsa.gz \
+zcat $tuningevaluation.fsa.gz \
 | \$SCRIPTS_ROOTDIR/generic/fsa2plf.pl \
-> tuning.fsa.in
+> $tuningevaluation.fsa.in
 
-[ \`wc -l < tuning.fsa.in\` == \`wc -l < tuning.ref.0\` ] \
-  || die "Mismatching tuning.ref.0 and tuning.fsa.in"
+[ \`wc -l < $tuningevaluation.fsa.in\` == \`wc -l < $tuningevaluation.ref.0\` ] \
+  || die "Mismatching $tuningevaluation.ref.0 and $tuningevaluation.fsa.in"
 
+if [ ! -z "$COMBMERT" ]; then
+  echo "Using weights from $COMBMERT"
+
+  ../tools/apply_weights_from_moses_ini.pl ../$COMBMERT/mert-tuning/moses.ini \\
+  < ./moses.abs.ini > moses.abs.opt.ini \\
+  || die "Failed to apply weights from $COMBMERT"
+
+  $MOSESPARALLELIZER \\
+    -input-file ./$tuningevaluation.fsa.in \\
+    -config ./moses.abs.opt.ini \\
+    -inputtype 2 \\
+    | sed 's/^ *//' \\
+    | sed 's/ *$//' \\
+    > evaluation.opt.out \\
+     || die "Translation of eval failed"
+  
+  echo "Tuned BLEU:"
+  #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
+  ./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt \\
+    || die "BLEU of evaluation.opt.out set failed"
+
+  echo "Detokenizing evaluation.opt.out"
+  \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
+    < evaluation.opt.out > evaluation.opt.txt
+else
+  echo "Training our weights"
+
+  #--obo-scorenbest=\`pwd\`/scorenbest
+  $MERTMOSES \
+    --no-filter-phrase-table \\
+    --inputtype=2 \\
+    --working-dir=mert-tuning \\
+    \`pwd\`/$tuningevaluation.fsa.in \\
+    \`pwd\`/$tuningevaluation.ref. \\
+    \`pwd\`/moses \\
+    \`pwd\`/moses.abs.ini \\
+    $MERTGRIDARGS \\
+    \$MERTFLAGS \\
+    --decoder-flags="-dl 0 -verbose 0 $MOSESFLAGS $SEARCHFLAG" \\
+    --starting-weights-from-ini \
+    || die "Mert failed"
+fi
 #--obo-scorenbest=\`pwd\`/scorenbest
-$MERTMOSES \
-  --no-filter-phrase-table \\
-  --inputtype=2 \\
-  --working-dir=mert-tuning \\
-  \`pwd\`/tuning.fsa.in \\
-  \`pwd\`/tuning.ref. \\
-  \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
-  $MERTGRIDARGS \\
-  \$MERTFLAGS \\
-  --decoder-flags="-dl 0 -verbose 0 $MOSESFLAGS $SEARCHFLAG" \\
-  --starting-weights-from-ini \
-  || die "Mert failed"
 
 # \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-opt \\
 #   ./mert-tuning/moses.ini evaluation.in \\
 #   || die "Filter for eval failed"
 # 
-# $MOSESPARALLELIZER \\
-#   -input-file ./evaluation.in \\
-#   -config ./filtered-for-eval-opt/moses.ini \\
-#   | sed 's/^ *//' \\
-#   | sed 's/ *$//' \\
-#   > evaluation.opt.out \\
-#    || die "Translation of eval failed"
-# 
-# echo "Tuned BLEU:"
-# #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-# ./testbleu evaluation.ref.0.factor0 < evaluation.opt.out | tee BLEU.opt \\
-#   || die "BLEU of evaluation.opt.out set failed"
-# 
-# echo "Detokenizing evaluation.opt.out"
-# \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
-#   < evaluation.opt.out > evaluation.opt.txt
 # 
 # 
 # \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval-std \\

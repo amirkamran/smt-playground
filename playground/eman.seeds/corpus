@@ -74,7 +74,8 @@ if [ ! -z "$RUN_COMMAND" ]; then
     [ "$COLUMN" == "-1" ] || cmd="$cmd cut -f $COLUMN | \\"$'\n'
     [ "$FACTOR" == "-1" ] || cmd="$cmd reduce_factors.pl $FACTOR | \\"$'\n'
     cmd="$cmd $RUN_COMMAND \\"$'\n'
-    cmd="$cmd \" $inf --promise-linecount=$OUTLINECOUNT"
+    cmd="$cmd \" $inf"
+    [ "$OUTLINECOUNT" == "-1" ] || cmd="$cmd --promise-linecount=$OUTLINECOUNT"
   fi
 elif [ ! -z "$COMBINE_PARTS" ]; then
   cmd="../factor_combinator.pl $COMBINE_PARTS"

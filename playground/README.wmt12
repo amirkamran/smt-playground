@@ -139,7 +139,7 @@ TODO Turkova metoda:
   - jednak na t0a1-0a1: s.evaluator.a430a4d2.20120227-1452
   - ale take na t0-0: s.evaluator.6917354d.20120227-1451 (odvozeno z s.evaluator.bd7643b0.20120222-1906)
 
-To ENGLISH:
+To ENGLISH: (DO ANGLICTINY)
 t0-0 small s.evaluator.4c2791e7.20120227-1646
   ... oprava: revertovany revali: s.evaluator.d692146c.20120228-1917
   ... a jeste totez s alignmentem nereverznim: s.evaluator.0a1ba105.20120228-1205
@@ -152,13 +152,22 @@ t0-0A1-0 large s.evaluator.d9c6fc17.20120228-1154
   ... oprava s revali: s.evaluator.5e11db8b.20120228-1937
   ... druha oprava: s.evaluator.55c9776a.20120228-2328
 
+GIGA:
+ pak to takhle nastartuju
+ az dobehne stc: s.corpus.2ad0bbd6.20120229-1734
+ SRCCORP=giga SRCAUG=enNm+stc eman init lucindex
+
+
 TODO luc:
 0. vyrob velky prekladovy model lemma->lemma
    ... s.evaluator.a910fa2d.20120227-2111 jako varianta 8a1ad56b.20120222-1511
 1. preloz enlem->cslem wmt12 *a* wmt09  ... dostanes wmt09a12cslemhyp
-   ... mam s.evaluator.4481ce81.20120227-2326 a s.evaluator.34d8f8ba.20120227-2328
+   ... mam s.evaluator.4481ce81.20120227-2326 wmt12
+         a s.evaluator.34d8f8ba.20120227-2328 wmt09
+	 a s.evaluator.03bcf975.20120229-1123 wmt11 (nove dodano)
    ... a udelal jsem z toho korpus:
        synth-large-wmt09a12/csNmT1+lemma (s.corpus.e8fd8e53.20120228-1230)
+       synth-large-wmt09a11a12 s.corpus.824576c2.20120229-1153
 2. profiltruj s.lucindex.cd643074.20120213-0903 podle wmt09a12cslemhyp, 500 vet
    ... dostanes 500monofilteredwmt09a12
    filtrovani:
@@ -186,7 +195,9 @@ TODO luc:
 Pro porovnani na DEV09, TEST12:
 15.77±0.55	CUT=500 	099dd5b7.20120228-1546
 15.90±0.55	CUT=300 	b2f1c967.20120228-1544
-?         	baseline	s.evaluator.bf1b8c6b.20120229-1017
+15.93±0.57	baseline	bf1b8c6b.20120229-1017
+	CUT=100	fe62a185.20120229-1727
+	CUT=300,ale i wmt11	4bdfa173.20120229-1202
 
 
 
@@ -248,11 +259,15 @@ MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
 
 SUBMISSIONS:
 
+to Czech
+
 16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
 	...varianta: s.evaluator.e40db4bc.20120229-1114 DEVwmt11
-	...varianta:  DEVwmt11+extrarefs
+	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
 15.48±0.56  	0352547d.20120227-1717 baseline t0-0
 15.90±0.55*PG  	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
             	...opticky pritom vypada trochu lepe nez 16.07
+		...varianta s.evaluator.af330490.20120229-1134 s 6gr
             	
+to English
 
