@@ -695,6 +695,7 @@ if ($cmd eq "abolish") {
       }
     }
     save("eman.abolished", `date`);
+    rename("eman.status", "eman.status-before-abolish");
     save("eman.status", "ABOLISHED");
     chdir_to_maindir();
   }
@@ -1029,6 +1030,25 @@ sub parse_recipe {
   return $recipe;
 }
 
+sub update_step_names_in_varsarr {
+  my $depmap = shift;
+  my $oldvars = shift;
+
+  # print "REPL: ".join(" ", %$depmap)."\n" if defined $depmap;
+  # print "VARSBEF: @$oldvars\n";
+  my @newvars = map {
+      foreach my $oldd (keys %$depmap) {
+        my $newd = $depmap->{$oldd};
+        #print "VARSOLDD $oldd\n";
+        #print "VARSNEWD $newd\n";
+        s/\Q$oldd\E/$newd/g;
+      }
+      $_;
+    } ( @$oldvars );
+  # print "VARSAFT: @newvars\n";
+  return \@newvars;
+}
+
 sub init_by_recipe {
   # given a recipe; a recipe has the following form:
   #      $recipe = { "name"=>'s.type.abcdef.2010',
@@ -1075,25 +1095,14 @@ sub init_by_recipe {
   # perform replacements of deps in vars
   # note that previous init_by_recipe might have proposed more replacements
   my $oldvars = $recipe->{"vars"};
-  # print "REPL: ".join(" ", %$depmap)."\n" if defined $depmap;
-  # print "VARSBEF: @$oldvars\n";
-  my @newvars = map {
-      foreach my $oldd (keys %$depmap) {
-        my $newd = $depmap->{$oldd};
-        #print "VARSOLDD $oldd\n";
-        #print "VARSNEWD $newd\n";
-        s/\Q$oldd\E/$newd/g;
-      }
-      $_;
-    } ( @$oldvars );
-  # print "VARSAFT: @newvars\n";
+  my $newvars = update_step_names_in_varsarr($depmap, $oldvars);
   # env. vars override the recipe (for usecases like V=x eman redo)
-  @newvars = map { my ($varname, $val) = split /=/, $_, 2;
+  my @newvars = map { my ($varname, $val) = split /=/, $_, 2;
                    defined $ENV{$varname}
                      ? "$varname=".var_bash_escape($ENV{$varname})
                  # prefer environment
                      : $_; # use the value from the scenario
-                 } @newvars;
+                 } @$newvars;
 
   # check if such a step exists already
   my $knownstep;
@@ -1217,6 +1226,12 @@ sub init {
   add_dir($subdir);
   $s = mkdiruniq(abs_path($subdir)."/".$dirprefix.$steptype.".", ".".$timestamp);
   $stepname = basename($s);
+  # if we are given $oldname, the name of the step we are just cloning
+  # modify the given vars by replacing oldname with stepname
+  $varsarr = update_step_names_in_varsarr(
+               { $derived_from => $stepname },
+               $varsarr)
+             if defined $derived_from;
   # populate the directory with all relevant files
   quietsystem("cp $seed $s/eman.seed") or die;
   my $oldwd = mychdir($s);
