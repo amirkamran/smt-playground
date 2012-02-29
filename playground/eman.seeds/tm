@@ -32,8 +32,8 @@ eval `eman bash-loadvars`
 PLAYGROUND=`eman path`
 
 if [ -z "$ALISTEP" ]; then
-  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI"
-  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI --init --bashvars=ALISTEP=stepname)
+  echo "Finding alistep that provides $ALICORP/$ALISYM-$ALILABEL+ali"
+  eval $($PLAYGROUND/corpman $ALICORP/$ALISYM-$ALILABEL+ali --init --bashvars=ALISTEP=stepname)
   export ALISTEP
   echo "Found ALISTEP=$ALISTEP"
   eman add-dep . "$ALISTEP" || die "Failed to depend on alistep $ALISTEP"
@@ -114,7 +114,17 @@ mkcorpus $SRCCORP/$SRCAUG corpus.src
 mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 cd ..
 
-mkcorpus $ALICORP/$ALISYM-$ALILABEL+$ALIORREVALI alignment.custom
+mkcorpus $ALICORP/$ALISYM-$ALILABEL+ali alignment.orig
+# we can't rely on the factor revali because concatenated corpora like
+# c-news+c-fiction/foo+revali would be attempted per parts
+if [ "$ALIORREVALI" == revali ]; then
+  echo "Reversing the alignment..."
+  zcat alignment.orig.gz \\
+  | ../../scripts/reverse_alignment.pl \\
+  | gzip -c > alignment.custom.gz
+else
+  ln -s alignment.orig.gz alignment.custom.gz
+fi
 
 alilen=\`zcat alignment.custom.gz | wc -l\`
 srclen=\`zcat corpus/corpus.src.gz | wc -l\`
