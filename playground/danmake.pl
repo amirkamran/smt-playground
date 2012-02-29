@@ -8,16 +8,47 @@ use open ':utf8';
 binmode(STDIN, ':utf8');
 binmode(STDOUT, ':utf8');
 binmode(STDERR, ':utf8');
+use Getopt::Long;
+use Carp;
 use dzsys;
 
-# OUTCORP=news-europarl-v7.cs-en OUTLANG=cs OUTFACTS=stc eman init augment --start
-my $steptype = $ARGV[0];
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|tm|lm|zmert|test|all)$/);
+GetOptions('type=s' => \$steptype, 'restart=s' => \$firstcorpus);
+
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|tm|lm|model|mert|zmert|test|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
-###!!! Dočasně se kvůli testování nového kroku omezíme jen na jeden jazykový pár.
-###!!!@pairs = (['en', 'cs']);
+# Vytvořit si seznam paralelních trénovacích korpusů. Budeme z něj vycházet při zakládání jednotlivých kroků.
+my @parallel_training_corpora;
+foreach my $language1 ('cs', 'de', 'es', 'fr')
+{
+    my @languages2 = ('en');
+    push(@languages2, 'cs') unless($language1 eq 'cs');
+    foreach my $language2 (@languages2)
+    {
+        push(@parallel_training_corpora, "news-europarl-v7.$language1-$language2");
+        if($language1 =~ m/^(es|fr)$/ && $language2 eq 'en')
+        {
+            push(@parallel_training_corpora, "un.$language1-$language2");
+        }
+    }
+}
+# Omezit se na korpusy, o které si uživatel řekl, pokud si řekl.
+if($firstcorpus)
+{
+    my @corpora;
+    my $on = 0;
+    foreach my $corpus (@parallel_training_corpora)
+    {
+        $on = 1 if($corpus eq $firstcorpus);
+        push(@corpora, $corpus) if($on);
+    }
+    @parallel_training_corpora = @corpora;
+}
+if(@ARGV)
+{
+    @parallel_training_corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@ARGV)} (@parallel_training_corpora);
+}
 # Pro každou kombinaci korpusu, jazyka a faktoru, kterou budeme potřebovat, vytvořit samostatný augmentovací krok.
 # Jednotlivé augmenty trvají nevysvětlitelně dlouho a tahle paralelizace by nám měla ulevit.
 # Na druhou stranu se obávám, zda Ondrovy zámky ohlídají současné pokusy o vytvoření stejných zdrojových faktorů.
@@ -40,7 +71,7 @@ if($steptype =~ m/^(augment|all)$/)
                 dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=stc eman init augment --start") or die;
                 dzsys::saferun("OUTCORP=$corpus OUTLANG=$language2 OUTFACTS=stc eman init augment --start") or die;
             }
-            if($language1 eq 'es' && $language2 eq 'en')
+            if(0 && $language1 =~ m/^(es|fr)$/ && $language2 eq 'en') ###!!!
             {
                 my $corpus = "un.$language1-$language2";
                 dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=lemma eman init augment --start") or die;
@@ -60,6 +91,20 @@ if($steptype =~ m/^(augment|all)$/)
                 dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
             }
         }
+    }
+    # A teď ještě jednojazyčná data na trénování jazykových modelů.
+    foreach my $corpus qw(gigaword.es gigaword.fr)
+    {
+        my $language;
+        if($corpus =~ m/\.([a-z]+)$/)
+        {
+            $language = $1;
+        }
+        else
+        {
+            die("Neznámý jazyk korpusu $corpus");
+        }
+        dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
     }
 }
 # Pro každý pár vytvořit a spustit vstupní krok dandata, který na jednom místě soustředí odkazy na všechny potřebné korpusy.
@@ -90,6 +135,12 @@ if($steptype =~ m/^(align|all)$/)
                 my $corpus = "news-europarl-v7.$language1-$language2";
                 dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1+lemma TGTALIAUG=$language2+lemma eman init align --start") or die;
                 dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2+lemma TGTALIAUG=$language1+lemma eman init align --start") or die;
+                if($language1 =~ m/^(es|fr)$/ && $language2 eq 'en')
+                {
+                    my $corpus = "un.$language1-$language2";
+                    dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1+lemma TGTALIAUG=$language2+lemma eman init align --start") or die;
+                    dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2+lemma TGTALIAUG=$language1+lemma eman init align --start") or die;
+                }
             }
         }
     }
@@ -130,20 +181,15 @@ if($steptype =~ m/^(extract|all)$/)
 # Pro každý pár vytvořit a spustit krok tm, který natrénuje překladový model Mosese.
 if($steptype =~ m/^(tm|all)$/)
 {
-    my $mosesstep = dzsys::chompticks('eman select t mosesgiza d');
-    foreach my $language1 ('cs', 'de', 'es', 'fr')
+    my $mosesstep = find_step('mosesgiza', 'd');
+    foreach my $corpus (@parallel_training_corpora)
     {
-        my @languages2 = ('en');
-        push(@languages2, 'cs') unless($language1 eq 'cs');
-        foreach my $language2 (@languages2)
-        {
-            my $corpus = "news-europarl-v7.$language1-$language2";
-            my $alignstep1 = dzsys::chompticks("eman select t align v CORPUS=$corpus v SRCALIAUG=$language1+lemma v TGTALIAUG=$language2+lemma");
-            my $alignstep2 = dzsys::chompticks("eman select t align v CORPUS=$corpus v SRCALIAUG=$language2+lemma v TGTALIAUG=$language1+lemma");
-            # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
-            dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep1 SRCAUG=$language1+stc TGTAUG=$language2+stc DECODINGSTEPS=t0-0 eman init tm --start");
-            dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep2 SRCAUG=$language2+stc TGTAUG=$language1+stc DECODINGSTEPS=t0-0 eman init tm --start");
-        }
+        my ($language1, $language2) = get_language_codes($corpus);
+        my $alignstep1 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language1+lemma v TGTALIAUG=$language2+lemma");
+        my $alignstep2 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language2+lemma v TGTALIAUG=$language1+lemma");
+        # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
+        dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep1 SRCAUG=$language1+stc TGTAUG=$language2+stc DECODINGSTEPS=t0-0 eman init tm --start");
+        dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep2 SRCAUG=$language2+stc TGTAUG=$language1+stc DECODINGSTEPS=t0-0 eman init tm --start");
     }
 }
 # Pro každý pár vytvořit a spustit krok lm, který natrénuje jazykový model.
@@ -151,20 +197,15 @@ if($steptype =~ m/^(tm|all)$/)
 # protože pro trénování využíváme cílovou stranu paralelního korpusu a ten není pro všechny páry shodný.
 if($steptype =~ m/^(lm|all)$/)
 {
-    my $srilmstep = dzsys::chompticks('eman select t srilm d');
+    my $srilmstep = find_step('srilm', 'd');
     my $danlm = 0; # hard switch
     if(!$danlm)
     {
-        foreach my $language1 ('cs', 'de', 'es', 'fr')
+        foreach my $corpus (@parallel_training_corpora)
         {
-            my @languages2 = ('en');
-            push(@languages2, 'cs') unless($language1 eq 'cs');
-            foreach my $language2 (@languages2)
-            {
-                my $corpus = "news-europarl-v7.$language1-$language2";
-                dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language1+stc ORDER=6 eman init lm --start") or die;
-                dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language2+stc ORDER=6 eman init lm --start") or die;
-            }
+            my ($language1, $language2) = get_language_codes($corpus);
+            dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language1+stc ORDER=6 eman init lm --start") or die;
+            dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language2+stc ORDER=6 eman init lm --start") or die;
         }
     }
     else
@@ -175,6 +216,21 @@ if($steptype =~ m/^(lm|all)$/)
             my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
             dzsys::saferun("SRILMSTEP=$srilmstep DATASTEP=$datastep ORDER=6 eman init danlm --start") or die;
         }
+    }
+}
+# Pro každý pár vytvořit a spustit krok model, který spojí překladový model Mosese (tm), jazykový model (lm) a případné další modely.
+if($steptype =~ m/^(model|all)$/)
+{
+    foreach my $corpus (@parallel_training_corpora)
+    {
+        my ($language1, $language2) = get_language_codes($corpus);
+        my $tmstep1 = find_step('tm', "v SRCCORP=$corpus v SRCAUG=$language1+stc v TGTAUG=$language2+stc");
+        my $tmstep2 = find_step('tm', "v SRCCORP=$corpus v SRCAUG=$language2+stc v TGTAUG=$language1+stc");
+        my $lmstep1 = find_step('lm', "v CORP=$corpus v CORPAUG=$language2+stc");
+        my $lmstep2 = find_step('lm', "v CORP=$corpus v CORPAUG=$language1+stc");
+        # Note that the 0: before language model step identifies the factor that shall be considered in the language model.
+        dzsys::saferun("TMS=$tmstep1 LMS=\"0:$lmstep1\" eman init model --start");
+        dzsys::saferun("TMS=$tmstep2 LMS=\"0:$lmstep2\" eman init model --start");
     }
 }
 # Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
@@ -188,6 +244,22 @@ if($steptype =~ m/^(zmert|all)$/)
         dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
     }
 }
+# Pro každý pár vytvořit a spustit krok mert, který vyladí váhy modelu (toto je Ondrův krok, který spolupracuje s Mosesem).
+if($steptype =~ m/^(mert|all)$/)
+{
+    foreach my $corpus (@parallel_training_corpora)
+    {
+        my ($language1, $language2) = get_language_codes($corpus);
+        my $tmstep1 = find_step('tm', "v SRCCORP=$corpus v SRCAUG=$language1+stc v TGTAUG=$language2+stc");
+        my $tmstep2 = find_step('tm', "v SRCCORP=$corpus v SRCAUG=$language2+stc v TGTAUG=$language1+stc");
+        my $lmstep1 = find_step('lm', "v CORP=$corpus v CORPAUG=$language2+stc");
+        my $lmstep2 = find_step('lm', "v CORP=$corpus v CORPAUG=$language1+stc");
+        my $modelstep1 = find_step('model', "v TMS=$tmstep1 v LMS=\"0:$lmstep1\"");
+        my $modelstep2 = find_step('model', "v TMS=$tmstep2 v LMS=\"0:$lmstep2\"");
+        dzsys::saferun("MODELSTEP=$modelstep1 DEVCORP=wmt10 eman init mert --start");
+        dzsys::saferun("MODELSTEP=$modelstep2 DEVCORP=wmt10 eman init mert --start");
+    }
+}
 # Pro každý pár vytvořit a spustit krok daneval, který přeloží testovací data a spočítá BLEU skóre.
 if($steptype =~ m/^(test|all)$/)
 {
@@ -198,6 +270,28 @@ if($steptype =~ m/^(test|all)$/)
         my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=test");
         dzsys::saferun("MERTSTEP=$mertstep EXTRACTSTEP=$tmstep eman init daneval --start") or die;
     }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Figures out language codes from the name of parallel corpus. Assumes that all
+# names of parallel corpora end in ".xx-yy" (language codes).
+#------------------------------------------------------------------------------
+sub get_language_codes
+{
+    my $corpus = shift;
+    my ($language1, $language2);
+    if($corpus =~ m/\.(\w+)-(\w+)$/)
+    {
+        $language1 = $1;
+        $language2 = $2;
+    }
+    else
+    {
+        croak("Unknown languages of parallel corpus $corpus");
+    }
+    return ($language1, $language2);
 }
 
 
