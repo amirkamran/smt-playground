@@ -429,6 +429,9 @@ sub lazy_build {
   # check if the whole corpus happens to be ready
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
+    if ($entry->{CONFLICT}) {
+      die "The corpus $corp/$lang+$facts is in conflict, see above or reindex.\n";
+    }
     if ($entry->{linecount} == -1) {
       die "The corpus $corp/$lang+$facts was registered by $entry->{stepname}, but it is not ready yet.\n";
     } else {
@@ -525,6 +528,9 @@ sub build_using_rules {
   $rule = $rules->{'*'}->{$facts} if ! defined $rule;
   die "No rule to make $corp/$lang+$facts."
     if !defined $rule;
+  if ($rule->{CONFLICT}) {
+    die "The rule for $corp/$lang+$facts is in conflict, see above.\n";
+  }
 
   my $useinlang = $rule->{'inlang'};
   $useinlang = $lang if $useinlang eq "*";
@@ -588,7 +594,8 @@ sub add_rule {
       ."from $newrule->{inlang}+$newrule->{infacts}"
       ." vs. "
       ."from $oldrule->{inlang}+$oldrule->{infacts}\n";
-    $waserror = 1;
+    # $waserror = 1; # Instead of dying rather prohibit the use
+    $rules->{$outlang}->{$outfacts}->{"CONFLICT"} = 1;
   } else {
     $rules->{$outlang}->{$outfacts} = $newrule;
   }
@@ -679,7 +686,10 @@ sub add_entry {
       # Don't report any conflict, just use the older one
       my $olddate = (split /\./, $oldentry->{"stepname"})[3];
       my $newdate = (split /\./, $newentry->{"stepname"})[3];
-      if ($olddate lt $newdate) {
+      if (!defined $olddate || !defined $newdate) {
+        # fake entries in dry run
+        $useentry = $oldentry;
+      } elsif ($olddate lt $newdate) {
         $useentry = $oldentry;
       } else {
         my $oldseed = $oldentry->{"stepname"}."/eman.seed";
@@ -710,7 +720,8 @@ sub add_entry {
     if defined $msg;
 
   if ($should_die) {
-    $waserror = 1;
+    # $waserror = 1; # instead of dying rather prohibit the use
+    $index->{$corpname}->{$lang}->{$facts}->{"CONFLICT"} = 1;
   } else {
     $index->{$corpname}->{$lang}->{$facts} = $useentry;
   }
