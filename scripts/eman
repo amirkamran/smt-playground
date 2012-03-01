@@ -3119,34 +3119,20 @@ by explicitly replacing the original step name with the name of the new
 step in variables of subsequent steps. The immutability of steps
 naturally requires to clone the subsequent steps as well.
 
-=head1 USAGE PATTERNS
+=head1 FINDING STEPS
 
-eman traceback SPEC -s '/.../.../'
-  # preview the experiment with some vars replaced
-  # append "--colorize | less" to preview
+Once you have many complex experiments in your playground, using 'ls'
+becomes less friendly. Eman can provides a few tools to locate
+experiments matching you criteria.
 
-eman traceback SPEC -s '/.../.../' | eman clone
-  # clone the whole subtree of steps replacing some vars
+While direct access of the filesystem (ls, grep s.*/eman.vars, ...) is
+perhaps faster, it does not search in (remote) subdirs of your
+playground.
 
-VAR=x eman redo SPEC
-  # clone the top step (and unusable predecessors) replacing VAR
-  # with some new value x
+  eman ls STEPTYPE  ... just lists existing steps
+  eman select QUERY-ARGUMENTS
 
-eman abolish `eman list STEPTYPE --status | grep FAILED | cut -f1`
-  # clean up, i.e. remove all content files of all failing steps
-
-eman stat `qstat | cut -c 1-8 | skip 2`
-  # show status of all running/held jobs in SGE
-  # WARNING: This only works if there are no non-eman cluster jobs.
-  # Otherwise, eman will just say "Failed to guess step from: $job_id".
-  # the skip command is available here:
-  #   http://www.cuni.cz/~obo/textutils/#skip
-
-eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
-  # list all MERT steps that were used to construct EVAL steps tagged
-  # with the tag FOO
-
-=head2 Eman `select' query syntax
+=head2 Eman `select' Query Syntax
 
 You can use the following filters in eman select:
 
@@ -3165,6 +3151,37 @@ The result (and speed) depends on the order of fitlers, e.g.:
 
 eman select t mert l 10 # output last 10 merts
 eman select l 10 t mert # output merts that were among 10 latest steps
+
+
+=head1 USAGE PATTERNS
+
+eman traceback SPEC -s '/.../.../'
+  # preview the experiment with some vars replaced
+  # append "--colorize | less" to preview
+
+eman traceback SPEC -s '/.../.../' | eman clone
+  # clone the whole subtree of steps replacing some vars
+
+VAR=x eman redo SPEC
+  # clone the top step (and unusable predecessors) replacing VAR
+  # with some new value x
+
+eman abolish `eman select t STEPTYPE f`
+  # remove all content files of all failing steps of a STEPTYPE
+
+eman stat `qstat | cut -c 1-8 | skip 2`
+  # show status of all running/held jobs in SGE
+  # WARNING: This only works if there are no non-eman cluster jobs.
+  # Otherwise, eman will just say "Failed to guess step from: $job_id".
+  # the skip command is available here:
+  #   http://www.cuni.cz/~obo/textutils/#skip
+
+eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
+  # list all MERT steps that were used to construct EVAL steps tagged
+  # with the tag FOO
+
+eman sel t lm vre tag --vars | grep 'ORDER\|s.lm'
+  # what all orders of LM do I have over morphological 'tag's
 
 =head2 If a Cluster Node Completely Dies
 
