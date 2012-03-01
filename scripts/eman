@@ -3180,7 +3180,7 @@ eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
   # list all MERT steps that were used to construct EVAL steps tagged
   # with the tag FOO
 
-eman sel t lm vre tag --vars | grep 'ORDER\|s.lm'
+eman sel t lm vre tag --stat --vars | grep 'ORDER\|s.lm'
   # what all orders of LM do I have over morphological 'tag's
 
 =head2 If a Cluster Node Completely Dies
