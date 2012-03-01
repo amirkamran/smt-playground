@@ -93,7 +93,7 @@ if [ -z $COMBMERTSTEP ]; then
   TUNING_OR_EVALUATION=tuning
   refidx=0
   for devcorp in $(echo $DEVCORP | tr ':' ' '); do
-    register_future_filename $devcorp/$REFAUG tuning.ref.$refidx
+    register_future_filename $devcorp/$REFAUG tuning.ref.$refidx.gz
     refidx=$(($refidx+1))
   done
 else
@@ -227,7 +227,8 @@ fi
 # Construct the lattice from the hypotheses and the corpus
 echo "Creating bilang (flags: $MAKEBFLAGS)"
 # create the input lattice as FSA
-../../scripts/make_bilang_for_syscomb.pl $TUNING_OR_EVALUATION.in hyp.*.outali.gz \\
+../../scripts/make_bilang_for_syscomb.pl $TUNING_OR_EVALUATION.in.gz \\
+    hyp.*.outali.gz \\
     $MAKEBFLAGS \\
 | gzip -c \\
 > $TUNING_OR_EVALUATION.bilang.gz \\
@@ -303,7 +304,6 @@ else
     $MERTGRIDARGS \\
     \$MERTFLAGS \\
     --decoder-flags="-dl 0 -verbose 0 $MOSESFLAGS $SEARCHFLAG" \\
-    --starting-weights-from-ini \
     || die "Mert failed"
 fi
 #--obo-scorenbest=\`pwd\`/scorenbest
