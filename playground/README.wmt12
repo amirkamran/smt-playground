@@ -197,7 +197,14 @@ Pro porovnani na DEV09, TEST12:
 15.90±0.55	CUT=300 	b2f1c967.20120228-1544
 15.93±0.57	baseline	bf1b8c6b.20120229-1017
 	CUT=100	fe62a185.20120229-1727
-	CUT=300,ale i wmt11	4bdfa173.20120229-1202
+	  s.lm.f83fd3eb.20120229-1724  497000 radek
+	  s.lucselect.b88db060.20120229-1147 49700 radek
+	  s.lucscore.d4c90838.20120229-1147 taky tak, cili tohle je ok.
+	CUT=300,ale i wmt11	STARE: 4bdfa173.20120229-1202
+	  s.lm.1c67cb7f.20120229-1158 1384958 radek
+	  s.lucscore.5d977de5.20120229-1157  2035899 radek... cili lm je blbe
+	  s.lucselect.cfcb2f2b.20120229-1157  2035899 ok
+	  oprava: s.evaluator.fbc531d7.20120229-2205
 
 
 
@@ -257,13 +264,33 @@ nebo
 MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
 
 
+KOMBINACE:
+
+
+s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
+s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
+s.evaluator.c30ec7fe.20120222-1847	small towards PER
+s.evaluator.d9f4e325.20120222-1849	small towards TER
+
+cili konfig:
+CORP=wmt11 \
+HYPAUGS=csNmT1_s.translate.46d1f1b7.20120222-1847+stc:csNmT1_s.translate.83099967.20120222-1849+stc:csNmT1_s.translate.14029a14.20120222-1854+stc:csNmT1_s.translate.4bfd0002.20120222-1808+stc \
+SRCAUG=enNmT1+stc \
+REFAUG=csNmT1+stc \
+MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 \
+SRILMSTEP=s.srilm.117f0cfe.20120202-0037 \
+TARGMODELSTEP=s.model.e351bb6f.20120222-1905 \
+eman init combmert
+
+
+
 SUBMISSIONS:
 
 to Czech
 
 16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-	...varianta: s.evaluator.e40db4bc.20120229-1114 DEVwmt11
-	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
+16.01±0.56	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
+15.90±0.57	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
 15.48±0.56  	0352547d.20120227-1717 baseline t0-0
 15.90±0.55*PG  	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
             	...opticky pritom vypada trochu lepe nez 16.07

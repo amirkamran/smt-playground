@@ -7,16 +7,18 @@ set -o pipefail  # safer pipes
 PLAYGROUND=$(eman path)
 
 eman \
-  defvar SYSTEMS \
-    help="':::'-delimited lists of translation steps (eval, mert, 2step, ...), each is expected to allow eman tb -s /=TESTCORP\$/=...\$)" \
   defvar TARGMODELSTEP type=reqstep \
-    help="the s.model. containing the moses.ini to apply on the target side" \
-  defvar DEVCORP \
-    help="the corpus for tuning ... expected to match with SYSTEMS/TESTCORP" \
-  defvar SRCAUG default="" \
-    help="language+factors to translate" \
+    help="the s.model containing the moses.ini to apply on the target side" \
+  defvar HYPAUGS \
+    help="colon-delimited list of system output corpora, e.g. csNmT1_s.translate.46d1f1b7.20120222-1847+stc" \
+  defvar CORP \
+    help="the corpus name, all systems produced a 'language' of it" \
+  defvar DEVCORP same_as=CORP \
+    help="the corpus to tune on, possibly multiple refs" \
+  defvar SRCAUG \
+    help="language+factors that the systems did translate from" \
   defvar REFAUG default="" \
-    help="language that will be created by translating" \
+    help="language+factors to tune on" \
   defvar BILANGFLAGS default="" \
     help="things like --featset=arclevel,primarcs for bilang2rover" \
   defvar MAKEBFLAGS default="" \
@@ -30,53 +32,11 @@ eman \
   defvar MOSESSTEP type=reqstep \
     help="the step containing compiled tools" \
   defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
-  defvar COMBMERTSTEP type=optstep \
+  defvar COMBMERTSTEP type=optstep default="" \
     help="the combmert where we optimized the weights" \
 || exit 1
 
 eval `eman bash-loadvars`
-
-#USERBINARIES=$BINARIES
-
-# echo $TAGPREF$SYSTEMS"DEV"$DEVCORP".S"$SEARCH$STACK$MERTTAG > eman.tag
-
-sid=1
-rm -f systems
-rm -f eman.deps
-for s in `echo $SYSTEMS | sed 's/:::/ /g'`; do
-  echo Including system $sid: $s
-  echo $s >> systems
-  eman add-deps . $s
-#  sysbinaries=`grep BINARIES ../$s/eman.vars | cut -d= -f2-`
-#  if [ -z "$INHERBINARIES" ]; then
-#    INHERBINARIES=$sysbinaries
-#  else
-#    if [ "$INHERBINARIES" != "$sysbinaries" ]; then
-#      if [ -z "$USERBINARIES" ]; then
-#        die "Conflicting binaries: $INHERBINARIES vs $sysbinaries, specify BINARIES=..."
-#      else
-#        # the user provides something, so the conflict does not matter
-#        # just remember there are no unambiguous binaries to inherit
-#        INHERBINARIES=conflicting
-#      fi
-#    fi
-#  fi
-  sid=$(($sid+1))
-done
-numsystems=$(($sid-1))
-echo $numsystems > numsystems
-
-#if [ -z "$USERBINARIES" ]; then
-#  # inheriting, ignoring our SAVEBINARIES
-#  BINARIES="$INHERBINARIES"
-#else
-#  # user has supplied the binaries
-#  BINARIES=$USERBINARIES
-#  if [ "$USERBINARIES" != "$INHERBINARIES" ]; then
-#    # not unambiguously inherited, our go the deps.
-#    echo $BINARIES >> eman.deps
-#  fi
-#fi
 
 # convert the dependencies to absolute paths
 SRILMDIR=`eman path $SRILMSTEP`
@@ -86,22 +46,63 @@ MOSESCMD="$MOSESSTEPDIR/bin/moses"
 
 [ $JOBS == 0 ] && SERIAL=yes
 
-firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
-
 # create local copies of the corpora
-$PLAYGROUND/corpman --dump $firstdevcorp/$SRCAUG > tuning.in \
-  || die "Failed to create tuning.in from $firstdevcorp/$SRCAUG"
-refidx=0
-for devcorp in $(echo $DEVCORP | tr ':' ' '); do
-  $PLAYGROUND/corpman --dump $devcorp/$REFAUG > tuning.ref.$refidx \
-    || die "Failed to create tuning.ref.$refidx from $devcorp/$REFAUG"
-  [ `wc -l < tuning.in` == `wc -l < tuning.ref.$refidx` ] \
-    || die "Mismatching number of lines in tuning.ref.$refidx taken from $devcorp/$REFAUG"
-  refidx=$(($refidx+1))
-done
+echo "" > corpus_preparation_commands
 
-echo Checking tuning corp size
-[ `wc -l < tuning.in` -gt 0 ] || die "Empty tuning.in"
+function register_future_filename() {
+  corpdesc="$1"
+  outfilename="$2"
+
+  # set bash variables stepname, filename, column, linecount
+  eval $($PLAYGROUND/corpman $corpdesc --init --bashvars=stepname --bashvars=filename --bashvars=column --bashvars=linecount)
+  [ ! -z "$stepname" ] || die "Corpus not found: $corpdesc"
+
+  # check the number of lines
+  [ -z "$linecount" ] || [ -z "$LINECOUNT" ] \
+      || [ $linecount -eq $LINECOUNT ] \
+    || die "Unexpected number of lines of $corpdesc: got $linecount, expected $LINECOUNT"
+  LINECOUNT="$linecount"
+
+  pathname=$(eman path $stepname)/$filename
+  if [ $column == "-1" ]; then
+    cmd="$PLAYGROUND/../scripts/wiseln $pathname $outfilename"
+  else
+    cmd="zcat $pathname | cut -f $column | gzip -c > $outfilename"
+  fi
+  echo "$cmd \\" >> corpus_preparation_commands
+  echo "|| die 'Failed to obtain $corpdesc'" >> corpus_preparation_commands
+
+  eman add-deps . $stepname
+}
+
+hid=1
+HYPIDS=""
+rm -f systems
+for h in `echo $HYPAUGS | sed 's/:/ /g'`; do
+  echo Including hypothesis $sid: $h
+  register_future_filename $CORP/$h hyp.$hid.out.gz
+  register_future_filename $CORP/$(echo $h | cut -d+ -f1)+ali hyp.$hid.ali.gz
+  HYPIDS="$HYPIDS $hid"
+  hid=$(($hid+1))
+done
+numsystems=$(($hid-1))
+echo $numsystems > numsystems
+
+
+if [ -z $COMBMERTSTEP ]; then
+  TUNING_OR_EVALUATION=tuning
+  refidx=0
+  for devcorp in $(echo $DEVCORP | tr ':' ' '); do
+    register_future_filename $devcorp/$REFAUG tuning.ref.$refidx
+    refidx=$(($refidx+1))
+  done
+else
+  TUNING_OR_EVALUATION=evaluation
+  COMBMERTSTEPDIR=$(eman path $COMBMERTSTEP)
+  [ -d "$COMBMERTSTEPDIR" ] || die "Not a valid step: $COMBMERTSTEP"
+fi
+
+register_future_filename $CORP/$SRCAUG $TUNING_OR_EVALUATION.in.gz
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -158,6 +159,8 @@ ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment; sometimes needed for ./augment.pl
 . /net/projects/SGE/user/sge_profile
+# setup PERL5LIB, LOCAL2DIR and RH8 variables (e.g. LD_LIBRARY_PATH)
+. /net/work/projects/perl_repo/admin/bin/setup_platform
 
 SRILMDIR1="\$(cat $SRILMDIR/srilm.path)/bin/"
 SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
@@ -176,28 +179,30 @@ echo export MERTFLAGS="$MERTFLAGS"
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  ../$TARGMODEL/model/moses.ini \
-  || die "Failed to clone ../$TARGMODEL/model/moses.ini"
+  ../$TARGMODELSTEP/model/moses.ini \
+  || die "Failed to clone ../$TARGMODELSTEP/model/moses.ini"
 
 # Construct empty-phrasetable
 echo -n "void ||| void ||| 0.0" \
-| $MOSESSTEPDIR/moses/misc/processPhraseTable -ttable 0 0 - -nscores 1 \
+| $MOSESSTEPDIR/moses/dist/bin/processPhraseTable -ttable 0 0 - -nscores 1 \
     -out empty-phrasetable
 
-# Construct the lattice from the hypotheses and the corpus
-sid=1
+
+# Get local copies of the corpora
+`cat corpus_preparation_commands`
+
+# Process them
 rm -f hypcorpus.text
-for s in \`cat systems\`; do
-  paste ../\$s/evaluation.opt.out ../\$s/evaluation.opt.ali \\
+for hid in $HYPIDS; do
+  ziplines --item-delim='\\t' hyp.\$hid.out.gz hyp.\$hid.ali.gz \\
   | gzip -c \\
-  > system.\$sid.outali.gz \\
-  || die "Failed to get output or ali from \$s"
-  cat ../\$s/evaluation.opt.out \\
+  > hyp.\$hid.outali.gz \\
+  || die "Failed to get output or ali from hypothesis $hid"
+  zcat hyp.\$hid.out.gz \\
   >> hypcorpus.text \\
   || die "Failed to append hypcorpus.text"
-  sid=\$((\$sid+1))
+  hid=\$((\$hid+1))
 done
-
 gzip hypcorpus.text || die "Failed to gzip hypcorpus.text"
 
 if [ $HYPLMORDER != 0 ]; then
@@ -219,24 +224,25 @@ if [ $HYPLMORDER != 0 ]; then
   gzip hypcorpus.lm || die "Failed to gzip hypcorpus.lm"
 fi
 
+# Construct the lattice from the hypotheses and the corpus
 echo "Creating bilang (flags: $MAKEBFLAGS)"
 # create the input lattice as FSA
-../../scripts/make_bilang_for_syscomb.pl $tuningevaluation.in system.*.outali.gz \\
+../../scripts/make_bilang_for_syscomb.pl $TUNING_OR_EVALUATION.in hyp.*.outali.gz \\
     $MAKEBFLAGS \\
 | gzip -c \\
-> $tuningevaluation.bilang.gz \\
+> $TUNING_OR_EVALUATION.bilang.gz \\
 || die "Failed to make bilang"
 
-zcat $tuningevaluation.bilang.gz \\
+zcat $TUNING_OR_EVALUATION.bilang.gz \\
 | ../../scripts/bilang2rover.pl $numsystems \\
     --tokenize-at-underscore \\
     $BILANGFLAGS \\
 | gzip -c \\
-> $tuningevaluation.fsa.gz
+> $TUNING_OR_EVALUATION.fsa.gz
 
 
 # guess link parameter count
-linkparams=\$(zcat $tuningevaluation.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
+linkparams=\$(zcat $TUNING_OR_EVALUATION.fsa.gz | head -n1 | cut -d" " -f4 | tr , '\n' | wc -l)
 
 mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 ../tools/fix_moses_ini_for_syscomb.pl empty-phrasetable \\
@@ -249,12 +255,12 @@ mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
 
 
-zcat $tuningevaluation.fsa.gz \
+zcat $TUNING_OR_EVALUATION.fsa.gz \
 | \$SCRIPTS_ROOTDIR/generic/fsa2plf.pl \
-> $tuningevaluation.fsa.in
+> $TUNING_OR_EVALUATION.fsa.in
 
-[ \`wc -l < $tuningevaluation.fsa.in\` == \`wc -l < $tuningevaluation.ref.0\` ] \
-  || die "Mismatching $tuningevaluation.ref.0 and $tuningevaluation.fsa.in"
+[ \`wc -l < $TUNING_OR_EVALUATION.fsa.in\` == \`zcat < $TUNING_OR_EVALUATION.in.gz | wc -l\` ] \
+  || die "Mismatching $TUNING_OR_EVALUATION.in.gz and $TUNING_OR_EVALUATION.fsa.in"
 
 if [ ! -z "$COMBMERT" ]; then
   echo "Using weights from $COMBMERT"
@@ -264,7 +270,7 @@ if [ ! -z "$COMBMERT" ]; then
   || die "Failed to apply weights from $COMBMERT"
 
   $MOSESPARALLELIZER \\
-    -input-file ./$tuningevaluation.fsa.in \\
+    -input-file ./$TUNING_OR_EVALUATION.fsa.in \\
     -config ./moses.abs.opt.ini \\
     -inputtype 2 \\
     | sed 's/^ *//' \\
@@ -283,13 +289,15 @@ if [ ! -z "$COMBMERT" ]; then
 else
   echo "Training our weights"
 
+  gunzip $TUNING_OR_EVALUATION.ref.*.gz || die "Failed to gunzip refs."
+
   #--obo-scorenbest=\`pwd\`/scorenbest
   $MERTMOSES \
     --no-filter-phrase-table \\
     --inputtype=2 \\
     --working-dir=mert-tuning \\
-    \`pwd\`/$tuningevaluation.fsa.in \\
-    \`pwd\`/$tuningevaluation.ref. \\
+    \`pwd\`/$TUNING_OR_EVALUATION.fsa.in \\
+    \`pwd\`/$TUNING_OR_EVALUATION.ref. \\
     \`pwd\`/moses \\
     \`pwd\`/moses.abs.ini \\
     $MERTGRIDARGS \\
