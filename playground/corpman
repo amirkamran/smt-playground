@@ -347,6 +347,7 @@ if ($cmd eq "reindex") {
       foreach my $bv (@bashvars) {
         foreach my $outvar_internalvar (split /,/, $bv) {
           my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
+	  $internalvar = $outvar if !defined $internalvar;
           my $internalval = $entry->{$internalvar};
           die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
           print $outvar, "=", $internalval, "\n";
