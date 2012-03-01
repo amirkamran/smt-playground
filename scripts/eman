@@ -769,7 +769,7 @@ if ($cmd eq "init") {
   mydie "usage: eman init STEPTYPE" if ! defined $steptype;
   my $s = init($steptype);
   $waserror = ! defined $s;
-  $waserror = ! start($s) if defined $s && $do_start;
+  $waserror = ! start($s) if defined $s && $do_start && !$dryrun;
   print $s, "\n" if $print_created_step && defined $s;
   exit $waserror;
 }
@@ -792,7 +792,7 @@ if ($cmd eq "clone") {
                       } @srcvars;
     my $news = init(get_steptype($srcstep), \@usevars, $srcstep);
     $waserror = 1 if ! defined $news;
-    $waserror = ! start($news) if defined $news && $do_start;
+    $waserror = ! start($news) if defined $news && $do_start && !$dryrun;
     print $news, "\n" if $print_created_step && defined $news;
     if ($do_outdate) {
       if ($waserror) {
@@ -808,7 +808,8 @@ if ($cmd eq "clone") {
     print YAML::Dump($recipe) if $debug;
     my $depmap = {};
     my $newtopstep = init_by_recipe($recipe, $depmap);
-    $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
+    $waserror = ! start($newtopstep)
+      if defined $newtopstep && $do_start && !$dryrun;
     if (defined $newtopstep) {
       if ($print_created_step) {
         # we don't print the traceback if we are printing top step name
@@ -833,7 +834,8 @@ if ($command eq "redo") {
   my $recipe = traceback_to_recipe($s);
   my $depmap = {};
   my $newtopstep = init_by_recipe($recipe, $depmap);
-  $waserror = ! start($newtopstep) if defined $newtopstep && $do_start;
+  $waserror = ! start($newtopstep)
+    if defined $newtopstep && $do_start && !$dryrun;
   if (defined $newtopstep) {
     if ($print_created_step) {
       # we don't print the traceback if we are printing top step name
