@@ -7,7 +7,7 @@ PLAYGROUND=$(eman path)
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-  defvar SCORERS default="BLEU;PER;TER;CDER" \
+  defvar SCORERS default="BLEU" \
     help="scorers you want to use" \
   defvar TRANSSTEP type=optstep default='' \
     help="translation step, implies corpora and factor if given" \
@@ -91,4 +91,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
