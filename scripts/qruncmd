@@ -26,6 +26,8 @@ my %opts = (
   verbose => 0,
   debug => 0,
   sync => 0,
+  "submit-sleep-every" => 500, # after every 500 jobs submitted
+  "submit-sleep" => 0, # sleep this many seconds
   mem=> "6g",
   disk=> undef,
   "time"=> undef,
@@ -67,6 +69,8 @@ my @optionspec = (
   "logdir=s",
   "help|h",
   "sync|s",
+  "submit-sleep-every=i",
+  "submit-sleep=i",
   "priority|p=i",
   "mem|m:s", # set to e.g. 4gi (default 6g). Blank value means no limit but
      # risk of killing the machine.
@@ -348,6 +352,11 @@ if ($opts{"continue"}) {
       print STDERR "\n";
       push @launched_jobids, $jobid;
       $waitfor[$waitslot] = $jobid;
+      if (0 == $i % $opts{"submit-sleep-every"}) {
+        my $sleep = $opts{"submit-sleep"};
+	print STDERR "Sleeping for $sleep seconds.\n";
+	sleep($sleep);
+      }
     }
   }
 }
