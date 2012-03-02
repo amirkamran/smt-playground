@@ -71,6 +71,8 @@ echo "Using this make-big-lm:"
 which make-big-lm || die "No make-big-lm"
 
 function mkcorpus() {
+  # If local copy of corpus already exists (we are running 'eman continue') remove it first.
+  rm -f corpus.\$2.gz
   corpspec=\$($PLAYGROUND/corpman --wait \$1)
   echo "corpman for \$1 returned: \$corpspec" # for the logfile
   step_file_col=(\$corpspec)
