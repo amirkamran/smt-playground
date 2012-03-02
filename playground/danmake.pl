@@ -226,7 +226,10 @@ if($steptype =~ m/^(lm|all)$/)
             foreach my $corpus (@mono_training_corpora)
             {
                 my $language = get_language_code($corpus);
-                dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language+stc ORDER=6 eman init lm --start") or die;
+                # Velké korpusy potřebují více paměti. Zatím nejmenší korpus, kterému nestačilo výchozích 6g, byl francouzský se 4+ mil. řádků.
+                my $n_lines = get_corpus_size($corpus, $language, 'stc');
+                my $mem = $n_lines>=4000000 ? ' --mem 30g' : '';
+                dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language+stc ORDER=6 eman init lm --start$mem") or die;
             }
         }
         else
@@ -372,6 +375,23 @@ sub get_language_code
         croak("Unknown language of monolingual corpus $corpus");
     }
     return $language;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Returns number of lines of corpus. The corpus must be registered with corpman
+# and we must be in the main playground folder.
+#------------------------------------------------------------------------------
+sub get_corpus_size
+{
+    my $corpus = shift;
+    my $language = shift;
+    my $factor = shift;
+    my $step = dzsys::chompticks("corpman $corpus/$language+$factor");
+    $step =~ s/\s.*//;
+    my @info = split(/\t/, dzsys::chompticks("cat $step/corpman.info"));
+    return $info[5];
 }
 
 
