@@ -1,0 +1,13 @@
+#!/bin/bash
+for EVALSTEP in `eman ls evaluator` ; do
+  source $EVALSTEP/eman.vars
+  source $TRANSSTEP/eman.vars
+  source $MERTSTEP/eman.vars
+  source $MODELSTEP/eman.vars
+  source $TMS/eman.vars
+  source `echo $LMS | perl -pe 'chomp; s/^0://'`/eman.vars
+  rm $EVALSTEP/eman.tag
+  echo A:SRCAUG=$SRCAUG,TGTAUG=$TGTAUG,PARA=$SRCCORP,MONO=$CORP | tee $EVALSTEP/eman.tag
+done
+eman reindex
+
