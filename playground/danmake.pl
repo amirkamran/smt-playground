@@ -55,6 +55,10 @@ foreach my $language ('cs', 'de', 'en', 'es', 'fr')
     # europarl-v7.fr    2190579
     # europarl-v7.fr-en 2007723
     push(@mono_training_corpora, "news-commentary-v7.$language+europarl-v7.$language");
+    foreach my $year (2007..2011)
+    {
+        push(@mono_training_corpora, "news.$year.$language");
+    }
     if($language =~ m/^(en|es|fr)$/)
     {
         push(@mono_training_corpora, "gigaword.$language");
@@ -398,7 +402,7 @@ sub find_lm
     my $parallel_corpus = shift;
     my $language = shift;
     # For some parallel corpora we have slightly larger monolingual versions for language model training.
-    if($parallel_corpus =~ m/^news-europarl-v7\./ && 0) ###!!! docasne
+    if($parallel_corpus =~ m/^news-europarl-v7\./)
     {
         my $mono = "news-commentary-v7.$language+europarl-v7.$language";
         return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
