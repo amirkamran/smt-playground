@@ -46,6 +46,7 @@ tempdir=/mnt/h/tmp
 SRILMDIR=`eman path $SRILMSTEP`
 
 cat << KONEC > eman.command
+#!/bin/bash
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
