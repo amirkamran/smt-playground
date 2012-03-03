@@ -303,7 +303,9 @@ foreach $lmcorpus (@lmcorpora)
         }
     }
     # Pro každý pár vytvořit a spustit krok translate, který přeloží testovací data Mosesem.
-    if($steptype =~ m/^(translate|all)$/)
+    # If we are creating mert we will want to create translate and evaluator, too.
+    # We can create them later separately but let's do it right away when we know the previous steps (they are in cache).
+    if($steptype =~ m/^(mert|translate|all)$/)
     {
         foreach my $corpus (@parallel_training_corpora)
         {
@@ -319,7 +321,9 @@ foreach $lmcorpus (@lmcorpora)
         }
     }
     # Pro každý pár vytvořit a spustit krok evaluator, který vyhodnotí Mosesův překlad.
-    if($steptype =~ m/^(evaluator|all)$/)
+    # If we are creating mert we will want to create translate and evaluator, too.
+    # We can create them later separately but let's do it right away when we know the previous steps (they are in cache).
+    if($steptype =~ m/^(mert|translate|evaluator|all)$/)
     {
         foreach my $corpus (@parallel_training_corpora)
         {
@@ -342,6 +346,8 @@ foreach $lmcorpus (@lmcorpora)
         }
     }
 }
+# Make sure eman knows about new tags etc.
+dzsys::saferun("eman reindex");
 
 
 
@@ -437,20 +443,34 @@ sub find_lm
         {
             return find_step('lm', "v CORP=$lmcorpus.$language v CORPAUG=$language+stc");
         }
+        elsif($lmcorpus =~ m/^\+news.\d+$/)
+        {
+            my $mono = parallel_to_mono($parallel_corpus, $language)."$lmcorpus.$language";
+            return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
+        }
         else
         {
             confess("Unknown monolingual corpus $lmcorpus\n(note that the language code must not be included because it will be appended automatically)");
         }
     }
-    # For some parallel corpora we have slightly larger monolingual versions for language model training.
-    elsif($parallel_corpus =~ m/^news-europarl-v7\./)
+    else
     {
-        my $mono = "news-commentary-v7.$language+europarl-v7.$language";
+        my $mono = parallel_to_mono($parallel_corpus, $language);
         return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
+    }
+}
+sub parallel_to_mono
+{
+    my $parallel_corpus = shift;
+    my $language = shift;
+    # For some parallel corpora we have slightly larger monolingual versions for language model training.
+    if($parallel_corpus =~ m/^news-europarl-v7\./)
+    {
+        return "news-commentary-v7.$language+europarl-v7.$language";
     }
     else
     {
-        return find_step('lm', "v CORP=$parallel_corpus v CORPAUG=$language+stc");
+        return $parallel_corpus;
     }
 }
 
