@@ -37,10 +37,10 @@ SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
 MOSESCMD="$MOSESDIR/bin/moses"
 
 #if [ "$MERTPRG" == zmert ]; then
-#  [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS 
+#  [ ! -z "$ZMERTMETRIC" ] || ZMERTMETRIC=SemPOS
 #  ZMERTMETRICTAG=$ZMERTMETRIC
 #  if [ "$ZMERTMETRIC" == SemPOS ] || [ "$ZMERTMETRIC" == SemPOS_BLEU ]; then
-#    [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt 
+#    [ ! -z "$ZMERTSEMPOSSOURCE" ] || ZMERTSEMPOSSOURCE=tmt
 #    ZMERTMETRICTAG=$ZMERTMETRICTAG$ZMERTSEMPOSSOURCE
 #    ZMERTSEMPOSSOURCEFLAG="--extract-sempos=$ZMERTSEMPOSSOURCE"
 #  fi
@@ -147,6 +147,7 @@ KONEC
 esac
 
 cat << KONEC > eman.command
+#!/bin/bash
 # This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
@@ -158,6 +159,9 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
+
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf mert-tuning moses* lmodel* ttable*
 
 # init grid environment
 . /net/projects/SGE/user/sge_profile

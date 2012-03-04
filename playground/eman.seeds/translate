@@ -68,7 +68,7 @@ DETOKAUG="$OUTLANG+$DETOKFACT" eman defvar DETOKAUG
 TOKAUG="$OUTLANG+$TOKFACT" eman defvar TOKAUG
 OUTALIAUG="$OUTLANG+$ALIFACT" eman defvar OUTALIAUG
 
-# promise translated corpus 
+# promise translated corpus
 # linecount is added after tranlating
 $PLAYGROUND/corpman register -- translated.gz \
   -1 $TESTCORP $OUTLANG $TOKFACT -1 0 \
@@ -95,6 +95,7 @@ else
 fi
 
 cat << KONEC > eman.command
+#!/bin/bash
 # This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
@@ -107,6 +108,9 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf moses* corpus*
+
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
@@ -118,7 +122,7 @@ $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Moses missing"
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
 if ! echo "test" | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
-       -u -l \$TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+       -u -l \$TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then
   echo "Defaulting to 'en' as the targetlang for detokenizer."
   TARGETLAN_FOR_DETOKENIZER=en
 fi

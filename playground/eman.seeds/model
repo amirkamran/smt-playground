@@ -102,6 +102,7 @@ DECRYPT=$PLAYGROUND/tools/decrypt_mapping_steps_for_training.pl
 DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
 
 cat << KONEC > eman.command
+#!/bin/bash
 # This is the command to be run here
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
@@ -113,6 +114,9 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
+
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf tm*
 
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
@@ -152,7 +156,7 @@ for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
   elif [ x\$lmtype == xflm ]; then
     numericlmtype=7
     lmsuffix=flm
-  else    
+  else
     numericlmtype=8
     lmsuffix=lm
   fi
@@ -222,4 +226,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
