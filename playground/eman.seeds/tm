@@ -89,6 +89,9 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf corpus* alignment* model*
+
 function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))
