@@ -75,6 +75,8 @@ export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
+  # If local copy of corpus already exists (we are running 'eman continue') remove it first.
+  rm -f corpus.\$2.gz
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
@@ -109,7 +111,7 @@ alilen=\`zcat alignment.gz | wc -l\`
 srclen=\`zcat corpus.src.gz | wc -l\`
 [ \$alilen == \$srclen ] \
   || die "Mismatched file lengths: ali \$alilen, src \$srclen"
-  
+
 
 echo "Aligned, now register alignments in corpman."
 i=1

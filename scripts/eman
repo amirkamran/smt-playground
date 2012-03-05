@@ -724,7 +724,7 @@ if ($cmd eq "continue") {
   my $s = guess_step($step); # happily guess the exact step
   chdir_to_stepdir($s);
   my $stat = load_status($s);
-  mydie "Only FAILED steps can be continued (after you manual fixes of eman.command)."
+  mydie "Only FAILED steps can be continued (after your manual fixes of eman.command)."
     if $stat ne "FAILED";
   save("eman.status", "PREPARED"); # fake our status
   $waserror = ! submit($s);
@@ -1867,7 +1867,7 @@ sub compiled_tag_string {
     # ( sort {$a cmp $b} keys %$autotags ),
   );
 }
-  
+
 
 sub load_depsarr {
   my $step = shift;
@@ -2469,7 +2469,7 @@ sub scan {
     foreach my $ct (@{$self->{coltoksf}}) {
       push @colid, ($self->collect_tokens($ct, $line));
     }
-    
+
     my $rowid = "@rowid";
     my $colid = "@colid";
     $out .= "  got: $rowid   and   $colid\n"
@@ -2485,7 +2485,7 @@ sub scan {
     my $pos = "$rowid\t$colid";
     my $value = main::field($line, $col_to_pick);
     my $thisinfo = $line;
-    if (defined $table{$pos} 
+    if (defined $table{$pos}
         && ($table{$pos} ne $value || $self->{verbose} >= 2)) {
       $out .= "Replaced: ".$tableinfo{$pos}."\n";
       $out .= "    With: ".$thisinfo."\n";
