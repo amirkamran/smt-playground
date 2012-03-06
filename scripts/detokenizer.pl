@@ -19,7 +19,7 @@ while (@ARGV) {
 }
 
 if ($HELP) {
-	print "Usage ./detokenizer.perl (-l [en|de|...]) < tokenizedfile > detokenizedfile\n";
+	print "Usage ./detokenizer.pl (-l [en|de|...]) < tokenizedfile > detokenizedfile\n";
 	exit;
 }
 if (!$QUIET) {
@@ -106,4 +106,3 @@ sub detokenize {
 
 	return $text;
 }
-
