@@ -57,6 +57,7 @@ my %expand_abbrev = qw(
   outdate outdate
   dups duplicates
   guess guess
+  qstat qstat
   collect collect
   defvar defvar
   bash-loadvars bash-loadvars
@@ -488,6 +489,13 @@ if ($cmd eq "guess") {
     my $step = guess_step($key);
     print $step."\n";
   }
+  exit 0;
+}
+
+if ($cmd eq "qstat") {
+  # SGE qstat with guessed step names
+  $lock->unlock() if defined $lock;
+  qstat();
   exit 0;
 }
 
@@ -2097,6 +2105,60 @@ sub guess_step_from_hashdate {
   return undef; #couldn't confirm
 }
 
+sub qstat {
+  # Call the SGE's command qstat and in its output, try to replace job names by step names.
+  open(QSTAT, 'qstat |') or die("Cannot pipe from qstat: $!");
+  my @rows;
+  while(<QSTAT>)
+  {
+      if(m/^(\d+)\s+(0\.\d+)\s+(\S+)\s+(\w+)\s+(\w+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*)/)
+      {
+          chomp;
+          my @fields = split(/\s+/, $_);
+          push(@rows, \@fields);
+      }
+      else
+      {
+          print;
+      }
+  }
+  close(QSTAT);
+  # Guess step names and figure out column widths.
+  my @lengths;
+  foreach my $row (@rows)
+  {
+      if($row->[2] =~ m/^s\./)
+      {
+          # The name of the job looks like it is a step-job. Try to guess the step name.
+          $row->[2] = guess_step($row->[0]);
+      }
+      # Queue names are unnecessarily long. Convert them to machine names.
+      if($row->[7] =~ m/^all.q@([a-z0-9]+)\.ufal\.hide/)
+      {
+          $row->[7] = $1;
+      }
+      for(my $i = 0; $i<=$#{$row}; $i++)
+      {
+          my $l = length($row->[$i]);
+          if(!defined($lengths[$i]) || $l>$lengths[$i])
+          {
+              $lengths[$i] = $l;
+          }
+      }
+  }
+  # Print the table.
+  foreach my $row (@rows)
+  {
+      my @fields = @{$row};
+      for(my $i = 0; $i<=$#fields; $i++)
+      {
+          print($fields[$i]);
+          print(' ' x ($lengths[$i]-length($fields[$i])));
+          print($i==$#fields ? "\n" : ' ');
+      }
+  }
+}
+
 sub add_hash_to_index {
   my $stepname = shift;
   my $hash = shift;
@@ -2959,6 +3021,7 @@ eman, experiment manager
   eman guess SPEC            # guess a *single* step based on the jobid
                              # or a substring of the hash, the tag, the
                              # date or final score
+  eman qstat                 # call SGE's qstat and guess steps for eman jobs
 
   eman list STEPTYPE ...     # list all steps of the given type
   eman status SPEC/STEPTYPE  # like 'list --status', abbr. 'stat'
@@ -3182,6 +3245,17 @@ eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
 
 eman sel t lm vre tag --stat --vars | grep 'ORDER\|s.lm'
   # what all orders of LM do I have over morphological 'tag's
+
+eman ls > steps-all.txt
+eman traceback --no-tree `qstat | grep $USER | grep -P '\ss\.' | cut -d' ' -f1 | grep -v 4296093` | sort -u > steps-tabu.txt
+perl -e 'open(TABU, "steps-tabu.txt") or die; while(<TABU>) { $tabu{$_}++ } open(ALL, "steps-all.txt") or die; while(<ALL>) { print unless($tabu{$_}) }' > steps-free.txt
+for i in `cat steps-free.txt` ; do echo $i ; cp -r $i /net/cluster/TMP/$USER/new_playground ; done
+for i in `cat steps-free.txt` ; do echo $i ; rm -rf $i ; done
+  # I want to move the playground to another disk because I am hitting the quota.
+  # But I need to know first which steps are running or prerequisities of something running (immovable at the moment).
+  # Note the "grep -v 4296093" above. Eman will die if any of the running jobs don't match a known step.
+  # (BEWARE: Copying steps will also separate numerous hardlinks we have there. The target disk usage will be much higher
+  # until we rejoin the hardlinks again or erase them.)
 
 =head2 If a Cluster Node Completely Dies
 
