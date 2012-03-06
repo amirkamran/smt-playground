@@ -2131,6 +2131,7 @@ sub qstat {
       {
           # The name of the job looks like it is a step-job. Try to guess the step name.
           $row->[2] = guess_step($row->[0]);
+          $row->[9] = load_tag($row->[2]);
       }
       # Queue names are unnecessarily long. Convert them to machine names.
       if($row->[7] =~ m/^all.q@([a-z0-9]+)\.ufal\.hide/)
