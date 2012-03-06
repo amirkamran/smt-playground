@@ -91,6 +91,9 @@ Options:
              ... emits a string for bash eval that sets bash variables STEP
                  to the output step name, LINES to corpus linecount etc.
              ... disables the default three-column output
+
+Corpman must reside in the playground it is supposed to operate on.
+If you run corpman from a different playground it will search for corpora there!
 ";
 }
 
@@ -125,7 +128,7 @@ my $index;
 #          column=>column_within_the_file; -1 could indicate the whole file,
 #          factind=>factor_index_within_the_file, -1 indicates the whole file
 #          linecount=>number_of_lines}
-# where 'fact' *can* be a specification of several factors: 
+# where 'fact' *can* be a specification of several factors:
 my $waserror = 0;
 
 # chdir to main dir
@@ -214,7 +217,7 @@ if (! defined $cmd) {
   print STDERR "Nothing to do.\n";
   exit;
 }
-  
+
 if ($cmd eq "reindex") {
   print STDERR "Reindexed.\n";
   exit;
@@ -305,7 +308,7 @@ if ($cmd eq "reindex") {
   } else {
     die "Bad descr format: $descr";
   }
-  
+
   $facts =~ s/\|/+/g;
 
   my $entry = build_exact_factors($corp, $lang, $facts);
@@ -316,7 +319,7 @@ if ($cmd eq "reindex") {
   # naturally, there is a risk of race conditions of two corpmans are running
   # a corpman reindex every now and then would find any corpus duplicates
   saveidx($index) if $should_save_index;
-  
+
   if ($wait) {
     my $status = load_step_status($stepname);
     if ($status ne "DONE") {
@@ -324,7 +327,7 @@ if ($cmd eq "reindex") {
         or die "Failed to wait for $stepname to finish."
     }
   }
-  
+
   if ($dumpcmd) {
     my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
     print "$maygunzip $mydir/$stepname/$filename";
@@ -467,7 +470,7 @@ sub lazy_build {
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
-    # add to index for further use 
+    # add to index for further use
     return add_entry_incl_entries_of_separate_factors(
       $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
   }
@@ -511,7 +514,7 @@ sub lazy_build {
     my $filename = "corpus.txt.gz";
     my $column = -1;
 
-    # add to index for further use 
+    # add to index for further use
     return add_entry_incl_entries_of_separate_factors(
       $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
   }
@@ -547,7 +550,7 @@ sub build_using_rules {
   my $filename = "corpus.txt.gz";
   my $column = -1;
 
-  # add to index for further use 
+  # add to index for further use
   return add_entry_incl_entries_of_separate_factors(
     $corp, $lang, $facts, $stepname, $filename, $column, $linecount, $yes_derived);
 }
@@ -739,7 +742,10 @@ sub get_entry_source_type {
 
 sub my_open {
   my $f = shift;
-  die "Not found: $f" if ! -e $f;
+  if(! -e $f) {
+    my $pwd = `pwd`;
+    die "Not found: $f\npwd = $pwd";
+  }
 
   my $opn;
   my $hdl;
