@@ -4,6 +4,13 @@ SGMLPATH=/net/data/wmt2012/test
 EXP=$1
 SRC=$2
 TGT=$3
+if [ -z "$SRC" ] || [ -z "$TGT" ] ; then
+  echo Usage: presubmit.sh '<step> <srclang> <tgtlang>'
+  echo STEP=$EXP
+  echo SRC=$SRC
+  echo TGT=$TGT
+  exit 1;
+fi
 SGMLSRC=$SGMLPATH/newstest2012-src.$SRC.sgm
 cd $EXP
 pwd

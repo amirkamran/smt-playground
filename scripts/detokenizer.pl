@@ -25,6 +25,7 @@ if ($HELP) {
 if (!$QUIET) {
 	print STDERR "Detokenizer Version 1.0\n";
 	print STDERR "Language: $language\n";
+    die("Unknown language") unless($language);
 }
 
 while(<STDIN>) {
