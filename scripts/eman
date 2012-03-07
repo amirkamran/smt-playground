@@ -39,6 +39,8 @@ my %expand_abbrev = qw(
   tb traceback
   tr traceback
   tf traceforward
+  traceusers traceforward
+  tu traceforward
   rm abolish
   st start
   pr prepare
@@ -579,6 +581,17 @@ if ($cmd eq "users") {
     foreach my $u (keys %$users) {
       print_short($u);
     }
+  }
+  exit 0;
+}
+
+if ($cmd eq "traceforward") {
+  $lock->unlock() if defined $lock;
+  mydie "usage: eman traceusers SPEC ..." if 0 == scalar @ARGV;
+  foreach my $key (@ARGV) {
+    my $step = guess_step($key);
+#    my $users = $idx->{'USED_BY'}->{$step};
+    traceforward("", $step);
   }
   exit 0;
 }
@@ -1757,6 +1770,45 @@ sub traceback {
   }
 }
 
+sub traceforward {
+  # Find recursively all users of the step and all their users.
+  my $prefix = shift;
+  my $step = shift;
+
+  return if $avoid{$step} || $ignore{$step};
+    # explicit avoiding of individual steps
+  return if $ignore{get_steptype($step)}; # avoiding steps of a given type
+
+  my $indent = $show_tree_in_traceback ? "+- " : "";
+  print "$prefix$indent$step\n";
+  my @kws; # space-delimited keywords
+  if ($show_jobid) {
+    my $jid = load_jobid($step);
+    push @kws, $jid if defined $jid && $jid ne "-";
+  }
+  push @kws, load_status($step) || "" if $show_status;
+  push @kws, compiled_tag_string($step) || "" if $show_tag;
+  $indent = $show_tree_in_traceback ? "|  | " : "";
+  print $prefix.$indent."Job: @kws\n" if 0 < scalar @kws;
+  my $users = $idx->{'USED_BY'}->{$step};
+  return if !defined $users;
+  my @deps = keys %$users;
+  my $deps = \@deps;
+  # if this step is reused, all deps are also reused
+  # (this is useful in 'tb -s')
+  if ($reuse{$step}) {
+    foreach my $dep (@$deps) {
+      $reuse{$dep} = 1;
+    }
+  }
+  print_vars($prefix.$indent, $step) if $show_vars;
+  print_log($prefix.$indent, $step) if $show_log;
+  $indent = $show_tree_in_traceback ? "|  " : "";
+  return if !$recurse;
+  foreach my $dep (@$deps) {
+    traceforward($prefix.$indent, $dep);
+  }
+}
 
 sub recognize_command {
   my $command = shift;
@@ -3040,7 +3092,7 @@ eman, experiment manager
     -s /foo/bar/             #   and modify vars; can be repeated
                              #   implies --vars
                              #   highlights diff if to terminal
- #eman traceforward SPEC ... # show tree of the steps and successors
+  eman traceforward SPEC ... # show tree of the steps and successors
   eman duplicates            # show groups of 2+ steps having same vars
     --tag --vars --status    #   include relevant information
     --log --jobid            #   and the tail of the log or SGE job ID
@@ -3254,6 +3306,9 @@ eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
 eman sel t lm vre tag --stat --vars | grep 'ORDER\|s.lm'
   # what all orders of LM do I have over morphological 'tag's
 
+( for fstep in `eman select f` ; do tb=`eman traceback $fstep --vars` ; alicorp=`echo $tb | perl -pe '$_="" unless(s/.*(ALICORP=\S+).*/$1/)'` ; if echo $alicorp | grep un > /dev/null ; then echo $fstep $alicorp ; fi ; done ) > failed_steps_depending_on_un_corpus.txt
+  # list all failed steps depending (transitively) on ALICORP=*un* (e.g. un.fr-en or un.es-en)
+
 eman ls > steps-all.txt
 eman traceback --no-tree `qstat | grep $USER | grep -P '\ss\.' | cut -d' ' -f1 | grep -v 4296093` | sort -u > steps-tabu.txt
 perl -e 'open(TABU, "steps-tabu.txt") or die; while(<TABU>) { $tabu{$_}++ } open(ALL, "steps-all.txt") or die; while(<ALL>) { print unless($tabu{$_}) }' > steps-free.txt
@@ -3273,7 +3328,11 @@ is probably what you want to do:
 
   qdel 2472256                         # remove it from the cluster
   eman fail 2472256                    # mark it FAILED for eman
-  eman redo 2472256 --start --mem 20g  # re-run it with some more memory
+  eman redo 2472256 --start --mem 20g  # clone and re-run it with some more memory\
+# or:
+  eman continue 2472256 --mem 20g      # re-run it with more memory
+    # eman redo will clone the failed step (and reuse steps it depends on)
+    # eman continue will rerun the original step instead (run eman.command without generating it anew)
 
 =head1 COMMON PROBLEMS
 
