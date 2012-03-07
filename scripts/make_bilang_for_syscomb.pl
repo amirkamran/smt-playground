@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Prepares a lattice for system combination based on source words
 #   source corpus (used to check token counts and project alignments)
 #   hyp+ali, hyp+ali, hyp+ali ...
