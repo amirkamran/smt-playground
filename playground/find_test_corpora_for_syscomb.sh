@@ -15,20 +15,26 @@ hypaugs=$(eman get-var $combmertstep HYPAUGS)
 
 for h in `echo $hypaugs | tr : ' '`; do
   echo "Source $h:"
-  echo -n "  "
-  transkey=$(echo $h | sed 's/^.*\(s\.translate\.[0-9a-f]*\.[-0-9]*\).*$/\1/')
+  transkeyarr=($(echo $h | sed 's/^\(.*\)\(s\.translate\.[0-9a-f]*\.[-0-9]*\)\(.*\)$/\1 \2 \3/'))
+  prefix=${transkeyarr[0]}
+  transkey=${transkeyarr[1]}
+  suffix=${transkeyarr[2]}
   transstep=""
   [ -z "$transkey" ] || transstep=$(eman guess "$transkey")
   if [ "$transstep" == "" ]; then
-    echo "no s.translate step found"
+    echo "  no s.translate step found"
   else
     # get the mertstep
-    mertstep=$(eman tb $transstep --ignore=corpus --ignore=mert --vars | pickre --re='MERTSTEP=(.*)' --pick --cut)
-    echo "$mertstep"
-    if [ "$mertstep" != "" ]; then
-      eman sel t translate vre $mertstep vre $testcorp --stat | prefix "  FOR $testcorp USE:\t"
-      echo "  or run:"
-      echo "    TESTCORP=$testcorp eman clone $transstep"
+    mertsteps=$(eman tb $transstep --ignore=corpus --ignore=mert --vars | pickre --re='MERTSTEP=(.*)' --pick --cut)
+    if [ "$mertsteps" != "" ]; then
+      for mertstep in $mertsteps; do
+        echo "  $mertstep"
+        eman sel t translate vre $mertstep vre $testcorp --stat \
+        | sed "s/	/$suffix	/" \
+        | prefix "    USE:\t$prefix"
+      done
     fi
+    echo "  or run:"
+    echo "    TESTCORP=$testcorp eman clone $transstep"
   fi
 done

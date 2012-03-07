@@ -9,9 +9,11 @@ use Getopt::Long;
 
 my $default_weight_l = 0.5;
 my $linkparamcount = undef;
+my $max_phrase_length = 800;
 
 GetOptions(
   "link-param-count=i" => \$linkparamcount,
+  "max-phrase-length=i" => \$max_phrase_length,
 ) or exit 1;
 
 my $emptyttablefile = shift;
@@ -38,7 +40,7 @@ my %fixvalues = (
   "distortion-limit" => 0,
   "link-param-count" => $linkparamcount,
   "inputtype" => 2,
-  "max-phrase-length" => 600,
+  "max-phrase-length" => $max_phrase_length,
 );
 
 my %seen = ();

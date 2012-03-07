@@ -75,6 +75,7 @@ s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
     ... s.evaluator.05015f1f.20120224-1807 is a new attempt, tuning corpus only
         from czeng-news; still worse, got 8.70±0.37
 
+* POSTEDITACE POSTPROC
 * postproc. tectomt narazil na konflikt AB:
 13:29 tauri4 playground$cat s.corpus.6ee3eee0.20120224-1151/corpman.info 
 corpus.txt.gz   -1      c-all-tmt       csNmtmt lemma   14833358        1
@@ -90,8 +91,18 @@ corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        
  ... druha oprava: s.align.ddeaf9de.20120227-1419 (rucne jsem procistil ten korpus)
      zkusil jsem eman cont s.align.ddeaf9de.20120227-1419 -queue '*@hyperion6*' -mem=30g
  ... treti oprava s.align.c05c559f.20120228-1119
+    ... hotovo
+ ... s.tm.7f6ad94e.20120302-1258
+     ... jenze jsem si zlikvidoval ten vstupni korpus :-//
+
+Greedy alignment:
+nyni snad konecne trenuju tm: s.tm.fe74d70c.20120302-0119
+oprava s.tm.90abd2c2.20120302-0710
+a z toho tm model: s.model.dab96d36.20120302-1258
 
  Finalni testset po prelozeni vypada takto: s.corpus.f9ed6639.20120228-1810
+
+ Nove zkousim vysypat czeng i s alignmentem: s.corpus.74ea9138.20120301-1624
 
 
 * pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
@@ -113,6 +124,8 @@ for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wm
 
 * systemy ke kombinovani:
 TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
+	s.evaluator.c0970c32.20120302-2113
+
 TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
 TODO	rm:
 	baseline: s.evaluator.63481d21.20120224-1945 12.22±0.45 vs baseline 12.23±0.46
@@ -134,10 +147,19 @@ TODO	2step
 	  step1: s.evaluator.a72e6171.20120227-0117
 	         oprava: s.evaluator.2d1bd34d.20120228-1724
 		 oprava2: s.evaluator.0209bd0f.20120228-1814
+		 oprava3: s.evaluator.ea9869e1.20120301-0900
+		 oprava4: s.evaluator.0ec2f004.20120301-1353 19.94±0.57
+	         na wmt12: s.evaluator.dcb856ac.20120301-2356 17.77±0.52
+	  combined wmt11: s.evaluator.ce73364b.20120302-0002 17.34±0.57
+	  combined wmt12: s.evaluator.696855f9.20120302-0045 15.37±0.54
 
 TODO Turkova metoda:
-  - jednak na t0a1-0a1: s.evaluator.a430a4d2.20120227-1452
-  - ale take na t0-0: s.evaluator.6917354d.20120227-1451 (odvozeno z s.evaluator.bd7643b0.20120222-1906)
+  - jednak na t0a1-0a1:
+   prunelm, vc. luclm: s.evaluator.6417dcc1.20120302-2259 musis restartnout, mert navazuju
+  - ale take na t0-0:
+17.61±0.57       s.evaluator.9d7d00ed.20120228-2228  s turkem
+17.51±0.57       s.evaluator.bd7643b0.20120222-1906  baseline
+
 
 To ENGLISH: (DO ANGLICTINY)
 t0-0 small s.evaluator.4c2791e7.20120227-1646
@@ -147,6 +169,7 @@ t0-0 large s.evaluator.e2885ab9.20120227-1654
   ... zalozen na revgdfa, mizernych 17.23±0.49
   ... oprava, ktera alignment otaci: s.evaluator.a1c0da6e.20120228-1924
   ... oprava2: s.evaluator.a4c1d4e0.20120229-0722
+  ... oprava3: s.evaluator.834ea9f7.20120301-0933
 t0-0A1-0 large s.evaluator.d9c6fc17.20120228-1154
   ... zabil jsem ho, je vadny...
   ... oprava s revali: s.evaluator.5e11db8b.20120228-1937
@@ -156,6 +179,48 @@ GIGA:
  pak to takhle nastartuju
  az dobehne stc: s.corpus.2ad0bbd6.20120229-1734
  SRCCORP=giga SRCAUG=enNm+stc eman init lucindex
+
+
+POKUS S MIXLM:
+udelat jeden mixlm, ktery bude michat vsechny korpusy (vs. pripadne toho lucenoveho z 2eccfed5.20120301-1010) podle synteticke cs+stc.
+Musim tedy ziskat wmt09, wmt11 a wmt12 prelozene modelem bf1b8c6b.20120229-1017.
+Na zaver se to bude mertovat na wmt09.
+
+
+wmt12	s.translate.ca65d38d.20120229-1017
+wmt11	s.translate.eb83cb29.20120228-0026
+wmt10	s.translate.c66969b8.20120301-1926
+wmt09	s.translate.8294cb41.20120301-1932
+
+ty 2 posledni jeste bezi
+
+ten wmt09 bude bohuzel prilis dobry preklad, protoze pouzity mert byl vyladen na wmt09
+
+mert pak prosim spustte na
+DEVCORP=wmt09
+a evaluator na TESTCORP=wmt11 i TESTCORP=wmt12
+
+Cim se vyznacuji finalni merty podle devsetu:
+kdyz mert pobezi na wmt09, je nejpodobnejsi baseline, coz je dobre pro srovnani
+- ma to ale trochu nevyhodu, ze ty preklady na nem byly vyladeny
+
+kdyz mert pobezi na wmt10, muzeme vysledek vyhodnotit na 11 a 12, neoceni spravne luclm
+
+kdyz mert pobezi na wmt11, nema to zadnou vyhodu
+
+ten luclm, ktery tam mame, je pripraven z wmt09, wmt11 a wmt12
+
+celkovy prehled:
+
+15.93±0.57 baseline:               	bf1b8c6b.20120229-1017
+15.77±0.55 mixlm, ale bez luclm:   	s.evaluator.3c5b0c52.20120302-1223
+15.89±0.57 mixlm(zahrnujici luclm):	s.evaluator.29bab972.20120302-1248
+16.01±0.55 mixlm + luclm v mertu:  	s.evaluator.00a087dc.20120302-1228
+
+MIXLM ze vsecho mozneho *podle baseline prekladu*:
+s.mixlm.f7126076.20120302-1034  jen vsechny standardni korpusy
+s.mixlm.fd9f3120.20120302-1106	navic i lucinuv korpus s.lm.c218b17e.20120302-1103
+
 
 
 TODO luc:
@@ -186,27 +251,26 @@ TODO luc:
      ...tyto tri jsou testovany na wmt11, takze zadne valne zlepseni mit nebudou
      s.evaluator.b2f1c967.20120228-1544
      s.evaluator.099dd5b7.20120228-1546
-     s.evaluator.e01a87c5.20120228-1548
+     s.evaluator.6fed50d5.20120301-0945 0.1594
 4. preloz tim wmt12 (pro ucely finalni evaluace) nebo wmt11 (pro ucely moji
    evaluace)
 5. pouzij to v combinovani, ktere vyladis na wmt09 a nasledne spustis na wmt11
    nebo wmt12
 
 Pro porovnani na DEV09, TEST12:
+15.94±0.56	CUT=800 	6fed50d5.20120301-0945
 15.77±0.55	CUT=500 	099dd5b7.20120228-1546
 15.90±0.55	CUT=300 	b2f1c967.20120228-1544
 15.93±0.57	baseline	bf1b8c6b.20120229-1017
-	CUT=100	fe62a185.20120229-1727
+	CUT=100	s.evaluator.98f119cb.20120301-0937
 	  s.lm.f83fd3eb.20120229-1724  497000 radek
 	  s.lucselect.b88db060.20120229-1147 49700 radek
 	  s.lucscore.d4c90838.20120229-1147 taky tak, cili tohle je ok.
-	CUT=300,ale i wmt11	STARE: 4bdfa173.20120229-1202
-	  s.lm.1c67cb7f.20120229-1158 1384958 radek
-	  s.lucscore.5d977de5.20120229-1157  2035899 radek... cili lm je blbe
-	  s.lucselect.cfcb2f2b.20120229-1157  2035899 ok
-	  oprava: s.evaluator.fbc531d7.20120229-2205
+15.91±0.57	CUT=300,ale i wmt11	2eccfed5.20120301-1010
 
-
+srovnani 15.93±0.57 vs 15.94±0.56 pomoci:
+./hilidiff 6fed50d5.20120301-0945 bf1b8c6b.20120229-1017 | pickre --pick --re='diff=([-0-9]+)' | mynl | labelledxychart --data=1,2,0,'' --ylabel='higher y = 1st hyp better' |gpsandbox
+...a na vic vetach je lepsi baseline, i kdyz jsou vety, kde je lepsi ta druha
 
 Protoze 0 jeste bezi zkousim aspon maly lematicky model. Pomoci nej jsem
 prelozil wmt09 (uz driv: s.evaluator.95057bdf.20120221-1507) a ted se pokusim
@@ -248,12 +312,13 @@ s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
 s.evaluator.38c6acff.20120227-0125	large stc->stc+tag
   a jeste jeho spravneji vyhodnocena varianta:
     s.evaluator.c5cc09ae.20120227-0129
-    OPRAVA: s.evaluator.2e7b990b.20120227-0923
+    OPRAVA: s.evaluator.04fc22da.20120227-2319
       a z toho PRO: s.evaluator.0e493551.20120227-1410
   ...dopadne tragicky, uletla word penalty (protoze jsou spatne reference)
   ten s.evaluator.c5cc09ae.20120227-0129 zkousim ted taky nad poscng:
     s.evaluator.92f4f256.20120227-1001
     oprava: s.evaluator.70824cf2.20120227-1507
+    oprava2: s.evaluator.5686b7cd.20120301-1422
 
 !!! pri vyrabeni musis reusnout mixlm, a musis prejit na novy mosesgiza, cili zhruba takto:
 MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 eman redo 18.09±0.59 --avoid=s.tm.c11f7cbf.20120211-0028 --start --add-tag=with-toa --disk=400g  --mem=40g --ign=mixlm
@@ -264,6 +329,11 @@ nebo
 MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
 
 
+OPTIMALIZACE NA NECO JINEHO:
+mohl bych udelat tstc-stc+pluslemma prostym pridanim gm
+
+
+
 KOMBINACE:
 
 
@@ -271,6 +341,10 @@ s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
 s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER
 s.evaluator.d9f4e325.20120222-1849	small towards TER
+
+... vyladeno na minilm: s.combmert.4e136804.20120301-1028	BEST0.11221
+... ladim na velelm: s.combmert.b0c7ea34.20120301-1122	BEST0.115077
+                     TESTCORPS READY
 
 cili konfig:
 CORP=wmt11 \
@@ -282,19 +356,158 @@ SRILMSTEP=s.srilm.117f0cfe.20120202-0037 \
 TARGMODELSTEP=s.model.e351bb6f.20120222-1905 \
 eman init combmert
 
+# TARGMODELSTEP=s.model.3e28def7.20120207-0013 \
+  ... minimodel
+
+# TARGMODELSTEP=s.model.e351bb6f.20120222-1905 \
+  ... prilis velky model
+
+Ted zkusim kombinovat varianty minimodelu trenovane na:
+wmt08 wmt09 wmt10
+csNmT1_s.translate.3d4333fb.20120221-1932+stc
+csNmT1_s.translate.70d9c878.20120221-1935+stc
+csNmT1_s.translate.38c62c9d.20120221-1927+stc
+
+-> s.combmert.cad43d5a.20120301-1802   3kombinace
+   ... TESTCORPS STARTED
+   -> testcombmert: s.combmert.f7d52ea8.20120302-1043
+   -> eval: s.evaluator.53b6961d.20120302-1126
+-> s.combmert.3d50d7c2.20120301-1751   3+4kombinace
+  ... to bude trvat docela dlouho, veta prumerne 5 vterin, kdyz se jede ve 3
+      vlaknech
+
+* Kombinace velkych modelu
+
+18.07±0.56	850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.65±0.56	1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+17.85±0.58	04fc22da.20120227-2319	large stc->stc+tag
+???       	5686b7cd.20120301-1422	poscng
+
+kdyz si zkopirujes tu tabulku, tak takhle se dozvis, jake korpusy pouzit:
+eman vars $(cut -f2 ~/clip) | grep TRANSAU'\|'s.evalu | paste - -
+
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.65±0.56	1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+17.85±0.58	04fc22da.20120227-2319	large stc->stc+tag
+---> s.combmert.aac145a1.20120301-1803
+
+a navic jeste:
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+---> s.combmert.fa28bab6.20120301-1804
+
+
+jako jina varianta co nejrozdilnejsi co nejmensi kombinace:
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+---> s.combmert.7de731b7.20120301-1949
+   TESTCORPS STARTED
+
+
+a dalsi jina varianta: s 2step
+17.34±0.57	ce73364b.20120302-0002	2step
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+---> s.combmert.1379f125.20120302-0026
+15.37±0.54	696855f9.20120302-0045 twostep wmt12
+
+a jeste jednodussi s 2step
+17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+---> s.combmert.a6aa501a.20120302-0031
+     TESTCORPS DONE
+     testcombmert: s.combmert.90aa7cf9.20120302-1204
+0.1356     eval: s.evaluator.3e3c9a01.20120302-1245
+... Zkousim btlow beam, prunelm-incl-luclm:
+  s.combmert.b22c384d.20120302-2220  dev: 0.172944
+  ---> tento otestuju na wmt12: s.combmert.aba8f92a.20120303-0125
+       evaluator: s.evaluator.c46b02cb.20120303-0145 0.1417
+  ...lepsi, ale i opticky je baseline porad nad tim
+  ...a z nej zkousim vybrat mene vah k ladeni: (voting, sentlevel, primarcs)
+    s.combmert.cad47de8.20120303-0042
+  ...a z nej zkousim vybrat mene vah k ladeni: (voting, sentlevel, primwords)
+    s.combmert.0dceadaf.20120303-0056 dev: 0.172302
+    
+... a take jen prunelm-incl-luclm, ale s opravou alignmentu:
+  s.combmert.5e1abf5c.20120302-2221
+  ... nestaci, dolezlo jen k 16.x
+... s totez, ale s rozsahem pro wp zapornym:
+  s.combmert.a49852c7.20120303-0018
+  ...evidentne to take nestaci
+
+ROZBOR KOMBINACE:
+
+- v 2stepu jsem musel opravit alignment, proste prevzit alignment kroku 1
+
+- Takto jsem kontroloval alignment:
+ziplines --item='\t' tuning.in.gz hyp.1.outali.gz | /net/tmp/bojar/wmt12-bojar/addicter/testchamber/alitextview.pl | less
+
+- viasource je nesikovny pro preklady 2-1 ap., protoze vsechno pak jde na prvni slovo... asi by tedy lepe dopadla giza
+
+- duvod zkracovani vet je v prohledavani: prilis kratka hypoteza ma prilis
+  dobre skore a ostatni z nbestlistu zmizi: napr. zde byl jediny kandidat.
+7||| „ opravdu nevím . “  ||| d: 0 lm: -15.9077 -16.3577 w: -5 I: -1.09861 -1.09861 0 0 -8.04719 4 4 5 5 5 tm: 0 ||| -604.282
+  ... to se tim -b 0.0003 vylepsilo, ale je to pomalejsi
+
+
+
+TODO:
+gm pro dve pouziti:
+  preklad stc-stc+lemma
+  combmert
+zkus sam, co mela delat PG
+apply combmert
+tm pro posteditaci s maxphrase 4
+
+
 
 
 SUBMISSIONS:
 
 to Czech
+done:
+15.90±0.57*ATOB	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
+16.01±0.56*at	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
+14.17±0.53  	    s.evaluator.c46b02cb.20120303-0145
+	-> cu-poorcomb
+16.07±0.55*OB  	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+	-> cu-bojar
 
-16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-16.01±0.56	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
-15.90±0.57	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
-15.48±0.56  	0352547d.20120227-1717 baseline t0-0
-15.90±0.55*PG  	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
-            	...opticky pritom vypada trochu lepe nez 16.07
-		...varianta s.evaluator.af330490.20120229-1134 s 6gr
-            	
+todo:
+16.07±0.55*OB  	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+	-> cu-bojar
+15.94±0.54	ZKOUSIM NOVY: s.evaluator.0a39eb06.20120303-0023
+	a jeste zkusim prihodit 2 velke LM: s.evaluator.fb1e6bf4.20120307-1904
+
+15.48±0.56     	0352547d.20120227-1717 baseline t0-0
+15.90±0.55*PGAK	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
+               	...opticky pritom vypada trochu lepe nez 16.07
+               	...varianta s.evaluator.af330490.20120229-1134 s 6gr
+               	...pouzij ten baseline; nemas nejaky vetsi?
+               	...a jako kontrasty dnesni pokusy
+15.37±0.54*BJAK	696855f9.20120302-0045 twostep
+10.70±0.50     	53b6961d.20120302-1126 combination on small data
+               	...opravdu je to mizerie
+13.56±0.52     	3e3c9a01.20120302-1245 combination on large data
+               	...ano, mizerie
+		ZKOUSIM JINE
+               	
 to English
 
+22.90±0.56*OB	s.evaluator.33d443f4.20120301-1350 t0-0
+	-> cu-bojar
+	ZKOUSIM TAKY t0-0At1-0 s.evaluator.499501ce.20120304-0208
+
+
+Co musim opravit do priste:
+- vic vet v jedne
+- zapomen na stc, to je smejd; resp. udelej lattice vstup s lc jako variantou
