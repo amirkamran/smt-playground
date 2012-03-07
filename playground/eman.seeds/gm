@@ -4,12 +4,21 @@
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
 
-if [ -z "$GENCORP" ] \
-|| [ -z "$BINARIES" ] \
-|| [ -z "$TGTAUG" ]; then
-  echo "You must set: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  echo "  \$GENCORP to target corpus name"
+eman \
+  defvar BINARIES type=reqstep \
+    help="the step containing compiled tools" \
+  defvar GENCORP \
+    help="source corpus name" \
+  defvar GENLANG \
+    help="language that we generate from and to" \
+  defvar TGTAUG help="the string describing lang+factors of the corpus" \
+  defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
+|| exit 1
+
+eval `eman bash-loadvars`
+
+PLAYGROUND=`eman path`
+
   echo "  \$GENLANG to the language"
   echo "  \$SRCAUG to the string describing src factors, e.g. lemma+tag"
   echo "  \$TGTAUG to the string describing tgt factors, e.g. stc"

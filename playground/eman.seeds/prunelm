@@ -3,39 +3,23 @@
 # prune a language model with given threshold
 
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
-
 set -o pipefail
 
-if [ -z "$FULLLM" ] \
-|| [ -z "$LMPRUNE" ] ; then
-  echo "You must set: "
-  echo "  \$FULLLM to the step containing the full LM"
-  echo "  \$LMPRUNE to N where pruning threshold is 1/(10^N)"
-  echo "And optionally: "
-  echo "  \$BINARIES to the step containing compiled tools"
-  exit 1
-fi
+eman \
+  defvar FULLLM type=reqstep \
+    help="source lm to prun" \
+  defvar SRILMSTEP type=reqstep inherit=FULLLM \
+    help="the step containing compiled tools" \
+  defvar LMPRUNE \
+    help="Pruning limit" \
+  defvar ORDER inherit=FULLLM \
+  defvar CORP inherit=FULLLM \
+    help="Pruning limit" \
+|| exit 1
 
-echo $FULLLM > eman.deps
+eval `eman bash-loadvars`
 
-if [ -z "$BINARIES" ] ; then
-  eval `cat ../$FULLLM/eman.vars | grep '^BINARIES='`
-else
-  echo $BINARIES >> eman.deps
-fi
-
-eval `cat ../$FULLLM/eman.vars | grep '^ORDER=\|^CORP='`
-
-echo $ORDER > var-ORDER
-echo $CORP > var-CORP
-
-cat << KONEC > eman.vars
-BINARIES=$BINARIES
-FULLLM=$FULLLM
-LMPRUNE=$LMPRUNE
-KONEC
-
-echo "PRUNELM-$FULLLM:$LMPRUNE" > eman.tag
+PLAYGROUND=`eman path`
 
 PRUNESTRING="0."
 for i in `seq $(($LMPRUNE - 1))` ; do
@@ -46,6 +30,9 @@ PRUNESTRING="$PRUNESTRING"1
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
+# convert the dependencies to absolute paths
+SRILMDIR=`eman path $SRILMSTEP`
+
 cat << KONEC > eman.command
 # This is the command to be run here
 echo "=============================="
@@ -53,18 +40,17 @@ echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
 
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
-mydir=\`pwd\`
-
-renice 10 \$\$
-function die() { echo "\$@" >&2 ; echo FAILED > \$mydir/eman.status ; exit 1 ; }
-set -o pipefail
-
-SRILMDIR1="\`cat ../$BINARIES/srilm.path\`/bin/"
-SRILMDIR2="\`cat ../$BINARIES/srilm.path\`/bin/i686/"
+SRILMDIR1="\$(cat $SRILMDIR/srilm.path)/bin/"
+SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
 
 export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 
@@ -89,8 +75,9 @@ eval \$inlmstream \\
 
 gzip corpus.lm || die "Gzip failed"
 
-echo DONE > \$mydir/eman.status
-
+# Standard command footer
+echo Done.
+eman succeed \$mydir
 echo "=============================="
 echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`

@@ -5,9 +5,12 @@ function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 PLAYGROUND=$(eman path)
+STEPNAME=$(basename $(pwd))
 
 eman \
-  defvar TARGMODELSTEP type=reqstep \
+  defvar COMBMERTSTEP type=optstep default="" \
+    help="the combmert where we optimized the weights" \
+  defvar TARGMODELSTEP type=reqstep inherit=COMBMERTSTEP \
     help="the s.model containing the moses.ini to apply on the target side" \
   defvar HYPAUGS \
     help="colon-delimited list of system output corpora, e.g. csNmT1_s.translate.46d1f1b7.20120222-1847+stc" \
@@ -15,25 +18,24 @@ eman \
     help="the corpus name, all systems produced a 'language' of it" \
   defvar DEVCORP same_as=CORP \
     help="the corpus to tune on, possibly multiple refs" \
-  defvar SRCAUG \
+  defvar SRCAUG inherit=COMBMERTSTEP \
     help="language+factors that the systems did translate from" \
-  defvar REFAUG default="" \
+  defvar REFAUG inherit=COMBMERTSTEP \
     help="language+factors to tune on" \
-  defvar BILANGFLAGS default="" \
+  defvar BILANGFLAGS default="" inherit=COMBMERTSTEP \
     help="things like --featset=arclevel,primarcs for bilang2rover" \
-  defvar MAKEBFLAGS default="" \
+  defvar MAKEBFLAGS default="" inherit=COMBMERTSTEP \
     help="things like --force-similar-alignment for make_bilang_for_syscomb" \
-  defvar HYPLMORDER default=3 \
+  defvar HYPLMORDER default=3 inherit=COMBMERTSTEP \
     help="the order of the LM based on the hypothesesm, default 3, zero to disable" \
-  defvar SEARCH default=cube help='the search type (beam or cube)' \
-  defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
-  defvar GRIDFLAGS default='' help='further flags for qsub' \
-  defvar MOSESFLAGS default=''  help='further flags for moses' \
-  defvar MOSESSTEP type=reqstep \
+  defvar SEARCH default=cube inherit=COMBMERTSTEP help='the search type (beam or cube)' \
+  defvar JOBS default=15 inherit=COMBMERTSTEP help='how many jobs to spawn (0 to disable SGE)' \
+  defvar GRIDFLAGS default='' inherit=COMBMERTSTEP help='further flags for qsub' \
+  defvar MERTFLAGS default='' inherit=COMBMERTSTEP help='further flags for mert.pl' \
+  defvar MOSESFLAGS default='' inherit=COMBMERTSTEP  help='further flags for moses' \
+  defvar MOSESSTEP type=reqstep inherit=COMBMERTSTEP \
     help="the step containing compiled tools" \
-  defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
-  defvar COMBMERTSTEP type=optstep default="" \
-    help="the combmert where we optimized the weights" \
+  defvar SRILMSTEP type=reqstep inherit=COMBMERTSTEP help='where is srilm compiled' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -103,6 +105,31 @@ else
 fi
 
 register_future_filename $CORP/$SRCAUG $TUNING_OR_EVALUATION.in.gz
+
+# promise translated corpus 
+OUTLANG=`echo $REFAUG | cut -d'+' -f1`_$STEPNAME
+[ -z "$COMBMERTSTEP" ] && OUTLANG="$OUTLANG"_TUNECHEAT
+DETOKFACT=untok
+TOKFACT="$(echo $REFAUG | cut -d'+' -f2-)"
+#ALIFACT="ali"
+
+# add these to eman
+DETOKAUG="$OUTLANG+$DETOKFACT" \
+TOKAUG="$OUTLANG+$TOKFACT" \
+  eman defvar DETOKAUG defvar TOKAUG
+#OUTALIAUG="$OUTLANG+$ALIFACT" eman defvar OUTALIAUG
+
+# linecount is added after tranlating
+$PLAYGROUND/corpman register -- $TUNING_OR_EVALUATION.opt.out.gz \
+  -1 $CORP $OUTLANG $TOKFACT -1 0 \
+|| die "Can't register corpus"
+$PLAYGROUND/corpman register -- $TUNING_OR_EVALUATION.opt.txt.gz \
+  -1 $CORP $OUTLANG $DETOKFACT -1 0 \
+|| die "Can't register corpus"
+#$PLAYGROUND/corpman register -- alignment.gz \
+#  -1 $CORP $OUTLANG $ALIFACT -1 0 \
+#|| die "Can't register corpus"
+
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -175,7 +202,14 @@ export MERTFLAGS="$MERTFLAGS"
 echo export MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
-../../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Moses missing"
+
+TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
+if ! echo "test" | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
+       -u -l \$TARGETLAN_FOR_DETOKENIZER > /dev/null 2>&1 ; then 
+  echo "Defaulting to 'en' as the targetlang for detokenizer."
+  TARGETLAN_FOR_DETOKENIZER=en
+fi
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
@@ -249,6 +283,7 @@ mv moses.ini moses.orig.ini || die "Failed to move moses.ini"
 ../tools/fix_moses_ini_for_syscomb.pl empty-phrasetable \\
   hypcorpus.lm.gz $HYPLMORDER \\
   --link-param-count=\$linkparams \\
+  --max-phrase-length=2000 \\
   < moses.orig.ini > moses.ini \\
 || die "Failed to modify moses.ini"
 
@@ -263,12 +298,12 @@ zcat $TUNING_OR_EVALUATION.fsa.gz \
 [ \`wc -l < $TUNING_OR_EVALUATION.fsa.in\` == \`zcat < $TUNING_OR_EVALUATION.in.gz | wc -l\` ] \
   || die "Mismatching $TUNING_OR_EVALUATION.in.gz and $TUNING_OR_EVALUATION.fsa.in"
 
-if [ ! -z "$COMBMERT" ]; then
-  echo "Using weights from $COMBMERT"
+if [ ! -z "$COMBMERTSTEP" ]; then
+  echo "Using weights from $COMBMERTSTEP"
 
-  ../tools/apply_weights_from_moses_ini.pl ../$COMBMERT/mert-tuning/moses.ini \\
+  ../tools/apply_weights_from_moses_ini.pl $COMBMERTSTEPDIR/mert-tuning/moses.ini \\
   < ./moses.abs.ini > moses.abs.opt.ini \\
-  || die "Failed to apply weights from $COMBMERT"
+  || die "Failed to apply weights from $COMBMERTSTEP"
 
   $MOSESPARALLELIZER \\
     -input-file ./$TUNING_OR_EVALUATION.fsa.in \\
@@ -276,17 +311,31 @@ if [ ! -z "$COMBMERT" ]; then
     -inputtype 2 \\
     | sed 's/^ *//' \\
     | sed 's/ *$//' \\
-    > evaluation.opt.out \\
+    | gzip -c \\
+    > $TUNING_OR_EVALUATION.opt.out.gz \\
      || die "Translation of eval failed"
-  
-  echo "Tuned BLEU:"
-  #\$SCRIPTS_ROOTDIR/generic/multi-bleu.perl evaluation.ref. < evaluation.opt.out | tee BLEU.opt
-  ./testbleu evaluation.ref.0 < evaluation.opt.out | tee BLEU.opt \\
-    || die "BLEU of evaluation.opt.out set failed"
 
-  echo "Detokenizing evaluation.opt.out"
-  \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl -u -l $TARGETLAN_FOR_DETOKENIZER \\
-    < evaluation.opt.out > evaluation.opt.txt
+  echo "Detokenizing $TUNING_OR_EVALUATION.opt.out"
+  zcat $TUNING_OR_EVALUATION.opt.out.gz \\
+  | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
+      -u -l \$TARGETLAN_FOR_DETOKENIZER \\
+  | gzip -c \\
+  > $TUNING_OR_EVALUATION.opt.txt.gz \\
+  || die "Failed to detokenize"
+
+  # register output corpus lines
+  linecount=\`zcat $TUNING_OR_EVALUATION.opt.txt.gz | wc -l\`
+  ## fill in linecount of the final corpus
+  $PLAYGROUND/corpman register -- $TUNING_OR_EVALUATION.opt.out.gz \
+    -1 $CORP $OUTLANG $TOKFACT \$linecount 0 \
+  || die "Can't register linecount of the translated corpus"
+  $PLAYGROUND/corpman register -- $TUNING_OR_EVALUATION.opt.txt.gz \
+    -1 $CORP $OUTLANG $DETOKFACT \$linecount 0 \
+  || die "Can't register linecount of the translated corpus"
+  #$PLAYGROUND/corpman register -- alignment.gz \
+  #  -1 $CORP $OUTLANG $ALIFACT \$linecount 0 \
+  #|| die "Can't register linecount of the output alignment"
+
 else
   echo "Training our weights"
 
@@ -296,7 +345,7 @@ else
   $MERTMOSES \
     --no-filter-phrase-table \\
     --inputtype=2 \\
-    --working-dir=mert-tuning \\
+    --working-dir=\`pwd\`/mert-tuning \\
     \`pwd\`/$TUNING_OR_EVALUATION.fsa.in \\
     \`pwd\`/$TUNING_OR_EVALUATION.ref. \\
     \`pwd\`/moses \\
