@@ -47,9 +47,6 @@ $STATMT/playground/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFA
 # Don't continue if we are not preparing the step yet.
 [ -z "$INIT_ONLY" ] || exit 0
 
-# Tag the step by its prominent characteristics.
-echo $ACDESC > eman.tag
-
 cat > eman.command << KONEC
 #!/bin/bash
 echo "=============================="

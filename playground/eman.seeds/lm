@@ -21,9 +21,6 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-# Remember the core settings as out tag
-eman add-tag $CORP+$CORPAUG.$ORDER .
-
 # add source corpus to deps
 corpstep=$($PLAYGROUND/corpman --init $CORP/$CORPAUG | cut -f1)
 [ ! -z "$corpstep" ] || die "Missing source corpus"

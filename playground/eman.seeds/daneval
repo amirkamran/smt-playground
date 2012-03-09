@@ -28,8 +28,6 @@ eman \
 eval `eman bash-loadvars`
 [ "$EXTRACTFOR" == "test" ] || die "The extract step $EXTRACTSTEP extracted grammar for $EXTRACTFOR, not for test data"
 
-echo $SRC-$TGT > eman.tag
-
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 

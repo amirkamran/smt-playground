@@ -26,8 +26,6 @@ if [ -z "$ALILABEL" ]; then
   eman defvar ALILABEL
 fi
 
-eman add-tag $CORPUS.$ALILABEL .
-
 GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 

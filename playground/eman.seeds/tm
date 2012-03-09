@@ -59,13 +59,6 @@ if echo "$DECODINGSTEPS" | grep , ; then
   exit 1
 fi
 
-eman add-tag "DEC$DECODINGSTEPS"
-#if [ $SRCCORP == $TGTCORP ] ; then
-#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
-#else
-#  eman add-tag "SRC$SRCCORP+$SRCAUG.TGT$TGTCORP+$TGTAUG.ALI$ALILABEL.DEC$DECODINGSTEPS"
-#fi
-
 DECRYPT=$PLAYGROUND/tools/decrypt_mapping_steps_for_training.pl
 [ -x $DECRYPT ] || die "Missing: $DECRYPT"
 
