@@ -56,12 +56,18 @@ foreach my $language ('cs', 'de', 'en', 'es', 'fr')
     # europarl-v7.es-en 1965734
     # europarl-v7.fr    2190579
     # europarl-v7.fr-en 2007723
-    push(@mono_training_corpora, "news-commentary-v7.$language+europarl-v7.$language");
+    push(@mono_training_corpora, "news-commentary-v7.$language");
+    push(@mono_training_corpora, "europarl-v7.$language");
+    my $news_euro = "news-commentary-v7.$language+europarl-v7.$language";
+    push(@mono_training_corpora, $news_euro);
     foreach my $year (2007..2011)
     {
         push(@mono_training_corpora, "news.$year.$language");
-        push(@mono_training_corpora, "news-commentary-v7.$language+europarl-v7.$language+news.$year.$language");
+        push(@mono_training_corpora, "$news_euro+news.$year.$language");
     }
+    my $news_all = "news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language";
+    push(@mono_training_corpora, $news_all);
+    push(@mono_training_corpora, "$news_euro+$news_all");
     if($language =~ m/^(en|es|fr)$/)
     {
         push(@mono_training_corpora, "gigaword.$language");
@@ -90,8 +96,28 @@ if($firstcorpus || $lastcorpus)
 }
 if(@ARGV)
 {
-    @parallel_training_corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@ARGV)} (@parallel_training_corpora);
-    @mono_training_corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@ARGV)} (@mono_training_corpora);
+    # Argumenty jsou regulární výrazy pro výběr korpusů nebo zkratkové kódy.
+    # Přepsat zkratkové kódy na regulární výrazy.
+    my @vyber = map
+    {
+        my $vysledek;
+        if($_ eq 'news.all')
+        {
+            $vysledek = 'news\.2007\.([a-z]+)\+news\.2008\.\1\+news\.2009\.\1\+news\.2010\.\1\+news\.2011\.\1';
+        }
+        elsif($_ eq 'ne+news.all')
+        {
+            $vysledek = 'news-commentary-v7\.([a-z]+)\+europarl-v7\.\1\+news\.2007\.\1\+news\.2008\.\1\+news\.2009\.\1\+news\.2010\.\1\+news\.2011\.\1';
+        }
+        else
+        {
+            $vysledek = $_;
+        }
+        $vysledek;
+    }
+    (@ARGV);
+    @parallel_training_corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@vyber)} (@parallel_training_corpora);
+    @mono_training_corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@vyber)} (@mono_training_corpora);
 }
 # $lmcorpus určuje nezávislý jednojazyčný korpus, který se má přibalit ke krokům model, mert, translate, evaluator apod.
 # Pokud uživatel zadal více takových korpusů, vytvořit stejnou sadu kroků pro každý z nich.
@@ -276,7 +302,7 @@ foreach $lmcorpus (@lmcorpora)
         }
     }
     # Pro každý pár vytvořit a spustit krok mert, který vyladí váhy modelu (toto je Ondrův krok, který spolupracuje s Mosesem).
-    if($steptype =~ m/^(mert|all)$/)
+    if($steptype =~ m/^(model|mert|all)$/)
     {
         foreach my $corpus (@parallel_training_corpora)
         {
@@ -305,7 +331,7 @@ foreach $lmcorpus (@lmcorpora)
     # Pro každý pár vytvořit a spustit krok translate, který přeloží testovací data Mosesem.
     # If we are creating mert we will want to create translate and evaluator, too.
     # We can create them later separately but let's do it right away when we know the previous steps (they are in cache).
-    if($steptype =~ m/^(mert|translate|all)$/)
+    if($steptype =~ m/^(model|mert|translate|all)$/)
     {
         foreach my $corpus (@parallel_training_corpora)
         {
@@ -323,7 +349,7 @@ foreach $lmcorpus (@lmcorpora)
     # Pro každý pár vytvořit a spustit krok evaluator, který vyhodnotí Mosesův překlad.
     # If we are creating mert we will want to create translate and evaluator, too.
     # We can create them later separately but let's do it right away when we know the previous steps (they are in cache).
-    if($steptype =~ m/^(mert|translate|evaluator|all)$/)
+    if($steptype =~ m/^(model|mert|translate|evaluator|all)$/)
     {
         foreach my $corpus (@parallel_training_corpora)
         {
@@ -447,6 +473,10 @@ sub find_lm
         {
             my $mono = parallel_to_mono($parallel_corpus, $language)."$lmcorpus.$language";
             return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
+        }
+        elsif($lmcorpus =~ m/^news.all$/)
+        {
+            return find_step('lm', "v CORP=news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language v CORPAUG=$language+stc");
         }
         else
         {

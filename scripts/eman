@@ -2212,6 +2212,7 @@ sub qstat {
       my @fields = @{$row};
       for(my $i = 0; $i<=$#fields; $i++)
       {
+          $fields[$i] = '' if(!defined($fields[$i]));
           print($fields[$i]);
           print(' ' x ($lengths[$i]-length($fields[$i])));
           print($i==$#fields ? "\n" : ' ');
@@ -3308,6 +3309,9 @@ eman sel t lm vre tag --stat --vars | grep 'ORDER\|s.lm'
 
 ( for fstep in `eman select f` ; do tb=`eman traceback $fstep --vars` ; alicorp=`echo $tb | perl -pe '$_="" unless(s/.*(ALICORP=\S+).*/$1/)'` ; if echo $alicorp | grep un > /dev/null ; then echo $fstep $alicorp ; fi ; done ) > failed_steps_depending_on_un_corpus.txt
   # list all failed steps depending (transitively) on ALICORP=*un* (e.g. un.fr-en or un.es-en)
+
+for x in `eman ls` ; do ev=`eman tf $x | grep s.evaluator` ; if [ -z "$ev" ] ; then echo $x ; fi ; done
+  # list all steps whose users (transitive) do not include any evaluator step
 
 eman ls > steps-all.txt
 eman traceback --no-tree `qstat | grep $USER | grep -P '\ss\.' | cut -d' ' -f1 | grep -v 4296093` | sort -u > steps-tabu.txt
