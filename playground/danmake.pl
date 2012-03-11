@@ -465,18 +465,23 @@ sub find_lm
     # A particular monolingual corpus can be requested via the -lm option.
     if($lmcorpus)
     {
-        if($lmcorpus =~ m/^news.\d+$/)
+        if($lmcorpus =~ m/^news\.\d+$/)
         {
             return find_step('lm', "v CORP=$lmcorpus.$language v CORPAUG=$language+stc");
         }
-        elsif($lmcorpus =~ m/^\+news.\d+$/)
+        elsif($lmcorpus =~ m/^\+news\.\d+$/)
         {
             my $mono = parallel_to_mono($parallel_corpus, $language)."$lmcorpus.$language";
             return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
         }
-        elsif($lmcorpus =~ m/^news.all$/)
+        elsif($lmcorpus =~ m/^news\.all$/)
         {
             return find_step('lm', "v CORP=news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language v CORPAUG=$language+stc");
+        }
+        elsif($lmcorpus =~ m/^\+news\.all$/)
+        {
+            my $mono = parallel_to_mono($parallel_corpus, $language);
+            return find_step('lm', "v CORP=$mono+news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language v CORPAUG=$language+stc");
         }
         else
         {
