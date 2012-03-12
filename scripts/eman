@@ -2197,7 +2197,7 @@ sub qstat {
           if(eval { guess_step($row->[0]) })
           {
               $row->[2] = guess_step($row->[0]);
-              $row->[9] = load_tag($row->[2]);
+              $row->[9] = compiled_tag_string($row->[2]);
               if(length($row->[9])>80)
               {
                   $row->[9] = substr($row->[9], 0, 77).'...';
