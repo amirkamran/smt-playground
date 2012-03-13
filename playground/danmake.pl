@@ -313,8 +313,14 @@ foreach $lmcorpus (@lmcorpora)
             # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
             # See the wiki for how to do it:
             # https://wiki.ufal.ms.mff.cuni.cz/user:zeman:eman#ondruv-navod-jak-prevzit-existujici-augmented-corpus
-            dzsys::saferun("MODELSTEP=$modelstep1 DEVCORP=wmt10v6b eman init mert --start");
-            dzsys::saferun("MODELSTEP=$modelstep2 DEVCORP=wmt10v6b eman init mert --start");
+            # The mert step submits parallel translation jobs to the cluster.
+            # These may be memory-intensive for some of the larger language models we use.
+            # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
+            # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
+            my $memory = '15g';
+            my $gridfl = "\"-hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
+            dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep1 DEVCORP=wmt10v6b eman init mert --start");
+            dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep2 DEVCORP=wmt10v6b eman init mert --start");
         }
     }
     # Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
