@@ -88,7 +88,7 @@ if (defined $mgizadir) {
 }
 
 if (defined $mgizadir && ! defined $mgizacores) {
-  chomp($mgizacores = `cat /proc/cpuinfo | grep CPU | wc -l`);
+  chomp($mgizacores = `cat /proc/cpuinfo | grep -E '(CPU|processor)' | wc -l`);
   print STDERR "Guessed $mgizacores CPU cores.\n";
   $mgizacores /= 2 if $parallel;
 }
