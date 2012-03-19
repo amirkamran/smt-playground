@@ -1,0 +1,51 @@
+#!/bin/bash
+# eman seed for checking out morfessor
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# There are no eman vars
+touch eman.vars
+
+# Nothing to do in initialization
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+# ufal's preferred tempdir
+TEMPDIR=$(if [ -e /mnt/h/tmp ]; then echo /mnt/h/tmp; else echo /tmp; fi)
+
+# Minimalistic checkout of treex files
+# The real (slow) checkout will be done later
+svn co --depth=empty https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk/personal/zeman morfessor \
+|| die "Failed to checkout morfessor"
+
+
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+# standard command header
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+cd morfessor || die "Can't chdir"
+
+svn update \
+|| die "Failed to get Morfessor from the SVN repository"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
