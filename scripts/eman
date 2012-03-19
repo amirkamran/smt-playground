@@ -1574,7 +1574,8 @@ sub submit {
         push @opts, ('-l', "h_vmem=".$mem);
       } else {
         # UFAL setup
-        push @opts, ('-l', "mf=".$mem);
+        push @opts, ('-hard', '-l', "mf=".$mem);
+        push @opts, ('-hard', '-l', "h_vmem=".$mem);
       }
     }
     if (defined $disk) {
