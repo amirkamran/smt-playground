@@ -28,7 +28,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 
 
-svn checkout https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk/personal/zeman morfessor \
+svn checkout https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk/personal/zeman/morfessor morfessor \
 || die "Failed to get Morfessor from the SVN repository"
 
 # Standard command footer
