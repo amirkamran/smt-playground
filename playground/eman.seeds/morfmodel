@@ -36,7 +36,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-$MORFESSORDIR/bin/actrain.pl -l $LANGUAGE -o . \\
+$MORFESSORDIR/morfessor/bin/actrain.pl -l $LANGUAGE -o . \\
     || die "actrain.pl FAILED"
 
 # Standard command footer
