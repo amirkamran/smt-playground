@@ -27,9 +27,11 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 
-
 svn checkout https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk/personal/zeman/morfessor morfessor \
 || die "Failed to get Morfessor from the SVN repository"
+
+chmod 755 morfessor/bin/*.pl
+|| die "Failed to make all Morfessor scripts executable"
 
 # Standard command footer
 echo Done.

@@ -1,0 +1,50 @@
+#!/bin/bash
+# eman seed for constructing a model of morphemes
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar MORFESSORSTEP type=reqstep help='where is Morfessor' \
+  defvar LANGUAGE help='code of the language to train on' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Emit the main script to be used in the running phase
+
+# convert the dependencies to absolute paths
+MORFESSORDIR=`eman path $MORFESSORSTEP`
+
+cat << KONEC > eman.command
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+$MORFESSORDIR/bin/actrain.pl -l $LANGUAGE -o . \\
+    || die "actrain.pl FAILED"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
