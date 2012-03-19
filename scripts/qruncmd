@@ -231,11 +231,13 @@ if ($opts{"continue"}) {
   if (0 == scalar @ARGV && !defined $opts{"input-file"}) {
     # copy stdin to a temp file, serve it
     $opts{sync} = 1; # wait to delete tempfile when all jobs are done
-    my $tmph;
-    ($tmph, $infile) = tempfile(
+    my $temp_tmph;
+    ($temp_tmph, $infile) = tempfile(
       '.qruncmd-temp-XXXXXXXX',
+      SUFFIX => ".gz",
       DIR => $pwd,
     );
+    my $tmph = my_save($infile);
     binmode($tmph, ":utf8");
     $tempfile_to_delete = $infile;
     print STDERR "Storing stdin to $infile\n";
@@ -246,6 +248,7 @@ if ($opts{"continue"}) {
     }
     print STDERR "Stored $totlines lines\n";
     close $tmph;
+    close $temp_tmph;
   } else {
     # serve directly arg1 but get number of lines first
     $infile = shift;
