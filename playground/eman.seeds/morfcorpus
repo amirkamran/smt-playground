@@ -1,0 +1,89 @@
+#!/bin/bash
+# eman step to segment a corpus into morphemes
+# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# License: GNU GPL
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default).
+# Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
+# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+if [ -z "$STATMT" ] ; then
+  echo "You must set: "
+  echo "  \$STATMT to the root of your working copy of the StatMT repository (one level above playground)"
+  echo "  \$SRC to the code of the source language"
+  echo "  \$TGT to the code of the target language"
+  exit 1
+fi
+SCRIPTS=$STATMT/scripts
+eman defvar MORFESSORSTEP type=reqstep help='where is Morfessor' \
+     defvar CORP help='name of input corpus, e.g. newstest2008' \
+     defvar LANG help='language of input corpus, e.g. en' \
+     defvar FACT help='factor(s) of input corpus, e.g. lemma' \
+|| exit 1
+
+# Set local bash variables.
+eval `eman bash-loadvars`
+
+# Create corpman.info so that this step can be located by corpman when searching for a specific corpus.
+# Fifth parameter after corpus.txt.gz: -1 ... we do not know the number of lines at the moment.
+# Sixth parameter after corpus.txt.gz: 1 ... this corpus is automatically derived from another corpus.
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP~morf $LANG $FACT -1 1 \
+|| die "Cannot register corpus"
+
+# Don't continue if we are not preparing the step yet.
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Convert the dependencies to absolute paths.
+MORFESSOR=`eman path $MORFESSORSTEP`/bin
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+
+# Get the input corpus.
+corpspec=$CORP/$LANG+$FACT
+corpmanout=\$($STATMT/playground/corpman --wait \$corpspec)
+echo "corpman for \$corpspec returned: \$corpmanout" # for the log
+step_file_col=(\$corpmanout)
+corpfile="$STATMT/playground/\${step_file_col[0]}/\${step_file_col[1]}"
+[ -e \$corpfile ] || die "Failed to prepare \$corpspec, corpus file not found: \$corpfile"
+if [ "\${step_file_col[2]}" == "-1" ]; then
+  $STATMT/scripts/wiseln \$corpfile input.txt.gz || die "Failed to clone input corpus \$corpspec"
+else
+  echo "Selecting the column \${step_file_col[2]} from \$corpfile"
+  zcat \$corpfile | cut -f "\${step_file_col[2]}" | gzip -c > input.txt.gz
+fi
+# Segment tokens into morphemes.
+###!!! DZ: I am currently using my old segmentation models, fixed. Later I will refer to morfmodel steps instead.
+gunzip -c input.txt.gz \
+| $MORFESSOR/morfseg.pl -m /net/work/people/zeman/morfessor/$LANG/segmented.txt \
+| gzip -c > corpus.txt.gz
+# Get the number of lines and re-register the corpus.
+echo "Checking output number of lines of corpus.txt.gz"
+nl=\$(zcat corpus.txt.gz | wc -l)
+echo "Re-registering the corpus with \$nl lines."
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP~morf $LANG $FACT \$nl 1 \\
+|| die "Cannot register corpus"
+# Remove corpman.index, force reindexing.
+rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
