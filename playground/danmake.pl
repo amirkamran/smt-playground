@@ -22,7 +22,7 @@ GetOptions
               # several monolingual corpora delimited by commas (e.g. -lm news.2009,news.2010) => everything will be called separately for each of them
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|data|align|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|morfcorpus|data|align|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
@@ -164,6 +164,26 @@ foreach $lmcorpus (@lmcorpora)
         {
             my $language = get_language_code($corpus);
             dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
+        }
+    }
+    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
+    if($steptype =~ m/^(morfcorpus|all)$/)
+    {
+        my $morfessorstep = find_step('morfessor', 'd');
+        # Odstranit corpman.index a vynutit tak přeindexování.
+        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+        dzsys::saferun("rm -f corpman.index") or die;
+        foreach my $corpus (@parallel_training_corpora)
+        {
+            my ($language1, $language2) = get_language_codes($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
+        }
+        # A teď ještě jednojazyčná data na trénování jazykových modelů.
+        foreach my $corpus (@mono_training_corpora)
+        {
+            my $language = get_language_code($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
         }
     }
     # Pro každý pár vytvořit a spustit vstupní krok dandata, který na jednom místě soustředí odkazy na všechny potřebné korpusy.

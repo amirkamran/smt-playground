@@ -1,0 +1,21 @@
+# A sample config file for eman autotags, i.e. short descriptive tags created
+# automatically from step variables using regexes
+# One line of this file is called a 'rule' and it can create one autotag.
+# The autotag is constructed using of sequence of regexes, each applied on the
+# output of the previous one, starting with the vars string.
+
+# Steptype	Source	/find/replace/	...and /find/replace/ in the result
+morfmodel	var	/LANGUAGE=(\S+)/$1/
+morfcorpus	var	/CORP=(\S+)/C:$1/
+morfcorpus	var	/LANG=(\S+)/L:$1/
+morfcorpus	var	/FACT=(\S+)/F:$1/
+lm	var	/CORP=(.*?)/LM:$1/m
+lm	var	/ORDER=(.*)/$1gr/
+align	var	/ALILABEL=(.*)/ALI:$1/
+tm	var	/ALISYM=(.*)/ALI:$1/
+mert	var	/.*pairwise-ranked.*/PRO/
+mert	var	/.*--sctype=([^" =]*).*/towards-$1/	/;/+/g
+mert	var	/DEVCORP=(.*)/DEV:$1/
+translate	var	/TESTCORP=(.*)/TEST:$1/
+evaluator	var	/REFAUGS=(.*)/REF:$1/
+lucscore	var	/CUT=(.*)/CUT:$1/

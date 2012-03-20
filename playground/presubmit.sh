@@ -12,6 +12,10 @@ if [ -z "$SRC" ] || [ -z "$TGT" ] ; then
   exit 1;
 fi
 SGMLSRC=$SGMLPATH/newstest2012-src.$SRC.sgm
+if ! [ -f $SGMLSRC ] ; then
+  echo $SGMLSRC not found
+  exit 2;
+fi
 cd $EXP
 pwd
 $SCR/capitalize_sentences.pl < corpus.translation | $SCR/detokenizer.pl -l $TGT > sysout.detok.txt
