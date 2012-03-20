@@ -22,7 +22,7 @@ GetOptions
               # several monolingual corpora delimited by commas (e.g. -lm news.2009,news.2010) => everything will be called separately for each of them
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|morfcorpus|data|align|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|morfcorpus|data|align|morfalign|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
@@ -226,7 +226,7 @@ foreach $lmcorpus (@lmcorpora)
             my ($language1, $language2) = get_language_codes($corpus);
             # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h, takže musíme požadovat i místo na disku (50 GB je někdy málo).
             # Velké korpusy potřebují více paměti i více místa na disku.
-            my $n_lines = get_corpus_size($corpus, $language, 'stc');
+            my $n_lines = get_corpus_size($corpus, $language1, 'stc');
             my $resources = $n_lines>=3000000 ? '--mem 20g --disk 100g' : '--mem 6g --disk 15g';
             dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1~morf+stc TGTALIAUG=$language2~morf+stc eman init align --start $resources") or die;
             dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2~morf+stc TGTALIAUG=$language1~morf+stc eman init align --start $resources") or die;
@@ -406,7 +406,7 @@ foreach $lmcorpus (@lmcorpora)
     }
 }
 # Make sure eman knows about new tags etc.
-dzsys::saferun("eman reindex");
+dzsys::saferun("eman reindex ; eman qstat");
 
 
 
