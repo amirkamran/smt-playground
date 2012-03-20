@@ -175,26 +175,6 @@ foreach $lmcorpus (@lmcorpora)
             dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
         }
     }
-    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
-    if($steptype =~ m/^(morfcorpus|all)$/)
-    {
-        my $morfessorstep = find_step('morfessor', 'd');
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
-        }
-        # A teď ještě jednojazyčná data na trénování jazykových modelů.
-        foreach my $corpus (@mono_training_corpora)
-        {
-            my $language = get_language_code($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
-        }
-    }
     # Pro každý pár vytvořit a spustit vstupní krok dandata, který na jednom místě soustředí odkazy na všechny potřebné korpusy.
     if($steptype =~ m/^(data|all)$/)
     {
