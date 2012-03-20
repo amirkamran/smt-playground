@@ -148,22 +148,31 @@ foreach $lmcorpus (@lmcorpora)
             dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=stc eman init augment --start") or die;
             dzsys::saferun("OUTCORP=$corpus OUTLANG=$language2 OUTFACTS=stc eman init augment --start") or die;
         }
-        if(0) ###!!!
-        {
-            foreach my $year (2008, 2009, 2010, 2011, 2012)
-            {
-                my $corpus = "newstest$year";
-                foreach my $language ('cs', 'de', 'en', 'es', 'fr')
-                {
-                    dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
-                }
-            }
-        }
         # A teď ještě jednojazyčná data na trénování jazykových modelů.
         foreach my $corpus (@mono_training_corpora)
         {
             my $language = get_language_code($corpus);
             dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
+        }
+    }
+    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
+    if($steptype =~ m/^(morfcorpus|all)$/)
+    {
+        my $morfessorstep = find_step('morfessor', 'd');
+        # Odstranit corpman.index a vynutit tak přeindexování.
+        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+        dzsys::saferun("rm -f corpman.index") or die;
+        foreach my $corpus (@parallel_training_corpora)
+        {
+            my ($language1, $language2) = get_language_codes($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
+        }
+        # A teď ještě jednojazyčná data na trénování jazykových modelů.
+        foreach my $corpus (@mono_training_corpora)
+        {
+            my $language = get_language_code($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
         }
     }
     # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
@@ -223,6 +232,24 @@ foreach $lmcorpus (@lmcorpora)
                 my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
                 dzsys::saferun("GIZASTEP=$gizastep DATASTEP=$datastep eman init danalign --start --mem 20g") or die;
             }
+        }
+    }
+    # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
+    if($steptype =~ m/^(morfalign|all)$/)
+    {
+        my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
+        # Odstranit corpman.index a vynutit tak přeindexování.
+        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+        dzsys::saferun("rm -f corpman.index") or die;
+        foreach my $corpus (@parallel_training_corpora)
+        {
+            my ($language1, $language2) = get_language_codes($corpus);
+            # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h, takže musíme požadovat i místo na disku (50 GB je někdy málo).
+            # Velké korpusy potřebují více paměti i více místa na disku.
+            my $n_lines = get_corpus_size($corpus, $language, 'stc');
+            my $resources = $n_lines>=3000000 ? '--mem 20g --disk 100g' : '--mem 6g --disk 15g';
+            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1~morf+stc TGTALIAUG=$language2~morf+stc eman init align --start $resources") or die;
+            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2~morf+stc TGTALIAUG=$language1~morf+stc eman init align --start $resources") or die;
         }
     }
     # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.

@@ -30,7 +30,7 @@ eval `eman bash-loadvars`
 # Create corpman.info so that this step can be located by corpman when searching for a specific corpus.
 # Fifth parameter after corpus.txt.gz: -1 ... we do not know the number of lines at the moment.
 # Sixth parameter after corpus.txt.gz: 1 ... this corpus is automatically derived from another corpus.
-$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP~morf $LANG $FACT -1 1 \
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANG~morf $FACT -1 1 \
 || die "Cannot register corpus"
 
 # Don't continue if we are not preparing the step yet.
@@ -77,7 +77,7 @@ gunzip -c input.txt.gz \
 echo "Checking output number of lines of corpus.txt.gz"
 nl=\$(zcat corpus.txt.gz | wc -l)
 echo "Re-registering the corpus with \$nl lines."
-$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP~morf $LANG $FACT \$nl 1 \\
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANG~morf $FACT \$nl 1 \\
 || die "Cannot register corpus"
 # Remove corpman.index, force reindexing.
 ###!!! To je sice hezký, ale když poběží 50 takových kroků najednou a budou si pod rukama mazat index, tak si zaručeně někdo z nich dá na hubu.
