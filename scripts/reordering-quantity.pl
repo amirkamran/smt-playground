@@ -96,11 +96,11 @@ while (<STDIN>) {
 
   ## compute the RQuantity
   my $rquantity = $reordered_spans_length / $source_length;
-  printf "%.02f\n", $rquantity if $verbose;
+  printf "%.03f\n", $rquantity if $verbose;
   $tot_rquantity += $rquantity;
 }
 
-printf "%.02f (%d / %d)\n", $tot_rquantity / $linecount, $tot_rquantity, $linecount;
+printf "%.04f (%.02f / %d)\n", $tot_rquantity / $linecount, $tot_rquantity, $linecount;
  
 # given a source block, return the span of its links on the target side
 sub get_opposite_span {
