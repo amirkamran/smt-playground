@@ -155,7 +155,8 @@ TODO	2step
 
 TODO Turkova metoda:
   - jednak na t0a1-0a1:
-   prunelm, vc. luclm: s.evaluator.6417dcc1.20120302-2259 musis restartnout, mert navazuju
+   prunelm, vc. luclm:
+18.43±0.59	s.evaluator.4dba862b.20120313-1534
   - ale take na t0-0:
 17.61±0.57       s.evaluator.9d7d00ed.20120228-2228  s turkem
 17.51±0.57       s.evaluator.bd7643b0.20120222-1906  baseline
@@ -474,19 +475,27 @@ tm pro posteditaci s maxphrase 4
 SUBMISSIONS:
 
 to Czech
-done:
-15.90±0.57*ATOB	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
-16.01±0.56*at	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
-14.17±0.53  	    s.evaluator.c46b02cb.20120303-0145
-	-> cu-poorcomb
-16.07±0.55*OB  	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-	-> cu-bojar
+submitted:
+16.07±0.55	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+          	-> cu-bojar-primary
+15.90±0.57	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
+          	-> cu-tamchyna (primary)
+16.01±0.56	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
+          	-> cu-tamchyna (contrast)
+14.17±0.53	s.evaluator.c46b02cb.20120303-0145
+          	-> cu-poorcomb (jmenem Petry Galuscakove)
+
+too late:
+15.87±0.58	s.evaluator.ab47b940.20120313-2232
+          	(odvozeno od s.evaluator.4dba862b.20120313-1534)
+          	... prilis pozde: Turkova metoda
 
 todo:
-16.07±0.55*OB  	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-	-> cu-bojar
-15.94±0.54	ZKOUSIM NOVY: s.evaluator.0a39eb06.20120303-0023
-	a jeste zkusim prihodit 2 velke LM: s.evaluator.fb1e6bf4.20120307-1904
+16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+             	-> cu-bojar
+15.94±0.54   	ZKOUSIM NOVY: s.evaluator.0a39eb06.20120303-0023
+16.10±0.56   	a jeste zkusim prihodit 2 velke LM: s.evaluator.fb1e6bf4.20120307-1904
+             	...ani SYN+webcoll nepomohly!
 
 15.48±0.56     	0352547d.20120227-1717 baseline t0-0
 15.90±0.55*PGAK	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
@@ -503,11 +512,37 @@ todo:
                	
 to English
 
+23.09±0.59   	s.evaluator.499501ce.20120304-0208 t0-0At1-0
+             	-> cu-bojar (late primary, snad ho pouziji)
 22.90±0.56*OB	s.evaluator.33d443f4.20120301-1350 t0-0
-	-> cu-bojar
-	ZKOUSIM TAKY t0-0At1-0 s.evaluator.499501ce.20120304-0208
+             	-> cu-bojar (first primary)
 
 
 Co musim opravit do priste:
 - vic vet v jedne
 - zapomen na stc, to je smejd; resp. udelej lattice vstup s lc jako variantou
+  ... hlavne res named entities
+- vetsi nbestlist!
+- zapomnel jsi pouzit paralelni news a europarl!!!
+
+
+
+
+2012-03-13
+Preklady pro TaraXU:
+
+for i in `seq 1 11`; do
+  echo eman tb s.evaluator.d09a808c.20120225-2205 -s /wmt11/taraXU-en-cz-$i/ --ign=corpus --ign=mert '|' MOSESFLAGS='"-th 3"' eman clone --start
+done
+
+for i in `seq 1 6`; do
+  echo eman tb s.evaluator.33d443f4.20120301-1350 -s /wmt12/taraXU-cz-en-$i/ --ign=corpus --ign=mert '|' MOSESFLAGS='"-th 3"' eman clone --start
+done
+
+
+2012-03-23
+
+Preklady pro EM+ interni:
+
+s.translate.cea0e4db.20120323-1442	pouzil do aj
+s.translate.f005c1ea.20120323-1440	pouzil do cj
