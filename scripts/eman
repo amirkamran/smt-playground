@@ -2867,6 +2867,28 @@ sub select_steps {
         }
         @steps = @new_steps;
       }
+      # Steps that are not currently reported by qstat (in any cluster state, e.g. 'r', 'qw', 'hqw' or even 'Eqw').
+      # Note that qstat is run for the current user. We do not expect the steps to run under anyone else.
+      when ("nq") {
+        my @qjobids = grep {m/^\d+$/} split(/\n/, `qstat | cut -d' ' -f1`);
+        # We will not rely on step guessing from job id. A step may have more than
+        # one job id if it is re-run and reindexing is needed to get the current one.
+        # This command is intended to identify jobs that failed to fail correctly.
+        # It would be dangerous to draw conclusions from not finding a job just because
+        # we do not know its current job id.
+        @steps = grep {
+          my $found = 0;
+          my $emanjobid = `cat $_/eman.jobid`;
+          $emanjobid = 0 if($emanjobid !~ m/^\d+$/);
+          foreach my $qjid (@qjobids) {
+            if (-f "$_/log.o$qjid" || $emanjobid == $qjid) {
+              $found = 1;
+              last;
+            }
+          }
+          !$found
+        } @steps;
+      }
       default { $error = 1; }
     }
   }
@@ -3283,8 +3305,10 @@ You can use the following filters in eman select:
                        has value <value>
   vre <regex>      ... only steps where the variable file matches <regex>
   tre <regex>      ... only steps where tags (incl. autotags) match <regex>
+  nq               ... only steps not currently known to qstat
+                       (current user, any cluster job status)
 
-The result (and speed) depends on the order of fitlers, e.g.:
+The result (and speed) depends on the order of filters, e.g.:
 
 eman select t mert l 10 # output last 10 merts
 eman select l 10 t mert # output merts that were among 10 latest steps
@@ -3319,6 +3343,10 @@ eman tb --no-tree $(eman sel t EVAL tre FOO) | grep MERT
 
 eman sel t lm vre tag --stat --vars | grep 'ORDER\|s.lm'
   # what all orders of LM do I have over morphological 'tag's
+
+eman select s RUNNING nq
+  # which failed jobs failed to fail correctly?
+  # eman believes they are still running but cluster does not know them
 
 ( for fstep in `eman select f` ; do tb=`eman traceback $fstep --vars` ; alicorp=`echo $tb | perl -pe '$_="" unless(s/.*(ALICORP=\S+).*/$1/)'` ; if echo $alicorp | grep un > /dev/null ; then echo $fstep $alicorp ; fi ; done ) > failed_steps_depending_on_un_corpus.txt
   # list all failed steps depending (transitively) on ALICORP=*un* (e.g. un.fr-en or un.es-en)
