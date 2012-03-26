@@ -16,10 +16,11 @@ use dzsys;
 GetOptions
 (
     'type|action=s' => \$steptype,
-    'first=s' => \$firstcorpus,
+    'first=s' => \$firstcorpus, # useful when previous run failed but some of the jobs were submitted successfully
     'last=s' => \$lastcorpus,
-    'lm=s' => \$lmcorpus # for steps model, mert etc.: use this language model instead of the default; e.g. '-lm news.2009' will select news.2009.de for experiments to German
+    'lm=s' => \$lmcorpus, # for steps model, mert etc.: use this language model instead of the default; e.g. '-lm news.2009' will select news.2009.de for experiments to German
               # several monolingual corpora delimited by commas (e.g. -lm news.2009,news.2010) => everything will be called separately for each of them
+    'morph|morf' => \$use_morphemes # use language code xx~morf instead of xx
 );
 
 die("Unknown step type $steptype") unless($steptype =~ m/^(augment|morfcorpus|data|align|morfalign|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
@@ -422,6 +423,11 @@ sub get_language_codes
     {
         $language1 = $1;
         $language2 = $2;
+        if($use_morphemes)
+        {
+            $language1 .= '~morf';
+            $language2 .= '~morf';
+        }
     }
     else
     {
@@ -443,6 +449,10 @@ sub get_language_code
     if($corpus =~ m/\.(\w+)$/)
     {
         $language = $1;
+        if($use_morphemes)
+        {
+            $language .= '~morf';
+        }
     }
     else
     {
@@ -455,14 +465,16 @@ sub get_language_code
 
 #------------------------------------------------------------------------------
 # Returns number of lines of corpus. The corpus must be registered with corpman
-# and we must be in the main playground folder.
+# and we must be in the main playground folder. If the corpus is not registered
+# but it is possible to derive it from existing corpora (by simple
+# concatenation, for example), it will be created and we will wait for it.
 #------------------------------------------------------------------------------
 sub get_corpus_size
 {
     my $corpus = shift;
     my $language = shift;
     my $factor = shift;
-    my $step = dzsys::chompticks("corpman $corpus/$language+$factor");
+    my $step = dzsys::chompticks("corpman --wait $corpus/$language+$factor");
     $step =~ s/\s.*//;
     my @info = split(/\t/, dzsys::chompticks("cat $step/corpman.info"));
     return $info[5];
