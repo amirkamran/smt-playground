@@ -2180,6 +2180,9 @@ sub qstat {
       {
           chomp;
           my @fields = split(/\s+/, $_);
+          # If the job is not running the machine-name field will be empty, we will not recognize it
+          # and we will get the next field instead, which is, usually, just the number "1" (number of slots).
+          splice(@fields, 7, 0, '') if($fields[7] =~ m/^\d+$/);
           push(@rows, \@fields);
       }
       else
