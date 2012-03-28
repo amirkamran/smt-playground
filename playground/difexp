@@ -8,7 +8,7 @@ inb="$2"
 shift 2
 
 function get_scores_file() {
-  step=$(eman path $1)
+  step=$(if [ -d $1 ]; then echo $1; else eman path $1; fi)
   if [ -e "$step"/scores ]; then
     echo "$step"/scores
   fi
@@ -19,9 +19,10 @@ tmpb=/tmp/difexp.$$.tmpb
 echo "-- EXPERIMENT: $ina" > $tmpa
 echo "++ EXPERIMENT: $inb" > $tmpb
 scoresa=$(get_scores_file "$ina")
-[ -e $scoresa ] && cat $scoresa | tt | prefix -- "-- " >> $tmpa
+[ -e "$scoresa" ] && cat $scoresa | tt | prefix -- "-- " >> $tmpa
 scoresb=$(get_scores_file "$inb")
-[ -e $scoresb ] && cat $scoresb | tt | prefix -- "++ " >> $tmpb
+[ -e "$scoresb" ] && ( cat $scoresb | tt | prefix -- "++ " >> $tmpb )
+echo "Calling eman traceback ... " "$@"
 if eman traceback "$ina" --tag --vars "$@" >> $tmpa \
   && eman traceback "$inb" --tag --vars "$@" >> $tmpb; then
   diff --unified=500 $tmpa $tmpb | less -S
