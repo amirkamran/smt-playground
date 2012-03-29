@@ -2965,6 +2965,10 @@ sub select_steps {
   my @steps = grep { $_ !~ m/(jid|path)/ } all_steps();
   @steps = filter_steps(\@steps, @args);
   if ($steps[0]) {
+    # all_steps() could have returned also NONEXISTENT steps (missing folder but the step mentioned as a dependency of another step).
+    # list() will die on NONEXISTENT steps ("Failed to guess step from: s...")
+    # Thus remove NONEXISTENT steps now.
+    @steps = grep { -d $_ } @steps;
     return list([@steps]);
   } else {
     return 1;
