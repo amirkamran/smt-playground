@@ -404,7 +404,7 @@ sub build_exact_factors {
   print STDERR "Called build_exact_factors @_\n" if $verbose;
   print STDERR "  The factind of the entry: $entry->{factind}\n" if $verbose;
   if ($entry->{"factind"} == -1
-      || ($entry->{"factind"} == 0 && $facts !~ /[+|]/)) {
+      || ($entry->{"factind"} == 0 && $entry->{"factors"} !~ /[+|]/)) {
       # XXX this check should actually also accept cases like factid=="1,2,3"
       # and factors contain 2 pluses...
     # great, the given column contains exactly the factors we asked for
@@ -616,6 +616,7 @@ sub add_entry_incl_entries_of_separate_factors {
     "factind" => -1,
     "linecount" => $linecount,
     "isderived" => $mayderived,
+    "factors" => $facts,
   };
   add_entry($corpname, $lang, $facts, $newentry, $mayderived);
 
@@ -632,6 +633,7 @@ sub add_entry_incl_entries_of_separate_factors {
           "factind" => $factind,
           "linecount" => $linecount,
           "isderived" => $mayderived,
+          "factors" => $facts,
         },
         $yes_derived
         );
