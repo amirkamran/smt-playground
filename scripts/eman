@@ -3,7 +3,9 @@
 #
 # More info: 'eman --help' or 'eman --man'
 #
-# Ondrej Bojar, bojar@ufal.mff.cuni.cz
+# Ondřej Bojar, bojar@ufal.mff.cuni.cz
+# Aleš Tamchyna, tamchyna@ufal.mff.cuni.cz
+# Dan Zeman, zeman@ufal.mff.cuni.cz
 #
 # BUGS: now already excluding dir self name from hash,
 #       should be also removing the exp's old name before renaming
@@ -2134,7 +2136,7 @@ sub guess_step {
   # only recommend --reindex if not already specified
   my $try_reindex = $reindex ? "" : "\nTry --reindex.";
 
-  die "Failed to guess step from: $key$try_reindex" if !defined $step;
+  confess "Failed to guess step from: $key$try_reindex" if !defined $step;
   return $step;
 }
 
@@ -2793,119 +2795,183 @@ sub tabulate {
 # end of routines for tablemaker
 
 
+
+#------------------------------------------------------------------------------
+# Retrieves argument of a filtering command in eman select. Dies if argument
+# not found.
+#------------------------------------------------------------------------------
+sub get_eman_select_arg
+{
+    my $args = shift; # array reference (array will be modified)
+    my $arg = shift(@{$args});
+    if(!defined($arg))
+    {
+        mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
+    }
+    return $arg;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Filters a list of steps according to criteria specified in the "eman select"
+# syntax. Returns the filtered list of steps. Does not print anything (unlike
+# select_steps() below).
+#------------------------------------------------------------------------------
+sub filter_steps
+{
+    my $steps = shift; # array reference
+    my @steps = sort { compare_steps($a, $b) } @{$steps};
+    my @args = @_;
+    # Filter without arguments returns all input steps.
+    while (@args)
+    {
+        my $cmd = shift @args;
+        given ($cmd)
+        {
+            # Only DONE steps.
+            when ("d") { @steps = grep { load_status($_) eq 'DONE' } @steps; }
+            # Only FAILED steps.
+            when ("f") { @steps = grep { load_status($_) eq 'FAILED' } @steps; }
+            # Only last n steps (order defined by compare_steps() called above).
+            # (In fact it is the reversed order because we take the first n elements of the array.)
+            when ("l")
+            {
+                my $n = get_eman_select_arg(\@args);
+                @steps  = @steps[0 .. min($n - 1, $#steps)];
+            }
+            # Only last 10 steps.
+            when ("lh") { @steps = @steps[0 .. min(9, $#steps)]; }
+            # Only steps in given status.
+            when ("s")
+            {
+                my $status = get_eman_select_arg(\@args);
+                @steps = grep { uc(load_status($_)) eq uc($status) } @steps;
+            }
+            # Only steps of given type.
+            when ("t")
+            {
+                my $type = get_eman_select_arg(\@args);
+                @steps = grep { get_steptype($_) eq $type } @steps;
+            }
+            # Only steps with given value of a variable (varexpr is VARIABLE=VALUE).
+            when ("v")
+            {
+                my $varexpr = get_eman_select_arg(\@args);
+                my @new_steps;
+                for my $step (@steps)
+                {
+                    my $varsstr = load_vars_str($step);
+                    next if ! $varsstr;
+                    my @vars = split /\n/, $varsstr;
+                    push @new_steps, $step if grep { $_ eq $varexpr } @vars;
+                }
+                @steps = @new_steps;
+            }
+            # Only steps with variable name and/or value matching a regular expression.
+            when ("vre")
+            {
+                my $varexpr = get_eman_select_arg(\@args);
+                my @new_steps;
+                for my $step (@steps)
+                {
+                    my $varsstr = load_vars_str($step);
+                    next if ! $varsstr;
+                    my @vars = split /\n/, $varsstr;
+                    push @new_steps, $step if grep { $_ =~ $varexpr } @vars;
+                }
+                @steps = @new_steps;
+            }
+            # Only steps with tag matching a regular expression.
+            when ("tre")
+            {
+                my $tagexpr = get_eman_select_arg(\@args);
+                my @new_steps;
+                for my $step (@steps)
+                {
+                    my $tagsstr = compiled_tag_string($step);
+                    push @new_steps, $step if $tagsstr =~ $tagexpr;
+                }
+                @steps = @new_steps;
+            }
+            # Only steps that are not currently reported by qstat (in any cluster state, e.g. 'r', 'qw', 'hqw' or even 'Eqw').
+            # Note that qstat is run for the current user. We do not expect the steps to run under anyone else.
+            when ("nq")
+            {
+                my @qjobids = grep {m/^\d+$/} split(/\n/, `qstat | cut -d' ' -f1`);
+                # We will not rely on step guessing from job id. A step may have more than
+                # one job id if it is re-run and reindexing is needed to get the current one.
+                # This command is intended to identify jobs that failed to fail correctly.
+                # It would be dangerous to draw conclusions from not finding a job just because
+                # we do not know its current job id. (Possible conclusions include destroying the step.)
+                @steps = grep {
+                    my $found = 0;
+                    my $emanjobid = `cat $_/eman.jobid`;
+                    $emanjobid = 0 if($emanjobid !~ m/^\d+$/);
+                    foreach my $qjid (@qjobids)
+                    {
+                        if (-f "$_/log.o$qjid" || $emanjobid == $qjid)
+                        {
+                            $found = 1;
+                            last;
+                        }
+                    }
+                    !$found
+                } @steps;
+            }
+            # Only steps that have at least one following step ("user") with given properties.
+            # The remaining filtering commands define the following step searched for.
+            # If there are no remaining commands, the steps with at least one user will be selected.
+            # If the next argument is '!' (negation), steps that have no following step with given properties will be selected.
+            when ("u")
+            {
+                my $not = 0;
+                if (scalar(@args)>=1 && $args[0] eq 'not')
+                {
+                    $not = 1;
+                    shift(@args);
+                }
+                my @new_steps;
+                for my $step (@steps)
+                {
+                    my $found = 0;
+                    my $users = $idx->{'USED_BY'}->{$step};
+                    if (defined $users)
+                    {
+                        my @users = keys %{$users};
+                        @users = filter_steps(\@users, @args);
+                        $found = scalar(@users)>0;
+                    }
+                    push(@new_steps, $step) if(($found && !$not) || (!$found && $not));
+                }
+                @steps = @new_steps;
+                splice(@args); # already used to filter the user-steps
+            }
+            # Unknown filter command.
+            default
+            {
+                # Die the same way as if missing required argument.
+                get_eman_select_arg([]);
+            }
+        }
+    }
+    return @steps;
+}
+
+
+
 sub select_steps {
   my @args = @_;
-  my @steps = sort { compare_steps($a, $b) } grep { $_ !~ m/(jid|path)/ } all_steps();
-  my $error = 0; # select without arguments lists all steps
-  while (@args) {
-    my $cmd = shift @args;
-    given ($cmd) {
-      when ("d") { @steps = grep { load_status($_) eq 'DONE' } @steps; }
-      when ("f") { @steps = grep { load_status($_) eq 'FAILED' } @steps; }
-      when ("l") {
-        my $n = shift @args;
-        if (! $n) {
-          $error = 1;
-          last;
-        }
-        @steps  = @steps[0 .. min($n - 1, $#steps)];
-      }
-      when ("lh") { @steps = @steps[0 .. min(9, $#steps)]; }
-      when ("s") {
-        my $status = shift @args;
-        if (! $status) {
-          $error = 1;
-          last;
-        }
-        @steps = grep { load_status($_) eq $status } @steps;
-      }
-      when ("t") {
-        my $type = shift @args;
-        if (! $type) {
-          $error = 1;
-          last;
-        }
-        @steps = grep { get_steptype($_) eq $type } @steps;
-      }
-      when ("v") {
-        my $varexpr = shift @args;
-        if (! $varexpr) {
-          $error = 1;
-          last;
-        }
-        my @new_steps;
-        for my $step (@steps) {
-          my $varsstr = load_vars_str($step);
-          next if ! $varsstr;
-          my @vars = split /\n/, $varsstr;
-          push @new_steps, $step if grep { $_ eq $varexpr } @vars;
-        }
-        @steps = @new_steps;
-      }
-      when ("vre") {
-        my $varexpr = shift @args;
-        if (! $varexpr) {
-          $error = 1;
-          last;
-        }
-        my @new_steps;
-        for my $step (@steps) {
-          my $varsstr = load_vars_str($step);
-          next if ! $varsstr;
-          my @vars = split /\n/, $varsstr;
-          push @new_steps, $step if grep { $_ =~ $varexpr } @vars;
-        }
-        @steps = @new_steps;
-      }
-      when ("tre") {
-        my $tagexpr = shift @args;
-        if (! $tagexpr) {
-          $error = 1;
-          last;
-        }
-        my @new_steps;
-        for my $step (@steps) {
-          my $tagsstr = compiled_tag_string($step);
-          push @new_steps, $step if $tagsstr =~ $tagexpr;
-        }
-        @steps = @new_steps;
-      }
-      # Steps that are not currently reported by qstat (in any cluster state, e.g. 'r', 'qw', 'hqw' or even 'Eqw').
-      # Note that qstat is run for the current user. We do not expect the steps to run under anyone else.
-      when ("nq") {
-        my @qjobids = grep {m/^\d+$/} split(/\n/, `qstat | cut -d' ' -f1`);
-        # We will not rely on step guessing from job id. A step may have more than
-        # one job id if it is re-run and reindexing is needed to get the current one.
-        # This command is intended to identify jobs that failed to fail correctly.
-        # It would be dangerous to draw conclusions from not finding a job just because
-        # we do not know its current job id.
-        @steps = grep {
-          my $found = 0;
-          my $emanjobid = `cat $_/eman.jobid`;
-          $emanjobid = 0 if($emanjobid !~ m/^\d+$/);
-          foreach my $qjid (@qjobids) {
-            if (-f "$_/log.o$qjid" || $emanjobid == $qjid) {
-              $found = 1;
-              last;
-            }
-          }
-          !$found
-        } @steps;
-      }
-      default { $error = 1; }
-    }
-  }
-
-  if ($error) {
-    mydie "usage: eman select <command> [arg] [<command> [arg][...]]";
+  my @steps = grep { $_ !~ m/(jid|path)/ } all_steps();
+  @steps = filter_steps(\@steps, @args);
+  if ($steps[0]) {
+    return list([@steps]);
   } else {
-    if ($steps[0]) {
-      return list([@steps]);
-    } else {
-      return 1;
-    }
+    return 1;
   }
 }
+
+
 
 sub do_outdate {
   my $step = shift;
@@ -3310,6 +3376,9 @@ You can use the following filters in eman select:
   tre <regex>      ... only steps where tags (incl. autotags) match <regex>
   nq               ... only steps not currently known to qstat
                        (current user, any cluster job status)
+  u <criteria>     ... only steps that have at least one user with given
+                       properties; rest of query defines the user
+  u not <criteria> ... only steps that have no users with given properties
 
 The result (and speed) depends on the order of filters, e.g.:
 
@@ -3557,8 +3626,10 @@ Dryad.
 
 =head1 AUTHOR
 
-Ondrej Bojar <obo@matfyz.cz>
+Ondřej Bojar <obo@matfyz.cz>
 
-Copyright 2010, 2011 Ondrej Bojar, All rights reserved.
+Contributions by Aleš Tamchyna and Dan Zeman.
+
+Copyright 2010, 2011, 2012 Ondřej Bojar, All rights reserved.
 
 =cut
