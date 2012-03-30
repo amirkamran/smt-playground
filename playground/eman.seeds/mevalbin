@@ -1,0 +1,41 @@
+#!/bin/bash
+# eman seed for compiling srilm
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+touch eman.vars # there are no variables
+
+# Set local bash variables
+#eval `eman bash-loadvars`
+
+PLAYGROUND=$(eman path)
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+cp $PLAYGROUND/../src/multeval.tar.gz . \\
+&& tar xzf multeval.tar.gz \\
+&& rm multeval.tar.gz \\
+|| die "Failed to extract Multeval"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
