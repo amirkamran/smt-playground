@@ -23,7 +23,7 @@ GetOptions
     'morph|morf' => \$use_morphemes # use language code xx~morf instead of xx
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|morfcorpus|data|align|morfalign|binarize|extract|tm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @languages = qw(en cs de es fr);
 my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
@@ -156,6 +156,36 @@ foreach $lmcorpus (@lmcorpora)
             dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
         }
     }
+    # Corpman mě permanentně buzeruje, že nemám pro své korpusy dostupný faktor form, protože jsem převzal přímo stc.
+    # Pojďme tedy jednorázově vyrobit základní korpusy s faktory form+lemma+tag pro paralelní korpusy
+    # news-commentary-v7 a europarl-v7, které jinak samostatně ani nemám na repertoáru.
+    if($steptype eq 'augmentbasic')
+    {
+        # Seznam neorientovaných párů kvůli identifikaci jednotlivých po dvou paralelních podmnožin.
+        # Poznámka: Tyto základní korpusy nemáme k dispozici pro páry de-cs, es-cs a fr-cs, pro ty už jsem rovnou vyráběl spojené korpusy news-commentary-europarl-v7.
+        my @pairs = ('cs-en', 'de-en', 'es-en', 'fr-en');
+        foreach my $pair (@pairs)
+        {
+            my ($language1, $language2) = get_language_codes("korpus.$pair");
+            dzsys::saferun("OUTCORP=news-commentary-v7.$pair OUTLANG=$language1 OUTFACTS=form+lemma+tag eman init augment --start") or die;
+            dzsys::saferun("OUTCORP=news-commentary-v7.$pair OUTLANG=$language2 OUTFACTS=form+lemma+tag eman init augment --start") or die;
+            dzsys::saferun("OUTCORP=europarl-v7.$pair        OUTLANG=$language1 OUTFACTS=form+lemma+tag eman init augment --start") or die;
+            dzsys::saferun("OUTCORP=europarl-v7.$pair        OUTLANG=$language2 OUTFACTS=form+lemma+tag eman init augment --start") or die;
+        }
+    }
+    # Výroba kombinovaných paralelních korpusů.
+    if($steptype eq 'combine')
+    {
+        foreach my $language ('es', 'fr')
+        {
+            # Bohužel máme nestejně připravené zdroje. Textová data se musí kombinovat ze tří korpusů,
+            # zatímco zarovnání máme už nachystané pro kombinaci prvních dvou dohromady.
+            # Nejdříve tedy zkombinovat první dva, počkat, až budou hotové, řádek zakomentovat a odkomentovat ty dva pod ním.
+            #combine_corpora("news-europarl-v7.$language-en", "news-commentary-v7.$language-en", "europarl-v7.$language-en", $language, 'en');
+            combine_corpora("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
+            combine_alignments("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
+        }
+    }
     # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
     if($steptype =~ m/^(morfcorpus|all)$/)
     {
@@ -269,6 +299,14 @@ foreach $lmcorpus (@lmcorpora)
             # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
             dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep1 SRCAUG=$language1+stc TGTAUG=$language2+stc DECODINGSTEPS=t0-0 eman init tm --start");
             dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep2 SRCAUG=$language2+stc TGTAUG=$language1+stc DECODINGSTEPS=t0-0 eman init tm --start");
+        }
+    }
+    # Výroba překladových modelů z kombinovaných paralelních korpusů.
+    if($steptype eq 'combinetm')
+    {
+        foreach my $language ('es', 'fr')
+        {
+            create_tm_for_combined_corpus("news-euro-un.$language-en", $language, 'en');
         }
     }
     # Pro každý pár vytvořit a spustit krok lm, který natrénuje jazykový model.
@@ -634,4 +672,126 @@ sub find_step
     }
     $stepcache{$select} = $step;
     return $step;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Spojí dva korpusy do jednoho pod novým jménem. Více méně je to něco, co umí
+# i corpman, až na to, že výsledný korpus nemusí mít dlouhý název obsahující
+# plusy, čímž omezíme případy, kdy corpman bude vymýšlet nechtěné způsoby při
+# výrobě faktorů. (Pokud corpman umí vyrobit faktor stc z faktoru lemma, a má
+# vyrobit "corpA+corpB/cs+stc", pak ho může vyrobit buď z "corpA+corpB/cs+lemma",
+# nebo slepením "corpA/cs+stc" a "corpB/cs+stc". Pokud máme připravená data
+# jen pro jednu z obou variant, ale corpman si vezme do hlavy, že použije tu
+# druhou, máme tu zbytečnou komplikaci.)
+#------------------------------------------------------------------------------
+sub combine_corpora
+{
+    my $corpus = shift; # název cílového korpusu
+    my $corpus1 = shift;
+    my $corpus2 = shift;
+    my $language1 = shift;
+    my $language2 = shift;
+    # Předpokládáme, že oba korpusy obsahují pro oba jazyky faktory form, lemma a tag.
+    my $path1l1 = find_corpus("$corpus1/$language1+form+lemma+tag");
+    my $path1l2 = find_corpus("$corpus1/$language2+form+lemma+tag");
+    my $path2l1 = find_corpus("$corpus2/$language1+form+lemma+tag");
+    my $path2l2 = find_corpus("$corpus2/$language2+form+lemma+tag");
+    # Předpokládáme, že soubor s korpusem je vždy zagzipovaný.
+    my $commandl1 = "zcat $path1l1 $path2l1";
+    my $commandl2 = "zcat $path1l2 $path2l2";
+    my $n = dzsys::chompticks("$commandl1 | wc -l");
+    # Nechat corpmana vyrobit krok se spojeným korpusem včetně registrace.
+    dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=form+lemma+tag OUTLINECOUNT=$n TAKE_FROM_COMMAND=\"$commandl1\" eman init corpus --start") or die;
+    dzsys::saferun("OUTCORP=$corpus OUTLANG=$language2 OUTFACTS=form+lemma+tag OUTLINECOUNT=$n TAKE_FROM_COMMAND=\"$commandl2\" eman init corpus --start") or die;
+    # Nakonec se ujistit, že corpman ví o nově vytvořených korpusech.
+    dzsys::saferun("corpman reindex") or die;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Spojí dva korpusy do jednoho pod novým jménem. Od funkce combine_corpora() se
+# liší tím, že nepracuje s textovými daty korpusů, ale s jejich zarovnáními.
+#------------------------------------------------------------------------------
+sub combine_alignments
+{
+    my $corpus = shift; # název cílového korpusu
+    my $corpus1 = shift;
+    my $corpus2 = shift;
+    my $language1 = shift;
+    my $language2 = shift;
+    # Předpokládáme, že dílčí zarovnání obsahují stejné symetrizace ve stejném pořadí.
+    # Takže se sice ptáme na gdfa, ale do cílového souboru zkopírujeme všechny sloupce.
+    # Také předpokládáme, že zarovnání je vždy vyrobeno nad faktorem lemma, což je zatím pravda.
+    my $path1l12 = find_corpus("$corpus1/gdfa-$language1-lemma-$language2-lemma+ali");
+    my $path1l21 = find_corpus("$corpus1/gdfa-$language2-lemma-$language1-lemma+ali");
+    my $path2l12 = find_corpus("$corpus2/gdfa-$language1-lemma-$language2-lemma+ali");
+    my $path2l21 = find_corpus("$corpus2/gdfa-$language2-lemma-$language1-lemma+ali");
+    # Předpokládáme, že soubor s korpusem je vždy zagzipovaný.
+    my $commandl12 = "zcat $path1l12 $path2l12";
+    my $commandl21 = "zcat $path1l21 $path2l21";
+    my $n = dzsys::chompticks("$commandl12 | wc -l");
+    # Nechat corpmana vyrobit krok se spojeným zarovnáním včetně registrace.
+    dzsys::saferun("OUTCORP=$corpus OUTLANG=gdfa-$language1-lemma-$language2-lemma OUTFACTS=ali OUTLINECOUNT=$n TAKE_FROM_COMMAND=\"$commandl12\" eman init corpus --start") or die;
+    dzsys::saferun("OUTCORP=$corpus OUTLANG=gdfa-$language2-lemma-$language1-lemma OUTFACTS=ali OUTLINECOUNT=$n TAKE_FROM_COMMAND=\"$commandl21\" eman init corpus --start") or die;
+    # Počkat na dokončení kroků corpus. Další úpravy můžeme provádět teprve ve chvíli, kdy budou data na místě.
+    dzsys::saferun('eman wait `eman select l 2`');
+    # Zjistit cesty k nově vytvořeným krokům se zarovnáními (nikoli přímo k souborům se zarovnáními).
+    my $pathl12 = find_corpus("$corpus/gdfa-$language1-lemma-$language2-lemma+ali"); $pathl12 =~ s-/corpus\.txt\.gz$--;
+    my $pathl21 = find_corpus("$corpus/gdfa-$language2-lemma-$language1-lemma+ali"); $pathl21 =~ s-/corpus\.txt\.gz$--;
+    # Krok corpus pojmenoval soubory corpus.txt.gz. Přejmenovat je na alignment.gz.
+    dzsys::saferun("mv $pathl12/corpus.txt.gz $pathl12/alignment.gz");
+    dzsys::saferun("mv $pathl21/corpus.txt.gz $pathl21/alignment.gz");
+    # Krok corpus si myslí, že pracoval pouze se symetrizací gdfa, a podle toho také svůj výtvor zaregistroval.
+    # My ale víme, že ve skutečnosti obsahovala všech 8 známých symetrizačních heuristik. Přeregistrovat.
+    open(CIL12, ">$pathl12/corpman.info") or die("Cannot write to $pathl12/corpman.info: $!");
+    open(CIL21, ">$pathl21/corpman.info") or die("Cannot write to $pathl21/corpman.info: $!");
+    my $i = 1;
+    foreach my $sym qw(gdf revgdf gdfa revgdfa left right int union)
+    {
+        print CIL12 ("alignment.gz\t$i\t$corpus\t$sym-$language1-lemma-$language2-lemma\tali\t$n\n");
+        print CIL21 ("alignment.gz\t$i\t$corpus\t$sym-$language2-lemma-$language1-lemma\tali\t$n\n");
+        $i++;
+    }
+    close(CIL12);
+    close(CIL21);
+    # Nakonec se ujistit, že corpman ví o nově vytvořených korpusech.
+    dzsys::saferun("corpman reindex") or die;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Returns absolute path to corpus file. Note that given corpus specification
+# may refer to just one column of the file but the function just points to the
+# whole file.
+#------------------------------------------------------------------------------
+sub find_corpus
+{
+    my $spec = shift;
+    my $corpman = dzsys::chompticks("corpman $spec");
+    my @corpman = split(/\s+/, $corpman);
+    my $path = "$ENV{STATMT}/playground/$corpman[0]/$corpman[1]";
+    return $path;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Vzhledem k tomu, že spojená zarovnání nemáme v kroku align, ale corpus,
+# musíme krok tm zakládat trochu jinak a dodat některé údaje, které by se jinak
+# dědily od kroku align.
+#------------------------------------------------------------------------------
+sub create_tm_for_combined_corpus
+{
+    my $corpus = shift; # corpus name
+    my $language1 = shift;
+    my $language2 = shift;
+    my $mosesstep = find_step('mosesgiza', 'd');
+    # Combined corpora typically involve large parts such as the UN corpus and tens of millions of lines.
+    # We will thus require large amounts of memory and disk space.
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
 }
