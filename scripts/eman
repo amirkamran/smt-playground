@@ -2389,10 +2389,13 @@ sub load_autotag_rules {
     next if /^\s*#/ || /^\s*$/;
     my @cols = split / *\t */;
     my $steptype = shift @cols;
-    my $source = shift @cols;
-    $out->{$steptype}->{$source} = [] if !defined $out->{$steptype}->{$source};
-    push @{$out->{$steptype}->{$source}}, [ @cols ];
-    print STDERR "Autotag rules based on $source of $steptype: $_\n" if $debug;
+    my $sources = shift @cols;
+    my @sources = split(/\|/, $sources);
+    foreach my $source (@sources) {
+      $out->{$steptype}->{$source} = [] if !defined $out->{$steptype}->{$source};
+      push @{$out->{$steptype}->{$source}}, [ @cols ];
+      print STDERR "Autotag rules based on $source of $steptype: $_\n" if $debug;
+    }
   }
   close $h;
   return $out;
