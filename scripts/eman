@@ -106,6 +106,7 @@ my $do_outdate = 0;
 my $add_tag = undef; # for newly inited steps, add the given tags
 my $subst = undef;
 my $avoid = undef;
+my $avoid_more = undef; # corresponds to --redo
 my $reuse = undef;
 my $ignore = undef; # like avoid but may include just steptype, not fully
                     # qualified steps
@@ -174,6 +175,7 @@ my %options = (
   "s|subst=s@" => \$subst,
   "avoid=s@" => \$avoid,
   "reuse=s@" => \$reuse,
+  "redo=s@" => \$avoid_more,
   "ignore=s@" => \$ignore,
   "all-avoid!" => \$avoid_all,
   "add-tag|addtag=s@" => \$add_tag,
@@ -193,10 +195,6 @@ my %options = (
   "subdir=s"=>\$subdir,
 );
 GetOptions(%options) or exit 1;
-
-my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
-my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
-my %ignore = map { ($_,1) } @$ignore if defined $ignore;
 
 # colorize regex outputs if substituting and output is terminal (or wished)
 if ($colorize || (!defined $colorize && -t STDOUT)) {
@@ -272,6 +270,14 @@ if (-e $subdirs_file) {
   }
 }
 chdir($oldwd) or die "Failed to chdir back to $oldwd";
+
+
+# Interpret various cmdline options
+my %avoid = map { (guess_step($_),1) } @$avoid if defined $avoid;
+my %reuse = map { (guess_step($_),1) } @$reuse if defined $reuse;
+my %ignore = map { ($_,1) } @$ignore if defined $ignore;
+my %avoid_more = map { ($_,1) } @$avoid_more if defined $avoid_more;
+
 
 ## Helper commands for bash scripting of seeds
 ## These commands do not need index at all, they do not even read it
@@ -1156,6 +1162,8 @@ sub init_by_recipe {
   if (defined $idx->{$thisname} && $idx->{$thisname} eq $hash
       && step_good_to_reuse($thisname)
       && !$avoid{$thisname}
+      && !$avoid_more{$thisname}
+      && !$avoid_more{$thissteptype}
       ) {
     print STDERR "The given $thisname actually fits.\n" if $debug;
     $knownstep = $thisname;
@@ -1200,6 +1208,8 @@ sub find_usable_step_given_hash {
     foreach my $k (@$knownsteps) {
       print STDERR "Considering old: $k\n" if $debug;
       next if $avoid{$k};
+      next if $avoid_more{$k};
+      next if $avoid_more{get_steptype($k)};
         # an explicit wish to ignore this step
       if ($reuse{$k}) {
         # an explicit wish to use this step, ignore all other options
@@ -3200,7 +3210,9 @@ eman, experiment manager
   eman redo SPEC             # equals 'eman tb --vars SPEC | eman clone'
                              # good predecessors are reused by default
     --reuse=SPEC             #   reuse the given step (incl. predecs.)
+    --ignore=STEPTYPE        #   reuse steps of the given type
     --avoid=SPEC             #   don't reuse the given step in the clone
+    --redo=STEPTYPE          #   don't reuse any steps of the given type
     --all-avoid              #   avoid all input steps
     --start                  # after init/clone/redo, submit to queue
 
