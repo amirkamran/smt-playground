@@ -31,10 +31,10 @@ csNmT1	stc	csNmT1-stc	ali	../../scripts/make_identity_ali.pl
 
 ta_txt	untoken	ta	form	/home/bojar/diplomka/granty/emplus/wmt12/playground/s.moses.542a93b3.20120115-0115/moses/scripts/tokenizer/tokenizer.perl
 
-csNmT1  form|lemma|tag  csNmT1  lof             ../../scripts/construct_lof.pl
-csNmT1  tag     csNmT1  mot0    ../../scripts/construct_mot.pl --scheme=""Z-1\|P-1\|R-0,4\|*-1,3,9,10""
-#csNmT1 tag     csNmT1  mot1    ../../scripts/construct_mot.pl --scheme=""Z-0,1\|P-0,1\|R-0,4\|*-0,1,3,9,10""
-csNmT1  tag     csNmT1  mot5    ../../scripts/construct_mot.pl --scheme=""Z-0,1\|R-0,4\|N-0,2,3,4,7,10\|A-0,2,3,4,9,10\|V-0,2,3,4,8,11\|P-0,1,2,3,4,5\|*-0,3,9,10""
-csNmT1  lof|mot0        csNmT1  lofplusmot0     sed '\'s/\|/+/g\''
-csNmT1  lof|mot5        csNmT1  lofplusmot5     sed '\'s/\|/+/g\''
-csNmT1  lof1|mot5       csNmT1  lof1plusmot5    sed '\'s/\|/+/g\''
+csNmT1 	form|lemma|tag	csNmT1	lof         	../../scripts/construct_lof.pl
+csNmT1 	tag           	csNmT1	mot0        	../../scripts/construct_mot.pl --scheme=""Z-1\|P-1\|R-0,4\|*-1,3,9,10""
+#csNmT1	tag           	csNmT1	mot1        	../../scripts/construct_mot.pl --scheme=""Z-0,1\|P-0,1\|R-0,4\|*-0,1,3,9,10""
+csNmT1 	tag           	csNmT1	mot5        	../../scripts/construct_mot.pl --scheme=""Z-0,1\|R-0,4\|N-0,2,3,4,7,10\|A-0,2,3,4,9,10\|V-0,2,3,4,8,11\|P-0,1,2,3,4,5\|*-0,3,9,10""
+csNmT1 	lof|mot0      	csNmT1	lofplusmot0 	sed '\'s/\|/+/g\''
+csNmT1 	lof|mot5      	csNmT1	lofplusmot5 	sed '\'s/\|/+/g\''
+csNmT1 	lof1|mot5     	csNmT1	lof1plusmot5	sed '\'s/\|/+/g\''
