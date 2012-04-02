@@ -2979,6 +2979,18 @@ sub filter_steps
                 @steps = @new_steps;
                 splice(@args); # already used to filter the user-steps
             }
+            # only local steps
+            when ("local")
+            {
+              guess_maindir();
+              @steps = grep { -d "$maindir/$_" } @steps;
+            }
+            # only remote/subdir steps
+            when ("remote")
+            {
+              guess_maindir();
+              @steps = grep { ! -d "$maindir/$_" } @steps;
+            }
             # Unknown filter command.
             default
             {
