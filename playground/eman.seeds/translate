@@ -85,8 +85,8 @@ if [ $JOBS == 0 ]; then
   GRIDARGS=""
   MOSESMAYPARALLEL="./moses $SEARCHFLAG $MOSESFLAGS"
 else
-  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
-  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -100 -cwd -S /bin/bash ' "
+  MERTGRIDARGS="--jobs=$JOBS --queue-flags=' -p -100 $GRIDFLAGS -cwd -S /bin/bash ' "
+  MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' -p -100 $GRIDFLAGS -cwd -S /bin/bash ' "
   MOSESMAYPARALLEL="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -feed-decoder-via-stdin -decoder ./moses"
 fi
 
