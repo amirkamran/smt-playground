@@ -383,7 +383,7 @@ foreach $lmcorpus (@lmcorpora)
             # These may be memory-intensive for some of the larger language models we use.
             # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
             # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-            my $memory = '15g';
+            my $memory = $lmcorpus =~ m/gigaword/ ? '30g' : '15g';
             my $gridfl = "\"-hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
             dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep1 DEVCORP=wmt10v6b eman init mert --start");
             dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep2 DEVCORP=wmt10v6b eman init mert --start");
@@ -565,6 +565,30 @@ sub find_lm
         {
             my $mono = parallel_to_mono($parallel_corpus, $language);
             return find_step('lm', "v CORP=$mono+news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language v CORPAUG=$language+stc");
+        }
+        elsif($lmcorpus eq 'gigaword')
+        {
+            # Gigaword je k dispozici pro angličtinu, španělštinu a francouzštinu, ale ne pro češtinu a němčinu.
+            # Abychom si ušetřili kontroly na mnoha jiných místech, podstrčíme pro tyto dva jazyky místo Gigawordu něco jiného.
+            if($language =~ m/^(en|es|fr)$/)
+            {
+                return find_step('lm', "v CORP=gigaword.$language v CORPAUG=$language+stc");
+            }
+            else
+            {
+                my $mono = parallel_to_mono($parallel_corpus, $language);
+                return find_step('lm', "v CORP=$mono v CORPAUG=$language+stc");
+            }
+        }
+        elsif($lmcorpus =~ m/^\+gigaword$/)
+        {
+            my $mono0 = parallel_to_mono($parallel_corpus, $language);
+            my $mono1;
+            if($language =~ m/^(en|es|fr)$/)
+            {
+                $mono1 = "+gigaword.$language";
+            }
+            return find_step('lm', "v CORP=$mono0$mono1 v CORPAUG=$language+stc");
         }
         else
         {

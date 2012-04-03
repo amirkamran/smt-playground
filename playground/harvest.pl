@@ -11,7 +11,7 @@ binmode(STDERR, ':utf8');
 use dzsys;
 
 # Make sure that all evaluator steps have a tag that identifies the corpora used.
-dzsys::saferun("tagevals > /dev/null") or die;
+dzsys::saferun("eman retag") or die;
 # Ask Eman to collect names, states, tags and scores of all evaluator steps.
 if(!-f 'eman.results.conf')
 {
