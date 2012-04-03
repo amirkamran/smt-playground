@@ -39,14 +39,10 @@ while(<RES>)
         'tags'    => $fields[4]
     );
     next unless($record{state} eq 'DONE');
-    if($record{tags} =~ m/SRCAUG=(.*?),TGTAUG=(.*?),/)
+    if($record{tags} =~ m/S:(.*?)\s+T:(.*?)\s/)
     {
         $record{pair} = "$1-$2";
-        # We may concern about factors later but currently there is always '+stc'.
-        $record{pair} =~ s/\+stc//g;
     }
-    # We are only interested in the first combined tag ("A:SRCAUG..."). Erase the rest.
-    $record{tags} =~ s/^(A:SRCAUG=\S+).*$/$1/;
     push(@results, \%record);
 }
 close(RES);
