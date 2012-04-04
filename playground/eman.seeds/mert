@@ -63,6 +63,11 @@ echo Checking tuning corp size
 MERTMOSES="\$SCRIPTS_ROOTDIR/training/mert-moses.pl"
 ZMERTMOSES="\$SCRIPTS_ROOTDIR/training/zmert-moses.pl"
 
+
+if [[ "$MOSESFLAGS" != *\-dl*  ]]; then
+  MOSESFLAGS="-dl 6 $MOSESFLAGS"
+fi
+
 if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
@@ -107,7 +112,7 @@ $ZMERTMOSES \
     $ZMERTFLAGS \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
-  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
+  --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
   || die "Mert failed"
 KONEC
 ;;
@@ -121,7 +126,7 @@ $MERTMOSES \
   \`pwd\`/moses.abs.ini \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
-  --decoder-flags="-dl 6 $MOSESFLAGS $SEARCHFLAG" \\
+  --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
   || die "Mert failed"
 KONEC
 ;;

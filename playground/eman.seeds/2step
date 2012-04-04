@@ -18,7 +18,9 @@ eman \
   defvar REFAUG inherit=PHASE2MERT:REFAUG \
   defvar MIDAUG inherit=PHASE2MERT:SRCAUG \
   defvar SEARCH help="beam or cube" default=cube \
-  defvar MOSESFLAGS help="any further flags" default='' \
+  defvar MOSESFLAGS help="any further flags for both steps" default='' \
+  defvar PHASE1MOSESFLAGS help="any further flags for step1 steps" default='' \
+  defvar PHASE2MOSESFLAGS help="any further flags for step2 steps" default='' \
   defvar GRIDFLAGS help="any further flags" default='' \
   defvar SERIAL help="yes to disable qsub" default='' \
   defvar STACK help="stacksize" default='' \
@@ -72,10 +74,12 @@ fi
 
 if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
-  MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
+  STEP1MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS $PHASE1MOSESFLAGS"
+  STEP2MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS $PHASE2MOSESFLAGS"
 else
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
-  MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -decoder ./moses"
+  STEP1MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS $PHASE1MOSESFLAGS' -decoder ./moses"
+  STEP2MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS $PHASE2MOSESFLAGS' -decoder ./moses"
 fi
 
 case "$SEARCH" in
@@ -175,7 +179,7 @@ cd ..
   ./phase1model/moses.opt.ini evaluation.in \\
   || die "Filter for phase 1 failed"
 
-$MOSESPARALLELIZER \\
+$STEP1MOSESPARALLELIZER \\
   -input-file ./evaluation.in \\
   -alignment-output-file ./evaluation.mid.ali \\
   -config ./filtered-for-phase1/moses.ini \\
@@ -203,7 +207,7 @@ cd ..
   ./phase2model/moses.opt.ini evaluation.mid \\
   || die "Filter for phase 2 failed"
 
-$MOSESPARALLELIZER \\
+$STEP2MOSESPARALLELIZER \\
   -input-file ./evaluation.mid \\
   -alignment-output-file ./evaluation.2nd.ali \\
   -config ./filtered-for-phase2/moses.ini \\
