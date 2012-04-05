@@ -294,8 +294,9 @@ foreach $lmcorpus (@lmcorpora)
         foreach my $corpus (@parallel_training_corpora)
         {
             my ($language1, $language2) = get_language_codes($corpus);
-            my $alignstep1 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language1+lemma v TGTALIAUG=$language2+lemma");
-            my $alignstep2 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language2+lemma v TGTALIAUG=$language1+lemma");
+            my $alignfactor = $use_morphemes ? 'stc' : 'lemma';
+            my $alignstep1 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language1+$alignfactor v TGTALIAUG=$language2+$alignfactor");
+            my $alignstep2 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language2+$alignfactor v TGTALIAUG=$language1+$alignfactor");
             # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
             dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep1 SRCAUG=$language1+stc TGTAUG=$language2+stc DECODINGSTEPS=t0-0 eman init tm --start");
             dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep2 SRCAUG=$language2+stc TGTAUG=$language1+stc DECODINGSTEPS=t0-0 eman init tm --start");

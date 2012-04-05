@@ -2890,13 +2890,17 @@ sub filter_steps
             when ("v")
             {
                 my $varexpr = get_eman_select_arg(\@args);
+                # Some values of variables are quoted in the variable string.
+                # If the user specifies unquoted value, search for the quoted one, too.
+                my $qvarexpr = $varexpr;
+                $qvarexpr =~ s/=(.*)$/="$1"/;
                 my @new_steps;
                 for my $step (@steps)
                 {
                     my $varsstr = load_vars_str($step);
                     next if ! $varsstr;
                     my @vars = split /\n/, $varsstr;
-                    push @new_steps, $step if grep { $_ eq $varexpr } @vars;
+                    push @new_steps, $step if grep { $_ eq $varexpr || $_ eq $qvarexpr } @vars;
                 }
                 @steps = @new_steps;
             }
