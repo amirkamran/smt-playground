@@ -42,11 +42,11 @@ fi
 
 # check (if the alistep is indeed an align step and not a trick like idali)
 # whether the corpus matches
-KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS)
+KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS | perl -pe 's/^"(.*)"$/$1/')
 [ "$KNOWNALICORPUS" == "$SRCCORP" ] \
   || [ "$KNOWNALICORPUS" == "" ] \
   || die "Nonmatching alistep: different corpus: $KNOWNALICORPUS vs $SRCCORP"
-KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL)
+KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL | perl -pe 's/^"(.*)"$/$1/')
 [ "$KNOWNALILABEL" == "$ALILABEL" ] \
   || [ "$KNOWNALILABEL" == "" ] \
   || die "Nonmatching alistep: different ALILABEL: $KNOWNALILABEL vs $ALILABEL"
