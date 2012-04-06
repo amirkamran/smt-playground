@@ -3236,6 +3236,9 @@ eman, experiment manager
   eman run SPEC              # run prepared step
   eman continue SPEC         # continue a single step that failed
   eman start SPEC            # prepare and run, incl. all predecessors
+    --priority -200          #   cluster scheduling priority (default: -100)
+    --mem 15g                #   required memory (default: 6g)
+    --disk 20g               #   required space in /mnt/h/tmp
 
   eman guess SPEC            # guess a *single* step based on the jobid
                              # or a substring of the hash, the tag, the
