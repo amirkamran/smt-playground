@@ -118,6 +118,8 @@ foreach my $m (@models)
 {
     &{$start_step{$steptype}}($m);
 }
+# Make sure eman knows about new tags etc.
+dzsys::saferun("eman reindex ; eman qstat");
 # Stop here. The remainder of the code is outdated.
 exit(0);
 # Pozor, stále chceme, aby $lmcorpus byl globální proměnná, takže žádné my!
