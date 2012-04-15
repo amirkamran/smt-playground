@@ -1,0 +1,280 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use List::Util qw( min max );
+use Cwd qw( abs_path cwd );
+use Getopt::Long;
+use File::Temp qw( tempfile );
+
+my $verbose = 0;
+my $max_running_exps = 10;
+my $search = 'greedy';
+my $greedy_nbest = 1;
+
+GetOptions(
+  "v|verbose!" => \$verbose,
+  "m|max-running=i" => \$max_running_exps,
+  "s|search=s" => \$search,
+  "greedy-nbest=i" => \$greedy_nbest,
+) or die get_usage();
+
+my %search_dispatch = (
+  'greedy' => \&search_greedy,
+  'exhaustive' => \&search_exhaust,
+  'genetic' => \&search_genetic,
+  'random' => \&search_random,
+);
+
+die get_usage() if ! defined $ARGV[0] || defined $ARGV[1];
+my $dir = abs_path($ARGV[0]);
+chdir("$dir/..") or die "Can't chdir to playground: $dir/..";
+verbose("My config is: $dir");
+
+my @chunks;
+my @rules;
+my %vars;
+my %created_exps;
+
+# load configuration
+verbose("Loading vars");
+load_vars();
+verbose("Loading rules");
+load_rules();
+verbose("Loading traceback");
+load_traceback();
+
+# run the search
+my $routine = $search_dispatch{$search};
+die "Unknown search type: $search" if ! defined $routine;
+$routine->();
+
+logmessage("Finished");
+
+#
+# subroutines
+#
+
+sub search_greedy
+{
+  my %values;
+  my %experiments;
+
+  # optimize each variable separately
+  for my $var (keys %vars) {    
+    # set all variables to the first value
+    map { $values{$_} = $vars{$_}->[0] } keys %vars;
+
+    for my $value (@{ $vars{$var} }) {
+      $values{$var} = $value;
+      if (rules_allow(\%values)) {
+        push @{ $experiments{$var} }, {
+          value => $value,
+          id => create_experiment(\%values)
+        };
+      }
+    }
+  }
+
+  # run the combination of 1 best value for each var (n-best is TODO)
+  my %bestvals;
+  for my $var (keys %vars) {
+    my $bestscore = undef;
+    for my $exp (@{ $experiments{$var} }) {
+      next if ! defined $exp->{id}; # cloning/starting failed
+      my $score = get_score($exp->{id});
+      if (! defined $bestscore || $score > $bestscore) {
+        $bestscore = $score;
+        $bestvals{$var} = $exp->{value};
+      }
+    }
+  }
+  create_experiment(\%bestvals);
+}
+
+sub create_experiment
+{
+  my $values = shift;
+  logmessage("Trying value combination: ",
+    join(' ', map { "$_=" . $values->{$_} } keys %$values));
+
+  my $traceback = generate_experiment($values);
+
+  # store the traceback in a tempfile
+  my ($tbhdl, $tbfile) = tempfile();
+  verbose("Storing traceback in $tbfile");
+  binmode $tbhdl, ":utf8";
+  print $tbhdl $traceback;
+  close $tbhdl;
+
+  # active waiting
+  sleep 10 while scalar(get_running_exps()) > $max_running_exps;
+  
+  my @outlines = `eman clone < $tbfile 2> $dir/eman.err | tee $dir/eman.out`;
+  if ($? != 0 or ! @outlines) {
+    logerror("cloning traceback failed: $tbfile (eman output is in $dir/eman.*)");
+    return undef;
+  } 
+
+  # everything succeeded
+  unlink $tbfile;
+  $outlines[$#outlines] =~ m/^Root: (.*)$/;
+  my $id = $1;
+  logmessage("created experiment $id, starting");
+  system "eman start $id 2> $dir/eman.err | tee $dir/eman.out";
+  if ($? != 0) {
+    logerror("could not start experiment $id (eman output is in $dir/eman.*)");
+    return undef;
+  }
+  $created_exps{$id} = get_status($id);
+
+  return $id;
+}
+
+sub get_running_exps
+{
+  # update statuses of prospector-created experiments
+  map { $created_exps{$_} = get_status($_) } keys %created_exps;
+
+  my @running = grep { $created_exps{$_} eq "RUNNING" } keys %created_exps;
+  verbose("Number of experiments running: " . scalar @running);
+  return @running;
+}
+
+sub get_status
+{
+  my $id = shift;
+  chomp(my $status = `cat $id/eman.status`);
+  return $status;  
+}
+
+sub generate_experiment
+{
+  my $values = shift;
+
+  # create full traceback from chunks
+  my $traceback;
+  for my $chunk (@chunks) {
+    my $indentlvl = $chunk->{level};
+    my $file = $chunk->{file};
+    open(my $chunkhdl, "<:utf8", "$dir/chunks/$file") or die $!;
+    my $cut = undef;
+    while (<$chunkhdl>) {
+      my $line = $_;
+      if (! defined $cut) {
+        # cut everything to the 1st '+' sign
+        $line =~ m/^([^+]*)/;
+        $cut = length($1);
+      }
+      $line = substr($line, $cut);
+      for (my $i = 0; $i < $indentlvl; $i++) {
+        $line = '|  ' . $line;
+      }
+      $traceback .= $line;
+    }
+    close $chunkhdl;
+  }  
+
+  # substitute variable values
+  map { $traceback =~ s/#$_#/$values->{$_}/g } keys %$values;
+
+  return $traceback;
+}
+
+sub rules_allow
+{
+  my $values = shift;
+  for my $rule (@rules) {
+    if (! defined $values->{ $rule->{match} }
+      || ! defined $values->{ $rule->{constrain} }) {
+      die "Bad rule: " . $rule->{match} . " or " . $rule->{constrain} . " is unknown";
+    }
+    if ($values->{ $rule->{match} } =~ m/$rule->{regex}/) {
+      if ($values->{ $rule->{constrain} } ne $rule->{to}) {
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+sub load_traceback
+{
+  my $indentlen = undef;
+  open(my $tbhdl, "<:utf8", "$dir/traceback") or die $!;
+  while (<$tbhdl>) {
+    chomp;
+    my $line = $_;
+    if (! defined $indentlen && $line =~ m/^(\s+)/) {
+      $indentlen = length($1);
+    }
+
+    # what indentation level is this step on
+    $line =~ m/^(\s*)(.*)$/;
+    my $indentlvl = defined $indentlen ? length($1) / $indentlen : 0;
+    my $file = $2;
+    push @chunks, { level => $indentlvl, file => $file };
+  }
+  close $tbhdl;
+}
+
+sub load_vars
+{
+  open(my $varshdl, "<:utf8", "$dir/vars") or die $!;
+  while (<$varshdl>) {
+    chomp;
+    my ($name, $valuesstr) = split / +/, $_;
+    my @values = split ',', $valuesstr;
+    $vars{$name} = \@values;
+  }
+  close $varshdl;
+}
+
+sub load_rules
+{
+  open(my $ruleshdl, "<:utf8", "$dir/rules") or die $!;
+  while (<$ruleshdl>) {
+    chomp;
+    my $line = $_;
+    $line =~ m/^(\S+)\s+\/(.*)\/\s+(\S+)\s+(.*)$/;
+    die "Bad rule: $line\n" if ! defined $4;
+    my $matched_var = $1;
+    my $regex = $2;
+    my $constrained_var = $3;
+    my $value = $4;
+    push @rules, {
+      match => $matched_var,
+      regex => $regex,
+      constrain => $constrained_var,
+      to => $value
+    };
+  }  
+  close $ruleshdl;
+}
+
+sub get_usage
+{
+  return "Usage: prospector [options] config-directory\n";
+}
+
+sub logerror
+{
+  print STDERR get_timestamp() . "\tERROR: @_\n";
+}
+
+sub logmessage
+{
+  print STDERR get_timestamp() . "\t@_\n";
+}
+
+sub verbose
+{
+  print STDERR get_timestamp() . "\t@_\n" if $verbose;
+}
+
+sub get_timestamp
+{
+  my ($sec, $min, $hour, $mday, $mon, $year) = localtime(time);
+  return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+    $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
+}
