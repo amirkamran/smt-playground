@@ -7,7 +7,9 @@
 # inlng	infacts       	outlng	outfacts      	command
 *      	form          	*     	lc            	lowercase.pl
 *      	form|lemma    	*     	stc           	../tools/add_truecased_form.pl 0:1:0:1 --replace-form --no-info | reduce_factors.pl 0
+*      	lc            	*     	lcstem3       	../../scripts/stem_factor.pl --stem=3
 *      	lc            	*     	lcstem4       	../../scripts/stem_factor.pl --stem=4
+*      	lc            	*     	lcstem5       	../../scripts/stem_factor.pl --stem=5
 *      	form            	*     	stem4       	../../scripts/stem_factor.pl --stem=4
 *      	form            	*     	stem3       	../../scripts/stem_factor.pl --stem=3
 *      	form            	*     	stem5       	../../scripts/stem_factor.pl --stem=5
