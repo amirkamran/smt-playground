@@ -11,12 +11,18 @@ my $verbose = 0;
 my $max_running_exps = 10;
 my $search = 'greedy';
 my $greedy_nbest = 1;
+my $genetic_population = 20;
+my $genetic_nbest = 8;
+my $genetic_mutation_prob = 0.05;
 
 GetOptions(
   "v|verbose!" => \$verbose,
   "m|max-running=i" => \$max_running_exps,
   "s|search=s" => \$search,
   "greedy-nbest=i" => \$greedy_nbest,
+  "genetic-population-size=i" => \$genetic_population,
+  "genetic-nbest=i" => \$genetic_nbest,
+  "genetic-mutation-prob=f" => \$genetic_mutation_prob,
 ) or die get_usage();
 
 my %search_dispatch = (
@@ -90,6 +96,67 @@ sub search_greedy
     }
   }
   create_experiment(\%bestvals);
+}
+
+sub search_genetic
+{
+  my @population;
+
+  # random initial population
+  for (my $i = 0; $i < $genetic_population; $i++) {
+    my %specimen;
+    for my $var (keys %vars) {
+      my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
+      $specimen{$var} = $vars{$var}->[$rnd];
+    }
+    push @population, {
+      specimen => \%specimen,
+      id => create_experiment(\%specimen)
+    };
+  }
+
+  my $last_best = undef;
+
+  my @next_population;
+  @population = sort {
+    get_score($b->{id}) <=> get_score($a->{id})
+  } @population;
+
+  logmessage("Survived: " . scalar(@population));
+  my @best = @population[0 .. min($#population, $genetic_nbest)];
+
+  for (my $i = 0; $i < $genetic_population; $i++) {
+    my $parent_count = scalar(@best);
+
+    # random first parent
+    my $first = int(rand($parent_count));
+
+    # random second parent, but different from first
+    my $second = int(rand($parent_count - 1));
+    $second++ if $second >= $first;
+
+    # create the child
+    my %specimen;
+    for my $var (keys %vars) {
+      # recombination
+      if (rand() < 0.5) {
+        $specimen{$var} = $best[$first];
+      } else {
+        $specimen{$var} = $best[$second];
+      }
+
+      # mutation
+      if (rand() < $genetic_mutation_prob) {
+        my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
+        $specimen{$var} = $vars{$var}->[$rnd];
+      }
+    }
+
+    push @next_population, {
+      specimen => \%specimen,
+      id => create_experiment(\%specimen)
+    };
+  }
 }
 
 sub create_experiment
