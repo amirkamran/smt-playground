@@ -25,7 +25,13 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+# Zvláštní jednorázové úkoly.
+if($steptype eq 'special')
+{
+    continue_lm_memory();
+    exit(0);
+}
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
 my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
 # Vytvořit si seznam paralelních trénovacích korpusů. Budeme z něj vycházet při zakládání jednotlivých kroků.
@@ -943,4 +949,76 @@ sub create_tm_for_combined_corpus
     # We will thus require large amounts of memory and disk space.
     dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
     dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
+}
+
+
+
+#==============================================================================
+# MAINTENANCE SUBROUTINES
+# Which steps failed, what was the reason and restarting them.
+#==============================================================================
+
+
+
+#------------------------------------------------------------------------------
+# Identifies language model steps killed by the cluster because of exceeding
+# memory quota. Restarts them with higher memory requirement.
+#------------------------------------------------------------------------------
+sub continue_lm_memory
+{
+    # Look for steps that have failed and are marked as failed,
+    # or for those that are still marked as running (but not known to cluster)?
+    my $select_failed = 1;
+    my @steps;
+    if($select_failed)
+    {
+        @steps = split(/\n/, dzsys::chompticks('eman select t lm f'));
+    }
+    else
+    {
+        @steps = split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
+    }
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        # Get all log file names of all previous attempts to do this step.
+        my @logs = split(/\n/, dzsys::chompticks("ls $step | grep -P 'log\.o[0-9]+'"));
+        if(scalar(@logs)==0)
+        {
+            print("No log file found!\n");
+        }
+        else
+        {
+            # Take the last log.
+            # Hope that all job ids have the same number of digits so that lexicographic sorting will be equivalent to numeric.
+            @logs = sort(@logs);
+            my $log = $logs[-1];
+            my $logpath = "$step/$log";
+            my $limitsline = dzsys::chompticks("grep '== Limits:' $logpath");
+            my $memory = 6;
+            if($limitsline =~ m/mem_free=(\d+)g/)
+            {
+                $memory = $1;
+            }
+            unless($select_failed)
+            {
+                # Change the state to FAILED, which is what it really is.
+                dzsys::saferun("eman fail $step");
+            }
+            # Do we have machines with more memory?
+            if($memory>=500)
+            {
+                print("Even 500g of memory was not enough, giving up.\n");
+                next;
+            }
+            $memory *= 2;
+            $memory = 30 if($memory<30);
+            $memory = 500 if($memory>500);
+            # Re-run the step with higher memory requirement.
+            # Set the highest possible priority because it may be more difficult to get a better machine.
+            dzsys::saferun("eman continue $step --mem ${memory}g --priority 0");
+            $n++;
+        }
+    }
+    print("Restarted $n steps.\n");
 }
