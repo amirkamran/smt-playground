@@ -50,6 +50,10 @@ load_rules();
 verbose("Loading traceback");
 load_traceback();
 
+# clear past eman logs
+unlink "$dir/eman.out";
+unlink "$dir/eman.err";
+
 # run the search
 my $routine = $search_dispatch{$search};
 die "Unknown search type: $search" if ! defined $routine;
@@ -174,7 +178,8 @@ sub search_genetic
 
 sub get_score
 {
-  my $score = `$dir/score`;
+  my $id = shift;
+  my $score = `$dir/score $dir/../$id`;
   return chomp $score;
 }
 
@@ -215,7 +220,7 @@ sub create_experiment
   # active waiting
   sleep 10 while scalar(get_running_exps()) > $max_running_exps;
   
-  my @outlines = `eman clone < $tbfile 2> $dir/eman.err | tee $dir/eman.out`;
+  my @outlines = `eman clone < $tbfile 2>> $dir/eman.err | tee -a $dir/eman.out`;
   if ($? != 0 or ! @outlines) {
     logerror("cloning traceback failed: $tbfile (eman output is in $dir/eman.*)");
     return undef;
@@ -226,7 +231,7 @@ sub create_experiment
   $outlines[$#outlines] =~ m/^Root: (.*)$/;
   my $id = $1;
   logmessage("created experiment $id, starting");
-  system "eman start $id 2> $dir/eman.err | tee $dir/eman.out";
+  system "eman start $id 2>> $dir/eman.err | tee -a $dir/eman.out";
   if ($? != 0) {
     logerror("could not start experiment $id (eman output is in $dir/eman.*)");
     return undef;
