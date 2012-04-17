@@ -69,6 +69,7 @@ sub search_greedy
 {
   my %values;
   my %experiments;
+  my @ids;
 
   # optimize each variable separately
   for my $var (keys %vars) {    
@@ -78,13 +79,17 @@ sub search_greedy
     for my $value (@{ $vars{$var} }) {
       $values{$var} = $value;
       if (rules_allow(\%values)) {
+        my $id = create_experiment(\%values);
+        push @ids, $id;
         push @{ $experiments{$var} }, {
           value => $value,
-          id => create_experiment(\%values)
+          id => $id
         };
       }
     }
   }
+
+  wait_for_exps(@ids);
 
   # run the combination of 1 best value for each var (n-best is TODO)
   my %bestvals;
@@ -125,7 +130,7 @@ sub search_genetic
     }
   }
 
-  logmessage("Survived: " . scalar(@population));
+  wait_for_exps(map { $_->{id} } @population);
   my @best = get_population_best(\@population, $genetic_nbest);
 
   # spawn new generations while score improves
@@ -165,6 +170,7 @@ sub search_genetic
         };
       }
     }
+    wait_for_exps(map { $_->{id} } @next_population);
     
     my $last_best = get_score( (get_population_best(\@population, 1))[0] );
     my $current_best = get_score( (get_population_best(\@next_population, 1))[0] );
@@ -176,11 +182,52 @@ sub search_genetic
   }
 }
 
+sub search_exhaust
+{
+  my @combinations = list_exhaust();
+  logmessage("Possible combinations: " . scalar @combinations);
+}
+
+sub list_exhaust
+{
+  my @all_combinations = list_var_values(keys %vars);
+  return grep { rules_allow($_) } @all_combinations;
+}
+
+sub list_var_values
+{
+  my @varlist = @_;
+  my $var = shift @varlist;
+  my @without_var;
+
+  if (@varlist) {
+    @without_var = list_exhaust(@varlist);
+  } else {
+    push @without_var, {}; # start with ref to empty hash
+  }
+
+  my @with_var;
+  for my $value ($vars{$varlist[0]}) {
+    for my $combination (@without_var) {
+      my %new = %$combination;
+      $new{$var} = $value;
+      push @with_var, \%new;
+    }
+  }
+
+  return @with_var;
+}
+
 sub get_score
 {
   my $id = shift;
-  my $score = `$dir/score $dir/../$id`;
-  return chomp $score;
+  return undef if ! defined $id;
+  my $score = `$dir/score $dir/../$id 2> /dev/null`;
+  if ($score) {
+    return chomp $score;
+  } else {
+    return undef; # empty output means that something went wrong
+  }
 }
 
 sub get_population_best
@@ -254,8 +301,24 @@ sub get_running_exps
 sub get_status
 {
   my $id = shift;
-  chomp(my $status = `cat $id/eman.status`);
+  my $status;
+  if (-f "$id/eman.status") {
+    chomp($status = `cat $id/eman.status`);
+  } else {
+    $status = 'NONEXISTENT';
+  }
   return $status;  
+}
+
+sub wait_for_exps
+{
+  my @ids = grep { defined $_ } @_;
+  my $contains_active = 1;
+  while ($contains_active) {
+    $contains_active = grep { $_ eq 'RUNNING' } map { get_status($_) } @ids;
+    verbose("Waiting for $contains_active running experiments");
+    sleep 10 if $contains_active;
+  }
 }
 
 sub generate_experiment
