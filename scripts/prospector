@@ -182,10 +182,33 @@ sub search_genetic
   }
 }
 
+sub get_population_best
+{
+  my $population = shift;
+  my $count = shift;
+
+  my @sorted = sort {
+    my $score_first = get_score($a->{id});
+    my $score_second = get_score($b->{id});
+    if (! defined $score_first) {
+      defined $score_second ? 1 : 0;    
+    } elsif (! defined $score_second) {
+      -1;
+    } else {
+      $score_second <=> $score_first;
+    }
+  } @$population;
+  return @sorted[0 .. min(scalar(@$population) - 1, $count)];
+}
+
 sub search_exhaust
 {
   my @combinations = list_exhaust();
   logmessage("Possible combinations: " . scalar @combinations);
+#   for my $combination (@combinations) {
+#   logmessage("Trying value combination: ",
+#     join(' ', map { "$_=" . $combination->{$_} } keys %$combination));
+#   }
 }
 
 sub list_exhaust
@@ -201,13 +224,13 @@ sub list_var_values
   my @without_var;
 
   if (@varlist) {
-    @without_var = list_exhaust(@varlist);
+    @without_var = list_var_values(@varlist);
   } else {
     push @without_var, {}; # start with ref to empty hash
   }
 
   my @with_var;
-  for my $value ($vars{$varlist[0]}) {
+  for my $value (@{ $vars{$var} }) {
     for my $combination (@without_var) {
       my %new = %$combination;
       $new{$var} = $value;
@@ -228,25 +251,6 @@ sub get_score
   } else {
     return undef; # empty output means that something went wrong
   }
-}
-
-sub get_population_best
-{
-  my $population = shift;
-  my $count = shift;
-
-  my @sorted = sort {
-    my $score_first = get_score($a->{id});
-    my $score_second = get_score($b->{id});
-    if (! defined $score_first) {
-      defined $score_second ? 1 : 0;    
-    } elsif (! defined $score_second) {
-      -1;
-    } else {
-      $score_second <=> $score_first;
-    }
-  } @$population;
-  return @sorted[0 .. min(scalar(@$population) - 1, $count)];
 }
 
 sub create_experiment
@@ -364,6 +368,10 @@ sub rules_allow
     }
     if ($values->{ $rule->{match} } =~ m/$rule->{regex}/) {
       if ($values->{ $rule->{constrain} } ne $rule->{to}) {
+
+        verbose("$rule->{match}=$values->{ $rule->{match} } matches /$rule->{regex}/"
+          . " and $rule->{constrain}!=$rule->{to}");
+
         return 0;
       }
     }
