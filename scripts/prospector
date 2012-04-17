@@ -205,10 +205,8 @@ sub search_exhaust
 {
   my @combinations = list_exhaust();
   logmessage("Possible combinations: " . scalar @combinations);
-#   for my $combination (@combinations) {
-#   logmessage("Trying value combination: ",
-#     join(' ', map { "$_=" . $combination->{$_} } keys %$combination));
-#   }
+  for my $combination (@combinations) {
+  }
 }
 
 sub list_exhaust
