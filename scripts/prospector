@@ -95,7 +95,11 @@ sub search_greedy
       }
     }
   }
-  create_experiment(\%bestvals);
+  if (rules_allow(\%bestvals)) {
+    create_experiment(\%bestvals);
+  } else {
+    logerror("Could not start optimal setup, value combination not allowed.");
+  }
 }
 
 sub search_genetic
@@ -103,60 +107,94 @@ sub search_genetic
   my @population;
 
   # random initial population
-  for (my $i = 0; $i < $genetic_population; $i++) {
+  while (scalar(@population) < $genetic_population) {
     my %specimen;
     for my $var (keys %vars) {
       my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
       $specimen{$var} = $vars{$var}->[$rnd];
     }
-    push @population, {
-      specimen => \%specimen,
-      id => create_experiment(\%specimen)
-    };
+    if (rules_allow(\%specimen)) {
+      push @population, {
+        specimen => \%specimen,
+        id => create_experiment(\%specimen)
+      };
+    }
   }
-
-  my $last_best = undef;
-
-  my @next_population;
-  @population = sort {
-    get_score($b->{id}) <=> get_score($a->{id})
-  } @population;
 
   logmessage("Survived: " . scalar(@population));
-  my @best = @population[0 .. min($#population, $genetic_nbest)];
+  my @best = get_population_best(\@population, $genetic_nbest);
 
-  for (my $i = 0; $i < $genetic_population; $i++) {
-    my $parent_count = scalar(@best);
+  # spawn new generations while score improves
+  my @next_population;
+  while (1) {
+    while (scalar @next_population < $genetic_population) {
+      my $parent_count = scalar(@best);
 
-    # random first parent
-    my $first = int(rand($parent_count));
+      # random first parent
+      my $first = int(rand($parent_count));
 
-    # random second parent, but different from first
-    my $second = int(rand($parent_count - 1));
-    $second++ if $second >= $first;
+      # random second parent, but different from first
+      my $second = int(rand($parent_count - 1));
+      $second++ if $second >= $first;
 
-    # create the child
-    my %specimen;
-    for my $var (keys %vars) {
-      # recombination
-      if (rand() < 0.5) {
-        $specimen{$var} = $best[$first];
-      } else {
-        $specimen{$var} = $best[$second];
+      # create the child
+      my %specimen;
+      for my $var (keys %vars) {
+        # recombination
+        if (rand() < 0.5) {
+          $specimen{$var} = $best[$first];
+        } else {
+          $specimen{$var} = $best[$second];
+        }
+
+        # mutation
+        if (rand() < $genetic_mutation_prob) {
+          my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
+          $specimen{$var} = $vars{$var}->[$rnd];
+        }
       }
 
-      # mutation
-      if (rand() < $genetic_mutation_prob) {
-        my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
-        $specimen{$var} = $vars{$var}->[$rnd];
+      if (rules_allow(\%specimen)) {
+        push @next_population, {
+          specimen => \%specimen,
+          id => create_experiment(\%specimen)
+        };
       }
     }
+    
+    my $last_best = get_score( (get_population_best(\@population, 1))[0] );
+    my $current_best = get_score( (get_population_best(\@next_population, 1))[0] );
 
-    push @next_population, {
-      specimen => \%specimen,
-      id => create_experiment(\%specimen)
-    };
+    # stop if score did not increase
+    last if ($current_best <= $last_best);
+
+    @population = @next_population;
   }
+}
+
+sub get_score
+{
+  my $score = `$dir/score`;
+  return chomp $score;
+}
+
+sub get_population_best
+{
+  my $population = shift;
+  my $count = shift;
+
+  my @sorted = sort {
+    my $score_first = get_score($a->{id});
+    my $score_second = get_score($b->{id});
+    if (! defined $score_first) {
+      defined $score_second ? 1 : 0;    
+    } elsif (! defined $score_second) {
+      -1;
+    } else {
+      $score_second <=> $score_first;
+    }
+  } @$population;
+  return @sorted[0 .. min(scalar(@$population) - 1, $count)];
 }
 
 sub create_experiment
