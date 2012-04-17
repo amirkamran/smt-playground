@@ -14,6 +14,7 @@ my $greedy_nbest = 1;
 my $genetic_population = 20;
 my $genetic_nbest = 8;
 my $genetic_mutation_prob = 0.05;
+my $random_limit = 50;
 
 GetOptions(
   "v|verbose!" => \$verbose,
@@ -23,6 +24,7 @@ GetOptions(
   "genetic-population-size=i" => \$genetic_population,
   "genetic-nbest=i" => \$genetic_nbest,
   "genetic-mutation-prob=f" => \$genetic_mutation_prob,
+  "random-limit=i" => \$random_limit,
 ) or die get_usage();
 
 my %search_dispatch = (
@@ -49,6 +51,8 @@ verbose("Loading rules");
 load_rules();
 verbose("Loading traceback");
 load_traceback();
+
+logmessage("Possible combinations: " . scalar list_exhaust());
 
 # clear past eman logs
 unlink "$dir/eman.out";
@@ -151,9 +155,9 @@ sub search_genetic
       for my $var (keys %vars) {
         # recombination
         if (rand() < 0.5) {
-          $specimen{$var} = $best[$first];
+          $specimen{$var} = $best[$first]->{specimen}->{$var};
         } else {
-          $specimen{$var} = $best[$second];
+          $specimen{$var} = $best[$second]->{specimen}->{$var};
         }
 
         # mutation
@@ -204,8 +208,24 @@ sub get_population_best
 sub search_exhaust
 {
   my @combinations = list_exhaust();
-  logmessage("Possible combinations: " . scalar @combinations);
   for my $combination (@combinations) {
+    create_experiment($combination);
+  }
+}
+
+sub search_random
+{
+  my $generated = 0;
+  while ($generated < $random_limit) {
+    my %values;
+    for my $var (keys %vars) {
+      my $rnd = int(rand(scalar @{ $vars{$var} }));
+      $values{$var} = $vars{$var}->[$rnd];
+    }
+    if (rules_allow(\%values)) {
+      create_experiment(\%values);
+      $generated++;
+    }
   }
 }
 
