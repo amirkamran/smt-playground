@@ -10,9 +10,11 @@
 *      	lc            	*     	lcstem3       	../../scripts/stem_factor.pl --stem=3
 *      	lc            	*     	lcstem4       	../../scripts/stem_factor.pl --stem=4
 *      	lc            	*     	lcstem5       	../../scripts/stem_factor.pl --stem=5
+*      	lc            	*     	lcstem6       	../../scripts/stem_factor.pl --stem=6
 *      	form            	*     	stem4       	../../scripts/stem_factor.pl --stem=4
 *      	form            	*     	stem3       	../../scripts/stem_factor.pl --stem=3
 *      	form            	*     	stem5       	../../scripts/stem_factor.pl --stem=5
+*      	form            	*     	stem6       	../../scripts/stem_factor.pl --stem=6
 en_txt 	untoken       	enNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
 cs_txt 	untoken       	csNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
 enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
