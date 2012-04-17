@@ -119,7 +119,7 @@ sub search_genetic
   while (scalar(@population) < $genetic_population) {
     my %specimen;
     for my $var (keys %vars) {
-      my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
+      my $rnd = int(rand(scalar @{ $vars{$var} }));
       $specimen{$var} = $vars{$var}->[$rnd];
     }
     if (rules_allow(\%specimen)) {
@@ -158,7 +158,7 @@ sub search_genetic
 
         # mutation
         if (rand() < $genetic_mutation_prob) {
-          my $rnd = int(rand(scalar(@{ $vars{$var} }) - 1));
+          my $rnd = int(rand(scalar @{ $vars{$var} }));
           $specimen{$var} = $vars{$var}->[$rnd];
         }
       }
