@@ -3640,6 +3640,20 @@ Here a is proposed bash solution for the 'tm' seed:
 The topic of inherited dependencies is related to the question whether we see
 the experiment as a tree or a directed acyclic graph.
 
+=head1 FUTURE EXTENSIONS
+
+=head2 eman.requests
+
+A script in step directory that will, based on the size of step's data etc.,
+predict the requirements on disk and memory and output a string such as:
+
+  --mem 30g --disk 100g
+
+Th output would be used as additional arguments for eman start/continue.
+
+The script would be optional and command-line specified parameters would
+override its output.
+
 =head1 SEE ALSO
 
 Eman is somewhat similar but also different from other experiment managements
