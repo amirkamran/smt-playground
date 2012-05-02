@@ -7,8 +7,8 @@ PLAYGROUND=$(eman path)
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-  defvar SCORERS default="BLEU" \
-    help="scorers you want to use" \
+  defvar SCORERS default="-s BLEU -s PER -s TER -s CDER" \
+    help="scorers you want to use, you have to prefix each scorer with -s or --sctype." \
   defvar TRANSSTEP type=optstep default='' \
     help="translation step, implies corpora and factor if given" \
   defvar MOSESSTEP type=reqstep inherit=TRANSSTEP \
@@ -74,7 +74,7 @@ REFERENCES=\`echo \$REFERENCES | sed 's/^,//'\`
 
 echo "Running $EVALUATOR"
 $EVALUATOR \\
-    --sctype "$SCORERS" \\
+    $SCORERS \\
     --reference \$REFERENCES \\
     --candidate corpus.translation \\
     --bootstrap 1000 \\
