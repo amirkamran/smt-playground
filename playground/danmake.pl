@@ -29,7 +29,8 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    continue_lm_memory();
+    #continue_lm_memory();
+    continue_tm_disk();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -1017,6 +1018,45 @@ sub continue_lm_memory
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
             dzsys::saferun("eman continue $step --mem ${memory}g --priority 0");
+            $n++;
+        }
+    }
+    print("Restarted $n steps.\n");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies failed translation model steps. Assumes that the reason of the
+# failure was insufficient disk space (this is difficult to verify). Restarts
+# them with higher disk requirement.
+#------------------------------------------------------------------------------
+sub continue_tm_disk
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select t tm f'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        # Get all log file names of all previous attempts to do this step.
+        my @logs = split(/\n/, dzsys::chompticks("ls $step | grep -P 'log\.o[0-9]+'"));
+        if(scalar(@logs)==0)
+        {
+            print("No log file found!\n");
+        }
+        else
+        {
+            # Take the last log.
+            # Hope that all job ids have the same number of digits so that lexicographic sorting will be equivalent to numeric.
+            @logs = sort(@logs);
+            my $log = $logs[-1];
+            my $logpath = "$step/$log";
+            ###!!! The above is a remnant of attempts to get knowledge from the log.
+            ###!!! However, we are not going to read the log now because it will not tell us about the previous disk requirement.
+            ###!!! It would tell us the name of the machine. We could use it to locate the machine and figure out its disk space.
+            # Re-run the step with higher memory requirement.
+            # Set the highest possible priority because it may be more difficult to get a better machine.
+            dzsys::saferun("eman continue $step --mem 30g --disk 100g --priority 0");
             $n++;
         }
     }
