@@ -15,7 +15,7 @@ while(<>)
     # Odstranit zalomení řádku.
     s/\r?\n$//;
     # Zajímají nás pouze řádky se segmenty.
-    if(m/<seg\s+id="\d+">(.*?)<\/seg>/i)
+    if(m/<seg\s+id\s*="\d+">(.*?)<\/seg>/i)
     {
         my $seg = $1;
         # Odstranit přebytečné mezery na začátku a na konci segmentu.
