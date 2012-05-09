@@ -90,7 +90,6 @@ my $help = 0;
 my $colorize = undef; # surely colorize output
 my $list_options = 0;
 my $assume_abolished_ok = 0;
-my $show_tree_in_traceback = 1;
 my $show_tag = 0;
 my $show_vars = 0;
 my $show_status = 0;
@@ -103,6 +102,7 @@ my $recurse = 1; # in traceback; switched off when using vars -s
 my $sge = 1;
 my $do_start = 0;
 my $do_outdate = 0;
+my $notree = 0; # set to 1 to avoid tree (indented) output in eman traceback
 my $add_tag = undef; # for newly inited steps, add the given tags
 my $subst = undef;
 my $avoid = undef;
@@ -163,7 +163,7 @@ my %options = (
   "sge!" => \$sge,
   "colorize!" => \$colorize,
   "assume-abolished-ok" => \$assume_abolished_ok, # for eman start
-  "tree-in-traceback!" => \$show_tree_in_traceback,
+  "notree!" => \$notree,
   "tag!" => \$show_tag,
   "vars!" => \$show_vars,
   "status!" => \$show_status,
@@ -195,6 +195,8 @@ my %options = (
   "subdir=s"=>\$subdir,
 );
 GetOptions(%options) or exit 1;
+
+my $show_tree_in_traceback = ! $notree;
 
 # colorize regex outputs if substituting and output is terminal (or wished)
 if ($colorize || (!defined $colorize && -t STDOUT)) {
