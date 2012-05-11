@@ -46,10 +46,10 @@ echo "  # to use Perl 5.12, not Perl 5.10" >> treex.bashsource
 echo "source /net/work/projects/perl_repo/admin/bin/setup_platform" >> treex.bashsource
 echo "  # to have all necessary CPAN modules pre-installed" >> treex.bashsource
 echo "export TMT_ROOT=$(pwd)/treex" >> treex.bashsource
-echo "export PERL5LIB=\$PERL5LIB:$(pwd)/treex/treex/lib:$(pwd)/treex/libs/other" >> treex.bashsource
+echo "export PERL5LIB=$(pwd)/treex/treex/lib:$(pwd)/treex/libs/other:\$PERL5LIB" >> treex.bashsource
 echo "export PERLLIB=\$PERL5LIB" >> treex.bashsource
 echo "  # to set TMT_ROOT and PERL*LIB" >> treex.bashsource
-echo "export PATH=\$PATH:$(pwd)/treex/treex/bin" >> treex.bashsource
+echo "export PATH=$(pwd)/treex/treex/bin:\$PATH" >> treex.bashsource
 echo "  # to have treex in your path" >> treex.bashsource
 
 

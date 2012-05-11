@@ -19,6 +19,6 @@ TREEX=$mydir/../$STEP/treex
 [ -e $TREEX.bashsource ] || die "$TREEX.bashsource not found"
 source $TREEX.bashsource
 
-treex -e WARN "$@"
+$TREEX/treex/bin/treex -e WARN "$@"
 
 exit $?
