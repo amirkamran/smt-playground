@@ -1,0 +1,88 @@
+#!/bin/bash
+# eman seed for running mert on a moses model
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar MERTRUNS default='3' help='how many instances of MERT to run' \
+  defvar MODELSTEP type=reqstep help='where is the model (moses.ini) incl. all files' \
+  defvar DEVCORP help='the corpus for tuning; use colon to delimit more corpora (the source side will be taken from the first one only)' \
+  defvar TESTCORP help='the corpus to translate' \
+  defvar SRCAUG inherit=MODELSTEP help='the source lang+factors' \
+  defvar REFAUG inherit=MODELSTEP:TGTAUG \
+    help='the target (reference) lang+factors' \
+  defvar SEARCH default=cube help='the search type (beam or cube)' \
+  defvar MOSESFLAGS default='' help='further flags for moses' \
+  defvar MERTFLAGS default='' help='further flags for mert.pl' \
+  defvar GRIDFLAGS default='' help='further flags for qsub' \
+  defvar STACK default='' help='stacksize for beam search' \
+  defvar TAGPREF default='' help='eman tag prefix' \
+  defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
+  defvar ZMERTMETRIC default='' help='for zmert: SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU' \
+  defvar ZMERTSEMPOSSOURCE default='' help='for zmert: factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt' \
+  defvar ZMERTSEMPOSBLEUWEIGHTS default='' help='for zmert --semposbleu-weights, e.g. 1:1' \
+  defvar ZMERTFLAGS default='' help='zmert flags' \
+  defvar TREEXSTEP default='' help='for zmert SemPOS tmt (used to be TMT_ROOT; untested)' \
+  defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
+  defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
+  defvar MEVALBINSTEP type=reqstep help="the step containing Multeval" \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+cat << KONEC > eman.command
+#!/bin/bash
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+function create_step
+{
+    # TODO
+}
+
+for run in \$(seq 1 $MERTRUNS) ; do
+    RUNS="\$RUNS \$(create_step MODELSTEP=$MODELSTEP \\
+        DEVCORP=$DEVCORP SRCAUG=$SRCAUG REFAUG=$REFAUG \\
+        SEARCH=$SEARCH MOSESFLAGS=$MOSESFLAGS MERTFLAGS=$MERTFLAGS \\
+        GRIDFLAGS=$GRIDFLAGS STACK=$STACK \\
+        TAGPREF=$TAGPREF MERTPRG=$MERTPRG \\
+        JOBS=$JOBS MOSESSTEP=$MOSESSTEP eman init -start mert)"
+done
+
+for mertstep in \$RUNS ; do
+    TRANSSTEPS="\$TRANSSTEPS \$(create_step MERTSTEP=\$mertstep \\
+        TESTCORP=$TESTCORP eman init -start translate)"
+done
+
+for transstep in \$TRANSSTEPS ; do
+    EVALSTEPS="\$EVALSTEPS \$(create_step TRANSSTEP=\$transstep \\
+        eman init -start evaluator)"
+done
+
+eman wait \$EVALSTEPS
+
+# TODO score avg
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
