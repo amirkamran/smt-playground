@@ -22,11 +22,6 @@ eman \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
-  defvar ZMERTMETRIC default='' help='for zmert: SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU' \
-  defvar ZMERTSEMPOSSOURCE default='' help='for zmert: factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt' \
-  defvar ZMERTSEMPOSBLEUWEIGHTS default='' help='for zmert --semposbleu-weights, e.g. 1:1' \
-  defvar ZMERTFLAGS default='' help='zmert flags' \
-  defvar TREEXSTEP default='' help='for zmert SemPOS tmt (used to be TMT_ROOT; untested)' \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
   defvar MEVALBINSTEP type=reqstep help="the step containing Multeval" \
@@ -51,7 +46,8 @@ ulimit -c 1 # core files limited to 1 byte
 
 function create_step
 {
-    # TODO
+  stepname=\$(\$@ 2>&1 | tail -1 | grep submitted | sed 's/Step \(.*\) submitted.*/\1/')
+  echo \$stepname
 }
 
 for run in \$(seq 1 $MERTRUNS) ; do
@@ -75,7 +71,11 @@ done
 
 eman wait \$EVALSTEPS
 
-# TODO score avg
+for evalstep in \$EVALSTEPS ; do
+  SCORE=\$(cat \$evalstep/scores | grep BLEU | cut -f2)
+  TOTAL=\$(( \$TOTAL + \$SCORE ))
+  echo \$(( \$TOTAL * 100 / $MERTRUNS )) | tee averagebleu
+done
 
 # Standard command footer
 echo Done.
