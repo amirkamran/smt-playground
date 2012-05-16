@@ -24,7 +24,6 @@ eman \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
-  defvar MEVALBINSTEP type=reqstep help="the step containing Multeval" \
 || exit 1
 
 # Set local bash variables
@@ -46,27 +45,32 @@ ulimit -c 1 # core files limited to 1 byte
 
 function create_step
 {
-  stepname=\$(\$@ 2>&1 | tail -1 | grep submitted | sed 's/Step \(.*\) submitted.*/\1/')
+  stepname=\$(eman init -start \$@ 2>&1 | tail -1 | grep submitted | sed 's/Step \(.*\) submitted.*/\1/')
   echo \$stepname
 }
 
+PLAYGROUND=\$(eman path)
+mydir=\$(pwd)
+
+cd \$PLAYGROUND
+
 for run in \$(seq 1 $MERTRUNS) ; do
-    RUNS="\$RUNS \$(create_step MODELSTEP=$MODELSTEP \\
+    RUNS="\$RUNS \$(MODELSTEP=$MODELSTEP \\
         DEVCORP=$DEVCORP SRCAUG=$SRCAUG REFAUG=$REFAUG \\
         SEARCH=$SEARCH MOSESFLAGS=$MOSESFLAGS MERTFLAGS=$MERTFLAGS \\
         GRIDFLAGS=$GRIDFLAGS STACK=$STACK \\
         TAGPREF=$TAGPREF MERTPRG=$MERTPRG \\
-        JOBS=$JOBS MOSESSTEP=$MOSESSTEP eman init -start mert)"
+        JOBS=$JOBS MOSESSTEP=$MOSESSTEP create_step mert)"
 done
 
 for mertstep in \$RUNS ; do
-    TRANSSTEPS="\$TRANSSTEPS \$(create_step MERTSTEP=\$mertstep \\
-        TESTCORP=$TESTCORP eman init -start translate)"
+    TRANSSTEPS="\$TRANSSTEPS \$(MERTSTEP=\$mertstep \\
+        TESTCORP=$TESTCORP create_step translate)"
 done
 
 for transstep in \$TRANSSTEPS ; do
-    EVALSTEPS="\$EVALSTEPS \$(create_step TRANSSTEP=\$transstep \\
-        eman init -start evaluator)"
+    EVALSTEPS="\$EVALSTEPS \$(TRANSSTEP=\$transstep \\
+        create_step evaluator)"
 done
 
 eman wait \$EVALSTEPS
@@ -74,8 +78,11 @@ eman wait \$EVALSTEPS
 for evalstep in \$EVALSTEPS ; do
   SCORE=\$(cat \$evalstep/scores | grep BLEU | cut -f2)
   TOTAL=\$(( \$TOTAL + \$SCORE ))
-  echo \$(( \$TOTAL * 100 / $MERTRUNS )) | tee averagebleu
 done
+
+cd \$mydir
+
+echo \$(( \$TOTAL * 100 / $MERTRUNS )) | tee averagebleu
 
 # Standard command footer
 echo Done.
