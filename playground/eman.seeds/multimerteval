@@ -46,6 +46,7 @@ ulimit -c 1 # core files limited to 1 byte
 function create_step
 {
   stepname=\$(eman init -start \$@ 2>&1 | tail -1 | grep submitted | sed 's/Step \(.*\) submitted.*/\1/')
+  [ -n "\$stepname" ] || die "Failed to create step \$@"
   echo \$stepname
 }
 
@@ -63,26 +64,35 @@ for run in \$(seq 1 $MERTRUNS) ; do
         JOBS=$JOBS MOSESSTEP=$MOSESSTEP create_step mert)"
 done
 
+echo "Created 'mert' steps: \$RUNS"
+
 for mertstep in \$RUNS ; do
     TRANSSTEPS="\$TRANSSTEPS \$(MERTSTEP=\$mertstep \\
         TESTCORP=$TESTCORP create_step translate)"
 done
+
+echo "Created 'translate' steps: \$TRANSSTEPS"
 
 for transstep in \$TRANSSTEPS ; do
     EVALSTEPS="\$EVALSTEPS \$(TRANSSTEP=\$transstep \\
         create_step evaluator)"
 done
 
+echo "Created 'evaluator' steps: \$EVALSTEPS"
+
 eman wait \$EVALSTEPS
 
+echo "Evaluator steps finished."
+
 for evalstep in \$EVALSTEPS ; do
+  [ \$(cat \$evalstep/eman.status) -eq DONE ] || die "Step failed: \$evalstep"
   SCORE=\$(cat \$evalstep/scores | grep BLEU | cut -f2)
-  TOTAL=\$(( \$TOTAL + \$SCORE ))
+  TOTAL=\$(echo "\$TOTAL + \$SCORE" | bc -l)
 done
 
 cd \$mydir
 
-echo \$(( \$TOTAL * 100 / $MERTRUNS )) | tee averagebleu
+echo "\$TOTAL * 100 / $MERTRUNS" | bc -l > averagebleu
 
 # Standard command footer
 echo Done.
