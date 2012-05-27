@@ -85,7 +85,7 @@ eman wait \$EVALSTEPS
 echo "Evaluator steps finished."
 
 for evalstep in \$EVALSTEPS ; do
-  [ \$(cat \$evalstep/eman.status) -eq DONE ] || die "Step failed: \$evalstep"
+  [ \$(cat \$evalstep/eman.status) = DONE ] || die "Step failed: \$evalstep"
   SCORE=\$(cat \$evalstep/scores | grep BLEU | cut -f2)
   TOTAL=\$(echo "\$TOTAL + \$SCORE" | bc -l)
 done
