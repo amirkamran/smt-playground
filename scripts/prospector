@@ -9,26 +9,28 @@ use File::Temp qw( tempfile );
 
 my $verbose = 0;
 my $max_running_exps = 10;
-my $search = 'greedy';
-my $greedy_nbest = 1;
+my $search = 'line';
+my $line_nbest = 1;
 my $genetic_population = 20;
 my $genetic_nbest = 8;
 my $genetic_mutation_prob = 0.05;
 my $random_limit = 50;
+my $prediction_limit = undef;
 
 GetOptions(
   "v|verbose!" => \$verbose,
   "m|max-running=i" => \$max_running_exps,
   "s|search=s" => \$search,
-  "greedy-nbest=i" => \$greedy_nbest,
+  "line-nbest=i" => \$line_nbest,
   "genetic-population-size=i" => \$genetic_population,
   "genetic-nbest=i" => \$genetic_nbest,
   "genetic-mutation-prob=f" => \$genetic_mutation_prob,
   "random-limit=i" => \$random_limit,
+  "p|max-allowed-prediction=f" => \$prediction_limit,
 ) or die get_usage();
 
 my %search_dispatch = (
-  'greedy' => \&search_greedy,
+  'line' => \&search_line,
   'exhaustive' => \&search_exhaust,
   'genetic' => \&search_genetic,
   'random' => \&search_random,
@@ -69,7 +71,7 @@ logmessage("Finished");
 # subroutines
 #
 
-sub search_greedy
+sub search_line
 {
   my %values;
   my %experiments;
@@ -84,11 +86,13 @@ sub search_greedy
       $values{$var} = $value;
       if (rules_allow(\%values)) {
         my $id = create_experiment(\%values);
-        push @ids, $id;
-        push @{ $experiments{$var} }, {
-          value => $value,
-          id => $id
-        };
+        if (defined $id) {
+          push @ids, $id;
+          push @{ $experiments{$var} }, {
+            value => $value,
+            id => $id
+          };
+        }
       }
     }
   }
@@ -127,10 +131,13 @@ sub search_genetic
       $specimen{$var} = $vars{$var}->[$rnd];
     }
     if (rules_allow(\%specimen)) {
-      push @population, {
-        specimen => \%specimen,
-        id => create_experiment(\%specimen)
-      };
+      my $id = create_experiment(\%specimen);
+      if (defined $id) {
+        push @population, {
+          specimen => \%specimen,
+          id => $id;
+        };
+      }
     }
   }
 
@@ -168,10 +175,13 @@ sub search_genetic
       }
 
       if (rules_allow(\%specimen)) {
-        push @next_population, {
-          specimen => \%specimen,
-          id => create_experiment(\%specimen)
-        };
+        my $id = create_experiment(\%specimen);
+        if (defined $id) {
+          push @next_population, {
+            specimen => \%specimen,
+            id => $id
+          };
+        }
       }
     }
     wait_for_exps(map { $_->{id} } @next_population);
@@ -223,8 +233,8 @@ sub search_random
       $values{$var} = $vars{$var}->[$rnd];
     }
     if (rules_allow(\%values)) {
-      create_experiment(\%values);
-      $generated++;
+      my $expid = create_experiment(\%values);
+      $generated++ if $expid;
     }
   }
 }
@@ -271,6 +281,18 @@ sub get_score
   }
 }
 
+sub get_prediction
+{
+  my $id = shift;
+  return undef if ! defined $id;
+  my $pred = `$dir/predict $dir/../$id 2> /dev/null`;
+  if ($pred) {
+    return chomp $pred;
+  } else {
+    return undef;
+  }
+}
+
 sub create_experiment
 {
   my $values = shift;
@@ -299,7 +321,23 @@ sub create_experiment
   unlink $tbfile;
   $outlines[$#outlines] =~ m/^Root: (.*)$/;
   my $id = $1;
-  logmessage("created experiment $id, starting");
+  logmessage("created experiment $id");
+
+  # predict experiment cost/complexity if requested
+  if (defined $prediction_limit) {
+    my $pred = get_prediction($id);
+    if (! defined $pref) {
+      logmessage("prediction limit specified but prediction failed, won't start $id");
+      return undef;
+    } elsif ($pred > $prediction_limit) {
+      logmessage("prediction over limit: $pred; won't start $id");
+      return undef;
+    } else {
+      logmessage("prediction within limit: $pred");
+    }
+  }
+
+  logmessage("starting $id");
   system "eman start $id 2>> $dir/eman.err | tee -a $dir/eman.out";
   if ($? != 0) {
     logerror("could not start experiment $id (eman output is in $dir/eman.*)");
