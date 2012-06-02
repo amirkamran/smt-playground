@@ -135,7 +135,7 @@ sub search_genetic
       if (defined $id) {
         push @population, {
           specimen => \%specimen,
-          id => $id;
+          id => $id
         };
       }
     }
@@ -326,7 +326,7 @@ sub create_experiment
   # predict experiment cost/complexity if requested
   if (defined $prediction_limit) {
     my $pred = get_prediction($id);
-    if (! defined $pref) {
+    if (! defined $pred) {
       logmessage("prediction limit specified but prediction failed, won't start $id");
       return undef;
     } elsif ($pred > $prediction_limit) {
