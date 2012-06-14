@@ -3484,6 +3484,8 @@ eman select s RUNNING nq
 
 for x in `eman ls` ; do ev=`eman tf $x | grep s.evaluator` ; if [ -z "$ev" ] ; then echo $x ; fi ; done
   # list all steps whose users (transitive) do not include any evaluator step
+eman select t translate u not t evaluator
+  # list all translate steps whose users (intransitive) do not include any evaluator step
 
 eman ls > steps-all.txt
 eman traceback --no-tree `qstat | grep $USER | grep -P '\ss\.' | cut -d' ' -f1 | grep -v 4296093` | sort -u > steps-tabu.txt
