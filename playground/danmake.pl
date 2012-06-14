@@ -30,7 +30,8 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 if($steptype eq 'special')
 {
     continue_lm_memory('running');
-    #continue_tm_disk();
+    continue_lm_memory('failed');
+    continue_tm_disk();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -1052,12 +1053,24 @@ sub continue_tm_disk
             @logs = sort(@logs);
             my $log = $logs[-1];
             my $logpath = "$step/$log";
-            ###!!! The above is a remnant of attempts to get knowledge from the log.
-            ###!!! However, we are not going to read the log now because it will not tell us about the previous disk requirement.
-            ###!!! It would tell us the name of the machine. We could use it to locate the machine and figure out its disk space.
+            my $limitsline = dzsys::chompticks("grep '== Limits:' $logpath");
+            my $disk = 50;
+            if($limitsline =~ m/mnth_free=(\d+)g/)
+            {
+                $disk = $1;
+            }
+            # Do we have machines with more disk space?
+            if($disk>=500)
+            {
+                print("Even 500g of /mnt/h space was not enough, giving up.\n");
+                next;
+            }
+            $disk *= 2;
+            $disk = 50 if($disk<50);
+            $disk = 500 if($disk>500);
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
-            dzsys::saferun("eman continue $step --mem 30g --disk 100g --priority 0");
+            dzsys::saferun("eman continue $step --mem 30g --disk ${disk}g --priority 0");
             $n++;
         }
     }
