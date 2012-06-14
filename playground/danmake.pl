@@ -29,8 +29,8 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    #continue_lm_memory();
-    continue_tm_disk();
+    continue_lm_memory('running');
+    #continue_tm_disk();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -969,7 +969,8 @@ sub continue_lm_memory
 {
     # Look for steps that have failed and are marked as failed,
     # or for those that are still marked as running (but not known to cluster)?
-    my $select_failed = 1;
+    my $what_to_select = shift;
+    my $select_failed = $what_to_select =~ m/^failed$/i;
     my @steps;
     if($select_failed)
     {
