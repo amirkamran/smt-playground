@@ -29,9 +29,12 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
+    ###!!! TO DO: A step may also have stayed in the INITED state (failed to start because one of its dependencies had been FAILED at that time).
     continue_lm_memory('running');
     continue_lm_memory('failed');
     continue_tm_disk();
+    start_all_missing_merts();
+    start_all_missing_translates();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -426,6 +429,18 @@ sub start_mert
 {
     my $m = shift; # reference to hash with model parameters
     my $modelstep = find_model($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    start_mert_for_model($modelstep);
+    start_translate($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new mert step for the given model step.
+#------------------------------------------------------------------------------
+sub start_mert_for_model
+{
+    my $modelstep = shift;
     # Note that the wmt10v6b corpus (a version of newstest2010) is not created by any step created by this danmake.pl script.
     # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
     # See the wiki for how to do it:
@@ -439,7 +454,25 @@ sub start_mert
     my $priority = $memory eq '30g' ? -50 : -99;
     my $gridfl = "\"-p $priority -hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
     dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem 30g");
-    start_translate($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies missing mert steps (their initialization may have failed?) of
+# existing model steps and initializes and starts them.
+#------------------------------------------------------------------------------
+sub start_all_missing_merts
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select t model u not t mert'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        start_mert_for_model($step);
+        $n++;
+    }
+    print("Started $n steps.\n");
 }
 
 
@@ -452,12 +485,42 @@ sub start_translate
 {
     my $m = shift; # reference to hash with model parameters
     my $mertstep = find_mert($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    start_translate_for_mert($mertstep);
+    start_evaluator($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new translate step for the given mert step.
+#------------------------------------------------------------------------------
+sub start_translate_for_mert
+{
+    my $mertstep = shift;
     # Note that the wmt12v6b corpus (a version of newstest2012) is not created by any step created by this danmake.pl script.
     # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
     # See the wiki for how to do it:
     # https://wiki.ufal.ms.mff.cuni.cz/user:zeman:eman#ondruv-navod-jak-prevzit-existujici-augmented-corpus
     dzsys::saferun("MERTSTEP=$mertstep TESTCORP=wmt12v6b eman init translate --start --mem 30g");
-    start_evaluator($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies missing translate steps (their initialization may have failed?) of
+# existing mert steps and initializes and starts them.
+#------------------------------------------------------------------------------
+sub start_all_missing_translates
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select t mert u not t translate'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        start_translate_for_mert($step);
+        $n++;
+    }
+    print("Started $n steps.\n");
 }
 
 
