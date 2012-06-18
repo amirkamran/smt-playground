@@ -29,12 +29,12 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    ###!!! TO DO: A step may also have stayed in the INITED state (failed to start because one of its dependencies had been FAILED at that time).
     continue_lm_memory('running');
     continue_lm_memory('failed');
     continue_tm_disk();
     start_all_missing_merts();
     start_all_missing_translates();
+    start_inited_steps();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -1022,6 +1022,29 @@ sub create_tm_for_combined_corpus
 # MAINTENANCE SUBROUTINES
 # Which steps failed, what was the reason and restarting them.
 #==============================================================================
+
+
+
+#------------------------------------------------------------------------------
+# Finds all steps (of all types) that have been initialized only. The most
+# likely reason for not starting them is that one of their dependencies had
+# failed. Try to start them now.
+#------------------------------------------------------------------------------
+sub start_inited_steps
+{
+    # Look for steps that have been initialized but not started.
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select s inited'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        # Note that if the steps were started normally, danmake.pl may have asked for specific memory/disk resources.
+        # We do not know what type of step it is and what the resource requirements would be, so we just leave it for failure & restart.
+        dzsys::saferun("eman start $step");
+        $n++;
+    }
+    print("Started $n steps.\n");
+}
 
 
 
