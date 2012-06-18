@@ -32,6 +32,7 @@ if($steptype eq 'special')
     continue_lm_memory('running');
     continue_lm_memory('failed');
     continue_tm_disk();
+    redo_mert_memory();
     start_all_missing_merts();
     start_all_missing_translates();
     start_inited_steps();
@@ -1161,4 +1162,72 @@ sub continue_tm_disk
         }
     }
     print("Restarted $n steps.\n");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies mert steps killed because their decoder processes exceeded memory
+# quota. Restarts them with higher memory requirement.
+#------------------------------------------------------------------------------
+sub redo_mert_memory
+{
+    # Look for failed mert steps.
+    my @steps = split(/\n/, dzsys::chompticks('eman select t mert f'));
+    my $n = 0;
+    my @to_remove;
+    foreach my $step (@steps)
+    {
+        # Get all log file names of all previous attempts to do this step.
+        my @logs = split(/\n/, dzsys::chompticks("ls $step | grep -P 'log\.o[0-9]+'"));
+        if(scalar(@logs)==0)
+        {
+            print("No log file found!\n");
+        }
+        else
+        {
+            # Take the last log.
+            # Hope that all job ids have the same number of digits so that lexicographic sorting will be equivalent to numeric.
+            @logs = sort(@logs);
+            my $log = $logs[-1];
+            my $logpath = "$step/$log";
+            my $decoder_died = dzsys::chompticks("grep 'The decoder died.' $logpath");
+            if($decoder_died)
+            {
+                my $gridflags = dzsys::chompticks("eman vars $step | grep GRIDFLAGS");
+                my $memory = 6;
+                if($gridflags =~ m/ mf=(\d+)g/)
+                {
+                    $memory = $1;
+                }
+                # Do we have machines with more memory?
+                if($memory>=500)
+                {
+                    print("Even 500g of memory was not enough, giving up.\n");
+                    next;
+                }
+                $memory *= 2;
+                $memory = 30 if($memory<30);
+                $memory = 500 if($memory>500);
+                # We cannot just re-run ("continue") the existing step.
+                # We are about to modify one of the environment variables that define the step.
+                # So we must create a new clone of the step and run that instead ("redo").
+                # Set the highest possible priority because it may be more difficult to get a better machine.
+                $gridflags = "-p 0 -hard -l mf=${memory}g -l act_mem_free=${memory}g -l h_vmem=${memory}g";
+                dzsys::saferun("GRIDFLAGS=\"$gridflags\" eman redo $step --mem 30g --priority 0 --start");
+                push(@to_remove, $step);
+                $n++;
+            }
+            else
+            {
+                print("The mert step seems to have failed because of other reasons than the death of the decoder.\n");
+            }
+        }
+    }
+    print("Cloned and restarted $n steps.\n");
+    print("If everything went well, you may want to rm -rf the following steps:\n");
+    foreach my $step (@to_remove)
+    {
+        print("\trm -rf $step\n");
+    }
 }
