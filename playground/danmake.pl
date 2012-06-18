@@ -35,6 +35,7 @@ if($steptype eq 'special')
     redo_mert_memory();
     start_all_missing_merts();
     start_all_missing_translates();
+    start_all_missing_evaluators();
     start_inited_steps();
     exit(0);
 }
@@ -534,7 +535,37 @@ sub start_evaluator
 {
     my $m = shift; # reference to hash with model parameters
     my $transtep = find_translate($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    start_evaluator_for_translate($transtep);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new evaluator step for the given translate step.
+#------------------------------------------------------------------------------
+sub start_evaluator_for_translate
+{
+    my $transtep = shift;
     dzsys::saferun("TRANSSTEP=$transtep SCORERS=BLEU eman init evaluator --start");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies missing evaluator steps (their initialization may have failed?) of
+# existing translate steps and initializes and starts them.
+#------------------------------------------------------------------------------
+sub start_all_missing_evaluators
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select t translate u not t evaluator'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        start_evaluator_for_translate($step);
+        $n++;
+    }
+    print("Started $n steps.\n");
 }
 
 
