@@ -15,21 +15,54 @@ SCRIPTS=$STATMT/scripts
 PLAYGROUND=$STATMT/playground
 eman \
      defvar CORPUS help='newseuro|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
-     defvar NEPAIR default='' help='select language pair of newseuro; empty for other corpora' \
+     defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
      defvar LANGUAGES help='codes of languages to process, space-delimited' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-###!!!
-# Create corpman info, the last field "1" indicates that this corpus is derived
-# automatically
-$PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS $OUTLINECOUNT $DERIVED \
-|| die "Can't register corpus"
+for l in $LANGUAGES ; do
+  # Create corpman info, the last field "1" indicates that this corpus is derived automatically.
+  $PLAYGROUND/corpman register -- corpus.$l.txt.gz -1 $CORPUS $l form -1 0 \
+    || die "Can't register corpus"
+done
 
 ###!!!
-READINPUT="zcat /net/data/wmt2012/giga-fren.release2.\$l.gz"
+if [ "$CORPUS" == "un" ] ; then
+  if [ "$PAIR" == "es-en" ] ; then
+    for l in $LANGUAGES ; do
+      if [ "$l" != "es" ] && [ "$l" != "en" ] ; then
+        die "Unknown language $l for pair $PAIR"
+      fi
+    done
+  elif [ "$PAIR" == "fr-en" ] ; then
+    for l in $LANGUAGES ; do
+      if [ "$l" != "fr" ] && [ "$l" != "en" ] ; then
+        die "Unknown language $l for pair $PAIR"
+      fi
+    done
+  else
+    die "Unknown language pair $PAIR for corpus $CORPUS"
+  fi
+  # cd /net/data/wmt2012
+  # wget http://www.statmt.org/wmt12/un.es-en.tgz # 1,103,180,390 B
+  # wget http://www.statmt.org/wmt12/un.fr-en.tgz # 1,262,447,173 B
+  # untar it
+  # cd $PLAYGROUND
+  READINPUT="zcat /net/data/wmt2012/MultiUN4WMT12/undoc.2000.$PAIR.\$l.gz"
+elif [ "$CORPUS" == "gigafren" ] ; then
+  if [ "$l" != "fr" ] && [ "$l" != "en" ] ; then
+    die "Unknown language $l"
+  fi
+  # cd /net/data/wmt2012
+  # wget http://www.statmt.org/wmt10/training-giga-fren.tar # 2,595,112,960 B
+  # untar it
+  # cd $PLAYGROUND
+  READINPUT="zcat /net/data/wmt2012/giga-fren.release2.\$l.gz"
+else
+  die "Unknown corpus $CORPUS"
+fi
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
@@ -46,26 +79,26 @@ mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
+expected_nl=-1
 for l in $LANGUAGES ; do
   echo Processing $READINPUT
   $READINPUT | $SCRIPTS/tok-dan.pl | $SCRIPTS/fill_empty_sentences.pl | $SCRIPTS/escape_pipe_lt_gt.pl | gzip -c > corpus.\$l.txt.gz \\
   || die "Failed to prepare the corpus"
   echo "Checking output number of lines of corpus.\$l.txt.gz"
   nl=\$(zcat corpus.\$l.txt.gz | wc -l)
+  if [ \$expected_nl -eq -1 ]; then
+    echo "Re-registering the corpus with \$nl lines."
+    ###!!!
+    $PLAYGROUND/corpman register -- corpus.\$l.txt.gz -1 gigafren \$l form \$nl 0 \\
+      || die "Cannot register corpus"
+  else
+    # just a check
+    [ "\$nl" -eq "\$expected_nl" ] \\
+      || die "Mismatched number of lines, expected \$expected_nl, got \$nl"
+  fi
 done
 
-
-if [ $OUTLINECOUNT -eq -1 ]; then
-  echo "Re-registering the corpus with \$nl lines."
-  $PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS \$nl $DERIVED \\
-    || die "Can't register corpus"
-else
-  # just a check
-  [ "\$nl" -eq $OUTLINECOUNT ] \\
-  || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
-fi
-
-rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
+rm -f $PLAYGROUND/corpman.index || echo "Failed to force reindexing"
 
 echo Done.
 eman succeed \$mydir
@@ -76,3 +109,4 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
+
