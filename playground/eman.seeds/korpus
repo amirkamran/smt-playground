@@ -3,6 +3,27 @@
 # The step preprocesses the downloaded corpus, saves the result and registers it with corpman.
 # This solution is probably temporary. We may later want to replace it by standard corpus steps.
 
+# CORPUS=newseuro PAIR=cs-en LANGUAGE=cs eman init korpus --start
+# CORPUS=newseuro PAIR=cs-en LANGUAGE=en eman init korpus --start
+# CORPUS=newseuro PAIR=de-en LANGUAGE=de eman init korpus --start
+# CORPUS=newseuro PAIR=de-en LANGUAGE=en eman init korpus --start
+# CORPUS=newseuro PAIR=es-en LANGUAGE=es eman init korpus --start
+# CORPUS=newseuro PAIR=es-en LANGUAGE=en eman init korpus --start
+# CORPUS=newseuro PAIR=fr-en LANGUAGE=fr eman init korpus --start
+# CORPUS=newseuro PAIR=fr-en LANGUAGE=en eman init korpus --start
+# CORPUS=newseuro PAIR=de-cs LANGUAGE=de eman init korpus --start
+# CORPUS=newseuro PAIR=de-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=newseuro PAIR=es-cs LANGUAGE=es eman init korpus --start
+# CORPUS=newseuro PAIR=es-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=newseuro PAIR=fr-cs LANGUAGE=fr eman init korpus --start
+# CORPUS=newseuro PAIR=fr-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=un PAIR=es-en LANGUAGE=es eman init korpus --start
+# CORPUS=un PAIR=es-en LANGUAGE=en eman init korpus --start
+# CORPUS=un PAIR=fr-en LANGUAGE=fr eman init korpus --start
+# CORPUS=un PAIR=fr-en LANGUAGE=en eman init korpus --start
+# CORPUS=gigafren LANGUAGE=fr eman init korpus --start
+# CORPUS=gigafren LANGUAGE=en eman init korpus --start
+
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
@@ -16,32 +37,41 @@ PLAYGROUND=$STATMT/playground
 eman \
      defvar CORPUS help='newseuro|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
-     defvar LANGUAGES help='codes of languages to process, space-delimited' \
+     defvar LANGUAGE help='language code (create separate step for each language)' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-for l in $LANGUAGES ; do
-  # Create corpman info, the last field "1" indicates that this corpus is derived automatically.
-  $PLAYGROUND/corpman register -- corpus.$l.txt.gz -1 $CORPUS $l form -1 0 \
-    || die "Can't register corpus"
-done
+if ! [ -z "$PAIR" ] ; then
+  REGCORPUS="$CORPUS.$PAIR"
+else
+  REGCORPUS=$CORPUS
+fi
+echo The corpus will be registered as "$REGCORPUS".
+
+# Create corpman info.
+# The first field "-1" indicates that there are no columns in the corpus file.
+# The last field "0" indicates that this corpus is not derived automatically from other corpora.
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $REGCORPUS $LANGUAGE form -1 0 \
+  || die "Cannot register corpus"
 
 ###!!!
-if [ "$CORPUS" == "un" ] ; then
+if [ "$CORPUS" == "newseuro" ] ; then
+  # cd /net/data/wmt2012
+  # wget http://www.statmt.org/wmt12/training-parallel.tgz
+  # untar it
+  # cd $PLAYGROUND
+  READINPUT="zcat /net/data/wmt2012/training/europarl-v7.$PAIR.$LANGUAGE.gz /net/data/wmt2012/training/news-commentary-v7.$PAIR.$LANGUAGE.gz"
+elif [ "$CORPUS" == "un" ] ; then
   if [ "$PAIR" == "es-en" ] ; then
-    for l in $LANGUAGES ; do
-      if [ "$l" != "es" ] && [ "$l" != "en" ] ; then
-        die "Unknown language $l for pair $PAIR"
-      fi
-    done
+    if [ "$LANGUAGE" != "es" ] && [ "$LANGUAGE" != "en" ] ; then
+      die "Unknown language $LANGUAGE for pair $PAIR"
+    fi
   elif [ "$PAIR" == "fr-en" ] ; then
-    for l in $LANGUAGES ; do
-      if [ "$l" != "fr" ] && [ "$l" != "en" ] ; then
-        die "Unknown language $l for pair $PAIR"
-      fi
-    done
+    if [ "$LANGUAGE" != "fr" ] && [ "$LANGUAGE" != "en" ] ; then
+      die "Unknown language $LANGUAGE for pair $PAIR"
+    fi
   else
     die "Unknown language pair $PAIR for corpus $CORPUS"
   fi
@@ -50,16 +80,16 @@ if [ "$CORPUS" == "un" ] ; then
   # wget http://www.statmt.org/wmt12/un.fr-en.tgz # 1,262,447,173 B
   # untar it
   # cd $PLAYGROUND
-  READINPUT="zcat /net/data/wmt2012/MultiUN4WMT12/undoc.2000.$PAIR.\$l.gz"
+  READINPUT="zcat /net/data/wmt2012/MultiUN4WMT12/undoc.2000.$PAIR.$LANGUAGE.gz"
 elif [ "$CORPUS" == "gigafren" ] ; then
-  if [ "$l" != "fr" ] && [ "$l" != "en" ] ; then
-    die "Unknown language $l"
+  if [ "$LANGUAGE" != "fr" ] && [ "$LANGUAGE" != "en" ] ; then
+    die "Unknown language $LANGUAGE for corpus $CORPUS"
   fi
   # cd /net/data/wmt2012
   # wget http://www.statmt.org/wmt10/training-giga-fren.tar # 2,595,112,960 B
   # untar it
   # cd $PLAYGROUND
-  READINPUT="zcat /net/data/wmt2012/giga-fren.release2.\$l.gz"
+  READINPUT="zcat /net/data/wmt2012/giga-fren.release2.$LANGUAGE.gz"
 else
   die "Unknown corpus $CORPUS"
 fi
@@ -80,25 +110,23 @@ set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
 expected_nl=-1
-for l in $LANGUAGES ; do
-  echo Processing $READINPUT
-  $READINPUT | $SCRIPTS/tok-dan.pl | $SCRIPTS/fill_empty_sentences.pl | $SCRIPTS/escape_pipe_lt_gt.pl | gzip -c > corpus.\$l.txt.gz \\
+echo Processing $READINPUT
+$READINPUT | $SCRIPTS/tok-dan.pl | $SCRIPTS/fill_empty_sentences.pl | $SCRIPTS/escape_pipe_lt_gt.pl | gzip -c > corpus.txt.gz \\
   || die "Failed to prepare the corpus"
-  echo "Checking output number of lines of corpus.\$l.txt.gz"
-  nl=\$(zcat corpus.\$l.txt.gz | wc -l)
-  if [ \$expected_nl -eq -1 ]; then
-    echo "Re-registering the corpus with \$nl lines."
-    ###!!!
-    $PLAYGROUND/corpman register -- corpus.\$l.txt.gz -1 gigafren \$l form \$nl 0 \\
-      || die "Cannot register corpus"
-  else
-    # just a check
-    [ "\$nl" -eq "\$expected_nl" ] \\
-      || die "Mismatched number of lines, expected \$expected_nl, got \$nl"
-  fi
-done
+echo "Checking output number of lines of corpus.txt.gz"
+nl=\$(zcat corpus.txt.gz | wc -l)
+if [ \$expected_nl -eq -1 ]; then
+  echo "Re-registering the corpus with \$nl lines."
+  $PLAYGROUND/corpman register -- corpus.txt.gz -1 $REGCORPUS $LANGUAGE form \$nl 0 \\
+    || die "Cannot register corpus"
+else
+  # just a check
+  [ "\$nl" -eq "\$expected_nl" ] \\
+    || die "Mismatched number of lines, expected \$expected_nl, got \$nl"
+fi
 
-rm -f $PLAYGROUND/corpman.index || echo "Failed to force reindexing"
+rm -f $PLAYGROUND/corpman.index \\
+  || echo "Failed to force reindexing"
 
 echo Done.
 eman succeed \$mydir
@@ -109,4 +137,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-
