@@ -29,14 +29,21 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augme
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    continue_lm_memory('running');
-    continue_lm_memory('failed');
-    continue_tm_disk();
-    redo_mert_memory();
-    start_all_missing_merts();
-    start_all_missing_translates();
-    start_all_missing_evaluators();
-    start_inited_steps();
+    if(1)
+    {
+        remove_news_single_years();
+    }
+    else
+    {
+        continue_lm_memory('running');
+        continue_lm_memory('failed');
+        continue_tm_disk();
+        redo_mert_memory();
+        start_all_missing_merts();
+        start_all_missing_translates();
+        start_all_missing_evaluators();
+        start_inited_steps();
+    }
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -1261,4 +1268,25 @@ sub redo_mert_memory
     {
         print("\trm -rf $step\n");
     }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Finds lm steps trained on single years of the crawled news corpora.
+#------------------------------------------------------------------------------
+sub remove_news_single_years
+{
+    my @steps;
+    my @lm_steps = split(/\n/, dzsys::chompticks('eman select t lm tre \'LM:news\.20\d\d\''));
+    foreach my $step (@lm_steps)
+    {
+        my @lm_and_descendants = split(/\n/, dzsys::chompticks("eman tf $step --notree"));
+        print(join("\n", @lm_and_descendants), "\n");
+        push(@steps, @lm_and_descendants);
+    }
+    dzsys::saferun('rm -rf '.join(' ', @steps));
+    print("Found ", scalar(@lm_steps), " lm steps.\n");
+    print("Found and removed ", scalar(@steps), " steps including descendants.\n");
+    dzsys::saferun('eman reindex');
 }

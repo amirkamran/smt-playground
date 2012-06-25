@@ -43,6 +43,12 @@ while(<RES>)
     {
         $record{pair} = "$1-$2";
     }
+    # We need a language pair identifier to sort the results.
+    # If the pair is unknown for any reason, choose xx-yy instead but do not leave it empty.
+    else
+    {
+        $record{pair} = 'xx-yy';
+    }
     push(@results, \%record);
 }
 close(RES);
