@@ -3,6 +3,7 @@
 # The step preprocesses the downloaded corpus, saves the result and registers it with corpman.
 # This solution is probably temporary. We may later want to replace it by standard corpus steps.
 
+# # Parallel training corpora
 # CORPUS=newseuro PAIR=cs-en LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro PAIR=cs-en LANGUAGE=en eman init korpus --start
 # CORPUS=newseuro PAIR=de-en LANGUAGE=de eman init korpus --start
@@ -23,6 +24,20 @@
 # CORPUS=un PAIR=fr-en LANGUAGE=en eman init korpus --start
 # CORPUS=gigafren LANGUAGE=fr eman init korpus --start
 # CORPUS=gigafren LANGUAGE=en eman init korpus --start
+# # Monolingual training corpora
+# CORPUS=newseuro LANGUAGE=cs eman init korpus --start
+# CORPUS=newseuro LANGUAGE=de eman init korpus --start
+# CORPUS=newseuro LANGUAGE=en eman init korpus --start
+# CORPUS=newseuro LANGUAGE=es eman init korpus --start
+# CORPUS=newseuro LANGUAGE=fr eman init korpus --start
+# CORPUS=newsall LANGUAGE=cs eman init korpus --start
+# CORPUS=newsall LANGUAGE=de eman init korpus --start
+# CORPUS=newsall LANGUAGE=en eman init korpus --start
+# CORPUS=newsall LANGUAGE=es eman init korpus --start
+# CORPUS=newsall LANGUAGE=fr eman init korpus --start
+# CORPUS=gigaword LANGUAGE=en eman init korpus --start
+# CORPUS=gigaword LANGUAGE=es eman init korpus --start
+# CORPUS=gigaword LANGUAGE=fr eman init korpus --start
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -34,8 +49,9 @@ set -o pipefail  # safer pipes
 [ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
 SCRIPTS=$STATMT/scripts
 PLAYGROUND=$STATMT/playground
+WMT=/net/data/wmt2012
 eman \
-     defvar CORPUS help='newseuro|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
+     defvar CORPUS help='newseuro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
      defvar LANGUAGE help='language code (create separate step for each language)' \
 || exit 1
@@ -56,13 +72,55 @@ echo The corpus will be registered as "$REGCORPUS".
 $PLAYGROUND/corpman register -- corpus.txt.gz -1 $REGCORPUS $LANGUAGE form -1 0 \
   || die "Cannot register corpus"
 
+# The de-cs, es-cs and fr-cs training sets are built as intersections of de-en-cs, es-en-cs and fr-en-cs, respectively.
+function intersection()
+{
+  # $1 ... path to corpus 1 (including file name)
+  # $2 ... path to corpus 2 (including file name)
+  # $3 ... path to resulting corpus (excluding file name)
+  # $4 ... source language
+  # $5 ... common language
+  # $6 ... target language
+  echo Computing intersection of $1 and $2...
+  mkdir -p $3 || die "Cannot create folder $3."
+  cd $3       || die "Cannot go to $3."
+  $SCRIPTS/overlap.pl -n $1 $2 > intersection_line_numbers.txt || die "overlap.pl failed"
+  $SCRIPTS/filter-corpus.pl -l < intersection_line_numbers.txt $1 $4.gz || die "filter-corpus.pl -l failed"
+  $SCRIPTS/filter-corpus.pl -r < intersection_line_numbers.txt $2 $6.gz || die "filter-corpus.pl -r failed"
+  # Check that both files have the same number of lines.
+  nl1=$(gunzip -c $4.gz | wc -l)
+  nl2=$(gunzip -c $6.gz | wc -l)
+  if [ "$nl1" -ne "$nl2" ] ; then
+    die "$4.gz has $nl1 lines but $6.gz has $nl2 lines."
+  fi
+}
+# The intersections must be computed separately and only once for each language pair.
+# This is not the best place to compute them because this step is invoked once for the source and once for the target language.
+# The resulting intersection is placed outside the playground!
+for src in de es fr ; do
+  for corpus in europarl-v7 news-commentary-v7 ; do
+    targetpath=$WMT/training/$corpus.$src-cs
+    if ! [ -d $targetpath ] ; then
+      intersection $WMT/training/$corpus.$src-en.en.gz $WMT/training/$corpus.cs-en.en.gz $targetpath $src en cs
+    fi
+  done
+done
+
 ###!!!
 if [ "$CORPUS" == "newseuro" ] ; then
-  # cd /net/data/wmt2012
+  # cd $WMT
   # wget http://www.statmt.org/wmt12/training-parallel.tgz
   # untar it
   # cd $PLAYGROUND
-  READINPUT="zcat /net/data/wmt2012/training/europarl-v7.$PAIR.$LANGUAGE.gz /net/data/wmt2012/training/news-commentary-v7.$PAIR.$LANGUAGE.gz"
+  if [[ "$PAIR" =~ '-cs' ]] ; then
+    READINPUT="zcat $WMT/training/europarl-v7.$PAIR/$LANGUAGE.gz $WMT/training/news-commentary-v7.$PAIR/$LANGUAGE.gz"
+  elif [[ "$PAIR" =~ '-en' ]] ; then
+    READINPUT="zcat $WMT/training/europarl-v7.$PAIR.$LANGUAGE.gz $WMT/training/news-commentary-v7.$PAIR.$LANGUAGE.gz"
+  elif [ -z "$PAIR" ] ; then # monolingual version of newseuro
+    READINPUT="zcat $WMT/training/europarl-v7.$LANGUAGE.gz $WMT/training/news-commentary-v7.$LANGUAGE.gz"
+  else
+    die "Unknown language pair $PAIR for corpus $CORPUS"
+  fi
 elif [ "$CORPUS" == "un" ] ; then
   if [ "$PAIR" == "es-en" ] ; then
     if [ "$LANGUAGE" != "es" ] && [ "$LANGUAGE" != "en" ] ; then
@@ -75,21 +133,44 @@ elif [ "$CORPUS" == "un" ] ; then
   else
     die "Unknown language pair $PAIR for corpus $CORPUS"
   fi
-  # cd /net/data/wmt2012
+  # cd $WMT
   # wget http://www.statmt.org/wmt12/un.es-en.tgz # 1,103,180,390 B
   # wget http://www.statmt.org/wmt12/un.fr-en.tgz # 1,262,447,173 B
   # untar it
   # cd $PLAYGROUND
-  READINPUT="zcat /net/data/wmt2012/MultiUN4WMT12/undoc.2000.$PAIR.$LANGUAGE.gz"
+  READINPUT="zcat $WMT/MultiUN4WMT12/undoc.2000.$PAIR.$LANGUAGE.gz"
 elif [ "$CORPUS" == "gigafren" ] ; then
   if [ "$LANGUAGE" != "fr" ] && [ "$LANGUAGE" != "en" ] ; then
     die "Unknown language $LANGUAGE for corpus $CORPUS"
   fi
-  # cd /net/data/wmt2012
+  # cd $WMT
   # wget http://www.statmt.org/wmt10/training-giga-fren.tar # 2,595,112,960 B
   # untar it
   # cd $PLAYGROUND
-  READINPUT="zcat /net/data/wmt2012/giga-fren.release2.$LANGUAGE.gz"
+  READINPUT="zcat $WMT/giga-fren.release2.$LANGUAGE.gz"
+elif [ "$CORPUS" == "newsall" ] ; then
+  # cd $WMT
+  # wget http://www.statmt.org/wmt12/training-monolingual-news-2007.tgz
+  # wget http://www.statmt.org/wmt12/training-monolingual-news-2008.tgz
+  # wget http://www.statmt.org/wmt12/training-monolingual-news-2009.tgz
+  # wget http://www.statmt.org/wmt12/training-monolingual-news-2010.tgz
+  # wget http://www.statmt.org/wmt12/training-monolingual-news-2011.tgz
+  # untar it
+  # cd $PLAYGROUND
+  READINPUT="zcat $WMT/training-monolingual/news.*.$LANGUAGE.shuffled.gz"
+elif [ "$CORPUS" == "gigaword" ] ; then
+  if [ "$LANGUAGE" != "en" ] && [ "$LANGUAGE" != "es" ] && [ "$LANGUAGE" != "fr" ] ; then
+    die "Unknown language $LANGUAGE for corpus $CORPUS"
+  fi
+  READINPUT="$STATMT/projects/danwmt/gigaword.pl $LANGUAGE"
+elif [[ "$CORPUS" =~ /wmt20[01][89012]/ ]] ; then
+  # cd $WMT
+  # wget http://www.statmt.org/wmt12/dev.tgz
+  # wget http://www.statmt.org/wmt12/test.tgz
+  # untar it
+  # cd $PLAYGROUND
+  newstest=$(echo $CORPUS | sed 's/wmt/newstest/')
+  READINPUT="$SCRIPTS/desgml.pl < $WMT/test/$newstest-src.$LANGUAGE.sgm"
 else
   die "Unknown corpus $CORPUS"
 fi
