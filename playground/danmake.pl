@@ -25,7 +25,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|korpus|augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -44,6 +44,11 @@ if($steptype eq 'special')
         start_all_missing_evaluators();
         start_inited_steps();
     }
+    exit(0);
+}
+elsif($steptype eq 'korpus')
+{
+    start_korpus();
     exit(0);
 }
 # Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
@@ -396,6 +401,87 @@ dzsys::saferun("eman reindex ; eman qstat");
 #==============================================================================
 # SUBROUTINES
 #==============================================================================
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts new korpus steps for all corpora.
+#------------------------------------------------------------------------------
+sub start_korpus
+{
+  # Remove Corpman index if any to force reindexing.
+  # If there were steps for the corpora, we must have removed them first (rm -rf s.korpus.*).
+  # However, the index could still refer to them.
+  unlink('corpman.index') if(-e 'corpman.index');
+  my $corpora = <<EOF
+  CORPUS=newseuro PAIR=cs-en LANGUAGE=cs eman init korpus --start
+  CORPUS=newseuro PAIR=cs-en LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro PAIR=de-en LANGUAGE=de eman init korpus --start
+  CORPUS=newseuro PAIR=de-en LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro PAIR=es-en LANGUAGE=es eman init korpus --start
+  CORPUS=newseuro PAIR=es-en LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro PAIR=fr-en LANGUAGE=fr eman init korpus --start
+  CORPUS=newseuro PAIR=fr-en LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro PAIR=de-cs LANGUAGE=de eman init korpus --start
+  CORPUS=newseuro PAIR=de-cs LANGUAGE=cs eman init korpus --start
+  CORPUS=newseuro PAIR=es-cs LANGUAGE=es eman init korpus --start
+  CORPUS=newseuro PAIR=es-cs LANGUAGE=cs eman init korpus --start
+  CORPUS=newseuro PAIR=fr-cs LANGUAGE=fr eman init korpus --start
+  CORPUS=newseuro PAIR=fr-cs LANGUAGE=cs eman init korpus --start
+  CORPUS=czeng LANGUAGE=cs eman init korpus --start
+  CORPUS=czeng LANGUAGE=en eman init korpus --start
+  CORPUS=un PAIR=es-en LANGUAGE=es eman init korpus --start
+  CORPUS=un PAIR=es-en LANGUAGE=en eman init korpus --start
+  CORPUS=un PAIR=fr-en LANGUAGE=fr eman init korpus --start
+  CORPUS=un PAIR=fr-en LANGUAGE=en eman init korpus --start
+  CORPUS=gigafren LANGUAGE=fr eman init korpus --start
+  CORPUS=gigafren LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro LANGUAGE=cs eman init korpus --start
+  CORPUS=newseuro LANGUAGE=de eman init korpus --start
+  CORPUS=newseuro LANGUAGE=en eman init korpus --start
+  CORPUS=newseuro LANGUAGE=es eman init korpus --start
+  CORPUS=newseuro LANGUAGE=fr eman init korpus --start
+  CORPUS=newsall LANGUAGE=cs eman init korpus --start
+  CORPUS=newsall LANGUAGE=de eman init korpus --start
+  CORPUS=newsall LANGUAGE=en eman init korpus --start
+  CORPUS=newsall LANGUAGE=es eman init korpus --start
+  CORPUS=newsall LANGUAGE=fr eman init korpus --start
+  CORPUS=gigaword LANGUAGE=en eman init korpus --start
+  CORPUS=gigaword LANGUAGE=es eman init korpus --start
+  CORPUS=gigaword LANGUAGE=fr eman init korpus --start
+  CORPUS=wmt2008 LANGUAGE=cs eman init korpus --start
+  CORPUS=wmt2008 LANGUAGE=de eman init korpus --start
+  CORPUS=wmt2008 LANGUAGE=en eman init korpus --start
+  CORPUS=wmt2008 LANGUAGE=es eman init korpus --start
+  CORPUS=wmt2008 LANGUAGE=fr eman init korpus --start
+  CORPUS=wmt2009 LANGUAGE=cs eman init korpus --start
+  CORPUS=wmt2009 LANGUAGE=de eman init korpus --start
+  CORPUS=wmt2009 LANGUAGE=en eman init korpus --start
+  CORPUS=wmt2009 LANGUAGE=es eman init korpus --start
+  CORPUS=wmt2009 LANGUAGE=fr eman init korpus --start
+  CORPUS=wmt2010 LANGUAGE=cs eman init korpus --start
+  CORPUS=wmt2010 LANGUAGE=de eman init korpus --start
+  CORPUS=wmt2010 LANGUAGE=en eman init korpus --start
+  CORPUS=wmt2010 LANGUAGE=es eman init korpus --start
+  CORPUS=wmt2010 LANGUAGE=fr eman init korpus --start
+  CORPUS=wmt2011 LANGUAGE=cs eman init korpus --start
+  CORPUS=wmt2011 LANGUAGE=de eman init korpus --start
+  CORPUS=wmt2011 LANGUAGE=en eman init korpus --start
+  CORPUS=wmt2011 LANGUAGE=es eman init korpus --start
+  CORPUS=wmt2011 LANGUAGE=fr eman init korpus --start
+  CORPUS=wmt2012 LANGUAGE=cs eman init korpus --start
+  CORPUS=wmt2012 LANGUAGE=de eman init korpus --start
+  CORPUS=wmt2012 LANGUAGE=en eman init korpus --start
+  CORPUS=wmt2012 LANGUAGE=es eman init korpus --start
+  CORPUS=wmt2012 LANGUAGE=fr eman init korpus --start
+EOF
+  ;
+  my @corpora = split(/\n/, $corpora);
+  foreach my $corpusinit (@corpora)
+  {
+      dzsys::saferun($corpusinit) or die;
+  }
+}
 
 
 

@@ -18,6 +18,8 @@
 # CORPUS=newseuro PAIR=es-cs LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro PAIR=fr-cs LANGUAGE=fr eman init korpus --start
 # CORPUS=newseuro PAIR=fr-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=czeng LANGUAGE=cs eman init korpus --start
+# CORPUS=czeng LANGUAGE=en eman init korpus --start
 # CORPUS=un PAIR=es-en LANGUAGE=es eman init korpus --start
 # CORPUS=un PAIR=es-en LANGUAGE=en eman init korpus --start
 # CORPUS=un PAIR=fr-en LANGUAGE=fr eman init korpus --start
@@ -38,6 +40,31 @@
 # CORPUS=gigaword LANGUAGE=en eman init korpus --start
 # CORPUS=gigaword LANGUAGE=es eman init korpus --start
 # CORPUS=gigaword LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2008 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2008 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2008 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2008 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2008 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2009 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2009 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2009 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2009 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2009 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2010 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2010 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2010 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2010 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2010 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2011 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2011 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2011 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2011 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2011 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=fr eman init korpus --start
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -121,6 +148,15 @@ if [ "$CORPUS" == "newseuro" ] ; then
   else
     die "Unknown language pair $PAIR for corpus $CORPUS"
   fi
+elif [ "$CORPUS" == "czeng" ] ; then
+  # No wget for Czeng. First, we can access it directly at ÚFAL (/net/data/czeng10-public-release/).
+  # Second, those outside ÚFAL need a login name to download it (registration form at http://ufal.mff.cuni.cz/czeng/czeng10/).
+  # Plain text format: Every file contains four columns. Czech sentence is in the third and English in the fourth column.
+  perl='while(<>) { chomp; my @c = split("\t", $_); if("'$LANGUAGE'" eq "cs") { print "$c[2]\n" } else { print "$c[3]\n" } }'
+  echo '#!/usr/bin/env perl' > column.pl
+  echo $perl >> column.pl
+  chmod 755 column.pl
+  READINPUT="zcat /net/data/czeng10-public-release/data.plaintext-format/*train.gz | column.pl"
 elif [ "$CORPUS" == "un" ] ; then
   if [ "$PAIR" == "es-en" ] ; then
     if [ "$LANGUAGE" != "es" ] && [ "$LANGUAGE" != "en" ] ; then
@@ -163,7 +199,7 @@ elif [ "$CORPUS" == "gigaword" ] ; then
     die "Unknown language $LANGUAGE for corpus $CORPUS"
   fi
   READINPUT="$STATMT/projects/danwmt/gigaword.pl $LANGUAGE"
-elif [[ "$CORPUS" =~ /wmt20[01][89012]/ ]] ; then
+elif [[ "$CORPUS" =~ wmt20[01][89012] ]] ; then
   # cd $WMT
   # wget http://www.statmt.org/wmt12/dev.tgz
   # wget http://www.statmt.org/wmt12/test.tgz
@@ -192,7 +228,12 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 
 expected_nl=-1
 echo Processing $READINPUT
-$READINPUT | $SCRIPTS/tok-dan.pl | $SCRIPTS/fill_empty_sentences.pl | $SCRIPTS/escape_pipe_lt_gt.pl | gzip -c > corpus.txt.gz \\
+$READINPUT \\
+  | $SCRIPTS/specchar.pl -l $LANGUAGE \\
+  | $SCRIPTS/tok-dan.pl \\
+  | $SCRIPTS/fill_empty_sentences.pl \\
+  | $SCRIPTS/escape_pipe_lt_gt.pl \\
+  | gzip -c > corpus.txt.gz \\
   || die "Failed to prepare the corpus"
 echo "Checking output number of lines of corpus.txt.gz"
 nl=\$(zcat corpus.txt.gz | wc -l)
