@@ -53,9 +53,9 @@ cd moses || die "Chdir failed"
 cd ../ || die "chdir back failed"
 
 cd bin || die "chdir to bin/ failed"
-ln -s ../moses/moses-cmd/src/moses \\
-   ../moses/moses-chart-cmd/src/moses_chart \\
-   ../moses/scripts/training/symal/symal \\
+ln -s ../moses/bin/moses \\
+   ../moses/bin/moses_chart \\
+   ../moses/bin/symal \\
    ./ \\
 || die "symlinking failed"
 
