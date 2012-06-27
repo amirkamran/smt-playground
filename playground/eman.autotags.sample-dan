@@ -17,6 +17,9 @@ corpus	var	/OUTCORP=(.*?)/C:$1/	/C:"(.*)"/C:$1/
 corpus	var	/OUTLANG=(.*?)/L:$1/	/L:"(.*)"/L:$1/
 corpus	var	/OUTFACTS=(.*?)/F:$1/	/F:"(.*)"/F:$1/
 corpus	korpus|corpus|augment|morfcorpus	/.*//
+augment	var	/OUTCORP=(.*?)/C:$1/	/C:"(.*)"/C:$1/
+augment	var	/OUTLANG=(.*?)/L:$1/	/L:"(.*)"/L:$1/
+augment	var	/OUTFACTS=(.*?)/F:$1/	/F:"(.*)"/F:$1/
 morfmodel	var	/LANGUAGE=(\S+)/$1/
 morfcorpus	var	/CORP=(\S+)/C:$1/	/C:"(.*)"/C:$1/
 morfcorpus	var	/LANG=(\S+)/L:$1/	/L:"(.*)"/L:$1/

@@ -133,7 +133,6 @@ for src in de es fr ; do
   done
 done
 
-###!!!
 if [ "$CORPUS" == "newseuro" ] ; then
   # cd $WMT
   # wget http://www.statmt.org/wmt12/training-parallel.tgz

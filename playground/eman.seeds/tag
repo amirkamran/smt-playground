@@ -1,0 +1,141 @@
+#!/bin/bash
+# A seed of the Eman step to lemmatize and tag a corpus using Treex.
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+# Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
+# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+SCRIPTS=$STATMT/scripts
+PLAYGROUND=$STATMT/playground
+WMT=/net/data/wmt2012
+eman \
+     defvar CORPUS help='name of corpus known to corpman (we need the "form" factor), e.g. newseuro.cs-en' \
+     defvar LANGUAGE help='language code' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Find the step with the form factor of the corpus.
+CORPSPEC=$($PLAYGROUND/corpman $CORPUS/$LANGUAGE+form)
+echo Corpman returned: $CORPSPEC
+CORPSPECFIELDS=($CORPSPEC)
+FORMSTEP=${CORPSPECFIELDS[0]}
+FORMFILE=${CORPSPECFIELDS[1]}
+if [ -d "$PLAYGROUND/$FORMSTEP" ] ; then
+  echo Corpus $CORPUS/$LANGUAGE+form found in step $FORMSTEP.
+else
+  die "Unknown corpus $CORPUS/$LANGUAGE+form."
+fi
+# Add the corpus step to our ancestors.
+eman add-deps . $FORMSTEP
+
+if   [ "$LANGUAGE" == "cs" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::CS::TagMorce  Print::TaggedTokensWithLemma"
+elif [ "$LANGUAGE" == "de" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+elif [ "$LANGUAGE" == "en" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::EN::TagMorce W2A::EN::FixTags W2A::EN::Lemmatize Print::TaggedTokensWithLemma"
+elif [ "$LANGUAGE" == "es" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+elif [ "$LANGUAGE" == "fr" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+else
+  die "Unknown language $LANGUAGE."
+fi
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+if   [[ "$CORPUS" =~ ^wmt ]] ; then
+  NJOBS=2
+elif [[ "$CORPUS" =~ ^giga ]] || [[ "$CORPUS" =~ ^un ]] ; then
+  NJOBS=100
+else
+  NJOBS=30
+fi
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+set -o pipefail
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+infile=$PLAYGROUND/$FORMSTEP/$FORMFILE
+outfile=\$mydir/tagged.txt.gz
+
+# The corpus of forms will be splitted to smaller files 1000 lines each.
+mkdir -p chunks
+fnl=\$(gunzip -c \$infile | wc -l)
+# We assume that the corpus file is gzipped and that it does not contain multiple columns.
+date
+echo Splitting the input file to chunks of 1000 lines.
+gunzip -c \$infile | split -d -a5 - chunks/
+date
+echo Renaming and gzipping the chunks.
+rm -f filelist.txt
+for f in chunks/* ; do
+  mv \$f \$f.txt
+  gzip \$f.txt
+  echo \$mydir/\$f.txt.gz >> filelist.txt
+done
+from="from=@\$mydir/filelist.txt"
+
+# Invoke Treex and tag the corpus.
+###!!! We may want to use a Treex installed within a special treex step.
+###!!! Ondřej does this to preserve the particular Treex version used to make the step.
+###!!! It would mean that the treex step is an ancestor of all tag steps.
+date
+echo Invoking Treex.
+cd chunks || die "Cannot go to chunks folder."
+# treex -Lfr Read::Sentences from=@/net/data/augmented_corpora/news.2011.fr/fr.tagged/filelist.txt W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma --no-save
+# Parametry pro paralelizaci Treexu na clusteru:
+# -p zapíná paralelizaci.
+# -j udává počet úloh, na které se to má rozdělit.
+# --priority udává požadovanou prioritu, typicky se snižuje "-100" apod.
+# --qsub udává případné další parametry pro plánovač (zejména požadavky na paměť?)
+echo treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save
+treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save \\
+  | $SCRIPTS/put_sentence_on_one_line.pl \\
+  | gzip -c \\
+  > \$outfile \\
+  || die "Treex failed."
+cd \$mydir
+# Check that the tagged corpus has number of lines identical to the corpus of forms.
+tnl=\$(gunzip -c \$outfile | wc -l)
+echo Input file \$infile has \$fnl lines.
+echo Output file \$outfile has \$tnl lines.
+if [ "\$tnl" -ne "\$fnl" ] ; then
+  die "Output file size mismatch."
+fi
+
+# Register the lemmas and tags with corpman.
+# Note that the 'form' factor that is also there will be registered as 'form1' to prevent conflict with the original form corpus.
+echo Registering the corpus.
+$PLAYGROUND/corpman register -- tagged.txt.gz -1 $CORPUS $LANGUAGE form1+lemma+tag \$tnl 0 \\
+  || die "Cannot register corpus."
+
+# Clean the disk and save some (a lot of!) space if everything went well.
+echo Removing the temporary chunks folder.
+rm -rf chunks
+
+echo Done.
+eman succeed \$mydir
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+
