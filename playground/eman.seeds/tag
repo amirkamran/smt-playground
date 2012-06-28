@@ -80,7 +80,7 @@ fnl=\$(gunzip -c \$infile | wc -l)
 # We assume that the corpus file is gzipped and that it does not contain multiple columns.
 date
 echo Splitting the input file to chunks of 1000 lines.
-gunzip -c \$infile | split -d -a5 - chunks/
+gunzip -c \$infile | split -d -a6 - chunks/
 date
 echo Renaming and gzipping the chunks.
 rm -f filelist.txt
@@ -138,4 +138,3 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 KONEC
-

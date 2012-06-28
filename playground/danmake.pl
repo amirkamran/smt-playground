@@ -495,8 +495,6 @@ sub start_tag
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
-        ###!!! Dočasné: Přeskočit gigaword.en. Ten totiž zatím ještě není připravený.
-        next if($corpname eq 'gigaword' && $c->{language} eq 'en');
         dzsys::saferun($command) or die;
     }
 }
