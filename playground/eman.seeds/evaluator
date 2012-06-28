@@ -27,7 +27,7 @@ eval `eman bash-loadvars`
 
 MOSESSTEPDIR=`eman path $MOSESSTEP `
 
-EVALUATOR=$MOSESSTEPDIR/moses/mert/evaluator
+EVALUATOR=$MOSESSTEPDIR/moses/bin/evaluator
 
 cat << KONEC > eman.command
 # This is the command to be run here
