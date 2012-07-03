@@ -75,7 +75,8 @@ infile=$PLAYGROUND/$FORMSTEP/$FORMFILE
 outfile=\$mydir/tagged.txt.gz
 
 # The corpus of forms will be splitted to smaller files 1000 lines each.
-mkdir -p chunks
+rm -rf chunks
+mkdir chunks || die "Cannot create the chunks folder."
 fnl=\$(gunzip -c \$infile | wc -l)
 # We assume that the corpus file is gzipped and that it does not contain multiple columns.
 date
@@ -103,9 +104,14 @@ cd chunks || die "Cannot go to chunks folder."
 # -p zapíná paralelizaci.
 # -j udává počet úloh, na které se to má rozdělit.
 # --priority udává požadovanou prioritu, typicky se snižuje "-100" apod.
-# --qsub udává případné další parametry pro plánovač (zejména požadavky na paměť?)
-echo treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save
-treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save \\
+# --memory udává požadovanou paměť, např. "4G", výchozí hodnota je "2G"
+# --qsub udává případné další parametry pro plánovač
+# Note DZ: I do not know what exactly the memory requirements of Morče depend on.
+# Nevertheless, some jobs exceeded (fatally) 6 gigabytes, so we must require more.
+# I suspect that there is a memory leak in Morče. Or all tagged text is stupidly kept in memory.
+# The more text is tagged, the more memory is used.
+echo treex -p -j$NJOBS --priority=-400 --memory=15G -L$LANGUAGE $SCENARIO --no-save
+treex -p -j$NJOBS --priority=-400 --memory=15G -L$LANGUAGE $SCENARIO --no-save \\
   | $SCRIPTS/put_sentence_on_one_line.pl \\
   | gzip -c \\
   > \$outfile \\
