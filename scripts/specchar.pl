@@ -93,6 +93,8 @@ while(<>)
     s/\s+/ /g;
     # U některých textů došlo k chybám při konverzi kódování a výsledkem je REPLACEMENT CHARACTER (xFFFD). Ten chceme odstranit bez náhrady.
     s/\x{FFFD}//g;
+    # Podobně by korpusy neměly obsahovat kódy "neznaků", které jsou určené pro použití uvnitř procesu, ale ne pro komunikaci a ukládání dat.
+    s/[\x{FDD0}-\x{FDEF}]//g;
     # Obsahuje vstup XML entity? Typicky nechceme žádné kromě &amp;, &lt;, &gt; a &pipe;. Např. &quot; je na závadu.
     decode_entities($_);
     # Europarl kromě XML entit ojediněle obsahuje i sekvence typu "\u8243".
