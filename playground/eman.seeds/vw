@@ -22,7 +22,7 @@ ulimit -c 1 # core files limited to 1 byte
 git clone git@github.com:ales-t/vowpal_wabbit.git || die "Failed to clone VW"
 cd vowpal_wabbit || die "Failed to chdir to vowpal_wabbit"
 ./autogen.sh --prefix=\$(pwd) || die "Configure failed"
-make || die "Compilation failed"
+make -j 8 || die "Compilation failed"
 make install || die "Installation failed"
 
 cd \$mydir || die "Failed to chdir back"
