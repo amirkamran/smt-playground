@@ -25,7 +25,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|korpus|tag|augment|augmentbasic|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|korpus|tag|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -72,7 +72,6 @@ foreach my $lms (@lmshortcuts)
 {
     push(@lmcorpora, get_monolingual_corpus_names($lms));
 }
-# Některé kroky (např. augment) pracují jak s paralelními, tak s jednojazyčnými korpusy.
 # Kroky lm pracují pouze s jednojazyčnými korpusy.
 # Kroky align a tm pracují pouze s paralelními korpusy.
 # Kroky model, mert, translate a evaluator pracují vždy s kombinací paralelního a jednojazyčného korpusu.
@@ -155,46 +154,6 @@ exit(0);
 # Pozor, stále chceme, aby $lmcorpus byl globální proměnná, takže žádné my!
 foreach $lmcorpus (@lmcorpora)
 {
-    # Pro každou kombinaci korpusu, jazyka a faktoru, kterou budeme potřebovat, vytvořit samostatný augmentovací krok.
-    # Jednotlivé augmenty trvají nevysvětlitelně dlouho a tahle paralelizace by nám měla ulevit.
-    # Na druhou stranu se obávám, zda Ondrovy zámky ohlídají současné pokusy o vytvoření stejných zdrojových faktorů.
-    if($steptype =~ m/^(augment|all)$/)
-    {
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=lemma eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=$corpus OUTLANG=$language2 OUTFACTS=lemma eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=$corpus OUTLANG=$language1 OUTFACTS=stc eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=$corpus OUTLANG=$language2 OUTFACTS=stc eman init augment --start") or die;
-        }
-        # A teď ještě jednojazyčná data na trénování jazykových modelů.
-        foreach my $corpus (@mono_training_corpora)
-        {
-            my $language = get_language_code($corpus);
-            dzsys::saferun("OUTCORP=$corpus OUTLANG=$language OUTFACTS=stc eman init augment --start") or die;
-        }
-    }
-    # Corpman mě permanentně buzeruje, že nemám pro své korpusy dostupný faktor form, protože jsem převzal přímo stc.
-    # Pojďme tedy jednorázově vyrobit základní korpusy s faktory form+lemma+tag pro paralelní korpusy
-    # news-commentary-v7 a europarl-v7, které jinak samostatně ani nemám na repertoáru.
-    if($steptype eq 'augmentbasic')
-    {
-        # Seznam neorientovaných párů kvůli identifikaci jednotlivých po dvou paralelních podmnožin.
-        # Poznámka: Tyto základní korpusy nemáme k dispozici pro páry de-cs, es-cs a fr-cs, pro ty už jsem rovnou vyráběl spojené korpusy news-commentary-europarl-v7.
-        my @pairs = ('cs-en', 'de-en', 'es-en', 'fr-en');
-        foreach my $pair (@pairs)
-        {
-            my ($language1, $language2) = get_language_codes("korpus.$pair");
-            dzsys::saferun("OUTCORP=news-commentary-v7.$pair OUTLANG=$language1 OUTFACTS=form+lemma+tag eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=news-commentary-v7.$pair OUTLANG=$language2 OUTFACTS=form+lemma+tag eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=europarl-v7.$pair        OUTLANG=$language1 OUTFACTS=form+lemma+tag eman init augment --start") or die;
-            dzsys::saferun("OUTCORP=europarl-v7.$pair        OUTLANG=$language2 OUTFACTS=form+lemma+tag eman init augment --start") or die;
-        }
-    }
     # Výroba kombinovaných paralelních korpusů.
     if($steptype eq 'combine')
     {
