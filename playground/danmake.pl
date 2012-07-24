@@ -187,45 +187,6 @@ foreach $lmcorpus (@lmcorpora)
             dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
         }
     }
-    # Pro každý pár vytvořit a spustit vstupní krok dandata, který na jednom místě soustředí odkazy na všechny potřebné korpusy.
-    if($steptype =~ m/^(data|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            dzsys::saferun("SRC=$src TGT=$tgt eman init dandata --start") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok danalign, který vyrobí obousměrný alignment.
-    if($steptype =~ m/^(align|all)$/)
-    {
-        my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
-        my $danalign = 0; # hard switch
-        if(!$danalign)
-        {
-            # Odstranit corpman.index a vynutit tak přeindexování.
-            # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-            dzsys::saferun("rm -f corpman.index") or die;
-            foreach my $corpus (@parallel_training_corpora)
-            {
-                my ($language1, $language2) = get_language_codes($corpus);
-                # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h. Měli bychom požadovat alespoň 15 GB volného místa,
-                # i když už jsem viděl korpus, na který nestačilo ani 50 GB.
-                my $disk = '15g';
-                dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1+lemma TGTALIAUG=$language2+lemma eman init align --start --disk $disk") or die;
-                dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2+lemma TGTALIAUG=$language1+lemma eman init align --start --disk $disk") or die;
-            }
-        }
-        else
-        {
-            foreach my $pair (@pairs)
-            {
-                my ($src, $tgt) = @{$pair};
-                my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
-                dzsys::saferun("GIZASTEP=$gizastep DATASTEP=$datastep eman init danalign --start --mem 20g") or die;
-            }
-        }
-    }
     # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
     if($steptype =~ m/^(morfalign|all)$/)
     {
