@@ -85,6 +85,15 @@ if($steptype eq 'lm')
         push(@models, {'t' => $language, 'mc' => $mcorpus});
     }
 }
+elsif($steptype =~ m/^(align|tm)$/)
+{
+    foreach my $pcorpus (@parallel_training_corpora)
+    {
+        my ($language1, $language2) = get_language_codes($pcorpus);
+        push(@models, {'s' => $language1, 't' => $language2, 'pc' => $pcorpus});
+        push(@models, {'s' => $language2, 't' => $language1, 'pc' => $pcorpus});
+    }
+}
 elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
 {
     foreach my $pcorpus (@parallel_training_corpora)
@@ -135,9 +144,44 @@ else
     # Give the user the chance to spot a problem and stop the machinery.
     sleep(30);
 }
+###!!!
+$dummy = <<EOF
+danmake.pl -t align -dryrun
+cs-de   news-europarl-v7.de-cs  
+cs-en   news-europarl-v7.cs-en  
+cs-es   news-europarl-v7.es-cs  
+cs-fr   news-europarl-v7.fr-cs  
+de-cs   news-europarl-v7.de-cs  
+de-en   news-europarl-v7.de-en  
+en-cs   news-europarl-v7.cs-en  
+en-de   news-europarl-v7.de-en  
+en-es   news-europarl-v7.es-en  
+en-es   un.es-en
+en-es   news-euro-un.es-en
+en-fr   news-europarl-v7.fr-en  
+en-fr   un.fr-en
+en-fr   news-euro-un.fr-en
+es-cs   news-europarl-v7.es-cs  
+es-en   news-europarl-v7.es-en  
+es-en   un.es-en
+es-en   news-euro-un.es-en
+fr-cs   news-europarl-v7.fr-cs  
+fr-en   news-europarl-v7.fr-en  
+fr-en   un.fr-en
+fr-en   news-euro-un.fr-en
+Total 22 models.
+EOF
+;
+# To nahoře je aktuální seznam paralelních korpusů, pro které by se pouštěl align.
+# Ten je ale už zastaralý a nekoresponduje s tím, jak jsem všechny korpusy znova vyrobil a označkoval.
+# Nové korpusy jsou zaregistrované pod jinými jmény, je v nich navíc gigafren a nejsou v nich (zatím) kombinace jako news-euro-un.fr-en.
+# Viz funkci get_corpora().
+###!!!
 my %start_step =
 (
     'lm'        => \&start_lm,
+    'align'     => \&start_align,
+#    'tm'        => \&start_tm,
     'model'     => \&start_model,
     'mert'      => \&start_mert,
     'translate' => \&start_translate,
@@ -332,25 +376,45 @@ dzsys::saferun("eman reindex ; eman qstat");
 #------------------------------------------------------------------------------
 # Creates the list of corpora, both parallel and monolingual. This is not the
 # old-fashioned list for 'augment' steps. This list uses names under which the
-# corpora are / shall be registered with corpman.
+# corpora are / shall be registered with corpman. This function provides a
+# seed from which other functions construct customized lists of parallel
+# training corpora, monolingual corpora etc. Note the 'parallel' flag. Being
+# available in multiple languages does not necessarily make the corpus
+# parallel. On the other hand, having 'pairs' implies being parallel. Not all
+# parallel corpora have 'pairs' though. Only those that have pairs in file
+# names.
 #------------------------------------------------------------------------------
-sub get_corpora
+sub get_corpora_seed
 {
     my @corpora0 =
     (
-      { 'corpus' => 'newseuro', 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] },
-      { 'corpus' => 'czeng',    'languages' => ['cs', 'en'] },
-      { 'corpus' => 'un',       'pairs' => ['es-en', 'fr-en'] },
-      { 'corpus' => 'gigafren', 'languages' => ['fr', 'en'] },
-      { 'corpus' => 'newseuro', 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'newsall',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'gigaword', 'languages' => ['en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2008',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2009',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2010',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2011',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2012',  'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'newseuro', 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] },
+      { 'corpus' => 'czeng',    'parallel' => 1, 'languages' => ['cs', 'en'] },
+      { 'corpus' => 'un',       'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+      { 'corpus' => 'gigafren', 'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'newseuro', 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'newsall',  'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'gigaword', 'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2008',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2009',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2010',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2011',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2012',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
     );
+    return @corpora0;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Creates the list of all corpora, viewed monolingually. This list is suitable
+# for steps that prepare and tag the corpora, i.e. both parallel and monoling.
+# corpora undergo the same processing. Steps for language models will probably
+# want to select only larger monolingual corpora.
+#------------------------------------------------------------------------------
+sub get_corpora
+{
+    my @corpora0 = get_corpora_seed();
     my @corpora;
     foreach my $c0 (@corpora0)
     {
@@ -380,6 +444,42 @@ sub get_corpora
         }
     }
     return @corpora;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Creates the list of parallel corpora.
+#------------------------------------------------------------------------------
+sub get_parallel_corpora
+{
+    my @corpora = grep {$_->{parallel}} (get_corpora_seed());
+    my @pcorpora;
+    foreach my $c (@corpora)
+    {
+        # Newseuro are parallel or monolingual, depending on presence of the 'pair' attribute.
+        # UN, gigafren and czeng are parallel (UN has the 'pair' attribute, gigafren and czeng have not).
+        # wmt20* are multi-parallel development and test data. They do not have the 'pair' attribute.
+        if(exists($c->{pairs}))
+        {
+            foreach my $p (@{$c->{pairs}})
+            {
+                push(@pcorpora, {'corpus' => "$c->{corpus}.$c->{pair}", 'pair' => $p});
+            }
+        }
+        else # No list of pairs => list of languages.
+        {
+            for(my $i = 0; $i<=$#{$c->{languages}}-1; $i++)
+            {
+                for(my $j = $i+1; $j<=$#{$c->{languages}}; $j++)
+                {
+                    my $pair = $c->{languages}[$i].'-'.$c->{languages}[$j];
+                    push(@pcorpora, {'corpus' => $c->{corpus}, 'pair' => $pair});
+                }
+            }
+        }
+    }
+    return @pcorpora;
 }
 
 
@@ -432,6 +532,25 @@ sub start_lm
     my $n_lines = get_corpus_size($m->{mc}, $m->{t}, 'stc');
     my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=30000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
     dzsys::saferun("SRILMSTEP=$srilmstep CORP=$m->{mc} CORPAUG=$m->{t}+stc ORDER=6 eman init lm --start$mem") or die;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new align step for the given parallel corpus.
+#------------------------------------------------------------------------------
+sub start_align
+{
+    my $m = shift; # reference to hash with model parameters
+    my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
+    # Odstranit corpman.index a vynutit tak přeindexování.
+    # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+    dzsys::saferun('rm -f corpman.index') or die;
+    # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h. Měli bychom požadovat alespoň 15 GB volného místa,
+    # i když už jsem viděl korpus, na který nestačilo ani 50 GB.
+    my $disk = '15g';
+    dzsys::saferun("GIZASTEP=$gizastep CORPUS=$m->{pc} SRCALIAUG=$m->{s}+lemma TGTALIAUG=$m->{t}+lemma eman init align --start --disk $disk") or die;
+    #start_tm($m);###!!!
 }
 
 
