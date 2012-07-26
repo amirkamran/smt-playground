@@ -87,11 +87,14 @@ if($steptype eq 'lm')
 }
 elsif($steptype =~ m/^(align|tm)$/)
 {
-    foreach my $pcorpus (@parallel_training_corpora)
+    my @pcorpora = get_parallel_corpora();
+    foreach my $pcorpus (@pcorpora)
     {
-        my ($language1, $language2) = get_language_codes($pcorpus);
-        push(@models, {'s' => $language1, 't' => $language2, 'pc' => $pcorpus});
-        push(@models, {'s' => $language2, 't' => $language1, 'pc' => $pcorpus});
+        # Netrénovat na malých testovacích datech, to je zbytečné.
+        # (Ta, na kterých neladíme ani netestujeme, bychom mohli chtít k trénovacím datům přidat, pak by ale "wmt" nebylo na začátku.)
+        next if($pcorpus->{corpus} =~ m/^wmt/);
+        push(@models, {'s' => $pcorpus->{languages}[0], 't' => $pcorpus->{languages}[1], 'pc' => $pcorpus->{corpus}});
+        push(@models, {'s' => $pcorpus->{languages}[1], 't' => $pcorpus->{languages}[0], 'pc' => $pcorpus->{corpus}});
     }
 }
 elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
@@ -144,44 +147,11 @@ else
     # Give the user the chance to spot a problem and stop the machinery.
     sleep(30);
 }
-###!!!
-$dummy = <<EOF
-danmake.pl -t align -dryrun
-cs-de   news-europarl-v7.de-cs  
-cs-en   news-europarl-v7.cs-en  
-cs-es   news-europarl-v7.es-cs  
-cs-fr   news-europarl-v7.fr-cs  
-de-cs   news-europarl-v7.de-cs  
-de-en   news-europarl-v7.de-en  
-en-cs   news-europarl-v7.cs-en  
-en-de   news-europarl-v7.de-en  
-en-es   news-europarl-v7.es-en  
-en-es   un.es-en
-en-es   news-euro-un.es-en
-en-fr   news-europarl-v7.fr-en  
-en-fr   un.fr-en
-en-fr   news-euro-un.fr-en
-es-cs   news-europarl-v7.es-cs  
-es-en   news-europarl-v7.es-en  
-es-en   un.es-en
-es-en   news-euro-un.es-en
-fr-cs   news-europarl-v7.fr-cs  
-fr-en   news-europarl-v7.fr-en  
-fr-en   un.fr-en
-fr-en   news-euro-un.fr-en
-Total 22 models.
-EOF
-;
-# To nahoře je aktuální seznam paralelních korpusů, pro které by se pouštěl align.
-# Ten je ale už zastaralý a nekoresponduje s tím, jak jsem všechny korpusy znova vyrobil a označkoval.
-# Nové korpusy jsou zaregistrované pod jinými jmény, je v nich navíc gigafren a nejsou v nich (zatím) kombinace jako news-euro-un.fr-en.
-# Viz funkci get_corpora().
-###!!!
 my %start_step =
 (
     'lm'        => \&start_lm,
     'align'     => \&start_align,
-#    'tm'        => \&start_tm,
+    'tm'        => \&start_tm,
     'model'     => \&start_model,
     'mert'      => \&start_mert,
     'translate' => \&start_translate,
@@ -464,7 +434,17 @@ sub get_parallel_corpora
         {
             foreach my $p (@{$c->{pairs}})
             {
-                push(@pcorpora, {'corpus' => "$c->{corpus}.$c->{pair}", 'pair' => $p});
+                my ($l1, $l2);
+                if($p =~ m/^(\S+)-(\S+)$/)
+                {
+                    $l1 = $1;
+                    $l2 = $2;
+                }
+                else
+                {
+                    die("Cannot understand language pair '$p'.");
+                }
+                push(@pcorpora, {'corpus' => "$c->{corpus}.$p", 'pair' => $p, 'languages' => [$l1, $l2]});
             }
         }
         else # No list of pairs => list of languages.
@@ -474,7 +454,7 @@ sub get_parallel_corpora
                 for(my $j = $i+1; $j<=$#{$c->{languages}}; $j++)
                 {
                     my $pair = $c->{languages}[$i].'-'.$c->{languages}[$j];
-                    push(@pcorpora, {'corpus' => $c->{corpus}, 'pair' => $pair});
+                    push(@pcorpora, {'corpus' => $c->{corpus}, 'pair' => $pair, 'languages' => [$c->{languages}[$i], $c->{languages}[$j]]});
                 }
             }
         }
@@ -548,9 +528,25 @@ sub start_align
     dzsys::saferun('rm -f corpman.index') or die;
     # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h. Měli bychom požadovat alespoň 15 GB volného místa,
     # i když už jsem viděl korpus, na který nestačilo ani 50 GB.
-    my $disk = '15g';
+    my $n_lines = get_corpus_size($m->{pc}, $m->{s}, 'lemma');
+    my $disk = $n_lines>=3000000 ? '100g' : '15g';
     dzsys::saferun("GIZASTEP=$gizastep CORPUS=$m->{pc} SRCALIAUG=$m->{s}+lemma TGTALIAUG=$m->{t}+lemma eman init align --start --disk $disk") or die;
-    #start_tm($m);###!!!
+    start_tm($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new tm step for the given parallel corpus.
+#------------------------------------------------------------------------------
+sub start_tm
+{
+    my $m = shift; # reference to hash with model parameters
+    my $mosesstep = find_step('mosesgiza', 'd');
+    my $alignfactor = $use_morphemes ? 'stc' : 'lemma';
+    my $alignstep = find_step('align', "v CORPUS=$m->{pc} v SRCALIAUG=$m->{s}+$alignfactor v TGTALIAUG=$m->{t}+$alignfactor");
+    # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
+    dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep SRCAUG=$m->{s}+stc TGTAUG=$m->{t}+stc DECODINGSTEPS=t0-0 eman init tm --start") or die;
 }
 
 

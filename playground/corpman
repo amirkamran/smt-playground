@@ -134,6 +134,7 @@ my $waserror = 0;
 # chdir to main dir
 chdir($mydir) or die "Failed to chdir to $mydir";
 
+# get/create index of all corpman.info files on the current playground
 if ( ! -e $indexfile || $reindex ) {
   print STDERR "Indexing...\n" if $verbose;
   open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
@@ -218,72 +219,23 @@ if (! defined $cmd) {
   exit;
 }
 
+#--------------------------------------
 if ($cmd eq "reindex") {
   print STDERR "Reindexed.\n";
   exit;
+#--------------------------------------
 } elsif ($cmd eq "register") {
   my ($file, $column, $corp, $lang, $facts, $linecount, $derived) = @ARGV;
 
   # all previous items are defined if the last one is
+  # $derived is optional and needs not be defined
   if (! defined $linecount) {
     usage();
     exit 1;
   }
-
-  my $stepname = basename($workdir);
-  my $force_info_update = 0;
-
-  my $entry = $index->{$corp}->{$lang}->{$facts};
-  if (defined $entry) {
-    if ($entry->{stepname} eq $stepname) {
-      if ($entry->{linecount} == -1) {
-        $entry->{linecount} = $linecount;
-        saveidx($index);
-        $force_info_update = 1;
-      }
-    } else {
-      if ($entry->{factind} == -1) {
-        die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
-      } else {
-        print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
-      }
-    }
-  } else {
-    # add corpus to index
-    add_entry_incl_entries_of_separate_factors(
-        $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
-    # save the updated index
-    saveidx($index);
-  }
-
-
-  my $do_update_info = 1;
-
-  # update corpman.info in the step directory
-  my @info_current;
-  if (-e "$workdir/corpman.info") {
-    @info_current = split /\n/, load_file("$workdir/corpman.info");
-  }
-  my $identical = grep /\t\Q$corp\E\t\Q$lang\E\t\Q$facts/, @info_current;
-  if ($identical) {
-    if ($force_info_update) {
-      @info_current = grep {
-        $_ !~ m/\t\Q$corp\E\t\Q$lang\E\t\Q$facts\E\t(-1|$linecount)/
-      } @info_current;
-    } else {
-      print STDERR "Corpus $corp/$lang+$facts already in corpman.info.\n";
-      $do_update_info = 0;
-    }
-  }
-
-  if ($do_update_info) {
-    $derived = "" if ! defined $derived;
-    my $new_info_line = join("\t",
-        $file, $column, $corp, $lang, $facts, $linecount, $derived);
-    push @info_current, $new_info_line;
-    my %uniq_info = map { ($_, 1) } @info_current;
-    save_file("$workdir/corpman.info", join("\n", sort keys %uniq_info));
-  }
+  # add or update the entry in the index, save the index and update the corpman.info file if necessary
+  register($index, $workdir, $file, $column, $corp, $lang, $facts, $linecount, $derived);
+#--------------------------------------
 } elsif ($cmd eq "list") {
   # list all variants of the given corpus or of all corpora
   my ($corp) = @ARGV;
@@ -294,6 +246,7 @@ if ($cmd eq "reindex") {
       list_corp_variants($c);
     }
   }
+#--------------------------------------
 } else {
   # user wants a corpus
   my $descr = $cmd;
@@ -368,6 +321,83 @@ if ($cmd eq "reindex") {
 exit ($waserror != 0);
 # end of main
 
+
+
+###############################################################################
+# SUBROUTINES
+###############################################################################
+
+
+
+#------------------------------------------------------------------------------
+# Registers a corpus with corpman.
+#------------------------------------------------------------------------------
+sub register {
+  my $index = shift;
+  my $workdir = shift;
+  my $file = shift;
+  my $column = shift;
+  my $corp = shift;
+  my $lang = shift;
+  my $facts = shift;
+  my $linecount = shift;
+  my $derived = shift;
+  my $stepname = basename($workdir);
+  my $force_info_update = 0;
+  my $entry = $index->{$corp}->{$lang}->{$facts};
+  if (defined $entry) {
+    if ($entry->{stepname} eq $stepname) {
+      if ($entry->{linecount} == -1) {
+        $entry->{linecount} = $linecount;
+        saveidx($index);
+        $force_info_update = 1;
+      }
+    } else {
+      if ($entry->{factind} == -1) {
+        die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+      } else {
+        print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
+      }
+    }
+  } else {
+    # add corpus to index
+    add_entry_incl_entries_of_separate_factors(
+        $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
+    # save the updated index
+    saveidx($index);
+  }
+  my $do_update_info = 1;
+  # update corpman.info in the step directory
+  my @info_current;
+  if (-e "$workdir/corpman.info") {
+    @info_current = split /\n/, load_file("$workdir/corpman.info");
+  }
+  my $identical = grep /\t\Q$corp\E\t\Q$lang\E\t\Q$facts/, @info_current;
+  if ($identical) {
+    if ($force_info_update) {
+      @info_current = grep {
+        $_ !~ m/\t\Q$corp\E\t\Q$lang\E\t\Q$facts\E\t(-1|$linecount)/
+      } @info_current;
+    } else {
+      print STDERR "Corpus $corp/$lang+$facts already in corpman.info.\n";
+      $do_update_info = 0;
+    }
+  }
+  if ($do_update_info) {
+    $derived = "" if ! defined $derived;
+    my $new_info_line = join("\t",
+        $file, $column, $corp, $lang, $facts, $linecount, $derived);
+    push @info_current, $new_info_line;
+    my %uniq_info = map { ($_, 1) } @info_current;
+    save_file("$workdir/corpman.info", join("\n", sort keys %uniq_info));
+  }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Lists all known variants of a corpus or of all corpora known to corpman.
+#------------------------------------------------------------------------------
 sub list_corp_variants {
   my $corpname = shift;
   foreach my $l (keys %{$index->{$corpname}}) {
@@ -396,9 +426,14 @@ sub list_corp_variants {
   }
 }
 
+
+
+#------------------------------------------------------------------------------
+# Finds required factors in index. If they are not available and if it knows
+# how to build them, it either builds them or returns the recipe.
+#------------------------------------------------------------------------------
 sub build_exact_factors {
   my ($corp, $lang, $facts) = @_;
-
   # runs lazy_build and extracts the required factor if necessary
   my $entry = lazy_build($corp, $lang, $facts);
   print STDERR "Called build_exact_factors @_\n" if $verbose;
@@ -423,10 +458,14 @@ sub build_exact_factors {
 }
 
 
+
+#------------------------------------------------------------------------------
+# Builds the specified corpus.
+# Returns stepname, filename, column and
+#   -1 if the requested factors are exactly there
+#   factor number of the *single* factor to pick
+#------------------------------------------------------------------------------
 sub lazy_build {
-  # build the specified corpus
-  # return stepname, filename, column and -1 (if the requested factors are
-  # exactly there) or the factor number of the *single* factor to pick
   my ($corp, $lang, $facts) = @_;
   print STDERR "Called lazy_build @_\n" if $verbose;
 
@@ -524,6 +563,11 @@ sub lazy_build {
   return build_using_rules($corp, $lang, $facts);
 }
 
+
+
+#------------------------------------------------------------------------------
+# Derives a corpus from other corpora using corpman rules.
+#------------------------------------------------------------------------------
 sub build_using_rules {
   my ($corp, $lang, $facts) = @_;
   print STDERR "Called build_using_rules @_\n" if $verbose;
@@ -556,6 +600,11 @@ sub build_using_rules {
 }
 
 
+
+#------------------------------------------------------------------------------
+# Constructs a recipe for a new eman step that would create the required
+# corpus. Calls eman with the recipe if required by the user.
+#------------------------------------------------------------------------------
 sub run_or_fake_corpus_step {
   my $command = shift;
   my $deps = shift; # deps to wait for
@@ -589,6 +638,9 @@ sub run_or_fake_corpus_step {
 
 
 
+#------------------------------------------------------------------------------
+# Adds a rule to the list of rules for deriving corpora.
+#------------------------------------------------------------------------------
 sub add_rule {
   my ($outlang, $outfacts, $newrule) = @_;
   $outfacts =~ s/\|/+/g;
@@ -641,6 +693,8 @@ sub add_entry_incl_entries_of_separate_factors {
   }
   return $newentry;
 }
+
+
 
 sub add_entry {
   # Add a corpus to the index avoiding duplicates.
@@ -733,6 +787,8 @@ sub add_entry {
   }
 }
 
+
+
 sub get_entry_source_type {
   # returns A, B, or C, see above
   my $entry = shift;
@@ -741,6 +797,8 @@ sub get_entry_source_type {
   return "B" if $entry->{"factind"} == -1;
   return "C";
 }
+
+
 
 sub my_open {
   my $f = shift;
@@ -766,6 +824,7 @@ sub my_open {
 }
 
 
+
 # Run a command very safely.
 # Synopsis: safesystem(qw(echo hello)) or die;
 sub safesystem {
@@ -784,6 +843,8 @@ sub safesystem {
         return ! $exitcode;
     }
 }
+
+
 
 sub my_save {
   my $f = shift;
@@ -808,6 +869,8 @@ sub my_save {
   return $hdl;
 }
 
+
+
 sub load_file {
   my $fn = shift;
   my $out = "";
@@ -816,6 +879,8 @@ sub load_file {
   close $h if $fn ne "-";
   return $out;
 }
+
+
 
 sub save_file {
   my $fn = shift;
@@ -827,6 +892,8 @@ sub save_file {
   close $h;
 }
 
+
+
 sub trim {
   my $s = shift;
   $s =~ s/ +\t/\t/g;
@@ -836,12 +903,15 @@ sub trim {
   return $s;
 }
 
+
+
 sub load_step_status {
   my $stepname = shift;
   my $status = load_file($stepname."/eman.status");
   chomp $status;
   return $status;
 }
+
 
 
 sub loadidx {
@@ -852,6 +922,9 @@ sub loadidx {
   }
   return $idx;
 }
+
+
+
 sub saveidx {
   my $idx = shift;
   my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>cwd());
@@ -863,3 +936,4 @@ sub saveidx {
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
 }
+
