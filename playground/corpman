@@ -446,7 +446,21 @@ sub build_exact_factors {
     return $entry;
   } else {
     # not quite, we need to restrict to the given factor
-    my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS=$entry->{stepname} RUN_COMMAND='cat' STEPNAME=$entry->{stepname} FILENAME=$entry->{filename} COLUMN=$entry->{column} FACTOR=$entry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$entry->{linecount} eman init corpus", [$entry->{"stepname"}]);
+    ###!!! DZ: This does not work. The new step cannot register new corpus with the factor
+    ###!!! because it has already been registered by the current step, thus there would be conflict.
+    ###!!! Instead of creating new copies of the corpus, we should provide means of identifying and extracting the factor from the existing step.
+    my $stepname = run_or_fake_corpus_step("DERIVED=1 ".
+      "DEPS=$entry->{stepname} ".
+      "RUN_COMMAND='cat' ".
+      "STEPNAME=$entry->{stepname} ".
+      "FILENAME=$entry->{filename} ".
+      "COLUMN=$entry->{column} ".
+      "FACTOR=$entry->{factind} ".
+      "OUTCORP=$corp ".
+      "OUTLANG=$lang ".
+      "OUTFACTS='$facts' ".
+      "OUTLINECOUNT=$entry->{linecount} ".
+      "eman init corpus", [$entry->{"stepname"}]);
     my $outentry = $entry;
     # fake output entry values
     $outentry->{"stepname"} = $stepname;
@@ -608,7 +622,6 @@ sub build_using_rules {
 sub run_or_fake_corpus_step {
   my $command = shift;
   my $deps = shift; # deps to wait for
-
   if (!$init) {
     my $fakeoutstep = "s.fake.".($fakeno++);
     print STDERR $fakeoutstep, ": ", $command, "\n";
@@ -936,4 +949,3 @@ sub saveidx {
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
 }
-

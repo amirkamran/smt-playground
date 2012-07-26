@@ -133,7 +133,7 @@ $PLAYGROUND/corpman register -- tagged.txt.gz -1 $CORPUS $LANGUAGE form1+lemma+t
 
 # Clean the disk and save some (a lot of!) space if everything went well.
 echo Removing the temporary chunks folder.
-rm -rf chunks
+rm -rf \$mydir/chunks
 
 echo Done.
 eman succeed \$mydir
