@@ -156,7 +156,8 @@ TODO	2step
 TODO Turkova metoda:
   - jednak na t0a1-0a1:
    prunelm, vc. luclm:
-18.43±0.59	s.evaluator.4dba862b.20120313-1534
+18.43±0.59	s.evaluator.4dba862b.20120313-1534	s turkem
+18.07±0.56	850d81ae.20120223-1047            	baseline
   - ale take na t0-0:
 17.61±0.57       s.evaluator.9d7d00ed.20120228-2228  s turkem
 17.51±0.57       s.evaluator.bd7643b0.20120222-1906  baseline
@@ -170,11 +171,12 @@ t0-0 large s.evaluator.e2885ab9.20120227-1654
   ... zalozen na revgdfa, mizernych 17.23±0.49
   ... oprava, ktera alignment otaci: s.evaluator.a1c0da6e.20120228-1924
   ... oprava2: s.evaluator.a4c1d4e0.20120229-0722
-  ... oprava3: s.evaluator.834ea9f7.20120301-0933
+24.62±0.59  ... oprava3: s.evaluator.834ea9f7.20120301-0933
 t0-0A1-0 large s.evaluator.d9c6fc17.20120228-1154
   ... zabil jsem ho, je vadny...
   ... oprava s revali: s.evaluator.5e11db8b.20120228-1937
   ... druha oprava: s.evaluator.55c9776a.20120228-2328
+  ... oprava podle pokusu WMT12: s.evaluator.1a7aec74.20120328-1611
 
 GIGA:
  pak to takhle nastartuju
@@ -305,11 +307,14 @@ s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
 s.evaluator.c30ec7fe.20120222-1847	small towards PER
 s.evaluator.d9f4e325.20120222-1849	small towards TER
 s.evaluator.850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+	zkusim taky na wmt12: s.evaluator.526e51e7.20120329-1129
 s.evaluator.d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
 NOs.evaluator.2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
 s.evaluator.21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
 s.evaluator.1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
-s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0) (no RM)
+s.evaluator.d8a42d9b.20120329-1450	like s.evaluator.bd7643b0.20120222-1906 but with rm
+	na wmt12: s.evaluator.e1423867.20120329-1453
 s.evaluator.38c6acff.20120227-0125	large stc->stc+tag
   a jeste jeho spravneji vyhodnocena varianta:
     s.evaluator.c5cc09ae.20120227-0129
@@ -421,7 +426,7 @@ a dalsi jina varianta: s 2step
 15.37±0.54	696855f9.20120302-0045 twostep wmt12
 
 a jeste jednodussi s 2step
-17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI
+17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI (snad opraven rucne)
 18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
 16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
 ---> s.combmert.a6aa501a.20120302-0031
@@ -431,7 +436,7 @@ a jeste jednodussi s 2step
 ... Zkousim btlow beam, prunelm-incl-luclm:
   s.combmert.b22c384d.20120302-2220  dev: 0.172944
   ---> tento otestuju na wmt12: s.combmert.aba8f92a.20120303-0125
-       evaluator: s.evaluator.c46b02cb.20120303-0145 0.1417
+       evaluator: s.evaluator.c46b02cb.20120303-0145 0.1417  ---> cu-poor-comb
   ...lepsi, ale i opticky je baseline porad nad tim
   ...a z nej zkousim vybrat mene vah k ladeni: (voting, sentlevel, primarcs)
     s.combmert.cad47de8.20120303-0042
@@ -459,6 +464,15 @@ ziplines --item='\t' tuning.in.gz hyp.1.outali.gz | /net/tmp/bojar/wmt12-bojar/a
 7||| „ opravdu nevím . “  ||| d: 0 lm: -15.9077 -16.3577 w: -5 I: -1.09861 -1.09861 0 0 -8.04719 4 4 5 5 5 tm: 0 ||| -604.282
   ... to se tim -b 0.0003 vylepsilo, ale je to pomalejsi
 
+
+
+Zkusim ted udelat kombinaci jen 2 systemu, zahodim ten vadny TER:
+17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI (snad opraven rucne)
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+...odvodim to z s.combmert.b22c384d.20120302-2220  dev: 0.172944
+---> s.combmert.a74e1a0a.20120530-1219 done
+... ale selhaly testcombmert: s.combmert.1a2510c5.20120530-1220
+    zkousim opravit: s.combmert.27e5f0d1.20120530-1812 ... failed due to corpman
 
 
 TODO:
@@ -524,7 +538,19 @@ Co musim opravit do priste:
   ... hlavne res named entities
 - vetsi nbestlist!
 - zapomnel jsi pouzit paralelni news a europarl!!!
-
+- pouzij extrakci podstromu odpovidajicich frazim po vzoru
+  Tinsley,Hearne,Way,2009!
+- pouzij Turkovu metodu vcas
+- pouzij GLM vcas
+- vyzkousej automaticke generovani pozic pro pomocna slova, po vzoru:
+  Morphological analysis for statistical machine translation (Young-Suk Lee,
+  2004) http://dl.acm.org/citation.cfm?id=1613999
+- do cestiny vypni zdrojovy tagging a zapni reordering:
+   s.evaluator.04fc22da.20120227-2319 17.85±0.58 tF-FaT,distr
+   s.evaluator.107486b0.20120725-1924 18.17±0.59 tF-FaT,lexr
+- do anglictiny lexr nejak nepomohl:
+   s.evaluator.33d443f4.20120301-1350 22.90±0.56  distr
+   s.evaluator.37a38e88.20120725-1316 22.76±0.55  lexr
 
 
 
@@ -546,3 +572,172 @@ Preklady pro EM+ interni:
 
 s.translate.cea0e4db.20120323-1442	pouzil do aj
 s.translate.f005c1ea.20120323-1440	pouzil do cj
+
+
+2012-03-27
+
+ex-post pro clanek zkousim jen 2comb jako zjednoduseni s.combmert.a6aa501a.20120302-0031:
+s.combmert.59abbb40.20120327-0115
+
+
+2012-04-02
+
+eman.seeds/mert bohuzel obsahoval zadratovane -dl 6, takze -dl 0 se v mertu pro
+2step neuplatnilo. Ve finalnim prekladu se ale uplatnovalo, takze pokusy nejsou
+zcela chybne.
+
+Nove tedy zkousim srovnat:
+s.evaluator.ce73364b.20120302-0002 (2step, kde 2step v mertu mel -dl6)
+s.evaluator.416c1e66.20120402-1605 oprava, kde i mert ma -dl0
+
+
+2012-05-30
+
+rozbor, proc dopadl spatne combmert:
+
+s.combmert.aba8f92a.20120303-0125
+
+ukazuje se, ze se velmi upredstnostnovala hypoteza 3:
+
+ziplines --delim hyp.?.out.gz evaluation.opt.out.gz --show | numerize_blocks | remove_blank_lines | grp --keys=1,3 --items=COLLECT2 | numsort 1 | split_at_colchange 1 | recut 3,2 | sed 's/.opt.out.gz//;s/.out.gz//g'  | cut -f1 | see
+
+3002    ... celkem vet
+2665    hyp.2
+2472    hyp.1
+1402    hyp.3
+1226    evaluation, hyp.3   ... stejny vystup, jako dala hyp3
+1221    evaluation          ... vystup opravdu zkombinovan, odlisny od vsech
+190     evaluation, hyp.1, hyp.3
+121     evaluation, hyp.1, hyp.2, hyp.3
+106     evaluation, hyp.1
+91      evaluation, hyp.2
+76      hyp.1, hyp.2
+36      evaluation, hyp.2, hyp.3
+26      hyp.1, hyp.3
+12      evaluation, hyp.1, hyp.2
+2       hyp.2, hyp.3
+
+Hypoteza 3 je totiz citelne nejkratsi:
+
+62538   hyp.1.out.gz
+62456   hyp.2.out.gz
+54497   hyp.3.out.gz
+
+... je to ta, ktera je optimalizovana na TER...
+... cili tim jsem si ublizil.
+
+Zde ukazkova veta + vahy. Je videt, ze mert se *snazil* systemu 3 vyhnout, ale
+nepovedlo se to dost.
+  	  	           	apriori          	voting           	sys1skel          	sys2skel          	sys3skel  	sys1made        	sys2made        	sys3made        	primmadearc     	primmadeword
+  	  	           	        0.0155014	       0.00217472	        0.00747898	        0.00272618	0.00386264	       0.0938297	       0.0305126	     -0.00884325	       0.0251508	       0.0229465
+ 0	 1	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+ 1	 2	verdikt    	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+ 2	 3	zatím      	                1	0.333333333333333	0.0384615384615385	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 3	 5	není       	                1	0.333333333333333	0.0384615384615385	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 2	 4	ještě      	                1	0.666666666666667	0.0384615384615385	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 4	 5	není       	                1	0.666666666666667	0.0384615384615385	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 5	 6	pravomocný 	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 5	 6	konečný    	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 6	 7	,          	                1	0.333333333333333	0.0769230769230769	                 1	         1	2.71828182845905	               1	               1	2.71828182845905	2.71828182845905
+ 6	 7	*EPS*      	                1	0.666666666666667	0.0769230769230769	                 1	         1	               1	2.71828182845905	2.71828182845905	               1	               1
+ 7	 8	a          	                1	0.333333333333333	0.0769230769230769	                 1	         1	2.71828182845905	               1	               1	2.71828182845905	2.71828182845905
+ 7	 8	,          	                1	0.666666666666667	0.0769230769230769	                 1	         1	               1	2.71828182845905	2.71828182845905	               1	               1
+ 8	 9	soud       	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+ 9	10	vyslechne  	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+ 9	10	bude       	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+10	11	*EPS*      	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+10	11	projednávat	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+11	12	odvolání   	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+11	12	*EPS*      	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+12	13	Tymošenkové	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+13	14	v          	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+14	15	prosinci   	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+15	16	.          	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+16	  	           	                 	                 	                  	                  	          	                	                	                	                	
+ 0	17	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+17	18	verdikt    	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+18	19	ještě      	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	               1	2.71828182845905	               1	               1
+18	19	zatím      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	2.71828182845905	               1	2.71828182845905	2.71828182845905
+19	20	není       	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+20	21	pravomocný 	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	2.71828182845905	               1	2.71828182845905	2.71828182845905
+20	21	konečný    	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	               1	2.71828182845905	               1	               1
+21	22	,          	                1	0.333333333333333	                 1	0.0384615384615385	         1	2.71828182845905	               1	               1	               1	               1
+22	23	a          	                1	0.333333333333333	                 1	0.0384615384615385	         1	2.71828182845905	               1	               1	               1	               1
+21	23	,          	                1	0.666666666666667	                 1	0.0769230769230769	         1	               1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+23	24	soud       	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+24	25	vyslechne  	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+24	25	bude       	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+25	26	*EPS*      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+25	26	projednávat	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+26	27	odvolání   	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+26	27	*EPS*      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+27	28	Tymošenkové	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+28	29	v          	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+29	30	prosinci   	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+30	31	.          	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+31	  	           	                 	                 	                  	                  	          	                	                	                	                	
+ 0	32	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+32	33	verdikt    	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+33	34	zatím      	                1	0.333333333333333	                 1	                 1	      0.05	               1	2.71828182845905	               1	               1	               1
+34	36	není       	                1	0.333333333333333	                 1	                 1	      0.05	               1	2.71828182845905	               1	               1	               1
+33	35	ještě      	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+35	36	není       	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+36	37	pravomocný 	                1	0.333333333333333	                 1	                 1	       0.1	               1	2.71828182845905	               1	               1	               1
+36	37	konečný    	                1	0.666666666666667	                 1	                 1	       0.1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+37	38	,          	                1	0.333333333333333	                 1	                 1	      0.05	2.71828182845905	               1	               1	               1	               1
+38	39	a          	                1	0.333333333333333	                 1	                 1	      0.05	2.71828182845905	               1	               1	               1	               1
+37	39	,          	                1	0.666666666666667	                 1	                 1	       0.1	               1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+39	40	soud       	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+40	42	vyslechne  	                1	0.333333333333333	                 1	                 1	       0.1	               1	               1	2.71828182845905	2.71828182845905	2.71828182845905
+40	41	bude       	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+41	42	projednávat	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+42	44	Tymošenkové	                1	0.333333333333333	                 1	                 1	       0.1	               1	               1	2.71828182845905	2.71828182845905	2.71828182845905
+42	43	odvolání   	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+43	44	Tymošenkové	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+44	45	v          	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+45	46	prosinci   	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+46	47	.          	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+47	  	           	                 	                 	                  	                  	          	                	                	                	                	
+
+
+
+2012-06-13
+zkousim spustit mert kroku 2, aby neladil phrase penalty:
+
+<F5
+16:38 tauri4 playground$eman tb s.evaluator.ce73364b.20120302-0002 -s '///' --ign=model --ign=corpus | MERTFLAGS="--activate-features=tm_0,tm_1,tm_2,tm_3,lm_0,lm_1,w_0,d_0" eman clone --mem=20g --disk=30g --start --reuse=s.mert.18a14277.20120301-0859 --redo=s.mosesgiza.ad93f520.20120221-1717
+Loading recipe from stdin.
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Initing new step mert (for s.mert.92078ae6.20120227-0957 in the recipe).
+Executing: INIT_ONLY=yes DEVCORP=wmt10 GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " JOBS=15 MERTFLAGS="--activate-features=tm_0,tm_1,tm_2,tm_3,lm_0,lm_1,w_0,d_0" MERTPRG=mert MODELSTEP=s.model.35a332d9.20120227-0941 MOSESFLAGS="-dl 0" MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 REFAUG=csNmT1+stc SEARCH=cube SRCAUG=csNmT1+pluslemma STACK= TAGPREF= TREEXSTEP= ZMERTFLAGS= ZMERTMETRIC= ZMERTSEMPOSBLEUWEIGHTS= ZMERTSEMPOSSOURCE= EMAN_READONLY=yes ./eman.seed >&2
+Inited: s.mert.b0645cfa.20120613-1638
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Forced to --reuse: s.mert.18a14277.20120301-0859
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Initing new step translate (for s.translate.c34ded0d.20120301-0900 in the recipe).
+Executing: INIT_ONLY=yes DETOKAUG=csNmT1_s.translate.77f981fe.20120613-1639+untok GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " ITER= JOBS=15 MERTSTEP=s.mert.18a14277.20120301-0859 MOSESFLAGS= MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 OUTALIAUG=csNmT1_s.translate.77f981fe.20120613-1639+ali REFAUG=csNmT1+pluslemma SEARCH=cube SRCAUG=enNmT1+stc TESTCORP=wmt11 TOKAUG=csNmT1_s.translate.77f981fe.20120613-1639+pluslemma EMAN_READONLY=yes ./eman.seed >&2
+Inited: s.translate.77f981fe.20120613-1639
+Initing new step translate (for s.translate.0776e2f0.20120302-0002 in the recipe).
+Executing: INIT_ONLY=yes DETOKAUG=csNmT1_s.translate.90168978.20120613-1639+untok GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " ITER= JOBS=15 MERTSTEP=s.mert.b0645cfa.20120613-1638 MOSESFLAGS="-th 3 -dl 0" MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 OUTALIAUG=csNmT1_s.translate.90168978.20120613-1639+ali REFAUG=csNmT1+stc SEARCH=cube SRCAUG=csNmT1_s.translate.77f981fe.20120613-1639+pluslemma TESTCORP=wmt11 TOKAUG=csNmT1_s.translate.90168978.20120613-1639+stc EMAN_READONLY=yes ./eman.seed >&2
+The corpus wmt11/csNmT1_s.translate.77f981fe.20120613-1639+pluslemma was registered by s.translate.77f981fe.20120613-1639, but it is not ready yet.
+Missing source corpus
+Exit code: 1
+Failed to init the step. Removing s.translate.90168978.20120613-1639
+
+
+Ten predposleni (tj. posl. uspesny) jeste zkusim spustit:
+s.translate.77f981fe.20120613-1639
+
+
+2012-07-25
+
+pro lingeu pridavam RM do s.evaluator.33d443f4.20120301-1350 22.90±0.56
+   --> s.evaluator.37a38e88.20120725-1316 22.76±0.55
+...musim ziskat moses.ini a ten rm, ktery jeste bude potreba binarizovat
+
+encs:  s.evaluator.d8a42d9b.20120329-1450 17.73±0.58 tF-F,lexr
+
+encs-taglm: s.evaluator.04fc22da.20120227-2319 17.85±0.58 tF-FaT,distr
+
+do kroku s.evaluator.04fc22da.20120227-2319 17.85±0.58 pridavam RM:
+  s.rm.0b38cbed.20120224-1942 ---> s.evaluator.107486b0.20120725-1924 18.17±0.59
