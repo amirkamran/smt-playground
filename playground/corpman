@@ -49,8 +49,9 @@ my $start = 0;
 my $wait = 0;
 my $dumpcmd = 0;
 my $dump = 0;
+my $factorindex = 0;
 my $register = 0;
-my $fakeno = 1; # the step number when for dry-runs
+my $fakeno = 1; # the step number for dry-runs
 my @bashvars = ();
 my $readonly = 0;
 
@@ -62,6 +63,7 @@ GetOptions(
   "wait!" => \$wait,
   "cmd!" => \$dumpcmd,
   "dump!" => \$dump,
+  "factorindex!" => \$factorindex,
   "verbose!" => \$verbose,
   "read-only|readonly!" => \$readonly,
   "bashvars=s" => \@bashvars,
@@ -86,14 +88,31 @@ Options:
   --cmd      ... emit a tiny shell script that dumps the corpus to stdout,
                  implies --wait
   --dump     ... dump the corpus to stdout, implies --wait
+  --factorindex
+             ... include the indices of factors (or -1 if all factors) in the
+                 output; do not create new step just because of factor
+                 extraction if there is a step with the required factor
+                 together with other factors; the reduce_factors.pl script can
+                 be used to extract the selected factors
   --reindex  ... search all subdirs for corpman.info files
   --bashvars=STEP=stepname,LINES=linecount
              ... emits a string for bash eval that sets bash variables STEP
                  to the output step name, LINES to corpus linecount etc.
              ... disables the default three-column output
 
+Output:
+  Tab-separated localization of the required corpus:
+  step name, file name, column index:
+  s.tag.3d46f29c.20120627-1348   tagged.txt.gz   -1
+  If the corpus does not exist but can be constructed and corpman was not asked
+  to construct it right away, the step name will start with s.fake. Steps
+  really created by corpman are s.corpus. Manually created corpora may be found
+  in other steps too. If --factorindex was used there will be a fourth field
+  with comma-separated list of indices of factors, or -1, e.g.:
+  s.tag.3d46f29c.20120627-1348   tagged.txt.gz   -1   1
+
 Corpman must reside in the playground it is supposed to operate on.
-If you run corpman from a different playground it will search for corpora there!
+If you run it from a different playground it will search for corpora there!
 ";
 }
 
@@ -261,14 +280,16 @@ if ($cmd eq "reindex") {
   } else {
     die "Bad descr format: $descr";
   }
-
+  # Factor names can be separated by pluses or by vertical bars.
   $facts =~ s/\|/+/g;
 
   my $entry = build_exact_factors($corp, $lang, $facts);
-  my ($stepname, $filename, $column)
-    = ($entry->{"stepname"}, $entry->{"filename"}, $entry->{"column"});
+  my $stepname = $entry->{stepname};
+  my $filename = $entry->{filename};
+  my $column = $entry->{column};
+  my $factind = $entry->{factind};
 
-  # if some new corpora were created, let's save the index
+  # save the index if new corpora were created
   # naturally, there is a risk of race conditions of two corpmans are running
   # a corpman reindex every now and then would find any corpus duplicates
   saveidx($index) if $should_save_index;
@@ -287,6 +308,7 @@ if ($cmd eq "reindex") {
     print " | cut -f $column" if $column != -1;
     print "\n";
   } elsif ($dump) {
+    ###!!! --factorindex will not yet work as expected with --dump
     my $h = my_open("$mydir/$stepname/$filename");
     if ($column == -1) {
       print while <$h>;
@@ -312,8 +334,10 @@ if ($cmd eq "reindex") {
         }
       }
     } else {
-      # print default details: stepname, filename and column
-      print $stepname, "\t", $filename, "\t", $column, "\n";
+      # print default details: stepname, filename, column [and factors if requested]
+      print $stepname, "\t", $filename, "\t", $column;
+      print "\t", $factind if($factorindex);
+      print "\n";
     }
   }
 }
@@ -439,7 +463,8 @@ sub build_exact_factors {
   print STDERR "Called build_exact_factors @_\n" if $verbose;
   print STDERR "  The factind of the entry: $entry->{factind}\n" if $verbose;
   if ($entry->{"factind"} == -1
-      || ($entry->{"factind"} == 0 && $entry->{"factors"} !~ /[+|]/)) {
+      || ($entry->{"factind"} == 0 && $entry->{"factors"} !~ /[+|]/)
+      || $factorindex) {
       # XXX this check should actually also accept cases like factid=="1,2,3"
       # and factors contain 2 pluses...
     # great, the given column contains exactly the factors we asked for
@@ -449,6 +474,9 @@ sub build_exact_factors {
     ###!!! DZ: This does not work. The new step cannot register new corpus with the factor
     ###!!! because it has already been registered by the current step, thus there would be conflict.
     ###!!! Instead of creating new copies of the corpus, we should provide means of identifying and extracting the factor from the existing step.
+    ###!!! If the user is OK with getting just the factor index(es), they can use the following tool to extract it:
+    ###!!! gunzip -c corpus.txt.gz | $STATMT/scripts/reduce_factors.pl 0,2 | gzip -c > corpus-1-3.txt.gz
+    ###!!! see the new option $factorindex above...
     my $stepname = run_or_fake_corpus_step("DERIVED=1 ".
       "DEPS=$entry->{stepname} ".
       "RUN_COMMAND='cat' ".
@@ -672,6 +700,10 @@ sub add_rule {
 
 
 
+#------------------------------------------------------------------------------
+# Adds to the index one or more corpus. Adds an entry for each factor of the
+# corpus, and for the combination of all factors.
+#------------------------------------------------------------------------------
 sub add_entry_incl_entries_of_separate_factors {
   my ($corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived) = @_;
   my $newentry = {
@@ -684,7 +716,7 @@ sub add_entry_incl_entries_of_separate_factors {
     "factors" => $facts,
   };
   add_entry($corpname, $lang, $facts, $newentry, $mayderived);
-
+  # Now add an extra entry for each factor.
   if ($facts =~ /[+\|]/) {
     # add also individual factors to support construction of the corpus
     my $factind = -1;
@@ -709,9 +741,11 @@ sub add_entry_incl_entries_of_separate_factors {
 
 
 
+#------------------------------------------------------------------------------
+# Adds a corpus to the index avoiding duplicates.
+# This *could* be restricted by other variables like eman select.
+#------------------------------------------------------------------------------
 sub add_entry {
-  # Add a corpus to the index avoiding duplicates.
-  # This *could* be restricted by some other variables like eman select...
   my ($corpname, $lang, $facts, $newentry, $isderived) = @_;
   $facts =~ s/\|/+/g;
 
@@ -727,8 +761,8 @@ sub add_entry {
     # there are several types of conflicting sources.
     # Where do the entries come from:
     # A: manually created corpora (these have isderived==0)
-    # B: automatic corpora of "all factors" (these have isderived==1 and factind==-1
-    # C: automatic corpora of "selected factor" (these have isderived==1 and factind!=-1
+    # B: automatic corpora of "all factors" (these have isderived==1 and factind==-1)
+    # C: automatic corpora of "selected factor" (these have isderived==1 and factind!=-1)
     # Possible conflicts:
     # old entry, new entry, resolution
     # AA  die
@@ -740,7 +774,6 @@ sub add_entry {
     # CA  use C, as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
-
     my $oldtype = get_entry_source_type($oldentry);
     my $newtype = get_entry_source_type($newentry);
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
@@ -784,14 +817,12 @@ sub add_entry {
       die "Unimplemented, should never happen.";
     }
   }
-
   print STDERR "Conflict ($conflict_type) for $corpname/$lang+$facts: "
     ."$newentry->{stepname} vs $oldentry->{stepname}. $msg\n"
     # ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
     # ." vs "
     # ."$oldentry->{stepname}/$oldentry->{filename}:$oldentry->{column}\n"
     if defined $msg;
-
   if ($should_die) {
     # $waserror = 1; # instead of dying rather prohibit the use
     $index->{$corpname}->{$lang}->{$facts}->{"CONFLICT"} = 1;
@@ -802,8 +833,20 @@ sub add_entry {
 
 
 
+#------------------------------------------------------------------------------
+# Figures out whether a corpus entry is derived and whether it contains
+# multiple factors. This is important for classification and resolving of
+# conflicts. Return values:
+#   A ... "manually" created corpora (these have isderived==0)
+#         "manual" does not mean that e.g. no stochastic tagger was used
+#         it means that it was not derived from other registered corpora by
+#         corpman using its rules
+#   B ... automatic corpora of "all factors" (these have isderived==1 and
+#         factind==-1)
+#   C ... automatic corpora of "selected factor" (these have isderived==1 and
+#         factind!=-1)
+#------------------------------------------------------------------------------
 sub get_entry_source_type {
-  # returns A, B, or C, see above
   my $entry = shift;
   my $isderived = $entry->{"isderived"} || 0;
   return "A" if ! $isderived;
@@ -819,7 +862,6 @@ sub my_open {
     my $pwd = `pwd`;
     die "Not found: $f\npwd = $pwd";
   }
-
   my $opn;
   my $hdl;
   my $ft = `file $f`;
@@ -865,7 +907,6 @@ sub my_save {
     binmode(STDOUT, ":utf8");
     return *STDOUT;
   }
-
   my $opn;
   my $hdl;
   # file might not recognize some files!
