@@ -818,11 +818,6 @@ sub add_entry {
     }
   }
 
-  # XXX is this wrong?
-  if ($oldentry->{factors} ne $facts) {
-    $should_die = 0;
-  }
-
   print STDERR "Conflict ($conflict_type) for $corpname/$lang+$facts: "
     ."$newentry->{stepname} vs $oldentry->{stepname}. $msg\n"
     # ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
