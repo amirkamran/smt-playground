@@ -38,8 +38,11 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
+
+trap "exit 1" TERM # needed for dying inside backticked function
+
 set -o pipefail
-function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; kill -s TERM \$TOP_PID ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
@@ -84,6 +87,7 @@ eman wait \$EVALSTEPS
 
 echo "Evaluator steps finished."
 
+TOTAL=0
 for evalstep in \$EVALSTEPS ; do
   [ \$(cat \$evalstep/eman.status) = DONE ] || die "Step failed: \$evalstep"
   SCORE=\$(cat \$evalstep/scores | grep BLEU | cut -f2)

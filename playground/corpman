@@ -757,7 +757,7 @@ sub add_entry {
   my $msg = undef;
   my $useentry = $newentry;
   my $conflict_type = "--";
-  if (defined $oldentry) {
+  if (defined $oldentry && $oldentry->{factors} eq $facts) {
     # there are several types of conflicting sources.
     # Where do the entries come from:
     # A: manually created corpora (these have isderived==0)
