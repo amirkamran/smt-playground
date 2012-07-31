@@ -757,7 +757,7 @@ sub add_entry {
   my $msg = undef;
   my $useentry = $newentry;
   my $conflict_type = "--";
-  if (defined $oldentry && $oldentry->{factors} eq $facts) {
+  if (defined $oldentry) {
     # there are several types of conflicting sources.
     # Where do the entries come from:
     # A: manually created corpora (these have isderived==0)
@@ -817,6 +817,12 @@ sub add_entry {
       die "Unimplemented, should never happen.";
     }
   }
+
+  # XXX is this wrong?
+  if ($oldentry->{factors} ne $facts) {
+    $should_die = 0;
+  }
+
   print STDERR "Conflict ($conflict_type) for $corpname/$lang+$facts: "
     ."$newentry->{stepname} vs $oldentry->{stepname}. $msg\n"
     # ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"
