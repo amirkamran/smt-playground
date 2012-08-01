@@ -275,7 +275,8 @@ sub get_score
   return undef if ! defined $id;
   my $score = `$dir/score $dir/../$id 2> /dev/null`;
   if ($score) {
-    return chomp $score;
+    chomp $score;
+    return $score;
   } else {
     return undef; # empty output means that something went wrong
   }
@@ -287,7 +288,8 @@ sub get_prediction
   return undef if ! defined $id;
   my $pred = `$dir/predict $dir/../$id 2> /dev/null`;
   if ($pred) {
-    return chomp $pred;
+    chomp $pred;
+    return $pred;
   } else {
     return undef;
   }
