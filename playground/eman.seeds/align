@@ -30,9 +30,9 @@ GIZAWRAPPER=$PLAYGROUND/../scripts/gizawrapper.pl
 [ -x $GIZAWRAPPER ] || die "gizawrapper not found: $GIZAWRAPPER"
 
 # add source and target corpora to deps
-eval $($PLAYGROUND/corpman --init $CORPUS/$SRCALIAUG --bashvars=srccorpstep=stepname,srccorplen=linecount)
+eval $($PLAYGROUND/corpman --factorindex --init $CORPUS/$SRCALIAUG --bashvars=srccorpstep=stepname,srccorplen=linecount)
 [ ! -z "$srccorpstep" ] || die "Missing source corpus"
-eval $($PLAYGROUND/corpman --init $CORPUS/$TGTALIAUG --bashvars=tgtcorpstep=stepname,tgtcorplen=linecount)
+eval $($PLAYGROUND/corpman --factorindex --init $CORPUS/$TGTALIAUG --bashvars=tgtcorpstep=stepname,tgtcorplen=linecount)
 [ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
 
 [ $tgtcorplen == $srccorplen ] || die "Mismatching corpora lengths: src $srccorplen lines, tgt $tgtcorplen"
@@ -75,16 +75,34 @@ echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 function mkcorpus() {
   # If local copy of corpus already exists (we are running 'eman continue') remove it first.
   rm -f corpus.\$2.gz
-  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
-  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  $PLAYGROUND/corpman --factorindex --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman --factorindex \$1))
+  step_file=$PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]}
+  scripts=$PLAYGROUND/../scripts
+  # Source corpus contains just one column.
   if [ "\${step_file_col[2]}" == "-1" ]; then
-    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
-      corpus.\$2.gz \
-    || die "Failed to clone \$2 corpus \$1"
+    # Every token contains just the required factors.
+    if [ "\${step_file_col[3]}" == "-1" ]; then
+      \$scripts/wiseln \$step_file corpus.\$2.gz \\
+      || die "Failed to clone \$2 corpus \$1"
+    # There are additional factors that must be filtered out.
+    else
+      echo "Selecting the factors from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | \$scripts/reduce_factors.pl \${step_file_col[3]} | gzip -c > corpus.\$2.gz
+      ###!!! The following did not work because the corpus was gzipped. The above should be better.
+      #\$scripts/reduce_factors.pl \${step_file_col[3]} < \$step_file | gzip -c > corpus.\$2.gz
+    fi
+  # There are more than one column, the required column must be extracted.
   else
-    echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/corpman --cmd \$1) \\
-    | gzip -c > corpus.\$2.gz
+    # Every token contains just the required factors.
+    if [ "\${step_file_col[3]}" == "-1" ]; then
+      echo "Selecting the column from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | gzip -c > corpus.\$2.gz
+    # There are additional factors that must be filtered out.
+    else
+      echo "Selecting the column and factors from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | \$scripts/reduce_factors.pl \${step_file_col[3]} | gzip -c > corpus.\$2.gz
+    fi
   fi
 }
 mkcorpus $CORPUS/$SRCALIAUG src

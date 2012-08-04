@@ -817,7 +817,6 @@ sub add_entry {
       die "Unimplemented, should never happen.";
     }
   }
-
   print STDERR "Conflict ($conflict_type) for $corpname/$lang+$facts: "
     ."$newentry->{stepname} vs $oldentry->{stepname}. $msg\n"
     # ."$newentry->{stepname}/$newentry->{filename}:$newentry->{column}"

@@ -144,6 +144,9 @@ if($dryrun)
 }
 else
 {
+    ###!!! DEBUG only the first model.
+    print("Debugging. Only the first model will be launched.\n");
+    splice(@models, 1);
     # Give the user the chance to spot a problem and stop the machinery.
     sleep(30);
 }
@@ -954,7 +957,7 @@ sub get_corpus_size
     my $corpus = shift;
     my $language = shift;
     my $factor = shift;
-    my $step = dzsys::chompticks("corpman --wait $corpus/$language+$factor");
+    my $step = dzsys::chompticks("corpman --factorindex --wait $corpus/$language+$factor");
     $step =~ s/\s.*//;
     my @info = split(/\t/, dzsys::chompticks("cat $step/corpman.info"));
     return $info[5];
