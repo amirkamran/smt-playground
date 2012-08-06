@@ -145,8 +145,11 @@ if($dryrun)
 else
 {
     ###!!! DEBUG only the first model.
-    print("Debugging. Only the first model will be launched.\n");
-    splice(@models, 1);
+    #print("Debugging. Only the first model will be launched.\n");
+    #splice(@models, 1);
+    ###!!! DEBUGGED successfully, do the rest (the first model is running already).
+    print("After debugging. The first model will not be launched again.\n");
+    shift(@models);
     # Give the user the chance to spot a problem and stop the machinery.
     sleep(30);
 }
