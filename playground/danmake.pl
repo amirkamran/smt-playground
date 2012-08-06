@@ -133,6 +133,7 @@ elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
 }
 # Vypsat seznam kombinací korpusů.
 @models = sort {"$a->{s}-$a->{t}" cmp "$b->{s}-$b->{t}"} @models;
+@models = filter_models($firstcorpus, $lastcorpus, \@ARGV, @models);
 foreach my $m (@models)
 {
     print("$m->{s}-$m->{t}\t$m->{pc}\t$m->{mc}\n");
@@ -144,12 +145,6 @@ if($dryrun)
 }
 else
 {
-    ###!!! DEBUG only the first model.
-    #print("Debugging. Only the first model will be launched.\n");
-    #splice(@models, 1);
-    ###!!! DEBUGGED successfully, do the rest (the first model is running already).
-    print("After debugging. The first model will not be launched again.\n");
-    shift(@models);
     # Give the user the chance to spot a problem and stop the machinery.
     sleep(30);
 }
@@ -849,6 +844,7 @@ sub parallel_to_mono
 
 #------------------------------------------------------------------------------
 # Filters a list of corpora according to command-line options.
+# Obsolete function, operates on the old list of corpora.
 #------------------------------------------------------------------------------
 sub filter_corpora
 {
@@ -893,6 +889,38 @@ sub filter_corpora
         @corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@vyber)} (@corpora);
     }
     return @corpora;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Filters a list of models/corpora according to command-line options.
+#------------------------------------------------------------------------------
+sub filter_models
+{
+    my $firstcorpus = shift;
+    my $lastcorpus = shift;
+    my $regexes = shift; # reference to array of regular expressions
+    my @models = @_;
+    if($firstcorpus || $lastcorpus)
+    {
+        my $on = defined($firstcorpus) ? 0 : 1;
+        my @m;
+        foreach my $model (@models)
+        {
+            $on = 1 if(defined($firstcorpus) && ($model->{pc} eq $firstcorpus || $model->{mc} eq $firstcorpus));
+            push(@m, $model) if($on);
+            $on = 0 if(defined($lastcorpus) && ($model->{pc} eq $lastcorpus || $model->{mc} eq $lastcorpus));
+        }
+        @models = @m;
+    }
+    if(@{$regexes})
+    {
+        # @{$regexes} jsou regulární výrazy pro výběr korpusů.
+        my @vyber = @{$regexes};
+        @models = grep {my $pc = $_->{pc}; my $mc = $_->{mc}; grep {$pc =~ $_ || $mc =~ $_} (@vyber)} (@models);
+    }
+    return @models;
 }
 
 
