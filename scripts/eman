@@ -450,9 +450,9 @@ my $autotag_rules = undef; # to be loaded by load_autotag_rules("eman.autotags")
 
 
 foreach my $subdir (@subdirs) {
-  my @steps = glob("$subdir/$dirprefix*.*.[0-9]*");
+  my @steps = glob("$subdir/$dirprefix*.[0-9]*");
   foreach my $s (@steps) {
-#    print STDERR "indexing $s\n";
+    print STDERR "indexing $s\n" if $debug;
     next if defined $idx->{basename($s)."path"}; # && defined $idx->{$s."jid"};
                                 # now avoiding costly regeneration of metadata
                                 # use --reindex if you miss jobids
@@ -1916,8 +1916,9 @@ sub step_valid {
 sub stepdir_valid {
   # checks if the given directory feels like an eman step
   my $stepdir = shift;
-  return -e File::Spec->catfile($stepdir, "eman.seed")
-    && -e File::Spec->catfile($stepdir, "eman.vars");
+  return -e File::Spec->catfile($stepdir, "eman.status");
+    # This test used to check for eman.seed and eman.vars, but that makes
+    # things harder for forged steps.
 }
 
 sub get_steptype {
