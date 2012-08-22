@@ -138,6 +138,9 @@ else
   rm -rf \$partstempdir
 fi
 
+echo Gzipping corpus.lm
+gzip corpus.lm || die "Failed to gzip"
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
