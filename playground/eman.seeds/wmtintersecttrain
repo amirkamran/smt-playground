@@ -1,0 +1,88 @@
+#!/bin/bash
+# Eman step to prepare missing WMT training pairs by intersecting the existing pairs.
+# For example, there is no Czech-German training data. However, cs-en and de-en News Commentary and Europarl can be intersected to obtain de-cs.
+# This step has to be done only once. It will do all the intersections and it will work OUTSIDE the playground, in the WMT folder (fixed path)!
+###!!! Conflicts are possible (multiple users trying to run the step) and not cared for at the moment!
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# Ensure all the required variables are set (or provide the default)
+# Note that we also require STATMT, which is constant w.r.t. individual experiments.
+# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
+# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
+[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+SCRIPTS=$STATMT/scripts
+PLAYGROUND=$STATMT/playground
+WMT=/net/data/wmt2012
+
+# The de-cs, es-cs and fr-cs training sets are built as intersections of de-en-cs, es-en-cs and fr-en-cs, respectively.
+function intersection()
+{
+  # $1 ... path to corpus 1 (including file name)
+  # $2 ... path to corpus 2 (including file name)
+  # $3 ... path to resulting corpus (excluding file name)
+  # $4 ... source language
+  # $5 ... common language
+  # $6 ... target language
+  echo Computing intersection of $1 and $2...
+  mkdir -p $3 || die "Cannot create folder $3."
+  cd $3       || die "Cannot go to $3."
+  $SCRIPTS/overlap.pl -n $1 $2 > intersection_line_numbers.txt || die "overlap.pl failed"
+  $SCRIPTS/filter-corpus.pl -l < intersection_line_numbers.txt $1 $4.gz || die "filter-corpus.pl -l failed"
+  $SCRIPTS/filter-corpus.pl -r < intersection_line_numbers.txt $2 $6.gz || die "filter-corpus.pl -r failed"
+  # Check that both files have the same number of lines.
+  nl1=$(gunzip -c $4.gz | wc -l)
+  nl2=$(gunzip -c $6.gz | wc -l)
+  if [ "$nl1" -ne "$nl2" ] ; then
+    die "$4.gz has $nl1 lines but $6.gz has $nl2 lines."
+  fi
+}
+# The intersections must be computed only once for each language pair.
+# The resulting intersection is placed outside the playground!
+for src in de es fr ; do
+  for corpus in europarl-v7 news-commentary-v7 ; do
+    targetpath=$WMT/training/$corpus.$src-cs
+    if ! [ -d $targetpath ] ; then
+      intersection $WMT/training/$corpus.$src-en.en.gz $WMT/training/$corpus.cs-en.en.gz $targetpath $src en cs
+    fi
+  done
+done
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+set -o pipefail
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+# The main action was already taken during the preparation phase.
+# Here we only log the results.
+for src in de es fr ; do
+  echo \$src-cs
+  targetpath=$WMT/training/news-commentary-v7.\$src-cs
+  echo \$src
+  gunzip -c \$targetpath/\$src.gz | head
+  echo cs
+  gunzip -c \$targetpath/cs.gz | head
+  echo \$(zcat \$targetpath/cs.gz | wc -l) lines
+  echo
+done
+
+echo Done.
+eman succeed \$mydir
+
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

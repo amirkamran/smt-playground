@@ -29,12 +29,13 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|korpus|tag|co
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    if(1)
+    if(0)
     {
         remove_news_single_years();
     }
     else
     {
+        continue_missing_running_steps();
         continue_lm_memory('running');
         continue_lm_memory('failed');
         continue_tm_disk();
@@ -1280,46 +1281,87 @@ sub continue_lm_memory
     my $n = 0;
     foreach my $step (@steps)
     {
-        # Get all log file names of all previous attempts to do this step.
-        my @logs = split(/\n/, dzsys::chompticks("ls $step | grep -P 'log\.o[0-9]+'"));
-        if(scalar(@logs)==0)
+        unless($select_failed)
         {
-            print("No log file found!\n");
+            # Change the state to FAILED, which is what it really is.
+            dzsys::saferun("eman fail $step");
+        }
+        continue_step_memory($step) and $n++;
+    }
+    print("Restarted $n steps.\n");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies steps that are marked as running but not known to the cluster.
+# Marks these steps as failed. Assumes that the only possible cause of such
+# mysterious failure is exceeding memory quota and restarts the steps with
+# higher memory requirement. (If we just marked the step as failed without
+# restarting it now, we would later not know that it failed because of memory.)
+#------------------------------------------------------------------------------
+sub continue_missing_running_steps
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select s running nq'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        # Change the state to FAILED, which is what it really is.
+        dzsys::saferun("eman fail $step");
+        continue_step_memory($step) and $n++;
+    }
+    print("Restarted $n steps.\n");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Verifies that a step failed due to memory limit and restarts it with higher
+# memory limit. (Unlike e.g. continue_lm_memory(), this function does not
+# search for steps. It operates on just one step.)
+#------------------------------------------------------------------------------
+sub continue_step_memory
+{
+    my $step = shift;
+    my $success = 1;
+    # Get all log file names of all previous attempts to do this step.
+    my @logs = split(/\n/, dzsys::chompticks("ls $step | grep -P 'log\.o[0-9]+'"));
+    if(scalar(@logs)==0)
+    {
+        print("No log file found!\n");
+    }
+    else
+    {
+        # Take the last log.
+        # Hope that all job ids have the same number of digits so that lexicographic sorting will be equivalent to numeric.
+        @logs = sort(@logs);
+        my $log = $logs[-1];
+        my $logpath = "$step/$log";
+        my $limitsline = dzsys::chompticks("grep '== Limits:' $logpath");
+        my $memory = 6;
+        if($limitsline =~ m/mem_free=(\d+)g/)
+        {
+            $memory = $1;
+        }
+        # Do we have machines with more memory?
+        if($memory>=500)
+        {
+            print("Even 500g of memory was not enough, giving up.\n");
+            $success = 0;
         }
         else
         {
-            # Take the last log.
-            # Hope that all job ids have the same number of digits so that lexicographic sorting will be equivalent to numeric.
-            @logs = sort(@logs);
-            my $log = $logs[-1];
-            my $logpath = "$step/$log";
-            my $limitsline = dzsys::chompticks("grep '== Limits:' $logpath");
-            my $memory = 6;
-            if($limitsline =~ m/mem_free=(\d+)g/)
-            {
-                $memory = $1;
-            }
-            unless($select_failed)
-            {
-                # Change the state to FAILED, which is what it really is.
-                dzsys::saferun("eman fail $step");
-            }
-            # Do we have machines with more memory?
-            if($memory>=500)
-            {
-                print("Even 500g of memory was not enough, giving up.\n");
-                next;
-            }
             $memory *= 2;
             $memory = 30 if($memory<30);
             $memory = 500 if($memory>500);
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
             dzsys::saferun("eman continue $step --mem ${memory}g --priority 0");
-            $n++;
+            ###!!! POZOR! Zapomněli jsme na případné diskové požadavky! U lm to nevadilo, ale align může spadnout jak na paměť, tak na disk!
         }
     }
-    print("Restarted $n steps.\n");
+    return $success;
 }
 
 
