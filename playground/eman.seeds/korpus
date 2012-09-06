@@ -99,40 +99,6 @@ echo The corpus will be registered as "$REGCORPUS".
 $PLAYGROUND/corpman register -- corpus.txt.gz -1 $REGCORPUS $LANGUAGE form -1 0 \
   || die "Cannot register corpus"
 
-# The de-cs, es-cs and fr-cs training sets are built as intersections of de-en-cs, es-en-cs and fr-en-cs, respectively.
-function intersection()
-{
-  # $1 ... path to corpus 1 (including file name)
-  # $2 ... path to corpus 2 (including file name)
-  # $3 ... path to resulting corpus (excluding file name)
-  # $4 ... source language
-  # $5 ... common language
-  # $6 ... target language
-  echo Computing intersection of $1 and $2...
-  mkdir -p $3 || die "Cannot create folder $3."
-  cd $3       || die "Cannot go to $3."
-  $SCRIPTS/overlap.pl -n $1 $2 > intersection_line_numbers.txt || die "overlap.pl failed"
-  $SCRIPTS/filter-corpus.pl -l < intersection_line_numbers.txt $1 $4.gz || die "filter-corpus.pl -l failed"
-  $SCRIPTS/filter-corpus.pl -r < intersection_line_numbers.txt $2 $6.gz || die "filter-corpus.pl -r failed"
-  # Check that both files have the same number of lines.
-  nl1=$(gunzip -c $4.gz | wc -l)
-  nl2=$(gunzip -c $6.gz | wc -l)
-  if [ "$nl1" -ne "$nl2" ] ; then
-    die "$4.gz has $nl1 lines but $6.gz has $nl2 lines."
-  fi
-}
-# The intersections must be computed separately and only once for each language pair.
-# This is not the best place to compute them because this step is invoked once for the source and once for the target language.
-# The resulting intersection is placed outside the playground!
-for src in de es fr ; do
-  for corpus in europarl-v7 news-commentary-v7 ; do
-    targetpath=$WMT/training/$corpus.$src-cs
-    if ! [ -d $targetpath ] ; then
-      intersection $WMT/training/$corpus.$src-en.en.gz $WMT/training/$corpus.cs-en.en.gz $targetpath $src en cs
-    fi
-  done
-done
-
 if [ "$CORPUS" == "newseuro" ] ; then
   # cd $WMT
   # wget http://www.statmt.org/wmt12/training-parallel.tgz

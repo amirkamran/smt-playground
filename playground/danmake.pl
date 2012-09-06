@@ -903,15 +903,36 @@ sub filter_models
     my $lastcorpus = shift;
     my $regexes = shift; # reference to array of regular expressions
     my @models = @_;
+    # The firstcorpus and lastcorpus options originally selected just corpus,
+    # not language pair and direction. This is not practical when trying to
+    # restart after an exception. It is possible that the same corpus is used
+    # several times in different translation directions, and the occurrences
+    # of the corpus in the list need not be adjacent. We thus allow that
+    # optionally the corpus is described as corpus/src-tgt.
     if($firstcorpus || $lastcorpus)
     {
+        my ($firstsrc, $firsttgt, $lastsrc, $lasttgt);
+        if(defined($firstcorpus) && $firstcorpus =~ s/\/(.+)-(.+)$//)
+        {
+            $firstsrc = $1;
+            $firsttgt = $2;
+        }
+        if(defined($lastcorpus) && $lastcorpus =~ s/\/(.+)-(.+)$//)
+        {
+            $lastsrc = $1;
+            $lasttgt = $2;
+        }
         my $on = defined($firstcorpus) ? 0 : 1;
         my @m;
         foreach my $model (@models)
         {
-            $on = 1 if(defined($firstcorpus) && ($model->{pc} eq $firstcorpus || $model->{mc} eq $firstcorpus));
+            $on = 1 if(defined($firstcorpus)
+                       && ($model->{pc} eq $firstcorpus || $model->{mc} eq $firstcorpus)
+                       && (!defined($firstsrc) || $model->{s} eq $firstsrc && $model->{t} eq $firsttgt));
             push(@m, $model) if($on);
-            $on = 0 if(defined($lastcorpus) && ($model->{pc} eq $lastcorpus || $model->{mc} eq $lastcorpus));
+            $on = 0 if(defined($lastcorpus)
+                       && ($model->{pc} eq $lastcorpus || $model->{mc} eq $lastcorpus)
+                       && (!defined($lastsrc) || $model->{s} eq $lastsrc && $model->{t} eq $lasttgt));
         }
         @models = @m;
     }

@@ -15,39 +15,7 @@ set -o pipefail  # safer pipes
 SCRIPTS=$STATMT/scripts
 PLAYGROUND=$STATMT/playground
 WMT=/net/data/wmt2012
-
-# The de-cs, es-cs and fr-cs training sets are built as intersections of de-en-cs, es-en-cs and fr-en-cs, respectively.
-function intersection()
-{
-  # $1 ... path to corpus 1 (including file name)
-  # $2 ... path to corpus 2 (including file name)
-  # $3 ... path to resulting corpus (excluding file name)
-  # $4 ... source language
-  # $5 ... common language
-  # $6 ... target language
-  echo Computing intersection of $1 and $2...
-  mkdir -p $3 || die "Cannot create folder $3."
-  cd $3       || die "Cannot go to $3."
-  $SCRIPTS/overlap.pl -n $1 $2 > intersection_line_numbers.txt || die "overlap.pl failed"
-  $SCRIPTS/filter-corpus.pl -l < intersection_line_numbers.txt $1 $4.gz || die "filter-corpus.pl -l failed"
-  $SCRIPTS/filter-corpus.pl -r < intersection_line_numbers.txt $2 $6.gz || die "filter-corpus.pl -r failed"
-  # Check that both files have the same number of lines.
-  nl1=$(gunzip -c $4.gz | wc -l)
-  nl2=$(gunzip -c $6.gz | wc -l)
-  if [ "$nl1" -ne "$nl2" ] ; then
-    die "$4.gz has $nl1 lines but $6.gz has $nl2 lines."
-  fi
-}
-# The intersections must be computed only once for each language pair.
-# The resulting intersection is placed outside the playground!
-for src in de es fr ; do
-  for corpus in europarl-v7 news-commentary-v7 ; do
-    targetpath=$WMT/training/$corpus.$src-cs
-    if ! [ -d $targetpath ] ; then
-      intersection $WMT/training/$corpus.$src-en.en.gz $WMT/training/$corpus.cs-en.en.gz $targetpath $src en cs
-    fi
-  done
-done
+echo > eman.vars
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
@@ -63,6 +31,42 @@ set -o pipefail
 mydir=\$(pwd)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+# The de-cs, es-cs and fr-cs training sets are built as intersections of de-en-cs, es-en-cs and fr-en-cs, respectively.
+function intersection()
+{
+  # $1 ... path to corpus 1 (including partial filename, excluding trailing .en.gz)
+  # $2 ... path to corpus 2 (including partial filename, excluding trailing .en.gz)
+  # $3 ... path to resulting corpus (excluding file name)
+  # $4 ... source language
+  # $5 ... common language
+  # $6 ... target language
+  echo Computing intersection of \$1 and \$2...
+  mkdir -p \$3 || die "Cannot create folder \$3."
+  cd \$3       || die "Cannot go to \$3."
+  $SCRIPTS/overlap.pl -n \$1.en.gz \$2.en.gz > intersection_line_numbers.txt || die "overlap.pl failed"
+  $SCRIPTS/filter-corpus.pl -l < intersection_line_numbers.txt \$1.\$4.gz \$4.gz || die "filter-corpus.pl -l failed"
+  $SCRIPTS/filter-corpus.pl -r < intersection_line_numbers.txt \$2.\$6.gz \$6.gz || die "filter-corpus.pl -r failed"
+  # Check that both files have the same number of lines.
+  nl1=\$(gunzip -c \$4.gz | wc -l)
+  nl2=\$(gunzip -c \$6.gz | wc -l)
+  if [ "\$nl1" -ne "\$nl2" ] ; then
+    die "\$4.gz has \$nl1 lines but \$6.gz has \$nl2 lines."
+  fi
+}
+
+# The intersections must be computed only once for each language pair.
+# The resulting intersection is placed outside the playground!
+for src in de es fr ; do
+  for corpus in europarl-v7 news-commentary-v7 ; do
+    targetpath=$WMT/training/\$corpus.\$src-cs
+#    if ! [ -d \$targetpath ] ; then
+      intersection $WMT/training/\$corpus.\$src-en $WMT/training/\$corpus.cs-en \$targetpath \$src en cs
+#    fi
+  done
+done
+# The intersection scripts may have changed the current directory!
+cd \$mydir
 
 # The main action was already taken during the preparation phase.
 # Here we only log the results.
