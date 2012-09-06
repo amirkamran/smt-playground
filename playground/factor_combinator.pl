@@ -57,8 +57,17 @@ while (1) {
       }
       my @toks = split / +/, $sentence;
       my $this_words_per_line = scalar(@toks);
-      die "$fname:$nr:column$column:Mismatching word count, expected $words_per_line, got $this_words_per_line"
-        if defined $words_per_line && $words_per_line != $this_words_per_line;
+      if(defined($words_per_line) && $words_per_line != $this_words_per_line) {
+          print STDERR "\nprevious sources:\n";
+          foreach my $fname1 (keys %fname_to_stream) {
+              foreach my $column1 (keys %{$fname_to_columns{$fname}}) {
+                  print STDERR "\t", join(' ', map {join('|', @{$_})} @{$fnamecol_to_line->{$fname1}->{$column1}});
+              }
+          }
+          print STDERR "current source:\n";
+          print STDERR "\t$sentence\n";
+          die "$fname:$nr:column$column:Mismatching word count, expected $words_per_line, got $this_words_per_line";
+      }
       $words_per_line = $this_words_per_line;
       $fnamecol_to_line->{$fname}->{$column} = [ map { [ split /\|/, $_ ] } @toks ];
     }
@@ -107,4 +116,3 @@ sub my_open {
   binmode $hdl, ":utf8";
   return $hdl;
 }
-
