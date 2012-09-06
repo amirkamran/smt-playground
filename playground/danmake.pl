@@ -31,7 +31,7 @@ if($steptype eq 'special')
 {
     if(0)
     {
-        remove_news_single_years();
+        # Put your own temporary special goal here and switch it on by changing 0 -> 1 above.
     }
     else
     {
@@ -1376,10 +1376,15 @@ sub continue_step_memory
             $memory *= 2;
             $memory = 30 if($memory<30);
             $memory = 500 if($memory>500);
+            # Besides memory, did we also require a certain amount of disk space? If so, we shall require it again.
+            my $disk = '';
+            if($limitsline =~ m/mnth_free=(\d+g)/)
+            {
+                $disk = " --disk $1";
+            }
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
-            dzsys::saferun("eman continue $step --mem ${memory}g --priority 0");
-            ###!!! POZOR! Zapomněli jsme na případné diskové požadavky! U lm to nevadilo, ale align může spadnout jak na paměť, tak na disk!
+            dzsys::saferun("eman continue $step --mem ${memory}g${disk} --priority 0");
         }
     }
     return $success;
@@ -1502,25 +1507,4 @@ sub redo_mert_memory
     {
         print("\trm -rf $step\n");
     }
-}
-
-
-
-#------------------------------------------------------------------------------
-# Finds lm steps trained on single years of the crawled news corpora.
-#------------------------------------------------------------------------------
-sub remove_news_single_years
-{
-    my @steps;
-    my @lm_steps = split(/\n/, dzsys::chompticks('eman select t lm tre \'LM:news\.20\d\d\''));
-    foreach my $step (@lm_steps)
-    {
-        my @lm_and_descendants = split(/\n/, dzsys::chompticks("eman tf $step --notree"));
-        print(join("\n", @lm_and_descendants), "\n");
-        push(@steps, @lm_and_descendants);
-    }
-    dzsys::saferun('rm -rf '.join(' ', @steps));
-    print("Found ", scalar(@lm_steps), " lm steps.\n");
-    print("Found and removed ", scalar(@steps), " steps including descendants.\n");
-    dzsys::saferun('eman reindex');
 }
