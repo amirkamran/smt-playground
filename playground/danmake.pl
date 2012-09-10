@@ -80,10 +80,10 @@ foreach my $lms (@lmshortcuts)
 my @models;
 if($steptype eq 'lm')
 {
-    foreach my $mcorpus (@mono_training_corpora)
+    my @mcorpora = get_monolingual_corpora();
+    foreach my $mcorpus (@mcorpora)
     {
-        my $language = get_language_code($mcorpus);
-        push(@models, {'t' => $language, 'mc' => $mcorpus});
+        push(@models, {'t' => $mcorpus->{language}, 'mc' => $mcorpus->{corpus}});
     }
 }
 elsif($steptype =~ m/^(align|tm)$/)
@@ -416,6 +416,56 @@ sub get_corpora
         }
     }
     return @corpora;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Creates the list of monolingual corpora suitable for language modeling.
+#------------------------------------------------------------------------------
+sub get_monolingual_corpora
+{
+    my @corpora = get_corpora_seed();
+    my @mcorpora;
+    foreach my $c (@corpora)
+    {
+        # Newsall and gigaword are monolingual-only corpora.
+        # There are special monolingual versions of newseuro for all the languages.
+        # Besides, we can also use target languages of the large parallel corpora (czeng, un, gigafren).
+        if(!$c->{parallel})
+        {
+            foreach my $l (@{$c->{languages}})
+            {
+                push(@mcorpora, {'corpus' => "$c->{corpus}.$l", 'language' => $l});
+            }
+        }
+        elsif($c->{corpus} =~ m/^(czeng|gigafren)$/)
+        {
+            foreach my $l (@{$c->{languages}})
+            {
+                push(@mcorpora, {'corpus' => "$c->{corpus}", 'language' => $l});
+            }
+        }
+        elsif($c->{corpus} eq 'un')
+        {
+            foreach my $p (@{$c->{pairs}})
+            {
+                my ($l1, $l2);
+                if($p =~ m/^(\S+)-(\S+)$/)
+                {
+                    $l1 = $1;
+                    $l2 = $2;
+                }
+                else
+                {
+                    die("Cannot understand language pair '$p'.");
+                }
+                push(@mcorpora, {'corpus' => "$c->{corpus}.$p", 'language' => $l1});
+                push(@mcorpora, {'corpus' => "$c->{corpus}.$p", 'language' => $l2});
+            }
+        }
+    }
+    return @mcorpora;
 }
 
 
