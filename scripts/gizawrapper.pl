@@ -17,6 +17,7 @@
 use strict;
 use utf8;
 use warnings;
+use Carp;
 use Getopt::Long;
 use File::Temp qw /tempdir/;
 use threads;
@@ -93,7 +94,7 @@ if (defined $mgizadir && ! defined $mgizacores) {
   $mgizacores /= 2 if $parallel;
 }
 
-map { die "Can't run $_" if ! -x $_ } ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL );
+map { confess "Can't run $_" if ! -x $_ } ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL );
 
 my $filea = shift;
 my $fileb = shift;
@@ -109,7 +110,7 @@ For options see the source code.
 # validate and interpret factors
 ($lfactors, $rfactors) = map {
   if (defined $_) {
-    die "Bad factors spec: $_" if !/^[0-9]+(,[0-9]+)*$/;
+    confess "Bad factors spec: $_" if !/^[0-9]+(,[0-9]+)*$/;
     my @use_indexes = split /,/, $_;
     [ @use_indexes ];
   } else {
@@ -133,7 +134,7 @@ foreach my $req (@dirsyms) {
     $simple_needed{$req} = 1;
   } else {
     my $symalargs = make_symal_args($req);
-    die "Bad symmetrization type: '$req'" if ! defined $symalargs;
+    confess "Bad symmetrization type: '$req'" if ! defined $symalargs;
     $symmetrized_needed{$req} = $symalargs;
     # any symmetrization needs both left and right alignments
     $simple_needed{"left"} = 1;
@@ -142,7 +143,7 @@ foreach my $req (@dirsyms) {
 }
 
 
-die "Nothing to do. Use at least one --dirsym."
+confess "Nothing to do. Use at least one --dirsym."
   if 0 == scalar keys %simple_needed && 0 == scalar keys %symmetrized_needed;
 
 
@@ -172,12 +173,12 @@ if (!defined $fileb) {
   );
   my ($insentsa, $sentnumsa) = @$ra;
   my ($insentsb, $sentnumsb) = @$rb;
-  die "Incompatible sent counts: $insentsa vs. $insentsb"
+  confess "Incompatible sent counts: $insentsa vs. $insentsb"
     if $insentsa != $insentsb;
   $insents = $insentsa;
   $sentnums = $sentnumsa;
 }
-die "No sentences!" if $insents == 0;
+confess "No sentences!" if $insents == 0;
 
 print STDERR "Running GIZA on $insents sentences.\n";
 
@@ -247,7 +248,7 @@ if (1 == scalar @simple_needed) {
   close ALI;
   print STDERR "My tempdir: $tmp\n";
   print STDERR "Aligned $insents sentences, some may have truncated alignments.\n";
-  die "Lost some sentences" if $insents != $cnt;
+  confess "Lost some sentences" if $insents != $cnt;
 } else {
   # run two gizas and possibly also symmetrizations
   my ($aliback, $alithere) = may_parallel(
@@ -336,7 +337,7 @@ if (1 == scalar @simple_needed) {
     } else {
       *SYMALOUT = my_save($symaloutfn);
       open SYMAL, "zcat $symalinfile[$revsymal] | $SYMAL $symalargs |"
-        or die "Failed to run symal ($symalargs)";
+        or confess "Failed to run symal ($symalargs)";
       $cnt = 0;
       my @this_skip_at = @skip_at;
       $skipped = 0;
@@ -369,7 +370,7 @@ if (1 == scalar @simple_needed) {
       close SYMAL;
       close SYMALOUT;
 
-      die "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
+      confess "Didn't produce correct number of sentences! Expected $insents, got $cnt. Remaining skip_at: @this_skip_at."
         if $insents != $cnt;
     }
   }
@@ -388,7 +389,7 @@ if (1 == scalar @simple_needed) {
     for(my $i=0; $i<=$#temphdls; $i++) {
       my $line = readline($temphdls[$i]);
       if (! defined $line) {
-        die "$alifilename{$dirsyms[$i]}:$nr: File too short!" if $i != 0;
+        confess "$alifilename{$dirsyms[$i]}:$nr: File too short!" if $i != 0;
       } else {
         chomp $line;
 
@@ -543,7 +544,7 @@ sub restrict_factors_and_section {
 
   my $seen_factors = undef;
   *INF = my_open($infile);
-  open OUTF, ">$outfile" or die "Can't write $outfile";
+  open OUTF, ">$outfile" or confess "Can't write $outfile";
   binmode(OUTF, ":utf8");
   my $nl = 0;
   my $sents = 0;
@@ -554,7 +555,7 @@ sub restrict_factors_and_section {
     chomp;
     ($seen_factors, $_)
       = trim_and_restrict_to_factors($factors, $seen_factors, $_, $infile, $nl);
-    die "$infile:$nl:Empty line" if $_ eq "";
+    confess "$infile:$nl:Empty line" if $_ eq "";
     print OUTF $_."\n";
     $sents++;
     # Verbose output so that the user can quickly check
@@ -592,8 +593,8 @@ sub restrict_factors_and_section_from_twocolfile {
   my $seen_factorsa = undef;
   my $seen_factorsb = undef;
   *INF = my_open($infile);
-  open OUTFA, ">$outfilea" or die "Can't write $outfilea";
-  open OUTFB, ">$outfileb" or die "Can't write $outfileb";
+  open OUTFA, ">$outfilea" or confess "Can't write $outfilea";
+  open OUTFB, ">$outfileb" or confess "Can't write $outfileb";
   binmode(INF, ":utf8");
   binmode(OUTFA, ":utf8");
   binmode(OUTFB, ":utf8");
@@ -616,7 +617,7 @@ sub restrict_factors_and_section_from_twocolfile {
     if ($senta eq "" || $sentb eq "") {
       print STDERR "$infile:$nl:Empty line in col 1\n" if $senta eq "";
       print STDERR "$infile:$nl:Empty line in col 2\n" if $sentb eq "";
-      die if !$drop_bad_lines;
+      confess if !$drop_bad_lines;
       next;
     }
     # Main output files
@@ -653,12 +654,12 @@ sub trim_and_restrict_to_factors {
     foreach my $w (@words) {
       my @facts = split /\|/, $w;
       my $got_factors = scalar(@facts);
-      die "$fn:$nl:Bad number of factors, expecting $seen_factors, got $got_factors in:"
+      confess "$fn:$nl:Bad number of factors, expecting $seen_factors, got $got_factors in:"
         ."\n$sent\n"
         if defined $seen_factors && $seen_factors != $got_factors;
       $seen_factors = $got_factors;
       my @outfacts = map {
-        die "$fn:$nl:Missed factor $_ in $w in:\n$sent\n"
+        confess "$fn:$nl:Missed factor $_ in $w in:\n$sent\n"
           if !defined $facts[$_];
         $facts[$_];
       } @$factors;
@@ -676,7 +677,7 @@ sub collect_vocabulary {
   print STDERR "Collecting vocabulary for $src\n";
 
   my %count;
-  open(TXT,$src) or die "Can't read $src";
+  open(TXT,$src) or confess "Can't read $src";
   binmode(TXT, ":utf8");
   while(<TXT>) {
       chomp;
@@ -685,7 +686,7 @@ sub collect_vocabulary {
   close(TXT);
 
   my %VCB;
-  open(VCB,">$tgt") or die "Can't write $tgt";
+  open(VCB,">$tgt") or confess "Can't write $tgt";
   binmode(VCB, ":utf8");
   print VCB "1\tUNK\t0\n";
   my $id=2;
@@ -708,9 +709,9 @@ sub numberize_and_merge {
       print STDERR "  $out already in place, reusing\n";
       return;
   }
-  open(IN_A,$in_a) or die "Can't read $in_a";
-  open(IN_B,$in_b) or die "Can't read $in_b";
-  open(OUT,">$out") or die "Can't write $out";
+  open(IN_A,$in_a) or confess "Can't read $in_a";
+  open(IN_B,$in_b) or confess "Can't read $in_b";
+  open(OUT,">$out") or confess "Can't write $out";
   binmode(IN_A, ":utf8");
   binmode(IN_B, ":utf8");
   binmode(OUT, ":utf8");
@@ -733,7 +734,7 @@ sub numberize_line {
   foreach (split(/ /,$txt)) {
       next if $_ eq '';
       $out .= " " if $not_first++;
-      die "Unknown word '$_'\n" unless defined($VCB->{$_});
+      confess "Unknown word '$_'\n" unless defined($VCB->{$_});
       $out .= $VCB->{$_};
   }
   return $out."\n";
@@ -742,7 +743,7 @@ sub numberize_line {
 sub make_classes {
   my $src = shift;
   my $tgt = shift;
-  die "Can't find $src" if ! -e $src;
+  confess "Can't find $src" if ! -e $src;
   if (-e $tgt) {
     print STDERR "Reusing existing $tgt\n";
     return;
@@ -757,11 +758,11 @@ sub run_giza {
   my($dir,$a,$b,$vcba, $vcbb, $vcba_file, $vcbb_file,
     $infile_a,$infile_b) = @_;
 
-  die "Missing vcba file: $vcba_file" if ! -e $vcba_file;
-  die "Missing vcbb file: $vcbb_file" if ! -e $vcbb_file;
-  die "Missing classes for vcba file: $vcba_file.classes"
+  confess "Missing vcba file: $vcba_file" if ! -e $vcba_file;
+  confess "Missing vcbb file: $vcbb_file" if ! -e $vcbb_file;
+  confess "Missing classes for vcba file: $vcba_file.classes"
     if ! -e $vcba_file.".classes";
-  die "Missing classes for vcbb file: $vcbb_file.classes"
+  confess "Missing classes for vcbb file: $vcbb_file.classes"
     if ! -e $vcbb_file.".classes";
 
   my $outprefix = "$dir/$a-$b";
@@ -793,7 +794,7 @@ sub run_giza {
     } else {
       $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
     }
-    safesystem($snt2cooc_call) or die;
+    safesystem($snt2cooc_call) or confess;
     if ($compress) {
       safesystem("gzip $cooc_file");
       $cooc_file .= '.gz';
@@ -842,10 +843,10 @@ sub run_giza {
     safesystem("rm $dir/$a-$b.A3.final.part*");
   }
 
-  die "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
+  confess "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
     if ! -e $outfile;
   return $outfile;
-  # safesystem("gzip $outprefix.A3.final") or die;
+  # safesystem("gzip $outprefix.A3.final") or confess;
 }
 
 
@@ -875,7 +876,7 @@ sub safesystem {
       exit(1);
   }
   elsif ($? & 127) {
-      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+      printf STDERR "Execution of: @_\n  confessd with signal %d, %s coredump\n",
           ($? & 127),  ($? & 128) ? 'with' : 'without';
       exit(1);
   }
@@ -888,7 +889,7 @@ sub safesystem {
 
 sub my_open {
   my $f = shift;
-  die "Not found: $f" if ! -e $f;
+  confess "Not found: $f" if ! -e $f;
 
   my $opn;
   my $hdl;
@@ -901,7 +902,7 @@ sub my_open {
   } else {
     $opn = "$f";
   }
-  open $hdl, $opn or die "Can't open '$opn': $!";
+  open $hdl, $opn or confess "Can't open '$opn': $!";
   binmode $hdl, ":utf8";
   return $hdl;
 }
@@ -924,7 +925,7 @@ sub my_save {
     $opn = ">$f";
   }
   mkpath( dirname($f) );
-  open $hdl, $opn or die "Can't write to '$opn': $!";
+  open $hdl, $opn or confess "Can't write to '$opn': $!";
   binmode $hdl, ":utf8";
   return $hdl;
 }
