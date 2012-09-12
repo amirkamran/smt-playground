@@ -430,20 +430,13 @@ sub get_monolingual_corpora
     foreach my $c (@corpora)
     {
         # Newsall and gigaword are monolingual-only corpora.
-        # There are special monolingual versions of newseuro for all the languages.
+        # There are special monolingual versions of newseuro for all the languages. They are registered with corpman without the language code extension.
         # Besides, we can also use target languages of the large parallel corpora (czeng, un, gigafren).
-        if(!$c->{parallel})
+        if(!$c->{parallel} || $c->{corpus} =~ m/^(czeng|gigafren)$/)
         {
             foreach my $l (@{$c->{languages}})
             {
-                push(@mcorpora, {'corpus' => "$c->{corpus}.$l", 'language' => $l});
-            }
-        }
-        elsif($c->{corpus} =~ m/^(czeng|gigafren)$/)
-        {
-            foreach my $l (@{$c->{languages}})
-            {
-                push(@mcorpora, {'corpus' => "$c->{corpus}", 'language' => $l});
+                push(@mcorpora, {'corpus' => $c->{corpus}, 'language' => $l});
             }
         }
         elsif($c->{corpus} eq 'un')
