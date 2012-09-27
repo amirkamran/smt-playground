@@ -1606,7 +1606,13 @@ sub submit {
     push @opts, map {('-hold_jid', $_)} @userholds;
 
     save("eman.status", "RUNNING"); # set status before starting to avoid race
-    $ok = safesystem("( qsub  -C '' $sgeholdsstr -N $s -o log.o\\\$JOB_ID @opts ./eman.command 2>&1 ) > log");
+    # Log the command, too. If we ever need to restart the job we will want to know the original memory+disk requirements.
+    # (SGE stores the requirements in the epilog text but the job may die without ever writing the epilog.)
+    my $qsub_command = "qsub -C '' $sgeholdsstr -N $s -o log.o\\\$JOB_ID @opts ./eman.command";
+    open(LOG, '>log') or die("Cannot write log: $!");
+    print LOG ("$qsub_command\n");
+    close(LOG);
+    $ok = safesystem("( $qsub_command 2>&1 ) >> log");
     if ($ok) {
       # get job id
       my $hdl = my_open("log");
