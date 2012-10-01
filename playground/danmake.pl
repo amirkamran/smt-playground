@@ -36,7 +36,11 @@ if($steptype eq 'special')
     else
     {
         continue_missing_running_steps();
-        continue_lm_memory('running');
+        ###!!! continue_lm_memory(running) is superfluous: all such lm steps have been restarted by continue_missing_running_steps().
+        ###!!! Should we rewrite the function to only handle failed steps?
+        ###!!! (At least for lm steps we know that the problem was with memory. For tm steps, it could be also disk space
+        ###!!! and there is no easy way to tell the two apart.)
+        #continue_lm_memory('running');
         continue_lm_memory('failed');
         continue_tm_disk();
         redo_mert_memory();
