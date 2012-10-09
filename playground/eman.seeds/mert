@@ -181,7 +181,7 @@ $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
 
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Absolutize failed"
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Absolutize failed"
 
 # This is the actual mert to run
 `cat command.mert`
