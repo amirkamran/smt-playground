@@ -152,9 +152,9 @@ gunzip -c corpus.src.gz > corpus.src
   --symlink \\
   $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
 
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini > moses.abs.ini || die "Failed to absolutize"
+\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Failed to absolutize"
 
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval ./moses.abs.ini corpus.src || die "Failed to filter"
+\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval \`pwd\`/moses.abs.ini corpus.src || die "Failed to filter"
 
 $MOSESMAYPARALLEL \\
   -input-file ./corpus.src \\
