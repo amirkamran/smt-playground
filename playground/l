@@ -7,6 +7,7 @@ s=`if [ -d $1 ]; then echo $1; else eman guess --read-only "$1"; fi`
 [ -d "$s" ] || die "Bad step specifier: $1"
 
 logf=`ls -t $s/log.o* 2>/dev/null | head -n1`
+[ -z "$logf" ] && logf=$s/log
 if [ -e "$logf" ]; then
   echo Following $logf
   less $logf
