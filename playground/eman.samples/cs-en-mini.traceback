@@ -70,7 +70,7 @@
 |  |  |  |  | OUTLINECOUNT=1000
 |  |  |  |  | RUN_COMMAND=
 |  |  |  |  | STEPNAME=
-|  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-dev/cs.gz"
+|  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-dev/en.gz"
 |  |  |  +- s.model.d98146cb.20121010-2336
 |  |  |  |  | CUTOFF=0
 |  |  |  |  | DECODINGSTEPS=t0-0
