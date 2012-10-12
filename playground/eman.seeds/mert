@@ -45,7 +45,7 @@ deps_to_add=""
 function ensure_and_add_to_deps() {
   corpstep=$($PLAYGROUND/corpman --init $1 | cut -f1)
   [ ! -z "$corpstep" ] || die "Corpus not found: $1"
-  deps_to_add=" $corpstep"
+  deps_to_add="$deps_to_add $corpstep"
 }
 firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
 ensure_and_add_to_deps $firstdevcorp/$SRCAUG
