@@ -17,7 +17,7 @@ use File::Temp qw/tempfile/;
 # use File::NFSLock;
 # use Fcntl qw(LOCK_EX LOCK_SH);
 use Cwd;
-use YAML;
+use YAML::XS;
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
@@ -1015,7 +1015,7 @@ sub saveidx {
   my $idx = shift;
   my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>cwd());
   binmode($h, ":utf8");
-  print $h YAML::Dump($idx);
+  print $h Dump($idx);
   close $h;
   print STDERR "Moving temp output index from $tempname to $indexfile\n"
     if $verbose;
