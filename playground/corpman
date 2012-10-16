@@ -273,14 +273,15 @@ if ($cmd eq "reindex") {
     }
   }
 
+  my $steppath = get_step_path($stepname);
   if ($dumpcmd) {
     my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
-    print "$maygunzip $mydir/$stepname/$filename";
+    print "$maygunzip $steppath/$filename";
     print " | cut -f $column" if $column != -1;
     print "\n";
   } elsif ($dump) {
     ###!!! --factorindex will not yet work as expected with --dump
-    my $h = my_open("$mydir/$stepname/$filename");
+    my $h = my_open("$steppath/$filename");
     if ($column == -1) {
       print while <$h>;
     } else {
@@ -296,7 +297,7 @@ if ($cmd eq "reindex") {
       foreach my $bv (@bashvars) {
         foreach my $outvar_internalvar (split /,/, $bv) {
           my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
-	  $internalvar = $outvar if !defined $internalvar;
+          $internalvar = $outvar if !defined $internalvar;
           my $internalval = $entry->{$internalvar};
           die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
           print $outvar, "=", $internalval, "\n";
@@ -326,6 +327,8 @@ exit ($waserror != 0);
 
 #------------------------------------------------------------------------------
 # Registers a corpus with corpman.
+#
+# This can only be done in the local playground.
 #------------------------------------------------------------------------------
 sub register {
   my $index = shift;
@@ -519,11 +522,10 @@ sub lazy_build {
     foreach my $subcorp (split /\+/, $corp) {
       my $subentry = lazy_build($subcorp, $lang, $facts);
       $linecount += $subentry->{"linecount"};
-      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
-        # XXX should ask eman to locate the stepdir
+      my $steppath = get_step_path() . "/$subentry->{filename}";
       my $subcolumn = $subentry->{"column"};
       my $subfactind = $subentry->{"factind"};
-      my $cmd = "zcat $pathname";
+      my $cmd = "zcat $steppath";
       $cmd .= " | cut -f $subcolumn" if $subcolumn != -1;
       $cmd .= " | reduce_factors.pl $subfactind" if $subfactind != -1;
       push @parts, $cmd;
@@ -568,9 +570,9 @@ sub lazy_build {
         if defined $linecount && $linecount != $subentry->{"linecount"};
       $linecount = $subentry->{"linecount"};
 
-      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
-        # XXX should ask eman to locate the stepdir
-      push @parts, "$pathname $subentry->{column} $subentry->{factind}";
+      my $steppath = get_step_path() . "/$subentry->{filename}";
+      my $subcolumn = $subentry->{"column"};
+      push @parts, "$steppath $subentry->{column} $subentry->{factind}";
       push @deps, $subentry->{"stepname"};
     }
     # build a step that combines all these
@@ -842,34 +844,40 @@ sub get_entry_source_type {
 sub create_index {
   print STDERR "Indexing...\n" if $verbose;
   undef $index; # discard old index
-  open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
-    or die "Can't search for corpora";
-  while (<INDFILES>) {
-    chomp;
-    my $fn = $_;
-    my @dirs = split /\//, $fn, 2;
-    my $stepname = undef;
-    foreach my $dir (split /\//, $fn) {
-      if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
-        $stepname = $dir;
-        last;
+  my $subdirs_hdl = my_open("eman.subdirs");
+  chomp(my @subdirs = <$subdirs_hdl>);
+  for my $subdir (@subdirs) { 
+    chdir $subdir;
+    open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
+      or die "Can't search for corpora";
+    while (<INDFILES>) {
+      chomp;
+      my $fn = $_;
+      my @dirs = split /\//, $fn, 2;
+      my $stepname = undef;
+      foreach my $dir (split /\//, $fn) {
+        if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
+          $stepname = $dir;
+          last;
+        }
+      }
+      die "Failed to guess step name from $fn" if !defined $stepname;
+      my $status = load_step_status($stepname);
+      next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
+      # skip all bad steps
+      my $text = load_file($fn);
+      foreach my $line (split /\n/, $text) {
+        next if $line eq "";
+        my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
+        = split /\t/, trim($line);
+        die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
+        add_entry_incl_entries_of_separate_factors(
+          $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
       }
     }
-    die "Failed to guess step name from $fn" if !defined $stepname;
-    my $status = load_step_status($stepname);
-    next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
-      # skip all bad steps
-    my $text = load_file($fn);
-    foreach my $line (split /\n/, $text) {
-      next if $line eq "";
-      my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
-        = split /\t/, trim($line);
-      die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
-      add_entry_incl_entries_of_separate_factors(
-        $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
-    }
+    close INDFILES;
   }
-  close INDFILES;
+  chdir $mydir;
   exit 1 if $waserror;
 }
 
@@ -979,7 +987,8 @@ sub trim {
 
 sub load_step_status {
   my $stepname = shift;
-  my $status = load_file($stepname."/eman.status");
+  my $steppath = get_step_path($stepname);
+  my $status = load_file($steppath."/eman.status");
   chomp $status;
   return $status;
 }
@@ -1007,4 +1016,9 @@ sub saveidx {
     if $verbose;
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
+}
+
+sub get_step_path {
+  my $stepname = shift;
+  return `eman path $stepname`;
 }

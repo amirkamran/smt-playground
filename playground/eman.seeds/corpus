@@ -45,7 +45,8 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
   # even for big corpora, use at most 30k lines per job
 
 # double check our input is a corpus
-[ -z "$STEPNAME" ] || [ -e ../$STEPNAME/corpman.info ] \
+STEPPATH=`eman path $STEPNAME`
+[ -z "$STEPPATH" ] || [ -e $STEPPATH/corpman.info ] \
 || die "\$STEPNAME/corpman.info not found"
 
 # Create corpman info, the last field "1" indicates that this corpus is derived
@@ -63,9 +64,9 @@ options=0
 if [ ! -z "$RUN_COMMAND" ]; then
   [ ! -z "$STEPNAME" ] \
     || die "Please define \$STEPNAME, indicating where the source corpus is."
-  [ -d "../$STEPNAME" ] \
-    || die "The directory with input (../\$STEPNAME) not found"
-  inf="../$STEPNAME/$FILENAME"
+  [ -d "$STEPPATH" ] \
+    || die "The directory with input ($STEPPATH) not found"
+  inf="$STEPPATH/$FILENAME"
   # we're not checking -e because the dep may not be done yet
   if [ "$JOBS" == 0 ]; then
     cmd="zcat $inf \\"$'\n'
