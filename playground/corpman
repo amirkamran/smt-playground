@@ -847,7 +847,12 @@ sub create_index {
   my $subdirs_hdl = my_open("eman.subdirs");
   chomp(my @subdirs = <$subdirs_hdl>);
   for my $subdir (@subdirs) { 
-    chdir $subdir;
+    if (! -d $subdir) {
+      print STDERR "Warning: skipping non-existent directory $subdir\n";
+      next;
+    }
+    print STDERR "Searching directory $subdir\n" if $verbose;
+    chdir $subdir or die "Cannot change directory to $subdir.";
     open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
       or die "Can't search for corpora";
     while (<INDFILES>) {
