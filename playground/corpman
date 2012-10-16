@@ -141,6 +141,7 @@ my $not_derived = 0;
 
 # first construct an index of corpora bits
 my $index;
+my $derivable;
 # $index->{corpname}->{language}->{fact}
 #    = {   stepname=>the_directory_name,
 #          filename=>filename_within_the_stepname,
@@ -729,7 +730,7 @@ sub add_entry_incl_entries_of_separate_factors {
           "column" => $column,
           "factind" => $factind,
           "linecount" => $linecount,
-          "isderived" => $mayderived,
+          "isderived" => 1,
           "factors" => $facts,
         },
         $yes_derived
