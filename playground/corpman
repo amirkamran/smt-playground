@@ -269,7 +269,7 @@ if ($cmd eq "reindex") {
   if ($wait) {
     my $status = load_step_status($stepname);
     if ($status ne "DONE") {
-      safesystem("eman wait $stepname")
+      safesystem("eman start $stepname && eman wait $stepname")
         or die "Failed to wait for $stepname to finish."
     }
   }
