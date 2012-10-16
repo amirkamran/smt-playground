@@ -141,7 +141,6 @@ my $not_derived = 0;
 
 # first construct an index of corpora bits
 my $index;
-my $derivable;
 # $index->{corpname}->{language}->{fact}
 #    = {   stepname=>the_directory_name,
 #          filename=>filename_within_the_stepname,
@@ -156,36 +155,7 @@ chdir($mydir) or die "Failed to chdir to $mydir";
 
 # get/create index of all corpman.info files on the current playground
 if ( ! -e $indexfile || $reindex ) {
-  print STDERR "Indexing...\n" if $verbose;
-  open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
-    or die "Can't search for corpora";
-  while (<INDFILES>) {
-    chomp;
-    my $fn = $_;
-    my @dirs = split /\//, $fn, 2;
-    my $stepname = undef;
-    foreach my $dir (split /\//, $fn) {
-      if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
-        $stepname = $dir;
-        last;
-      }
-    }
-    die "Failed to guess step name from $fn" if !defined $stepname;
-    my $status = load_step_status($stepname);
-    next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
-      # skip all bad steps
-    my $text = load_file($fn);
-    foreach my $line (split /\n/, $text) {
-      next if $line eq "";
-      my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
-        = split /\t/, trim($line);
-      die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
-      add_entry_incl_entries_of_separate_factors(
-        $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
-    }
-  }
-  close INDFILES;
-  exit 1 if $waserror;
+  create_index(); # stored in $index
   saveidx($index);
 } else {
   # load existing index
@@ -369,6 +339,7 @@ sub register {
   my $derived = shift;
   my $stepname = basename($workdir);
   my $force_info_update = 0;
+  my $do_register = 0;
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{stepname} eq $stepname) {
@@ -379,18 +350,30 @@ sub register {
       }
     } else {
       if ($entry->{factind} == -1) {
-        die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+        my $status = load_step_status($entry->{stepname});
+        if ($status =~ m/^FAILED|PREPFAILED$/) {
+          print STDERR "Warning: corpus $entry->{stepname} is identical but has status $status!\n";
+          create_index(); # reindex, some corpora failed and we don't know
+          $do_register = 1; # register the new corpus
+        } else {
+          die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+        }
       } else {
         print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
       }
     }
   } else {
+    $do_register = 1; # this is a new corpus, register it
+  }
+
+  if ($do_register) {
     # add corpus to index
     add_entry_incl_entries_of_separate_factors(
         $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
     # save the updated index
     saveidx($index);
   }
+
   my $do_update_info = 1;
   # update corpman.info in the step directory
   my @info_current;
@@ -855,6 +838,40 @@ sub get_entry_source_type {
   return "C";
 }
 
+# find all corpora in the playground and add them to the index
+sub create_index {
+  print STDERR "Indexing...\n" if $verbose;
+  undef $index; # discard old index
+  open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
+    or die "Can't search for corpora";
+  while (<INDFILES>) {
+    chomp;
+    my $fn = $_;
+    my @dirs = split /\//, $fn, 2;
+    my $stepname = undef;
+    foreach my $dir (split /\//, $fn) {
+      if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
+        $stepname = $dir;
+        last;
+      }
+    }
+    die "Failed to guess step name from $fn" if !defined $stepname;
+    my $status = load_step_status($stepname);
+    next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
+      # skip all bad steps
+    my $text = load_file($fn);
+    foreach my $line (split /\n/, $text) {
+      next if $line eq "";
+      my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
+        = split /\t/, trim($line);
+      die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
+      add_entry_incl_entries_of_separate_factors(
+        $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
+    }
+  }
+  close INDFILES;
+  exit 1 if $waserror;
+}
 
 
 sub my_open {
