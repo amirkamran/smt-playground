@@ -14,7 +14,7 @@ use Getopt::Long;
 use File::Path;
 use File::Basename;
 use File::Temp qw/tempfile/;
-use File::Spec qw/file_name_is_absolute/;
+use File::Spec;
 # use File::NFSLock;
 # use Fcntl qw(LOCK_EX LOCK_SH);
 use Cwd;
@@ -1026,7 +1026,7 @@ sub saveidx {
 
 sub get_step_path {
   my $stepname = shift;
-  if (! file_name_is_absolute($stepname)) {
+  if (! File::Spec->file_name_is_absolute($stepname)) {
     chomp(my $steppath = `eman path $stepname`);
     return $steppath;
   } else {
