@@ -46,7 +46,7 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 
 # double check our input is a corpus
 STEPPATH=`eman path $STEPNAME`
-[ -z "$STEPPATH" ] || [ -e $STEPPATH/corpman.info ] \
+[ -z "$STEPNAME" ] || [ -e $STEPPATH/corpman.info ] \
 || die "\$STEPPATH/corpman.info not found"
 
 # Create corpman info, the last field "1" indicates that this corpus is derived
@@ -62,7 +62,7 @@ options=0
 [ "$options" -eq 1 ] || die "Bad usage: Needed exactly one of RUN_COMMAND, COMBINE_PARTS and TAKE_FROM_COMMAND, got $options"
 
 if [ ! -z "$RUN_COMMAND" ]; then
-  [ ! -z "$STEPPATH" ] \
+  [ ! -z "$STEPNAME" ] \
     || die "Please define \$STEPPATH, indicating where the source corpus is."
   [ -d "$STEPPATH" ] \
     || die "The directory with input (\$STEPPATH) not found"
