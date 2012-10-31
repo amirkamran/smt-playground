@@ -48,6 +48,9 @@ Jednojazycna data
       select_czech_sents_from_seznamdata.pl
       refine_and_truecase_czech_sents.pl
 
+* Martin Majlis -- webovy korpus
+  ufal/~majlis/w2c
+
 Dalsi?
 
 Paralelni data
