@@ -523,7 +523,7 @@ sub lazy_build {
     foreach my $subcorp (split /\+/, $corp) {
       my $subentry = lazy_build($subcorp, $lang, $facts);
       $linecount += $subentry->{"linecount"};
-      my $steppath = get_step_path() . "/$subentry->{filename}";
+      my $steppath = get_step_path($subentry->{stepname}) . "/$subentry->{filename}";
       my $subcolumn = $subentry->{"column"};
       my $subfactind = $subentry->{"factind"};
       my $cmd = "zcat $steppath";
@@ -571,7 +571,7 @@ sub lazy_build {
         if defined $linecount && $linecount != $subentry->{"linecount"};
       $linecount = $subentry->{"linecount"};
 
-      my $steppath = get_step_path() . "/$subentry->{filename}";
+      my $steppath = get_step_path($subentry->{stepname}) . "/$subentry->{filename}";
       my $subcolumn = $subentry->{"column"};
       push @parts, "$steppath $subentry->{column} $subentry->{factind}";
       push @deps, $subentry->{"stepname"};
@@ -1030,8 +1030,12 @@ sub saveidx {
 sub get_step_path {
   my $stepname = shift;
   if (! File::Spec->file_name_is_absolute($stepname)) {
-    chomp(my $steppath = `eman path $stepname`);
-    return $steppath;
+    if (-d $stepname) {
+      return "$mydir/$stepname";
+    } else {
+      chomp(my $steppath = `eman path $stepname`);
+      return $steppath;
+    }
   } else {
     return $stepname;
   }
