@@ -1030,7 +1030,7 @@ sub saveidx {
 sub get_step_path {
   my $stepname = shift;
   if (! File::Spec->file_name_is_absolute($stepname)) {
-    if (-d $stepname) {
+    if (-d "$mydir/$stepname") {
       return "$mydir/$stepname";
     } else {
       chomp(my $steppath = `eman path $stepname`);
