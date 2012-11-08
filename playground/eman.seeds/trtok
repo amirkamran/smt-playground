@@ -55,7 +55,7 @@ cmake ../src -DPREFER_STATIC_LIBRARIES=ON \\
   -DMaxEnt_INCLUDE_DIR=\`pwd\`/../../maxent/src/ \\
   -DBoost_USE_MULTITHREADED=OFF \\
   -DCMAKE_BUILD_TYPE=Release \\
-  -DINSTALL_DIR=\`pwd\` || die "CMake failed"
+  -DINSTALL_DIR=\`pwd\`/../install || die "CMake failed"
 make -j 4 || die "Make failed"
 make install || die "Make install failed"
 
