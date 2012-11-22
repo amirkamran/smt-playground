@@ -74,7 +74,7 @@ function mkcorpus() {
   corpspec=\$($PLAYGROUND/corpman --wait \$1)
   echo "corpman for \$1 returned: \$corpspec" # for the logfile
   step_file_col=(\$corpspec)
-  corpfile="$PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]}"
+  corpfile=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
   [ -e \$corpfile ] \\
     || die "Failed to prepare \$1, corpus file not found: \$corpfile"
   if [ "\${step_file_col[2]}" == "-1" ]; then

@@ -77,7 +77,7 @@ function mkcorpus() {
   rm -f corpus.\$2.gz
   $PLAYGROUND/corpman --factorindex --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman --factorindex \$1))
-  step_file=$PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]}
+  step_file=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
   scripts=$PLAYGROUND/../scripts
   # Source corpus contains just one column.
   if [ "\${step_file_col[2]}" == "-1" ]; then
