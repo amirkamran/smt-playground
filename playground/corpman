@@ -754,11 +754,11 @@ sub add_entry {
     # old entry, new entry, resolution
     # AA  die
     # AB  die
-    # AC  use C; this happens if there is a manually created corpus of more factors but we need to to select one factor from it
+    # AC  use C iff factind of A != -1; selecting one factor from existing corpus, use A otherwise
     # BA  die
     # BB  die
     # BC  prefer B (directly usable, C would require one more factor selection)
-    # CA  use C, as in AC above
+    # CA  as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
     my $oldtype = get_entry_source_type($oldentry);
@@ -766,7 +766,17 @@ sub add_entry {
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
     if ($conflict_type eq "AC" || $conflict_type eq "CA") {
       $should_die = 0;
-      $useentry = ($oldtype eq "C" ? $oldentry : $newentry);
+      my $entry_a = $oldtype eq "A" ? $oldentry : $newentry;
+      my $entry_c = $oldtype eq "C" ? $oldentry : $newentry;
+      if ($entry_a->{factind} == -1) {
+        # A has the exact factors we need and it already exists
+        # (unlike C, which is a derivable corpus)
+        $useentry = $entry_a;
+      } else {
+        # A has more factors than we need, C stands for the factor we can extract from it
+        # => use C
+        $useentry = $entry_c;      
+      }
     } elsif ($oldtype eq "A" || $newtype eq "A") {
       $should_die = 1;
       $msg = "Conflict involving a manually created corpus.";
