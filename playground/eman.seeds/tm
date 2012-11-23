@@ -89,7 +89,8 @@ function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
-    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
+    STEPPATH=\$(eman path \${step_file_col[0]})
+    $PLAYGROUND/../scripts/wiseln \$STEPPATH/\${step_file_col[1]} \\
       \$2.gz \
     || die "Failed to clone \$2 corpus \$1"
   else
