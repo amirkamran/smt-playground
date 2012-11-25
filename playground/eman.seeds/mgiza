@@ -21,17 +21,21 @@ renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
 
-tar xzf ../../src/mgizapp-0.6.3.tar.gz || die "mgiza missing"
+tar xzf ../../src/mgizapp-0.7.2.tar.gz || die "mgiza missing"
 cd mgizapp || die "Failed to chdir to mgizapp"
-patch -p1 < ../../../src/mgizapp-0.6.3.patch-for-gzipped-files \
-  || die "Failed to patch mgiza"
 ./configure || die "Failed to configure"
+
+#stupid patch... it can be done more beautifully but this will do :-)
+cat src/Makefile | sed 's/-lpthread/-lpthread -lboost_thread/'>src/Makefile_copy
+mv src/Makefile_copy src/Makefile
+
 make || die "Failed to make"
 cd ../ || die "chdir back failed"
 
 mkdir -p bin || die "Can't make bindir"
-ln -s ../mgizapp/src/mgiza ../mgizapp/src/snt2cooc.out \
-   ../mgizapp/src/mkcls ../mgizapp/src/symal bin/
+ln -s ../mgizapp/src/mgiza ../mgizapp/src/snt2cooc \
+   ../mgizapp/src/mkcls/mkcls ../mgizapp/src/symal ../mgizapp/scripts/merge_alignment.py  bin/
+                                                   #the python script is not strictly "bin" but who cares
 
 # Standard command footer
 echo Done.

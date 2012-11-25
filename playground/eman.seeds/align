@@ -16,6 +16,8 @@ eman \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar ALILABEL default='' \
     help='alignment "corpus" name, generated automatically if not given' \
+  defvar CORES default='1' \
+    help='Core number for mgiza and SGE. Not used with GIZA++. Default=1 (just 1 core)' \
 || exit 1
 
 # Set local bash variables
@@ -113,15 +115,33 @@ tempdir=/mnt/h/tmp
 [ -d \$tempdir ] || tempdir=/tmp
   # the default
 
-$GIZAWRAPPER \\
-  corpus.src.gz corpus.tgt.gz \\
-  --lfactors=0 --rfactors=0 \\
-  --tempdir=\$tempdir \\
-  --bindir=$GIZASTEP/bin \\
-  --dirsym=$ALISYMS \\
-  --drop-bad-lines \\
-| gzip -c > alignment.gz \
-|| die "Failed to align the corpus"
+
+if [ "`echo $GIZASTEP | grep 's.mgiza'`" ]; then
+
+    $GIZAWRAPPER \\
+        corpus.src.gz corpus.tgt.gz \\
+        --lfactors=0 --rfactors=0 \\
+        --tempdir=\$tempdir \\
+        --mgizadir=$GIZASTEP/bin \\
+        --mgizacores=$CORES \\
+        --dirsym=$ALISYMS \\
+        --drop-bad-lines \\
+    | gzip -c > alignment.gz \
+    || die "Failed to align the corpus"
+
+else
+
+    $GIZAWRAPPER \\
+        corpus.src.gz corpus.tgt.gz \\
+        --lfactors=0 --rfactors=0 \\
+        --tempdir=\$tempdir \\
+        --bindir=$GIZASTEP/bin \\
+        --dirsym=$ALISYMS \\
+        --drop-bad-lines \\
+    | gzip -c > alignment.gz \
+    || die "Failed to align the corpus"
+
+fi
 
 alilen=\`zcat alignment.gz | wc -l\`
 srclen=\`zcat corpus.src.gz | wc -l\`
