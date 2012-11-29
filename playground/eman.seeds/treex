@@ -68,7 +68,7 @@ renice 10 \$\$
 
 cd treex || die "Can't chdir"
 
-svn up treex libs \
+svn up --username public --password public --non-interactive treex libs \
 || die "Failed to obtain treex and libs"
 
 # Standard command footer
