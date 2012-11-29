@@ -74,7 +74,7 @@ if [ ! -z "$RUN_COMMAND" ]; then
     [ "$FACTOR" == "-1" ] || cmd="$cmd | ../../scripts/reduce_factors.pl $FACTOR \\"$'\n'
     cmd="$cmd | $RUN_COMMAND \\"$'\n'
   else
-    cmd="../../scripts/qruncmd --jobs=$JOBS --split-to-size=$SPLIT_TO_SIZE --join --jobname corpman.$OUTCORP.$OUTLANG \" \\"$'\n'
+    cmd="../../scripts/qruncmd --jobs=$JOBS --attempts=5 --split-to-size=$SPLIT_TO_SIZE --join --jobname corpman.$OUTCORP.$OUTLANG \" \\"$'\n'
     [ "$COLUMN" == "-1" ] || cmd="$cmd cut -f $COLUMN | \\"$'\n'
     [ "$FACTOR" == "-1" ] || cmd="$cmd ../../scripts/reduce_factors.pl $FACTOR | \\"$'\n'
     cmd="$cmd $RUN_COMMAND \\"$'\n'
