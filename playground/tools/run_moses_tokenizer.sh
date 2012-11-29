@@ -15,7 +15,7 @@ STEP=
 while [ $TRIES -lt 10 -a -z "$STEP" ]; do
     STEP=$(cd ..; eman sel t mosesgiza d | head -n 1)
     sleep 10
-    TRIES=$((1+1))
+    TRIES=$(($TRIES+1))
 done
 
 
