@@ -8,7 +8,15 @@ mydir=$(dirname $(readlink -f "$0" ) )
 [ -d "$mydir" ] || die "Failed to find ourselves, got: $mydir"
 
 
-STEP=$(cd ..; eman sel t mosesgiza d | head -n 1)
+#try the selection 10 times, THEN fail
+#(AFS sometimes derps)
+TRIES=0
+STEP=
+while [ $TRIES -lt 10 -a -z "$STEP" ]; do
+    STEP=$(cd ..; eman sel t mosesgiza d | head -n 1)
+    sleep 10
+    TRIES=$((1+1))
+done
 
 
 [ -z "$STEP" ] && die "There is no appropriate mosesgiza step. Run 'eman init mosesgiza -start' first."
