@@ -7,11 +7,11 @@ set -o pipefail  # safer pipes
 mydir=$(dirname $(readlink -f "$0" ) )
 [ -d "$mydir" ] || die "Failed to find ourselves, got: $mydir"
 
-[ -e $mydir/runtreex.use-this-treex-step ] \
-|| die "Please put your desired s.treex.1234 step identifier into $mydir/runtreex.use-this-treex-step"
 
-STEP=$(cat $mydir/runtreex.use-this-treex-step)
-[ -z "$STEP" ] && die "No treex given in $mydir/runtreex.use-this-treex-step"
+STEP=$(cd ..; eman sel t treex d | head -n 1)
+
+
+[ -z "$STEP" ] && die "There is no appropriate TreeX step. Run 'eman init treex -start' first."
 [ -d "$mydir/../$STEP" ] || die "$STEP is not in $mydir/.."
 
 TREEX=$mydir/../$STEP/treex
