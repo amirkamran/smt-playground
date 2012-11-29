@@ -23,7 +23,7 @@ ulimit -c 1 # core files limited to 1 byte
 git clone git://github.com/lzhang10/maxent.git || die "Failed to clone Maxent"
 cd maxent || die "Failed to chdir to maxent"
 ./configure --prefix=\`pwd\` || die "Failed to configure maxent"
-make -j 4 || die "Maxent compilation failed"
+make || die "Maxent compilation failed"
 make install || die "Maxent installation failed"
 cd .. || die "Failed to chdir back"
 
