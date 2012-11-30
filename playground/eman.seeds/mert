@@ -17,6 +17,7 @@ eman \
   defvar MOSESFLAGS default='' help='further flags for moses' \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
+  defvar EMAN_MEM default='6g' help='memory for sub for thread itself' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \

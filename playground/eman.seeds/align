@@ -16,7 +16,7 @@ eman \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar ALILABEL default='' \
     help='alignment "corpus" name, generated automatically if not given' \
-  defvar CORES default='1' \
+  defvar EMAN_CORES default='1' \
     help='Core number for mgiza and SGE. Not used with GIZA++. Default=1 (just 1 core)' \
 || exit 1
 
@@ -123,7 +123,7 @@ if [ "`echo $GIZASTEP | grep 's.mgiza'`" ]; then
         --lfactors=0 --rfactors=0 \\
         --tempdir=\$tempdir \\
         --mgizadir=$GIZASTEP/bin \\
-        --mgizacores=$CORES \\
+        --mgizacores=$EMAN_CORES \\
         --dirsym=$ALISYMS \\
         --drop-bad-lines \\
     | gzip -c > alignment.gz \
