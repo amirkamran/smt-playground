@@ -12,6 +12,7 @@ eman \
   defvar CORPUS help='the corpus name' \
   defvar SRCALIAUG help='lang+factors for the source side' \
   defvar TGTALIAUG help='lang+factors for the target side' \
+  defvar TMPDIR help='temporary directory for Gizawrapper' default='/mnt/h/tmp/' \
   defvar ALISYMS default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar ALILABEL default='' \
@@ -110,7 +111,7 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-tempdir=/mnt/h/tmp
+tempdir=$TEMPDIR
   # best choice for ufal
 [ -d \$tempdir ] || tempdir=/tmp
   # the default
