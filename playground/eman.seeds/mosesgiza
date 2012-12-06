@@ -7,6 +7,7 @@ set -o pipefail  # safer pipes
 # Ensure all the required variables are set (or provide the default)
 eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
      defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
+     defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
 || exit 1
 
 # Set local bash variables
@@ -48,6 +49,9 @@ git clone https://github.com/moses-smt/mosesdecoder.git moses \\
 || die "Failed to clone moses"
 
 cd moses || die "Chdir failed"
+[ -z "$MOSESBRANCH" ] || git checkout $MOSESBRANCH \\
+|| die "Failed to check out branch $MOSESBRANCH"
+
 ./bjam -j4 --with-giza=\$mydir/bin || die "Build failed"
 
 cd ../ || die "chdir back failed"
