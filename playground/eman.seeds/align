@@ -111,7 +111,7 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-tempdir=$TEMPDIR
+tempdir=$TMPDIR
   # best choice for ufal
 [ -d \$tempdir ] || tempdir=/tmp
   # the default
