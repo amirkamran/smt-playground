@@ -57,7 +57,7 @@ cd moses || die "Chdir failed"
 
 [ -z "$SRILMSTEP" ] || SRILMARG=" --with-srilm=\`eman path $SRILMSTEP\`/srilm "
 [ -z "$IRSTLMSTEP" ] || IRSTLMARG=" --with-irstlm=\`eman path $IRSTLMSTEP\`/install "
-BJAMARGS=" --max-kenlm-order 8 $BJAMARGS "
+BJAMARGS=" --max-kenlm-order=8 $BJAMARGS "
 
 ./bjam -j4 --with-giza=\$mydir/bin \\
   \$SRILMARG \$IRSTLMARG \$BJAMARGS || die "Build failed"
