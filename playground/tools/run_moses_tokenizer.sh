@@ -18,11 +18,15 @@ while [ $TRIES -lt 10 -a -z "$STEP" ]; do
     TRIES=$(($TRIES+1))
 done
 
+STEPDIR=`eman path $STEP`
 
 [ -z "$STEP" ] && die "There is no appropriate mosesgiza step. Run 'eman init mosesgiza -start' first."
-[ -d "$mydir/../$STEP" ] || die "$STEP is not in $mydir/.."
 
-TOKENIZER=$mydir/../$STEP/moses/scripts/tokenizer/tokenizer.perl
+[ -n "$STEPDIR" ] || die "$STEPDIR is empty"
+[ -d "$STEPDIR" ] || die "$STEPDIR does not exist"
+
+
+TOKENIZER=$STEPDIR/moses/scripts/tokenizer/tokenizer.perl
 
 echo "run_moses_tokenizer: Using this particular moses step: $STEP" >&2
 echo "$STEP" >> run_moses_tokenizer.mosesgiza-step-used

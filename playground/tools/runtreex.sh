@@ -21,9 +21,13 @@ done
 
 
 [ -z "$STEP" ] && die "There is no appropriate TreeX step. Run 'eman init treex -start' first."
-[ -d "$mydir/../$STEP" ] || die "$STEP is not in $mydir/.."
 
-TREEX=$mydir/../$STEP/treex
+STEPDIR=`eman path $STEP`
+
+[ -n "$STEPDIR" ] || die "$STEPDIR is empty"
+[ -d "$STEPDIR" ] || die "$STEPDIR does not exist"
+
+TREEX=$STEPDIR/treex
 
 [ -e $TREEX.bashsource ] || die "$TREEX.bashsource not found"
 source $TREEX.bashsource
