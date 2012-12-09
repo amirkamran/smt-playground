@@ -112,11 +112,7 @@ mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
 tempdir=$TMPDIR
-[ -n \$tempdir ] || tempdir=/tmp
-  # best choice for ufal
-[ -d \$tempdir ] || tempdir=/tmp
-  # the default
-
+[ -d "\$tempdir" ] || tempdir=/tmp
 
 if [ "`echo $GIZASTEP | grep 's.mgiza'`" ]; then
 
