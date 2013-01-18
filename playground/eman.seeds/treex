@@ -16,7 +16,7 @@ touch eman.vars
 TEMPDIR=$(if [ -e /mnt/h/tmp ]; then echo /mnt/h/tmp; else echo /tmp; fi)
 
 # Minimalistic checkout of treex files
-svn co --depth=empty https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk treex \
+svn co --depth=empty https://svn.ms.mff.cuni.cz/svn/tectomt_devel/trunk --username public --password public --non-interactive treex \
 || die "Failed to checkout treex"
 
 cd treex \
@@ -68,7 +68,7 @@ renice 10 \$\$
 
 cd treex || die "Can't chdir"
 
-svn up treex libs \
+svn up --username public --password public --non-interactive treex libs \
 || die "Failed to obtain treex and libs"
 
 # Standard command footer

@@ -1,5 +1,5 @@
 #!/bin/bash
-# This will pass stdin to stdout via treex command of the given scenario.
+# This will pass stdin to stdout via moses tokenizer
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -13,27 +13,23 @@ mydir=$(dirname $(readlink -f "$0" ) )
 TRIES=0
 STEP=
 while [ $TRIES -lt 10 -a -z "$STEP" ]; do
-    STEP=$(cd ..; eman sel t treex d | head -n 1)
+    STEP=$(cd ..; eman sel t mosesgiza d | head -n 1)
     sleep 10
     TRIES=$(($TRIES+1))
 done
 
-
-
-[ -z "$STEP" ] && die "There is no appropriate TreeX step. Run 'eman init treex -start' first."
-
 STEPDIR=`eman path $STEP`
+
+[ -z "$STEP" ] && die "There is no appropriate mosesgiza step. Run 'eman init mosesgiza -start' first."
 
 [ -n "$STEPDIR" ] || die "$STEPDIR is empty"
 [ -d "$STEPDIR" ] || die "$STEPDIR does not exist"
 
-TREEX=$STEPDIR/treex
 
-[ -e $TREEX.bashsource ] || die "$TREEX.bashsource not found"
-source $TREEX.bashsource
+TOKENIZER=$STEPDIR/moses/scripts/tokenizer/tokenizer.perl
 
-echo "runtreex: Using this particular treex step: $STEP" >&2
-echo "$STEP" >> runtreex.treex-step-used
-$TREEX/treex/bin/treex -e WARN "$@"
+echo "run_moses_tokenizer: Using this particular moses step: $STEP" >&2
+echo "$STEP" >> run_moses_tokenizer.mosesgiza-step-used
+$TOKENIZER "$@"
 
 exit $?

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # This script cooperates with eman.seeds/corpus (and possibly other eman
 # seeds) and constructs factored corpus of a given specification within eman
 # framework of steps.
@@ -14,10 +14,11 @@ use Getopt::Long;
 use File::Path;
 use File::Basename;
 use File::Temp qw/tempfile/;
+use File::Spec;
 # use File::NFSLock;
 # use Fcntl qw(LOCK_EX LOCK_SH);
 use Cwd;
-use YAML;
+use YAML::XS;
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
@@ -155,38 +156,7 @@ chdir($mydir) or die "Failed to chdir to $mydir";
 
 # get/create index of all corpman.info files on the current playground
 if ( ! -e $indexfile || $reindex ) {
-  print STDERR "Indexing...\n" if $verbose;
-  open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
-    or die "Can't search for corpora";
-  while (<INDFILES>) {
-    chomp;
-    my $fn = $_;
-    my @dirs = split /\//, $fn, 2;
-    my $stepname = undef;
-    foreach my $dir (split /\//, $fn) {
-      if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
-        $stepname = $dir;
-        last;
-      }
-    }
-    die "Failed to guess step name from $fn" if !defined $stepname;
-    my $status = load_step_status($stepname);
-    next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
-      # skip all bad steps
-    my $text = load_file($fn);
-    foreach my $line (split /\n/, $text) {
-      # Treat '#' and the rest of the line as comment.
-      $line =~ s/\#.*//;
-      next if $line eq "";
-      my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
-        = split /\t/, trim($line);
-      die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
-      add_entry_incl_entries_of_separate_factors(
-        $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
-    }
-  }
-  close INDFILES;
-  exit 1 if $waserror;
+  create_index(0); # stored in $index
   saveidx($index);
 } else {
   # load existing index
@@ -299,19 +269,20 @@ if ($cmd eq "reindex") {
   if ($wait) {
     my $status = load_step_status($stepname);
     if ($status ne "DONE") {
-      safesystem("eman wait $stepname")
+      safesystem("eman start $stepname && eman wait $stepname")
         or die "Failed to wait for $stepname to finish."
     }
   }
 
+  my $steppath = get_step_path($stepname);
   if ($dumpcmd) {
     my $maygunzip = ($filename =~ /\.gz$/ ? "zcat" : "cat");
-    print "$maygunzip $mydir/$stepname/$filename";
+    print "$maygunzip $steppath/$filename";
     print " | cut -f $column" if $column != -1;
     print "\n";
   } elsif ($dump) {
     ###!!! --factorindex will not yet work as expected with --dump
-    my $h = my_open("$mydir/$stepname/$filename");
+    my $h = my_open("$steppath/$filename");
     if ($column == -1) {
       print while <$h>;
     } else {
@@ -327,7 +298,7 @@ if ($cmd eq "reindex") {
       foreach my $bv (@bashvars) {
         foreach my $outvar_internalvar (split /,/, $bv) {
           my ($outvar, $internalvar) = split /=/, $outvar_internalvar;
-	  $internalvar = $outvar if !defined $internalvar;
+          $internalvar = $outvar if !defined $internalvar;
           my $internalval = $entry->{$internalvar};
           die "Undefined '$internalvar' when producing bash variable setter for $bv" if !defined $internalvar;
           print $outvar, "=", $internalval, "\n";
@@ -357,6 +328,8 @@ exit ($waserror != 0);
 
 #------------------------------------------------------------------------------
 # Registers a corpus with corpman.
+#
+# This can only be done in the local playground.
 #------------------------------------------------------------------------------
 sub register {
   my $index = shift;
@@ -370,6 +343,7 @@ sub register {
   my $derived = shift;
   my $stepname = basename($workdir);
   my $force_info_update = 0;
+  my $do_register = 0;
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{stepname} eq $stepname) {
@@ -380,18 +354,30 @@ sub register {
       }
     } else {
       if ($entry->{factind} == -1) {
-        die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+        my $status = load_step_status($entry->{stepname});
+        if ($status =~ m/^FAILED|PREPFAILED$/) {
+          print STDERR "Warning: corpus $entry->{stepname} is identical but has status $status!\n";
+          create_index(1); # reindex, some corpora failed and we don't know
+          $do_register = 1; # register the new corpus
+        } else {
+          die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
+        }
       } else {
         print STDERR "Warning: corpus $corp/$lang+$facts is implicitly available in $entry->{stepname}!\n";
       }
     }
   } else {
+    $do_register = 1; # this is a new corpus, register it
+  }
+
+  if ($do_register) {
     # add corpus to index
     add_entry_incl_entries_of_separate_factors(
         $corp, $lang, $facts, $stepname, $file, $column, $linecount, $derived);
     # save the updated index
     saveidx($index);
   }
+
   my $do_update_info = 1;
   # update corpman.info in the step directory
   my @info_current;
@@ -537,11 +523,10 @@ sub lazy_build {
     foreach my $subcorp (split /\+/, $corp) {
       my $subentry = lazy_build($subcorp, $lang, $facts);
       $linecount += $subentry->{"linecount"};
-      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
-        # XXX should ask eman to locate the stepdir
+      my $steppath = get_step_path($subentry->{stepname}) . "/$subentry->{filename}";
       my $subcolumn = $subentry->{"column"};
       my $subfactind = $subentry->{"factind"};
-      my $cmd = "zcat $pathname";
+      my $cmd = "zcat $steppath";
       $cmd .= " | cut -f $subcolumn" if $subcolumn != -1;
       $cmd .= " | reduce_factors.pl $subfactind" if $subfactind != -1;
       push @parts, $cmd;
@@ -586,9 +571,9 @@ sub lazy_build {
         if defined $linecount && $linecount != $subentry->{"linecount"};
       $linecount = $subentry->{"linecount"};
 
-      my $pathname = "../$subentry->{stepname}/$subentry->{filename}";
-        # XXX should ask eman to locate the stepdir
-      push @parts, "$pathname $subentry->{column} $subentry->{factind}";
+      my $steppath = get_step_path($subentry->{stepname}) . "/$subentry->{filename}";
+      my $subcolumn = $subentry->{"column"};
+      push @parts, "$steppath $subentry->{column} $subentry->{factind}";
       push @deps, $subentry->{"stepname"};
     }
     # build a step that combines all these
@@ -731,7 +716,7 @@ sub add_entry_incl_entries_of_separate_factors {
           "column" => $column,
           "factind" => $factind,
           "linecount" => $linecount,
-          "isderived" => $mayderived,
+          "isderived" => 1,
           "factors" => $facts,
         },
         $yes_derived
@@ -769,11 +754,11 @@ sub add_entry {
     # old entry, new entry, resolution
     # AA  die
     # AB  die
-    # AC  use C; this happens if there is a manually created corpus of more factors but we need to to select one factor from it
+    # AC  use C iff factind of A != -1; selecting one factor from existing corpus, use A otherwise
     # BA  die
     # BB  die
     # BC  prefer B (directly usable, C would require one more factor selection)
-    # CA  use C, as in AC above
+    # CA  as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
     my $oldtype = get_entry_source_type($oldentry);
@@ -781,7 +766,17 @@ sub add_entry {
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
     if ($conflict_type eq "AC" || $conflict_type eq "CA") {
       $should_die = 0;
-      $useentry = ($oldtype eq "C" ? $oldentry : $newentry);
+      my $entry_a = $oldtype eq "A" ? $oldentry : $newentry;
+      my $entry_c = $oldtype eq "C" ? $oldentry : $newentry;
+      if ($entry_a->{factind} == -1) {
+        # A has the exact factors we need and it already exists
+        # (unlike C, which is a derivable corpus)
+        $useentry = $entry_a;
+      } else {
+        # A has more factors than we need, C stands for the factor we can extract from it
+        # => use C
+        $useentry = $entry_c;      
+      }
     } elsif ($oldtype eq "A" || $newtype eq "A") {
       $should_die = 1;
       $msg = "Conflict involving a manually created corpus.";
@@ -856,6 +851,54 @@ sub get_entry_source_type {
   return "C";
 }
 
+# find all corpora in the playground and add them to the index
+sub create_index {
+  # if reindexing during 'register', some eman steps may not have eman.status
+  my $soft_checks = shift;
+  print STDERR "Indexing...\n" if $verbose;
+  undef $index; # discard old index
+  my $subdirs_hdl = my_open("eman.subdirs");
+  chomp(my @subdirs = <$subdirs_hdl>);
+  for my $subdir (@subdirs) { 
+    if (! -d $subdir) {
+      print STDERR "Warning: skipping non-existent directory $subdir\n";
+      next;
+    }
+    print STDERR "Searching directory $subdir\n" if $verbose;
+    chdir $subdir or die "Cannot change directory to $subdir.";
+    open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
+      or die "Can't search for corpora";
+    while (<INDFILES>) {
+      chomp;
+      my $fn = $_;
+      my @dirs = split /\//, $fn, 2;
+      my $stepname = undef;
+      foreach my $dir (split /\//, $fn) {
+        if ($dir =~ /^s\..*\.[0-9]{8}-[0-9]{4}$/) {
+          $stepname = $dir;
+          last;
+        }
+      }
+      die "Failed to guess step name from $fn" if !defined $stepname;
+      next if $soft_checks && ! -f "$subdir/$stepname";     
+      my $status = load_step_status("$subdir/$stepname");
+      next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
+      # skip all bad steps
+      my $text = load_file($fn);
+      foreach my $line (split /\n/, $text) {
+        next if $line eq "";
+        my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
+        = split /\t/, trim($line);
+        die "Bad entry $fn: $line" if $linecount !~ /^(-1|[0-9]+)$/;
+        add_entry_incl_entries_of_separate_factors(
+          $corpname, $lang, $facts, $stepname, $filename, $column, $linecount, $mayderived);
+      }
+    }
+    close INDFILES;
+  }
+  chdir $mydir;
+  exit 1 if $waserror;
+}
 
 
 sub my_open {
@@ -963,7 +1006,8 @@ sub trim {
 
 sub load_step_status {
   my $stepname = shift;
-  my $status = load_file($stepname."/eman.status");
+  my $steppath = get_step_path($stepname);
+  my $status = load_file($steppath."/eman.status");
   chomp $status;
   return $status;
 }
@@ -985,10 +1029,24 @@ sub saveidx {
   my $idx = shift;
   my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>cwd());
   binmode($h, ":utf8");
-  print $h YAML::Dump($idx);
+  print $h Dump($idx);
   close $h;
   print STDERR "Moving temp output index from $tempname to $indexfile\n"
     if $verbose;
   rename($tempname, $indexfile);
   chmod 0644, $indexfile;
+}
+
+sub get_step_path {
+  my $stepname = shift;
+  if (! File::Spec->file_name_is_absolute($stepname)) {
+    if (-d "$mydir/$stepname") {
+      return "$mydir/$stepname";
+    } else {
+      chomp(my $steppath = `eman path $stepname`);
+      return $steppath;
+    }
+  } else {
+    return $stepname;
+  }
 }

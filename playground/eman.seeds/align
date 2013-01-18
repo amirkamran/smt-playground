@@ -12,10 +12,13 @@ eman \
   defvar CORPUS help='the corpus name' \
   defvar SRCALIAUG help='lang+factors for the source side' \
   defvar TGTALIAUG help='lang+factors for the target side' \
+  defvar TMPDIR help='temporary directory for Gizawrapper' default='/mnt/h/tmp/' \
   defvar ALISYMS default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar ALILABEL default='' \
     help='alignment "corpus" name, generated automatically if not given' \
+  defvar EMAN_CORES default='1' \
+    help='Core number for mgiza and SGE. Not used with GIZA++. Default=1 (just 1 core)' \
 || exit 1
 
 # Set local bash variables
@@ -77,7 +80,7 @@ function mkcorpus() {
   rm -f corpus.\$2.gz
   $PLAYGROUND/corpman --factorindex --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman --factorindex \$1))
-  step_file=$PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]}
+  step_file=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
   scripts=$PLAYGROUND/../scripts
   # Source corpus contains just one column.
   if [ "\${step_file_col[2]}" == "-1" ]; then
@@ -108,20 +111,35 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-tempdir=/mnt/h/tmp
-  # best choice for ufal
-[ -d \$tempdir ] || tempdir=/tmp
-  # the default
+tempdir=$TMPDIR
+[ -d "\$tempdir" ] || tempdir=/tmp
 
-$GIZAWRAPPER \\
-  corpus.src.gz corpus.tgt.gz \\
-  --lfactors=0 --rfactors=0 \\
-  --tempdir=\$tempdir \\
-  --bindir=$GIZASTEP/bin \\
-  --dirsym=$ALISYMS \\
-  --drop-bad-lines \\
-| gzip -c > alignment.gz \
-|| die "Failed to align the corpus"
+if [ "`echo $GIZASTEP | grep 's.mgiza'`" ]; then
+
+    $GIZAWRAPPER \\
+        corpus.src.gz corpus.tgt.gz \\
+        --lfactors=0 --rfactors=0 \\
+        --tempdir=\$tempdir \\
+        --mgizadir=$GIZASTEP/bin \\
+        --mgizacores=$EMAN_CORES \\
+        --dirsym=$ALISYMS \\
+        --drop-bad-lines \\
+    | gzip -c > alignment.gz \
+    || die "Failed to align the corpus"
+
+else
+
+    $GIZAWRAPPER \\
+        corpus.src.gz corpus.tgt.gz \\
+        --lfactors=0 --rfactors=0 \\
+        --tempdir=\$tempdir \\
+        --bindir=$GIZASTEP/bin \\
+        --dirsym=$ALISYMS \\
+        --drop-bad-lines \\
+    | gzip -c > alignment.gz \
+    || die "Failed to align the corpus"
+
+fi
 
 alilen=\`zcat alignment.gz | wc -l\`
 srclen=\`zcat corpus.src.gz | wc -l\`

@@ -1,28 +1,43 @@
-+- s.evaluator.d420bcfe.20120307-0934
-|  | MOSESSTEP=s.mosesgiza.a76ef97a.20120306-1516
++- s.evaluator.74724e03.20121012-1347
+|  | MOSESSTEP=s.mosesgiza.375a40d5.20121011-0942
 |  | REFAUGS=en+form
-|  | SCORERS=BLEU
+|  | SCORERS="-s BLEU -s PER -s TER -s CDER"
 |  | TESTCORP=sample-cs-en-mini-test
-|  | TRANSAUG=en_s.translate.073403fb.20120307-0934+form
-|  | TRANSSTEP=s.translate.073403fb.20120307-0934
-|  +- s.mosesgiza.a76ef97a.20120306-1516
+|  | TRANSAUG=en_s.translate.1d12e1b2.20121012-1303+form
+|  | TRANSSTEP=s.translate.1d12e1b2.20121012-1303
+|  +- s.corpus.3dc57e88.20121012-1152
+|  |  | COLUMN=-1
+|  |  | COMBINE_PARTS=
+|  |  | DEPS=
+|  |  | DERIVED=0
+|  |  | FACTOR=-1
+|  |  | FILENAME=
+|  |  | JOBS=15
+|  |  | OUTCORP=sample-cs-en-mini-test
+|  |  | OUTFACTS=form
+|  |  | OUTLANG=en
+|  |  | OUTLINECOUNT=1000
+|  |  | RUN_COMMAND=
+|  |  | STEPNAME=
+|  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-test/en.gz"
+|  +- s.mosesgiza.375a40d5.20121011-0942
 |  |  | IRSTLMSTEP=
 |  |  | SRILMSTEP=
-|  +- s.translate.073403fb.20120307-0934
-|  |  | DETOKAUG=en_s.translate.073403fb.20120307-0934+untok
+|  +- s.translate.1d12e1b2.20121012-1303
+|  |  | DETOKAUG=en_s.translate.1d12e1b2.20121012-1303+untok
 |  |  | GRIDFLAGS=
 |  |  | ITER=
 |  |  | JOBS=0
-|  |  | MERTSTEP=s.mert.44ec033d.20120307-0932
+|  |  | MERTSTEP=s.mert.f969d3c4.20121012-1303
 |  |  | MOSESFLAGS=
-|  |  | MOSESSTEP=s.mosesgiza.a76ef97a.20120306-1516
-|  |  | OUTALIAUG=en_s.translate.073403fb.20120307-0934+ali
+|  |  | MOSESSTEP=s.mosesgiza.375a40d5.20121011-0942
+|  |  | OUTALIAUG=en_s.translate.1d12e1b2.20121012-1303+ali
 |  |  | REFAUG=en+form
 |  |  | SEARCH=cube
 |  |  | SRCAUG=cs+form
 |  |  | TESTCORP=sample-cs-en-mini-test
-|  |  | TOKAUG=en_s.translate.073403fb.20120307-0934+form
-|  |  +- s.corpus.ab7bc53d.20120307-0931
+|  |  | TOKAUG=en_s.translate.1d12e1b2.20121012-1303+form
+|  |  +- s.corpus.4c004349.20121011-0947
 |  |  |  | COLUMN=-1
 |  |  |  | COMBINE_PARTS=
 |  |  |  | DEPS=
@@ -37,15 +52,15 @@
 |  |  |  | RUN_COMMAND=
 |  |  |  | STEPNAME=
 |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-test/cs.gz"
-|  |  +- s.mert.44ec033d.20120307-0932
+|  |  +- s.mert.f969d3c4.20121012-1303
 |  |  |  | DEVCORP=sample-cs-en-mini-dev
 |  |  |  | GRIDFLAGS=
 |  |  |  | JOBS=0
 |  |  |  | MERTFLAGS=
 |  |  |  | MERTPRG=mert
-|  |  |  | MODELSTEP=s.model.e15baa23.20120307-0932
+|  |  |  | MODELSTEP=s.model.c9a5b0fd.20121011-0947
 |  |  |  | MOSESFLAGS=
-|  |  |  | MOSESSTEP=s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  | MOSESSTEP=s.mosesgiza.375a40d5.20121011-0942
 |  |  |  | REFAUG=en+form
 |  |  |  | SEARCH=cube
 |  |  |  | SRCAUG=cs+form
@@ -56,24 +71,54 @@
 |  |  |  | ZMERTMETRIC=
 |  |  |  | ZMERTSEMPOSBLEUWEIGHTS=
 |  |  |  | ZMERTSEMPOSSOURCE=
-|  |  |  +- s.model.e15baa23.20120307-0932
+|  |  |  +- s.corpus.81b079f1.20121011-1035
+|  |  |  |  | COLUMN=-1
+|  |  |  |  | COMBINE_PARTS=
+|  |  |  |  | DEPS=
+|  |  |  |  | DERIVED=0
+|  |  |  |  | FACTOR=-1
+|  |  |  |  | FILENAME=
+|  |  |  |  | JOBS=15
+|  |  |  |  | OUTCORP=sample-cs-en-mini-dev
+|  |  |  |  | OUTFACTS=form
+|  |  |  |  | OUTLANG=cs
+|  |  |  |  | OUTLINECOUNT=1000
+|  |  |  |  | RUN_COMMAND=
+|  |  |  |  | STEPNAME=
+|  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-dev/cs.gz"
+|  |  |  +- s.corpus.abbd1451.20121011-0947
+|  |  |  |  | COLUMN=-1
+|  |  |  |  | COMBINE_PARTS=
+|  |  |  |  | DEPS=
+|  |  |  |  | DERIVED=0
+|  |  |  |  | FACTOR=-1
+|  |  |  |  | FILENAME=
+|  |  |  |  | JOBS=15
+|  |  |  |  | OUTCORP=sample-cs-en-mini-dev
+|  |  |  |  | OUTFACTS=form
+|  |  |  |  | OUTLANG=en
+|  |  |  |  | OUTLINECOUNT=1000
+|  |  |  |  | RUN_COMMAND=
+|  |  |  |  | STEPNAME=
+|  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-dev/en.gz"
+|  |  |  +- s.model.c9a5b0fd.20121011-0947
 |  |  |  |  | CUTOFF=0
 |  |  |  |  | DECODINGSTEPS=t0-0
-|  |  |  |  | LMS=0:s.lm.caa69b92.20120307-0932
-|  |  |  |  | MOSESSTEP=s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  | LMS=0:s.lm.8ebef405.20121011-0947
+|  |  |  |  | MOSESSTEP=s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  | RMSTEP=
 |  |  |  |  | SRCAUG=cs+form
 |  |  |  |  | TGTAUG=en+form
 |  |  |  |  | THRESHOLD=
-|  |  |  |  | TMS=s.tm.46bb1413.20120307-0932
-|  |  |  |  +- s.lm.caa69b92.20120307-0932
+|  |  |  |  | TMS=s.tm.4dc971c2.20121011-0947
+|  |  |  |  +- s.lm.8ebef405.20121011-0947
 |  |  |  |  |  | CORP=sample-cs-en-mini-train
 |  |  |  |  |  | CORPAUG=en+form
 |  |  |  |  |  | LMFLAGS=
 |  |  |  |  |  | ORDER=3
 |  |  |  |  |  | PARTS=1
-|  |  |  |  |  | SRILMSTEP=s.srilm.0e3ffbcb.20120306-1506
-|  |  |  |  |  +- s.corpus.ad642d28.20120307-0930
+|  |  |  |  |  | SRILMSTEP=s.srilm.3e6d6d96.20121011-0947
+|  |  |  |  |  +- s.corpus.cdad66a4.20121011-0947
 |  |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  |  |  | DEPS=
@@ -88,17 +133,17 @@
 |  |  |  |  |  |  | RUN_COMMAND=
 |  |  |  |  |  |  | STEPNAME=
 |  |  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/en.gz"
-|  |  |  |  |  +- s.srilm.0e3ffbcb.20120306-1506
-|  |  |  |  +- s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  |  +- s.srilm.3e6d6d96.20121011-0947
+|  |  |  |  +- s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  |  | SRILMSTEP=
-|  |  |  |  +- s.tm.46bb1413.20120307-0932
+|  |  |  |  +- s.tm.4dc971c2.20121011-0947
 |  |  |  |  |  | ALICORP=sample-cs-en-mini-train
 |  |  |  |  |  | ALILABEL=cs-form-en-form
 |  |  |  |  |  | ALIORREVALI=ali
-|  |  |  |  |  | ALISTEP=s.align.af0388da.20120307-0932
+|  |  |  |  |  | ALISTEP=s.align.280c4cdd.20121011-0947
 |  |  |  |  |  | ALISYM=gdfa
-|  |  |  |  |  | BINARIES=s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  |  | BINARIES=s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  |  | CUTOFF=0
 |  |  |  |  |  | DECODINGSTEPS=t0-0
 |  |  |  |  |  | NBESTOOV=
@@ -108,14 +153,14 @@
 |  |  |  |  |  | TGTCORP=sample-cs-en-mini-train
 |  |  |  |  |  | THRESHOLD=
 |  |  |  |  |  | TRAININGFLAGS=
-|  |  |  |  |  +- s.align.af0388da.20120307-0932
+|  |  |  |  |  +- s.align.280c4cdd.20121011-0947
 |  |  |  |  |  |  | ALILABEL=cs-form-en-form
 |  |  |  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
 |  |  |  |  |  |  | CORPUS=sample-cs-en-mini-train
-|  |  |  |  |  |  | GIZASTEP=s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  |  |  | GIZASTEP=s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  |  |  | SRCALIAUG=cs+form
 |  |  |  |  |  |  | TGTALIAUG=en+form
-|  |  |  |  |  |  +- s.corpus.3db42f4a.20120307-0930
+|  |  |  |  |  |  +- s.corpus.93e86a6f.20121011-0947
 |  |  |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  |  |  |  | DEPS=
@@ -130,7 +175,7 @@
 |  |  |  |  |  |  |  | RUN_COMMAND=
 |  |  |  |  |  |  |  | STEPNAME=
 |  |  |  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/cs.gz"
-|  |  |  |  |  |  +- s.corpus.ad642d28.20120307-0930
+|  |  |  |  |  |  +- s.corpus.cdad66a4.20121011-0947
 |  |  |  |  |  |  |  | COLUMN=-1
 |  |  |  |  |  |  |  | COMBINE_PARTS=
 |  |  |  |  |  |  |  | DEPS=
@@ -145,12 +190,12 @@
 |  |  |  |  |  |  |  | RUN_COMMAND=
 |  |  |  |  |  |  |  | STEPNAME=
 |  |  |  |  |  |  |  | TAKE_FROM_COMMAND="zcat ../eman.samples/corpora/cs-en-mini-train/en.gz"
-|  |  |  |  |  |  +- s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  |  |  +- s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  |  |  |  | SRILMSTEP=
-|  |  |  |  |  +- s.mosesgiza.a76ef97a.20120306-1516
+|  |  |  |  |  +- s.mosesgiza.375a40d5.20121011-0942
 |  |  |  |  |  |  | IRSTLMSTEP=
 |  |  |  |  |  |  | SRILMSTEP=
-|  |  +- s.mosesgiza.a76ef97a.20120306-1516
+|  |  +- s.mosesgiza.375a40d5.20121011-0942
 |  |  |  | IRSTLMSTEP=
 |  |  |  | SRILMSTEP=

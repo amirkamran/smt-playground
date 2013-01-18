@@ -7,7 +7,11 @@ set -o pipefail  # safer pipes
 # Ensure all the required variables are set (or provide the default)
 eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
      defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
+     defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
+     defvar BJAMARGS default='' help='any extra arguments for the compilation of Moses' \
 || exit 1
+
+# XXX we don't have any IRSTLM steps
 
 # Set local bash variables
 eval `eman bash-loadvars`
@@ -48,7 +52,15 @@ git clone https://github.com/moses-smt/mosesdecoder.git moses \\
 || die "Failed to clone moses"
 
 cd moses || die "Chdir failed"
-./bjam -j4 --with-giza=\$mydir/bin || die "Build failed"
+[ -z "$MOSESBRANCH" ] || git checkout $MOSESBRANCH \\
+|| die "Failed to check out branch $MOSESBRANCH"
+
+[ -z "$SRILMSTEP" ] || SRILMARG=" --with-srilm=\`eman path $SRILMSTEP\`/srilm "
+[ -z "$IRSTLMSTEP" ] || IRSTLMARG=" --with-irstlm=\`eman path $IRSTLMSTEP\`/install "
+BJAMARGS=" --max-kenlm-order=8 $BJAMARGS "
+
+./bjam -j4 --with-giza=\$mydir/bin \\
+  \$SRILMARG \$IRSTLMARG \$BJAMARGS || die "Build failed"
 
 cd ../ || die "chdir back failed"
 

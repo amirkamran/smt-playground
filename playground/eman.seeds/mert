@@ -17,6 +17,7 @@ eman \
   defvar MOSESFLAGS default='' help='further flags for moses' \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
+  defvar EMAN_MEM default='6g' help='memory for sub for thread itself' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
@@ -40,12 +41,27 @@ echo $MODELSTEP > info.modelexp
 
 MODELSTEP=$(eman path $MODELSTEP)
 
+# check that the dev corpus is ready: source and all refs
+deps_to_add=""
+function ensure_and_add_to_deps() {
+  corpstep=$($PLAYGROUND/corpman --init $1 | cut -f1)
+  [ ! -z "$corpstep" ] || die "Corpus not found: $1"
+  deps_to_add="$deps_to_add $corpstep"
+}
+firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
+ensure_and_add_to_deps $firstdevcorp/$SRCAUG
+refidx=0
+for devcorp in $(echo $DEVCORP | tr ':' ' '); do
+  ensure_and_add_to_deps $devcorp/$REFAUG
+  refidx=$(($refidx+1))
+done
+eman add-deps . $deps_to_add
+
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
 
-firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
-
 # create local copies of the corpora
+firstdevcorp=$(echo $DEVCORP | cut -d: -f1)
 $PLAYGROUND/corpman --dump $firstdevcorp/$SRCAUG > tuning.in \
   || die "Failed to create tuning.in from $firstdevcorp/$SRCAUG"
 refidx=0

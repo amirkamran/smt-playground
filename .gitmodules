@@ -1,0 +1,3 @@
+[submodule "scripts/eman"]
+	path = scripts/eman
+	url = https://redmine.ms.mff.cuni.cz/eman.git

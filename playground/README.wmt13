@@ -1,0 +1,103 @@
+Jednojazycna data
+-----------------
+
+* Google Ngrams
+  /net/data/google-czech-ngrams-2009/
+  Navod, jak z nich vyrobit LM:
+    http://www-speech.sri.com/projects/srilm/manpages/srilm-faq.7.html
+
+* CNK
+  /mnt/ATLAS/data/CNK-SYN
+  ...je treba zjistit, jak se lisi od toho, co jsem parsoval zde:
+     /net/data/tectomt-SYN-WEB
+
+* Webovy korpus 2011 (CWC2011, Johanka)
+  /net/cluster/TMP/pecina/CWC2011
+  nebo taky /mnt/ATLAS/data/CWC2011
+
+                            sents   toks
+    articles_shuffled       38 M    628 M
+    blogs_shuffled          98 M    1249 M
+    discussions_shuffled    82 M    1407 M
+    TOTAL                   218 M   3284 M
+
+  Konverzni skript:
+    /home/bojar/diplomka/bin/vertical2factors --input-sent-regex='^<s>'
+
+* WMT Mono News 20*
+  /a/merkur3/TMP/tamchyna/wmt13/data
+  Mixture-LM podle let? Ano, ale michat podle neceho aktualnejsiho nez wmt08.
+
+* monitoring-tisk 2012
+  /ha/seznamdata/texty_z_monitoringu
+  nebo taky /mnt/ATLAS/data/MonitoringTisku1998-2012 (tam se to jeste vali)
+
+* CzEng 1.0
+  /net/data/czeng10-public-release
+  Mixture-LM podle domen? Ano, urcite.
+  Pozor, to michani bychom taky meli delat nejak lepe, mixovat na wmt08 se v
+  roce 13 uz nemusi uplne hodit...
+
+* Seznam.cz 2008
+  /mnt/ATLAS/data/Seznam2008 (tam se to jeste vali)
+  aktualne to lezi i zde:
+  /ha/seznamdata/seznam_texty_z_webu/ftp/b-[0-9]*.gz
+  ...pridaval bych to az jako posledni zdroj.
+  ...zacal jsem pro ten ucel psat dva skripty, ale nepamatuji si, jak daleko jsem dosel:
+    ufal-smt-playground/playground/augmented_corpora/prep-wmt10/
+      select_czech_sents_from_seznamdata.pl
+      refine_and_truecase_czech_sents.pl
+
+* Martin Majlis -- webovy korpus
+  ufal/~majlis/w2c
+
+Dalsi?
+
+Paralelni data
+--------------
+
+* CzEng 1.0
+  /net/data/czeng10-public-release
+
+* Prekladove pameti Evropskeho centra pro prevenci chorob
+    http://langtech.jrc.ec.europa.eu/ECDC-TM.html
+
+*? Neco stahnout pomoci Panacea Tools?
+
+Dalsi?
+
+
+
+Cisteni, normalizace
+--------------------
+
+Potrebujeme jednotnou pipeline. Kterou pouzit?
+
+- TrTok na segmentaci na vety, nikoli na tokenizaci
+- playground/treex_scenarios/{cs,en}Nm.scen
+  ... Nm znaci normalizovane a na m-rovine.
+  ... normalizace jsou prave bloky jako W2W::NormalizeCzechSentence
+      jeste bychom normalizaci mohli zkontrolovat a vylepsit
+
+* Kontrola jednotnosti
+
+- doporucuju 64bit binarku suspicious_tokenization (pozor, nacita bigramy do pameti!):
+
+  cat corpus1 corpus2 corpus3 | ~/tools/src/obotools/suspicious_tokenization \
+  | numsort n3
+
+  Vypise to neco jako:
+
+se na           sena            24      1
+na to           nato            18      2
+do konce        dokonce         9       30
+¾e na           ¾ena            8       9
+za to           zato            6       3
+jako by         jakoby          5       1
+z ní            zní             5       5
+pøed tím        pøedtím         4       10
+
+Zde je evidentni, ze jsou to vsechno plane poplachy. Ale mohou tam byt veci
+jako "us." vs. "us .". Cisla za temi dvema variantami jsou pocty vyskytu jedne
+a druhe varianty.
+

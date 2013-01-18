@@ -1,0 +1,72 @@
+#!/bin/bash
+# Download and compile Vowpal Wabbit
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+touch eman.vars 
+
+cat > eman.command << END
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# get Maxent
+git clone git://github.com/lzhang10/maxent.git || die "Failed to clone Maxent"
+cd maxent || die "Failed to chdir to maxent"
+./configure --prefix=\`pwd\` || die "Failed to configure maxent"
+make || die "Maxent compilation failed"
+make install || die "Maxent installation failed"
+cd .. || die "Failed to chdir back"
+
+# get Quex
+tar xzf ../../src/quex-0.63.1.tar.gz || die "Failed to extract Quex"
+
+# get Boost
+wget http://ufal.mff.cuni.cz/~tamchyna/boost_1_51_0.tar.gz || die "Failed to fetch Boost"
+tar xzf boost_1_51_0.tar.gz || die "Failed to extract Boost"
+cd boost_1_51_0 && sh bootstrap.sh \\
+&& ./b2 install --prefix=\`pwd\`/install \\
+--with-filesystem --with-program_options --with-system --with-thread link=static \\
+|| die "Boost compilation failed"
+
+export LD_LIBRARY_PATH="\`pwd\`/install/lib:\$LD_LIBRARY_PATH"
+export LIBRARY_PATH="\`pwd\`/install/lib:\$LIBRARY_PATH"
+export CPATH="\`pwd\`/install/include:\$CPATH"
+
+cd .. || die "Failed to chdir back"
+
+# get latest version of TrTok
+git clone git://github.com/jirkamarsik/trainable-tokenizer.git || die "Failed to clone TrTok"
+cd trainable-tokenizer || die "Failed to chdir to TrTok"
+mkdir bin && cd bin || die "Failed to create directory for TrTok build"
+export QUEX_PATH=\`pwd\`/../../quex-0.63.1/
+export BOOST_ROOT=\`pwd\`/../../boost_1_51_0/install/
+cmake ../src -DPREFER_STATIC_LIBRARIES=ON \\
+  -DBoost_USE_STATIC_LIBS=ON -DMaxEnt_LIBRARY=\`pwd\`/../../maxent/lib/libmaxent.a \\
+  -DMaxEnt_INCLUDE_DIR=\`pwd\`/../../maxent/src/ \\
+  -DBoost_USE_MULTITHREADED=OFF \\
+  -DCMAKE_BUILD_TYPE=Release \\
+  -DINSTALL_DIR=\`pwd\`/../install || die "CMake failed"
+make -j 4 || die "Make failed"
+make install || die "Make install failed"
+
+cd \$mydir || die "Failed to chdir back"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+END

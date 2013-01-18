@@ -30,7 +30,6 @@ binmode(STDERR, ":utf8");
 
 my $tempdir = "/tmp";
 my $parallel = 1; # run the two GIZA runs simultaneously
-my $compress = 1; # gzip everything
 my @dirsyms = ();
       # right, left   ... for unidirectional GIZA only
       # gdf, intersect, union   ... for two runs, symmetrized
@@ -54,7 +53,7 @@ print STDERR "ARGS: @ARGV\n";
 
 GetOptions(
   "parallel!" => \$parallel,
-  "compress!" => \$compress,
+ # "compress!" => \$compress,
   "bindir=s" => \$bindir,
   "mgizadir=s" => \$mgizadir,
   "mgizacores=i" => \$mgizacores,
@@ -76,11 +75,11 @@ GetOptions(
 my ( $MKCLS, $GIZA, $SNT2COOC, $SYMAL, $MERGE );
 
 if (defined $mgizadir) {
-  $MKCLS = "$mgizadir/bin/mkcls";
-  $GIZA = "$mgizadir/bin/mgiza";
-  $SNT2COOC = "$mgizadir/bin/snt2cooc";
-  $SYMAL = "$mgizadir/bin/symal";
-  $MERGE = "$mgizadir/scripts/merge_alignment.py";
+  $MKCLS = "$mgizadir/mkcls";
+  $GIZA = "$mgizadir/mgiza";
+  $SNT2COOC = "$mgizadir/snt2cooc";
+  $SYMAL = "$mgizadir/symal";
+  $MERGE = "$mgizadir/merge_alignment.py";
 } else {
   $MKCLS = "$bindir/mkcls";
   $GIZA = "$bindir/GIZA++";
@@ -767,7 +766,7 @@ sub run_giza {
 
   my $outprefix = "$dir/$a-$b";
   my $outfile = "$outprefix.A3.final";
-  $outfile .= '.gz' if $compress && defined $mgizadir;
+  #$outfile .= '.gz' if $compress && defined $mgizadir;
     # plain GIZA does not gzip its output
 
   if (-e $outfile) {
@@ -795,10 +794,10 @@ sub run_giza {
       $snt2cooc_call = "$SNT2COOC $vcba_file $vcbb_file $traincorpus > $cooc_file";
     }
     safesystem($snt2cooc_call) or confess;
-    if ($compress) {
-      safesystem("gzip $cooc_file");
-      $cooc_file .= '.gz';
-    }
+    #if ($compress) {
+    #  safesystem("gzip $cooc_file");
+    #  $cooc_file .= '.gz';
+    #}
   }
 
   my %GizaDefaultOptions =
@@ -826,7 +825,8 @@ sub run_giza {
       }
   }
 
-  $GizaDefaultOptions{"use_gzip"} = 1 if $compress and defined $mgizadir;
+  #doesn't work with mgiza
+  #$GizaDefaultOptions{"use_gzip"} = 1 if $compress and defined $mgizadir;
   $GizaDefaultOptions{"ncpu"} = $mgizacores if defined $mgizadir;
 
   my $GizaOptions;
@@ -838,7 +838,7 @@ sub run_giza {
   safesystem("$GIZA $GizaOptions >&2");
 
   if (defined $mgizadir) {
-    my $redirect = $compress ? " | gzip -c " : "";
+    my $redirect = "";
     safesystem("$MERGE $dir/$a-$b.A3.final.part* $redirect > $outfile");
     safesystem("rm $dir/$a-$b.A3.final.part*");
   }
