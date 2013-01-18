@@ -491,7 +491,7 @@ SUBMISSIONS:
 to Czech
 submitted:
 16.07±0.55	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
-          	-> cu-bojar-primary
+          	-> cu-bojar-primary DEVwmt10
 15.90±0.57	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
           	-> cu-tamchyna (primary)
 16.01±0.56	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
@@ -542,12 +542,18 @@ Co musim opravit do priste:
   Tinsley,Hearne,Way,2009!
 - pouzij Turkovu metodu vcas
 - pouzij GLM vcas
+- zajisti, aby Paroubek's se neprekladalo jako Paroubek je!!!
 - vyzkousej automaticke generovani pozic pro pomocna slova, po vzoru:
   Morphological analysis for statistical machine translation (Young-Suk Lee,
   2004) http://dl.acm.org/citation.cfm?id=1613999
 - do cestiny vypni zdrojovy tagging a zapni reordering:
    s.evaluator.04fc22da.20120227-2319 17.85±0.58 tF-FaT,distr
    s.evaluator.107486b0.20120725-1924 18.17±0.59 tF-FaT,lexr
+      ... ehm, toto nebylo potvrzeno nejlepsim modelem na wmt12, viz 16.07 vs. 15.90
+      >                           wmt12        wmt11
+      > cu-bojar              16.07Â±0.55  18.10Â±0.55
+      > F-FaT distr           15.73Â±0.55  17.85Â±0.58
+      > F-FaT lexr (dal vam)  15.90Â±0.57  18.17Â±0.59
 - do anglictiny lexr nejak nepomohl:
    s.evaluator.33d443f4.20120301-1350 22.90±0.56  distr
    s.evaluator.37a38e88.20120725-1316 22.76±0.55  lexr

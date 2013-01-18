@@ -175,6 +175,8 @@ if ( ! -e $indexfile || $reindex ) {
       # skip all bad steps
     my $text = load_file($fn);
     foreach my $line (split /\n/, $text) {
+      # Treat '#' and the rest of the line as comment.
+      $line =~ s/\#.*//;
       next if $line eq "";
       my ($filename, $column, $corpname, $lang, $facts, $linecount, $mayderived)
         = split /\t/, trim($line);

@@ -12,10 +12,12 @@ use Getopt::Long;
 use Carp;
 use dzsys;
 
-# @ARGV obsahuje regulární výrazy pro výběr zúčastněných korpusů. Ten může být dále omezen volbami -first a -last.
+# @ARGV obsahuje regulární výrazy pro výběr zúčastněných korpusů. Ten může být dále omezen volbami -onlys, -onlyt, -first a -last.
 GetOptions
 (
     'type|action=s' => \$steptype,
+    'onlys=s' => \$onlys, # only models with this source language
+    'onlyt=s' => \$onlyt, # only models with this target language
     'first=s' => \$firstcorpus, # useful when previous run failed but some of the jobs were submitted successfully
     'last=s' => \$lastcorpus,
     'lm=s' => \$lmcorpus, # for steps model, mert etc.: use this language model instead of the default; e.g. '-lm news.2009' will select news.2009.de for experiments to German
@@ -25,7 +27,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|korpus|tag|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -35,21 +37,30 @@ if($steptype eq 'special')
     }
     else
     {
-        continue_missing_running_steps();
-        ###!!! continue_lm_memory(running) is superfluous: all such lm steps have been restarted by continue_missing_running_steps().
-        ###!!! Should we rewrite the function to only handle failed steps?
-        ###!!! (At least for lm steps we know that the problem was with memory. For tm steps, it could be also disk space
-        ###!!! and there is no easy way to tell the two apart.)
-        #continue_lm_memory('running');
-        continue_lm_memory('failed');
-        continue_tm_disk();
-        redo_mert_memory();
-        start_all_missing_merts();
-        start_all_missing_translates();
-        start_all_missing_evaluators();
         start_inited_steps();
     }
     exit(0);
+}
+# Find steps that failed due to insufficient resources. Restart them with extended resource requirements.
+elsif($steptype eq 'restart')
+{
+    continue_missing_running_steps();
+    ###!!! continue_lm_memory(running) is superfluous: all such lm steps have been restarted by continue_missing_running_steps().
+    ###!!! Should we rewrite the function to only handle failed steps?
+    ###!!! (At least for lm steps we know that the problem was with memory. For tm steps, it could be also disk space
+    ###!!! and there is no easy way to tell the two apart.)
+    #continue_lm_memory('running');
+    continue_lm_memory('failed');
+    continue_tm_disk();
+    redo_mert_memory();
+}
+# Find steps without expected descendants. Start the descendants.
+elsif($steptype eq 'complete')
+{
+    start_all_missing_tms();
+    start_all_missing_merts();
+    start_all_missing_translates();
+    start_all_missing_evaluators();
 }
 elsif($steptype eq 'korpus')
 {
@@ -60,22 +71,6 @@ elsif($steptype eq 'tag')
 {
     start_tag();
     exit(0);
-}
-# Seznam jazykových párů (momentálně pouze tyto: na jedné straně angličtina, na druhé jeden z jazyků čeština, němčina, španělština nebo francouzština)
-my @pairs = qw(cs-de cs-en cs-es cs-fr de-cs de-en en-cs en-de en-es en-fr es-cs es-en fr-cs fr-en);
-# Vytvořit si seznam paralelních trénovacích korpusů. Budeme z něj vycházet při zakládání jednotlivých kroků.
-my @parallel_training_corpora = list_parallel_corpora();
-# Vytvořit si seznam jednojazyčných trénovacích korpusů. Budeme z něj vycházet při přípravě jazykových modelů.
-my @mono_training_corpora = list_monolingual_corpora();
-@parallel_training_corpora = filter_corpora($firstcorpus, $lastcorpus, \@ARGV, @parallel_training_corpora);
-@mono_training_corpora = filter_corpora($firstcorpus, $lastcorpus, \@ARGV, @mono_training_corpora);
-# $lmcorpus určuje nezávislý jednojazyčný korpus, který se má přibalit ke krokům model, mert, translate, evaluator apod.
-# Pokud uživatel zadal více takových korpusů, vytvořit stejnou sadu kroků pro každý z nich.
-my @lmshortcuts = split(/,/, $lmcorpus);
-my @lmcorpora;
-foreach my $lms (@lmshortcuts)
-{
-    push(@lmcorpora, get_monolingual_corpus_names($lms));
 }
 # Kroky lm pracují pouze s jednojazyčnými korpusy.
 # Kroky align a tm pracují pouze s paralelními korpusy.
@@ -104,44 +99,45 @@ elsif($steptype =~ m/^(align|tm)$/)
 }
 elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
 {
-    foreach my $pcorpus (@parallel_training_corpora)
+    my @pcorpora = get_parallel_corpora();
+    foreach my $pcorpus (@pcorpora)
     {
-        my ($language1, $language2) = get_language_codes($pcorpus);
-        # Jestliže nebyl požadován konkrétní jednojazyčný korpus, použít cílovou stranu paralelního korpusu.
-        my $plmc1 = parallel_to_mono($pcorpus, $language1);
-        my $plmc2 = parallel_to_mono($pcorpus, $language2);
-        if(scalar(@lmcorpora)==0)
+        # Netrénovat na malých testovacích datech, to je zbytečné.
+        # (Ta, na kterých neladíme ani netestujeme, bychom mohli chtít k trénovacím datům přidat, pak by ale "wmt" nebylo na začátku.)
+        next if($pcorpus->{corpus} =~ m/^wmt/);
+        # Alternativní způsob spojování jazykových modelů (mám od Ondřeje 18.10.2012):
+        # Nevytváří se nový krok lm. Místo toho se dva nebo více kroků lm vloží do jediného kroku model.
+        # Mert potom každému jazykovému modelu přiřadí samostatnou váhu. Nemělo by jich tedy být příliš mnoho, aby to mert unesl.
+        # Ještě jinou alternativou by byl krok mixlm, který spojí dva existující modely s váhami, váhy ale optimalizuje na perplexitu.
+        ###!!! Zatím zde natvrdo vyjmenuji přídavné jazykové modely. Asi by to ale mělo být nějak podchyceno v poli korpusů.
+        # 1. Pro všechna newseuro automaticky přidat i news.all cílového jazyka.
+        # 2. Totéž asi i pro kombinace newseuro a něčeho dalšího paralelního (czeng, un, gigafren).
+        # 3. Pro překlady do en, es, fr navíc volitelně gigaword.
+        my $l1 = $pcorpus->{languages}[0];
+        my $l2 = $pcorpus->{languages}[1];
+        # Základní jazykový model vždy tvoří cílová strana paralelního korpusu.
+        # Druhý jazykový model vždy tvoří news.all v příslušném jazyce.
+        my $pmc = $pcorpus->{corpus} =~ m/^newseuro/ ? 'newseuro' : $pcorpus->{corpus};
+        push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
+        push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
+        ###!!! Anglický Gigaword zatím vynechat! Značkování havarovalo a i když jsem to nějak poslepoval, výsledek stejně obsahuje chyby.
+        ###!!! Nejlepší bude už to konečně vyhodit a přejít na značkování Featuramou.
+        if($l1 =~ m/^(es|fr)$/)
         {
-            push(@models, {'s' => $language1, 't' => $language2, 'pc' => $pcorpus, 'mc' => $plmc2});
-            push(@models, {'s' => $language2, 't' => $language1, 'pc' => $pcorpus, 'mc' => $plmc1});
+            push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
         }
-        # Jestliže byl požadován konkrétní jednojazyčný korpus, spojit ho s cílovou stranou paralelního korpusu.
-        else
+        if($l2 =~ m/^(es|fr)$/)
         {
-            foreach my $mchash (@lmcorpora)
-            {
-                if($mchash->{l} eq $language1)
-                {
-                    # Spojení s cílovou stranou paralelního korpusu je volitelné.
-                    my $mcorpus = $plm ? "$plmc1+$mchash->{c}" : $mchash->{c};
-                    push(@models, {'s' => $language2, 't' => $language1, 'pc' => $pcorpus, 'mc' => $mcorpus});
-                }
-                if($mchash->{l} eq $language2)
-                {
-                    # Spojení s cílovou stranou paralelního korpusu je volitelné.
-                    my $mcorpus = $plm ? "$plmc2+$mchash->{c}" : $mchash->{c};
-                    push(@models, {'s' => $language1, 't' => $language2, 'pc' => $pcorpus, 'mc' => $mcorpus});
-                }
-            }
+            push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
         }
     }
 }
 # Vypsat seznam kombinací korpusů.
 @models = sort {"$a->{s}-$a->{t}" cmp "$b->{s}-$b->{t}"} @models;
-@models = filter_models($firstcorpus, $lastcorpus, \@ARGV, @models);
+@models = filter_models($onlys, $onlyt, $firstcorpus, $lastcorpus, \@ARGV, @models);
 foreach my $m (@models)
 {
-    print("$m->{s}-$m->{t}\t$m->{pc}\t$m->{mc}\n");
+    print("$m->{s}-$m->{t}\t$m->{pc}\t$m->{mc}\t$m->{mc2}\t$m->{mc3}\n");
 }
 printf("Total %d models.\n", scalar(@models));
 if($dryrun)
@@ -171,173 +167,7 @@ foreach my $m (@models)
 dzsys::saferun("eman reindex ; eman qstat");
 # Stop here. The remainder of the code is outdated.
 exit(0);
-# Pozor, stále chceme, aby $lmcorpus byl globální proměnná, takže žádné my!
-foreach $lmcorpus (@lmcorpora)
-{
-    # Výroba kombinovaných paralelních korpusů.
-    if($steptype eq 'combine')
-    {
-        foreach my $language ('es', 'fr')
-        {
-            # Bohužel máme nestejně připravené zdroje. Textová data se musí kombinovat ze tří korpusů,
-            # zatímco zarovnání máme už nachystané pro kombinaci prvních dvou dohromady.
-            # Nejdříve tedy zkombinovat první dva, počkat, až budou hotové, řádek zakomentovat a odkomentovat ty dva pod ním.
-            #combine_corpora("news-europarl-v7.$language-en", "news-commentary-v7.$language-en", "europarl-v7.$language-en", $language, 'en');
-            combine_corpora("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
-            combine_alignments("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
-        }
-    }
-    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
-    if($steptype =~ m/^(morfcorpus|all)$/)
-    {
-        my $morfessorstep = find_step('morfessor', 'd');
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
-        }
-        # A teď ještě jednojazyčná data na trénování jazykových modelů.
-        foreach my $corpus (@mono_training_corpora)
-        {
-            my $language = get_language_code($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
-    if($steptype =~ m/^(morfalign|all)$/)
-    {
-        my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h, takže musíme požadovat i místo na disku (50 GB je někdy málo).
-            # Velké korpusy potřebují více paměti i více místa na disku.
-            my $n_lines = get_corpus_size($corpus, $language1, 'stc');
-            my $resources = $n_lines>=3000000 ? '--mem 20g --disk 100g' : '--mem 6g --disk 15g';
-            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1~morf+stc TGTALIAUG=$language2~morf+stc eman init align --start $resources") or die;
-            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2~morf+stc TGTALIAUG=$language1~morf+stc eman init align --start $resources") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.
-    if($steptype =~ m/^(binarize|all)$/)
-    {
-        my $joshuastep = dzsys::chompticks('eman ls joshua');
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $alignstep = find_step('danalign', "v SRC=$src v TGT=$tgt");
-            dzsys::saferun("JOSHUASTEP=$joshuastep ALIGNSTEP=$alignstep eman init binarize --start --mem 31g") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit dev i test krok extract, který vytáhne ze zarovnaného korpusu gramatiku (překladový model) pro daný zdrojový text.
-    if($steptype =~ m/^(extract|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $binarizestep = find_step('binarize', "v SRC=$src v TGT=$tgt");
-            foreach my $for ('dev', 'test')
-            {
-                dzsys::saferun("BINARIZESTEP=$binarizestep FOR=$for eman init extract --start") or die;
-            }
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok tm, který natrénuje překladový model Mosese.
-    if($steptype =~ m/^(tm|all)$/)
-    {
-        my $mosesstep = find_step('mosesgiza', 'd');
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            my $alignfactor = $use_morphemes ? 'stc' : 'lemma';
-            my $alignstep1 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language1+$alignfactor v TGTALIAUG=$language2+$alignfactor");
-            my $alignstep2 = find_step('align', "v CORPUS=$corpus v SRCALIAUG=$language2+$alignfactor v TGTALIAUG=$language1+$alignfactor");
-            # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
-            dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep1 SRCAUG=$language1+stc TGTAUG=$language2+stc DECODINGSTEPS=t0-0 eman init tm --start");
-            dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep2 SRCAUG=$language2+stc TGTAUG=$language1+stc DECODINGSTEPS=t0-0 eman init tm --start");
-        }
-    }
-    # Výroba překladových modelů z kombinovaných paralelních korpusů.
-    if($steptype eq 'combinetm')
-    {
-        foreach my $language ('es', 'fr')
-        {
-            create_tm_for_combined_corpus("news-euro-un.$language-en", $language, 'en');
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok lm, který natrénuje jazykový model.
-    # Poznámka: I když se jazykový model trénuje pouze na cílovém jazyku, model pro páry cs-en a de-en nemusí být stejný,
-    # protože pro trénování využíváme cílovou stranu paralelního korpusu a ten není pro všechny páry shodný.
-    if($steptype =~ m/^(lm|all)$/)
-    {
-        my $srilmstep = find_step('srilm', 'd');
-        my $danlm = 0; # hard switch
-        if(!$danlm)
-        {
-            # Pro news-commentary a europarl: chceme použít pouze cílovou stranu paralelního korpusu, nebo maximum textu z daného zdroje pro daný jazyk?
-            # Samozřejmě předpokládám, že lepší bude to druhé. To první je zde z historických důvodů, zpočátku bylo jednodušší nezabývat se dalším korpusem.
-            my $from_mono = 1;
-            if($from_mono)
-            {
-                foreach my $corpus (@mono_training_corpora)
-                {
-                    my $language = get_language_code($corpus);
-                    # Velké korpusy potřebují více paměti. Zatím nejmenší korpus, kterému nestačilo výchozích 6g, byl francouzský se 4+ mil. řádků.
-                    my $n_lines = get_corpus_size($corpus, $language, 'stc');
-                    my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=30000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
-                    dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language+stc ORDER=6 eman init lm --start$mem") or die;
-                }
-            }
-            else
-            {
-                foreach my $corpus (@parallel_training_corpora)
-                {
-                    my ($language1, $language2) = get_language_codes($corpus);
-                    dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language1+stc ORDER=6 eman init lm --start") or die;
-                    dzsys::saferun("SRILMSTEP=$srilmstep CORP=$corpus CORPAUG=$language2+stc ORDER=6 eman init lm --start") or die;
-                }
-            }
-        }
-        else
-        {
-            foreach my $pair (@pairs)
-            {
-                my ($src, $tgt) = @{$pair};
-                my $datastep = find_step('dandata', "v SRC=$src v TGT=$tgt");
-                dzsys::saferun("SRILMSTEP=$srilmstep DATASTEP=$datastep ORDER=6 eman init danlm --start") or die;
-            }
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
-    if($steptype =~ m/^(zmert|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $lmstep = find_step('danlm', "v SRC=$src v TGT=$tgt");
-            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=dev");
-            dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok daneval, který přeloží testovací data a spočítá BLEU skóre.
-    if($steptype =~ m/^(test|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $mertstep = find_step('zmert', "v SRC=$src v TGT=$tgt");
-            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=test");
-            dzsys::saferun("MERTSTEP=$mertstep EXTRACTSTEP=$tmstep eman init daneval --start") or die;
-        }
-    }
-}
+spustit_stare_dosud_nekonvertovane_kroky();
 # Make sure eman knows about new tags etc.
 dzsys::saferun("eman reindex ; eman qstat");
 
@@ -513,6 +343,12 @@ sub get_parallel_corpora
 
 
 
+#==============================================================================
+# START STEPS
+#==============================================================================
+
+
+
 #------------------------------------------------------------------------------
 # Initializes and starts new korpus steps for all corpora.
 #------------------------------------------------------------------------------
@@ -591,11 +427,60 @@ sub start_align
 sub start_tm
 {
     my $m = shift; # reference to hash with model parameters
-    my $mosesstep = find_step('mosesgiza', 'd');
     my $alignfactor = $use_morphemes ? 'stc' : 'lemma';
     my $alignstep = find_step('align', "v CORPUS=$m->{pc} v SRCALIAUG=$m->{s}+$alignfactor v TGTALIAUG=$m->{t}+$alignfactor");
+    start_tm_for_align($m->{s}, $m->{t}, $alignstep);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts a new tm step for the given align step.
+#------------------------------------------------------------------------------
+sub start_tm_for_align
+{
+    my $src = shift;
+    my $tgt = shift;
+    my $alignstep = shift;
+    my $mosesstep = find_step('mosesgiza', 'd');
     # I do not know what DECODINGSTEPS means. The value "t0-0" has been taken from eman.samples/en-cs-wmt12-small.mert.
-    dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep SRCAUG=$m->{s}+stc TGTAUG=$m->{t}+stc DECODINGSTEPS=t0-0 eman init tm --start") or die;
+    dzsys::saferun("BINARIES=$mosesstep ALISTEP=$alignstep SRCAUG=$src+stc TGTAUG=$tgt+stc DECODINGSTEPS=t0-0 eman init tm --start") or die;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Identifies missing tm steps (their initialization may have failed?) of
+# existing align steps and initializes and starts them.
+#------------------------------------------------------------------------------
+sub start_all_missing_tms
+{
+    my @steps;
+    @steps = split(/\n/, dzsys::chompticks('eman select t align u not t tm'));
+    my $n = 0;
+    foreach my $step (@steps)
+    {
+        # Figure out the languages of the align step.
+        my ($src, $tgt);
+        open(VARS, "eman vars $step |") or die("Cannot pipe from eman vars $step: $!");
+        while(<VARS>)
+        {
+            if(m/SRCALIAUG=(.*?)\+/) #/ heal syntax highlighting in gedit
+            {
+                $src = $1;
+            }
+            elsif(m/TGTALIAUG=(.*?)\+/) #/ heal syntax highlighting in gedit
+            {
+                $tgt = $1;
+            }
+        }
+        close(VARS);
+        die("Unknown source language of step $step") unless($src);
+        die("Unknown target language of step $step") unless($tgt);
+        start_tm_for_align($src, $tgt, $step);
+        $n++;
+    }
+    print("Started $n steps.\n");
 }
 
 
@@ -607,11 +492,28 @@ sub start_tm
 sub start_model
 {
     my $m = shift; # reference to hash with model parameters
-    my $tmstep = find_tm($m->{pc}, $m->{s}, $m->{t});
-    my $lmstep = find_lm($m->{mc}, $m->{t});
-    # Note that the 0: before language model step identifies the factor that shall be considered in the language model.
-    dzsys::saferun("TMS=$tmstep LMS=\"0:$lmstep\" eman init model --start --mem 30g");
+    my $tmstep = find_tm($m);
+    my $lmsteps = get_lmsequence($m);
+    dzsys::saferun("TMS=$tmstep LMS=\"$lmsteps\" eman init model --start --mem 30g");
     start_mert($m);
+}
+
+
+
+#------------------------------------------------------------------------------
+# Generates packed description of language models used, as it is expected by
+# the model step. Currently assumes maximum of 3 lms per experiment.
+#------------------------------------------------------------------------------
+sub get_lmsequence
+{
+    my $m = shift; # reference to hash with model parameters
+    # There may be up to three language models.
+    my @mcs = ($m->{mc});
+    push(@mcs, $m->{mc2}) if($m->{mc2});
+    push(@mcs, $m->{mc3}) if($m->{mc3});
+    # Note that the 0: before language model step identifies the factor that shall be considered in the language model.
+    my $lmsteps = join(':::', map {'0:'.find_lm($_, $m->{t})} (@mcs));
+    return $lmsteps;
 }
 
 
@@ -623,7 +525,7 @@ sub start_model
 sub start_mert
 {
     my $m = shift; # reference to hash with model parameters
-    my $modelstep = find_model($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    my $modelstep = find_model($m);
     start_mert_for_model($modelstep);
     start_translate($m);
 }
@@ -679,7 +581,7 @@ sub start_all_missing_merts
 sub start_translate
 {
     my $m = shift; # reference to hash with model parameters
-    my $mertstep = find_mert($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    my $mertstep = find_mert($m);
     start_translate_for_mert($mertstep);
     start_evaluator($m);
 }
@@ -727,7 +629,7 @@ sub start_all_missing_translates
 sub start_evaluator
 {
     my $m = shift; # reference to hash with model parameters
-    my $transtep = find_translate($m->{pc}, $m->{mc}, $m->{s}, $m->{t});
+    my $transtep = find_translate($m);
     start_evaluator_for_translate($transtep);
 }
 
@@ -763,180 +665,107 @@ sub start_all_missing_evaluators
 
 
 
+#==============================================================================
+# FIND STEPS
+#==============================================================================
+
+
+
 #------------------------------------------------------------------------------
-# Lists available parallel corpora. A list item is either a parallel corpus or
-# a combination of parallel corpora. More than one combination per language
-# pair may be listed.
+# Najde krok s odpovídajícím jazykovým modelem.
 #------------------------------------------------------------------------------
-sub list_parallel_corpora
+sub find_lm
 {
-    my @corpora;
-    foreach my $language1 ('cs', 'de', 'es', 'fr')
-    {
-        my @languages2 = ('en');
-        push(@languages2, 'cs') unless($language1 eq 'cs');
-        foreach my $language2 (@languages2)
-        {
-            push(@corpora, "news-europarl-v7.$language1-$language2");
-        }
-    }
-    push(@corpora, 'un.es-en');
-    push(@corpora, 'un.fr-en');
-    push(@corpora, 'news-euro-un.es-en');
-    push(@corpora, 'news-euro-un.fr-en');
-    return @corpora;
-}
-
-
-
-#------------------------------------------------------------------------------
-# Lists available monolingual corpora. A list item is either a corpus or
-# a combination of corpora. More than one combination per language may be
-# listed.
-#------------------------------------------------------------------------------
-sub list_monolingual_corpora
-{
-    my @mono_training_corpora;
-    foreach my $language ('cs', 'de', 'en', 'es', 'fr')
-    {
-        # K paralelním korpusům news-commentary a europarl existují jednojazyčná sjednocení.
-        # Např. europarl-v7.cs/cs.gz by mělo být stejné nebo větší než europarl-v7.cs-en/cs.gz:
-        # europarl-v7.cs     668595
-        # europarl-v7.cs-en  646605
-        # europarl-v7.de    2176537
-        # europarl-v7.de-en 1920209
-        # europarl-v7.en    2218201
-        # europarl-v7.es    2123835
-        # europarl-v7.es-en 1965734
-        # europarl-v7.fr    2190579
-        # europarl-v7.fr-en 2007723
-        push(@mono_training_corpora, "news-commentary-v7.$language");
-        push(@mono_training_corpora, "europarl-v7.$language");
-        my $news_euro = "news-commentary-v7.$language+europarl-v7.$language";
-        push(@mono_training_corpora, $news_euro);
-        foreach my $year (2007..2011)
-        {
-            push(@mono_training_corpora, "news.$year.$language");
-            push(@mono_training_corpora, "$news_euro+news.$year.$language");
-        }
-        my $news_all = "news.2007.$language+news.2008.$language+news.2009.$language+news.2010.$language+news.2011.$language";
-        push(@mono_training_corpora, $news_all);
-        push(@mono_training_corpora, "$news_euro+$news_all");
-        if($language =~ m/^(en|es|fr)$/)
-        {
-            push(@mono_training_corpora, "gigaword.$language");
-        }
-    }
-    return @mono_training_corpora;
-}
-
-
-
-#------------------------------------------------------------------------------
-# Expands shortcuts of monolingual corpora. For the given shortcut returns
-# names of corresponding monolingual corpora in all languages in which they are
-# available (e.g. the Gigaword is only available in three languages). Since
-# the language is not always identifiable from corpus name (parallel corpora
-# can also serve as monolingual), the result is a list of hashes of the form
-# 'l' => $language, 'c' => $corpus
-#------------------------------------------------------------------------------
-sub get_monolingual_corpus_names
-{
-    my $lmcorpus = shift;
-    my @results;
-    my @languages = ('cs', 'de', 'en', 'es', 'fr');
-    if($lmcorpus =~ m/^news\.\d+$/)
-    {
-        @results = map {{'l' => $_, 'c' => "$lmcorpus.$_"}} @languages;
-    }
-    elsif($lmcorpus =~ m/^news\.all$/)
-    {
-        foreach my $l (@languages)
-        {
-            push(@results, {'l' => $l, 'c' => join('+', map {"news.$_.$l"} (2007..2011))});
-        }
-    }
-    elsif($lmcorpus eq 'gigaword')
-    {
-        # Gigaword je k dispozici pro angličtinu, španělštinu a francouzštinu, ale ne pro češtinu a němčinu.
-        @languages = ('en', 'es', 'fr');
-        @results = map {{'l' => $_, 'c' => "gigaword.$_"}} @languages;
-    }
-    return @results;
-}
-
-
-
-#------------------------------------------------------------------------------
-# Returns the name of monolingual corpus that corresponds to the target side
-# of the given parallel corpus. (It is not always exactly the target side of
-# the parallel corpus. Occasionally we have a slightly larger set from the
-# same source.)
-#------------------------------------------------------------------------------
-sub parallel_to_mono
-{
-    my $parallel_corpus = shift;
+    my $mono_corpus = shift;
     my $language = shift;
-    # For some parallel corpora we have slightly larger monolingual versions for language model training.
-    if($parallel_corpus =~ m/^news-europarl-v7\./)
-    {
-        return "news-commentary-v7.$language+europarl-v7.$language";
-    }
-    else
-    {
-        return $parallel_corpus;
-    }
+    return find_step('lm', "v CORP=$mono_corpus v CORPAUG=$language+stc");
 }
 
 
 
 #------------------------------------------------------------------------------
-# Filters a list of corpora according to command-line options.
-# Obsolete function, operates on the old list of corpora.
+# Najde krok s odpovídajícím překladovým modelem.
 #------------------------------------------------------------------------------
-sub filter_corpora
+sub find_tm
 {
-    my $firstcorpus = shift;
-    my $lastcorpus = shift;
-    my $regexes = shift; # reference to array of regular expressions
-    my @corpora = @_;
-    if($firstcorpus || $lastcorpus)
+    my $m = shift; # model hash
+    return find_step('tm', "v SRCCORP=$m->{pc} v SRCAUG=$m->{s}+stc v TGTAUG=$m->{t}+stc");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde krok s odpovídající kombinací překladového a jazykového modelu.
+#------------------------------------------------------------------------------
+sub find_model
+{
+    my $m = shift; # model hash
+    my $tmstep = find_tm($m);
+    my $lmsteps = get_lmsequence($m);
+    return find_step('model', "v TMS=$tmstep v LMS=\"$lmsteps\"");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde krok s mertem pro danou kombinaci překladového a jazykového modelu.
+#------------------------------------------------------------------------------
+sub find_mert
+{
+    my $m = shift; # model hash
+    my $modelstep = find_model($m);
+    return find_step('mert', "v MODELSTEP=$modelstep");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde krok s testovacím překladem pro danou kombinaci překladového a
+# jazykového modelu.
+#------------------------------------------------------------------------------
+sub find_translate
+{
+    my $m = shift; # model hash
+    my $mertstep = find_mert($m);
+    return find_step('translate', "v MERTSTEP=$mertstep");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde předcházející krok, na kterém závisíme. Vypíše varování, pokud daným
+# kritériím odpovídá několik kroků nebo žádný krok.
+#------------------------------------------------------------------------------
+sub find_step
+{
+    my $steptype = shift;
+    my $emanselect = shift;
+    # Výsledky všech volání eman select v rámci jednoho běhu danmake.pl cachujeme
+    # a předpokládáme, že po celou tuto dobu jsou platné. Pokud tedy generujeme
+    # 20 různých mertů, které ale všechny používají tentýž jazykový model,
+    # nemusíme volat emana, aby nám jazykový model hledal pořád dokola.
+    my $select = "t $steptype $emanselect";
+    if($stepcache{$select})
     {
-        my $on = 0;
-        my @c;
-        foreach my $corpus (@corpora)
-        {
-            $on = 1 if($corpus eq $firstcorpus);
-            push(@c, $corpus) if($on);
-            $on = 0 if($corpus eq $lastcorpus);
-        }
-        @corpora = @c;
+        print STDERR ("Cached:    ( eman select $select ) => $stepcache{$select}\n");
+        return $stepcache{$select};
     }
-    if(@{$regexes})
+    my $step = dzsys::chompticks("eman select $select");
+    # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
+    my @steps = split(/\s+/, $step);
+    my $n = scalar(@steps);
+    if($n==0)
     {
-        # Argumenty jsou regulární výrazy pro výběr korpusů nebo zkratkové kódy.
-        # Přepsat zkratkové kódy na regulární výrazy.
-        my @vyber = map
-        {
-            my $vysledek;
-            if($_ eq 'news.all')
-            {
-                $vysledek = 'news\.2007\.([a-z]+)\+news\.2008\.\1\+news\.2009\.\1\+news\.2010\.\1\+news\.2011\.\1';
-            }
-            elsif($_ eq 'ne+news.all')
-            {
-                $vysledek = 'news-commentary-v7\.([a-z]+)\+europarl-v7\.\1\+news\.2007\.\1\+news\.2008\.\1\+news\.2009\.\1\+news\.2010\.\1\+news\.2011\.\1';
-            }
-            else
-            {
-                $vysledek = $_;
-            }
-            $vysledek;
-        }
-        (@{$regexes});
-        @corpora = grep {my $corpus = $_; grep {$corpus =~ $_} (@vyber)} (@corpora);
+        my $for = " for $emanselect" if($emanselect);
+        die("No $steptype step found$for");
     }
-    return @corpora;
+    elsif($n>1)
+    {
+        print STDERR ("WARNING: $n $steptype steps found, using $steps[0]\n");
+        $step = $steps[0];
+    }
+    $stepcache{$select} = $step;
+    return $step;
 }
 
 
@@ -946,6 +775,8 @@ sub filter_corpora
 #------------------------------------------------------------------------------
 sub filter_models
 {
+    my $onlys = shift;
+    my $onlyt = shift;
     my $firstcorpus = shift;
     my $lastcorpus = shift;
     my $regexes = shift; # reference to array of regular expressions
@@ -983,11 +814,20 @@ sub filter_models
         }
         @models = @m;
     }
+    # @{$regexes} jsou regulární výrazy pro výběr korpusů.
     if(@{$regexes})
     {
-        # @{$regexes} jsou regulární výrazy pro výběr korpusů.
         my @vyber = @{$regexes};
         @models = grep {my $pc = $_->{pc}; my $mc = $_->{mc}; grep {$pc =~ $_ || $mc =~ $_} (@vyber)} (@models);
+    }
+    # onlys a onlyt jsou filtry pro výběr konkrétního zdrojového nebo cílového jazyka.
+    if($onlys)
+    {
+        @models = grep {$_->{s} =~ $onlys} (@models);
+    }
+    if($onlyt)
+    {
+        @models = grep {$_->{t} =~ $onlyt} (@models);
     }
     return @models;
 }
@@ -1061,116 +901,6 @@ sub get_corpus_size
     $step =~ s/\s.*//;
     my @info = split(/\t/, dzsys::chompticks("cat $step/corpman.info"));
     return $info[5];
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde krok s odpovídajícím překladovým modelem.
-#------------------------------------------------------------------------------
-sub find_tm
-{
-    my $parallel_corpus = shift;
-    my $srclang = shift;
-    my $tgtlang = shift;
-    return find_step('tm', "v SRCCORP=$parallel_corpus v SRCAUG=$srclang+stc v TGTAUG=$tgtlang+stc");
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde krok s odpovídajícím jazykovým modelem.
-#------------------------------------------------------------------------------
-sub find_lm
-{
-    my $mono_corpus = shift;
-    my $language = shift;
-    return find_step('lm', "v CORP=$mono_corpus v CORPAUG=$language+stc");
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde krok s odpovídající kombinací překladového a jazykového modelu.
-#------------------------------------------------------------------------------
-sub find_model
-{
-    my $parallel_corpus = shift;
-    my $mono_corpus = shift;
-    my $srclang = shift;
-    my $tgtlang = shift;
-    my $tmstep = find_tm($parallel_corpus, $srclang, $tgtlang);
-    my $lmstep = find_lm($mono_corpus, $tgtlang);
-    return find_step('model', "v TMS=$tmstep v LMS=\"0:$lmstep\"");
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde krok s mertem pro danou kombinaci překladového a jazykového modelu.
-#------------------------------------------------------------------------------
-sub find_mert
-{
-    my $parallel_corpus = shift;
-    my $mono_corpus = shift;
-    my $srclang = shift;
-    my $tgtlang = shift;
-    my $modelstep = find_model($parallel_corpus, $mono_corpus, $srclang, $tgtlang);
-    return find_step('mert', "v MODELSTEP=$modelstep");
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde krok s testovacím překladem pro danou kombinaci překladového a
-# jazykového modelu.
-#------------------------------------------------------------------------------
-sub find_translate
-{
-    my $parallel_corpus = shift;
-    my $mono_corpus = shift;
-    my $srclang = shift;
-    my $tgtlang = shift;
-    my $mertstep = find_mert($parallel_corpus, $mono_corpus, $srclang, $tgtlang);
-    return find_step('translate', "v MERTSTEP=$mertstep");
-}
-
-
-
-#------------------------------------------------------------------------------
-# Najde předcházející krok, na kterém závisíme. Vypíše varování, pokud daným
-# kritériím odpovídá několik kroků nebo žádný krok.
-#------------------------------------------------------------------------------
-sub find_step
-{
-    my $steptype = shift;
-    my $emanselect = shift;
-    # Výsledky všech volání eman select v rámci jednoho běhu danmake.pl cachujeme
-    # a předpokládáme, že po celou tuto dobu jsou platné. Pokud tedy generujeme
-    # 20 různých mertů, které ale všechny používají tentýž jazykový model,
-    # nemusíme volat emana, aby nám jazykový model hledal pořád dokola.
-    my $select = "t $steptype $emanselect";
-    if($stepcache{$select})
-    {
-        print STDERR ("Cached:    ( eman select $select ) => $stepcache{$select}\n");
-        return $stepcache{$select};
-    }
-    my $step = dzsys::chompticks("eman select $select");
-    # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-    my @steps = split(/\s+/, $step);
-    my $n = scalar(@steps);
-    if($n==0)
-    {
-        my $for = " for $emanselect" if($emanselect);
-        die("No $steptype step found$for");
-    }
-    elsif($n>1)
-    {
-        print STDERR ("WARNING: $n $steptype steps found, using $steps[0]\n");
-        $step = $steps[0];
-    }
-    $stepcache{$select} = $step;
-    return $step;
 }
 
 
@@ -1538,6 +1268,12 @@ sub redo_mert_memory
                 # So we must create a new clone of the step and run that instead ("redo").
                 # Set the highest possible priority because it may be more difficult to get a better machine.
                 $gridflags = "-p 0 -hard -l mf=${memory}g -l act_mem_free=${memory}g -l h_vmem=${memory}g";
+                # Erase all environment variables. We want Eman to see only those we define on its command line (see below).
+                # Otherwise, it might think we want to reconstruct corpora with locale variables such as "LANGUAGE=en_US:en".
+                foreach my $ev (keys(%ENV))
+                {
+                    delete($ENV{$ev});
+                }
                 dzsys::saferun("GRIDFLAGS=\"$gridflags\" eman redo $step --mem 30g --priority 0 --start");
                 push(@to_remove, $step);
                 $n++;
@@ -1553,5 +1289,120 @@ sub redo_mert_memory
     foreach my $step (@to_remove)
     {
         print("\trm -rf $step\n");
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Archív kroků, které jsem generoval dnes už zastaralým způsobem, zatím nebyl
+# čas je předělat a ani jsem je ještě k ničemu nepotřeboval.
+#------------------------------------------------------------------------------
+sub spustit_stare_dosud_nekonvertovane_kroky
+{
+    # Výroba kombinovaných paralelních korpusů.
+    if($steptype eq 'combine')
+    {
+        foreach my $language ('es', 'fr')
+        {
+            # Bohužel máme nestejně připravené zdroje. Textová data se musí kombinovat ze tří korpusů,
+            # zatímco zarovnání máme už nachystané pro kombinaci prvních dvou dohromady.
+            # Nejdříve tedy zkombinovat první dva, počkat, až budou hotové, řádek zakomentovat a odkomentovat ty dva pod ním.
+            #combine_corpora("news-europarl-v7.$language-en", "news-commentary-v7.$language-en", "europarl-v7.$language-en", $language, 'en');
+            combine_corpora("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
+            combine_alignments("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
+        }
+    }
+    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
+    if($steptype =~ m/^(morfcorpus|all)$/)
+    {
+        my $morfessorstep = find_step('morfessor', 'd');
+        # Odstranit corpman.index a vynutit tak přeindexování.
+        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+        dzsys::saferun("rm -f corpman.index") or die;
+        foreach my $corpus (@parallel_training_corpora)
+        {
+            my ($language1, $language2) = get_language_codes($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
+        }
+        # A teď ještě jednojazyčná data na trénování jazykových modelů.
+        foreach my $corpus (@mono_training_corpora)
+        {
+            my $language = get_language_code($corpus);
+            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
+        }
+    }
+    # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
+    if($steptype =~ m/^(morfalign|all)$/)
+    {
+        my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
+        # Odstranit corpman.index a vynutit tak přeindexování.
+        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
+        dzsys::saferun("rm -f corpman.index") or die;
+        foreach my $corpus (@parallel_training_corpora)
+        {
+            my ($language1, $language2) = get_language_codes($corpus);
+            # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h, takže musíme požadovat i místo na disku (50 GB je někdy málo).
+            # Velké korpusy potřebují více paměti i více místa na disku.
+            my $n_lines = get_corpus_size($corpus, $language1, 'stc');
+            my $resources = $n_lines>=3000000 ? '--mem 20g --disk 100g' : '--mem 6g --disk 15g';
+            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1~morf+stc TGTALIAUG=$language2~morf+stc eman init align --start $resources") or die;
+            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2~morf+stc TGTALIAUG=$language1~morf+stc eman init align --start $resources") or die;
+        }
+    }
+    # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.
+    if($steptype =~ m/^(binarize|all)$/)
+    {
+        my $joshuastep = dzsys::chompticks('eman ls joshua');
+        foreach my $pair (@pairs)
+        {
+            my ($src, $tgt) = @{$pair};
+            my $alignstep = find_step('danalign', "v SRC=$src v TGT=$tgt");
+            dzsys::saferun("JOSHUASTEP=$joshuastep ALIGNSTEP=$alignstep eman init binarize --start --mem 31g") or die;
+        }
+    }
+    # Pro každý pár vytvořit a spustit dev i test krok extract, který vytáhne ze zarovnaného korpusu gramatiku (překladový model) pro daný zdrojový text.
+    if($steptype =~ m/^(extract|all)$/)
+    {
+        foreach my $pair (@pairs)
+        {
+            my ($src, $tgt) = @{$pair};
+            my $binarizestep = find_step('binarize', "v SRC=$src v TGT=$tgt");
+            foreach my $for ('dev', 'test')
+            {
+                dzsys::saferun("BINARIZESTEP=$binarizestep FOR=$for eman init extract --start") or die;
+            }
+        }
+    }
+    # Výroba překladových modelů z kombinovaných paralelních korpusů.
+    if($steptype eq 'combinetm')
+    {
+        foreach my $language ('es', 'fr')
+        {
+            create_tm_for_combined_corpus("news-euro-un.$language-en", $language, 'en');
+        }
+    }
+    # Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
+    if($steptype =~ m/^(zmert|all)$/)
+    {
+        foreach my $pair (@pairs)
+        {
+            my ($src, $tgt) = @{$pair};
+            my $lmstep = find_step('danlm', "v SRC=$src v TGT=$tgt");
+            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=dev");
+            dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
+        }
+    }
+    # Pro každý pár vytvořit a spustit krok daneval, který přeloží testovací data a spočítá BLEU skóre.
+    if($steptype =~ m/^(test|all)$/)
+    {
+        foreach my $pair (@pairs)
+        {
+            my ($src, $tgt) = @{$pair};
+            my $mertstep = find_step('zmert', "v SRC=$src v TGT=$tgt");
+            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=test");
+            dzsys::saferun("MERTSTEP=$mertstep EXTRACTSTEP=$tmstep eman init daneval --start") or die;
+        }
     }
 }

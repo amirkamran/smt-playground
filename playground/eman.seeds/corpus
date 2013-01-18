@@ -50,7 +50,7 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 
 # Create corpman info, the last field "1" indicates that this corpus is derived
 # automatically
-$PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS $OUTLINECOUNT $DERIVED \
+$PLAYGROUND/corpman register -- corpus.txt.gz -1 $OUTCORP $OUTLANG $OUTFACTS $OUTLINECOUNT $DERIVED $FACTOR \
 || die "Can't register corpus"
 
 options=0

@@ -2870,6 +2870,15 @@ sub filter_steps
         my $cmd = shift @args;
         given ($cmd)
         {
+            # Negation of the following filters.
+            when ("not")
+            {
+                my @initial_steps = @steps;
+                @steps = filter_steps(\@steps, @args);
+                my %filtered; map {$filtered{$_}++} (@steps);
+                @steps = grep {!exists($filtered{$_})} (@initial_steps);
+                splice(@args); # already used to compute the argument of the negation
+            }
             # Only DONE steps.
             when ("d") { @steps = grep { load_status($_) eq 'DONE' } @steps; }
             # Only FAILED steps.
@@ -3445,6 +3454,8 @@ You can use the following filters in eman select:
   u <criteria>     ... only steps that have at least one user with given
                        properties; rest of query defines the user
   u not <criteria> ... only steps that have no users with given properties
+  not              ... negation of the remaining filters
+                       e.g. eman select not d
 
 The result (and speed) depends on the order of filters, e.g.:
 
