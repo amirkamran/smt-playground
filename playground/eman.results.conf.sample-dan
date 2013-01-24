@@ -1,0 +1,4 @@
+BLEU	*/BLEU	BLEU\s*=\s*([^\s,]+)
+BLEU	*/BLEU.opt	BLEU\s*=\s*([^\s,]+)
+BLEUstd	*/BLEU.std	BLEU\s*=\s*([^\s,]+)
+*	s.evaluator*/scores	CMD: perl -F'\t' -lane '$F[2] =~ s/[\[\]]//g; ($lo, $hi) = split /,/, $F[2]; printf "$F[0]\n", $F[1]*100;'

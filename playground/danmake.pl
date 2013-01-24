@@ -641,7 +641,11 @@ sub start_evaluator
 sub start_evaluator_for_translate
 {
     my $transtep = shift;
-    dzsys::saferun("TRANSSTEP=$transtep SCORERS=BLEU eman init evaluator --start");
+    # In spring 2012, Matouš changed something in the evaluator code and new mosesgiza template must be used.
+    # However the old one must be kept too, otherwise Eman would think that all alignments must be recomputed.
+    # Thus we explicitly say here which mosesgiza is to be used for the evaluator step.
+    my $mosesgizastep = 's.mosesgiza.a4574321.20130123-1210';
+    dzsys::saferun("TRANSSTEP=$transtep MOSESSTEP=$mosesgizastep SCORERS=BLEU eman init evaluator --start");
 }
 
 

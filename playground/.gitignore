@@ -19,4 +19,8 @@ corpman.index
 eman.autotags
 eman.index
 eman.subdirs
+eman.results
+eman.results.conf
+harvest.txt
+bleu.NO-SITENAME
 
