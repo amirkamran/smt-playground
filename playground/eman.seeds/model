@@ -13,6 +13,8 @@ PLAYGROUND=`eman path` # eman playground directory
 eman \
   defvar TMS help='extracted phrases, a colon-separated lists of s.tm' \
   defvar LMS help='tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep' \
+  defvar CONFIGARGS default='' \
+    help='additional arguments passed to train-model.perl' \
   defvar RMSTEP default='' help='lexicalized reordering model' \
   defvar MOSESSTEP default='' \
     help='moses scripts and binaries (default to inherit from the first TM)' \
@@ -189,6 +191,7 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
     --f src --e tgt \\
     --reordering $REORDERING \\
     --reordering-factors $REORDFACTORS \\
+    $CONFIGARGS \\
     \$lmopts \\
     $DECRYPTEDSTEPS \\
   || die "Failed to create moses.ini"
@@ -206,7 +209,7 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
 done
 
 mkdir model
-$PLAYGROUND/../scripts/merge_moses_models.pl --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
+$PLAYGROUND/../scripts/merge_moses_models.pl --append-unknown --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
   || die "Merge moses.ini failed"
 
 # Standard command footer
