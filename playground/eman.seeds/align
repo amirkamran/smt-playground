@@ -134,9 +134,9 @@ wrapperargs="corpus.src.gz corpus.tgt.gz \\
   --drop-bad-lines \\
 "
 
-if [ \$ismgiza = yes ]; then
+if [ "\$ismgiza" = yes ]; then
   wrapperargs="\$wrapperargs --mgizadir=$GIZASTEP/bin --mgizacores=$EMAN_CORES"
-  [ $KEEPMODEL = yes ] && wrapperargs="\$wrapperargs --keep"
+  [ "$KEEPMODEL" = yes ] && wrapperargs="\$wrapperargs --keep"
   [ -z "$USEMODEL" ] || wrapperargs="\$wrapperargs --mgiza-model=$MODELPATH"
 else
   wrapperargs="\$wrapperargs --bindir=$GIZASTEP/bin"
@@ -161,7 +161,7 @@ for s in $(echo $ALISYMS | tr , ' '); do \\
 done
 rm $PLAYGROUND/corpman.index # force to reindex
 
-if [ $KEEPMODEL = yes ]; then
+if [ "\$ismgiza" = yes ] && [ "$KEEPMODEL" = yes ]; then
   wrapperdir=\$(cat gizawrapper.log | grep 'My tempdir' | head -1 | cut -d' ' -f3)
   echo "Storing model from \$wrapperdir in \$mydir/model"
   mkdir model
