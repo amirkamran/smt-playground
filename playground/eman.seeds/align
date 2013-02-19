@@ -137,7 +137,7 @@ wrapperargs="corpus.src.gz corpus.tgt.gz \\
 if [ "\$ismgiza" = yes ]; then
   wrapperargs="\$wrapperargs --mgizadir=$GIZASTEP/bin --mgizacores=$EMAN_CORES"
   [ "$KEEPMODEL" = yes ] && wrapperargs="\$wrapperargs --keep"
-  [ -z "$USEMODEL" ] || wrapperargs="\$wrapperargs --mgiza-model=$MODELPATH"
+  [ -z "$USEMODEL" ] || wrapperargs="\$wrapperargs --mgizamodel=$MODELPATH"
 else
   wrapperargs="\$wrapperargs --bindir=$GIZASTEP/bin"
 fi
