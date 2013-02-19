@@ -7,12 +7,19 @@
 use strict;
 use warnings;
 use List::Util qw( min max );
+use Getopt::Long;
+
+my $verbose = 0;
+my $debug   = 0;
+
+die "usage: reordering-quantity.pl [-v -d] < gizaalign"
+  if ! GetOptions(
+    "v|verbose" => \$verbose,
+    "d|debug"   => \$debug,
+  );
 
 my $linecount = 0;
 my $tot_rquantity = 0;
-my $verbose = 0;
-
-$verbose = 1 if defined $ARGV[0] && $ARGV[0] eq '-v';
 
 while (<STDIN>) {
   chomp;
@@ -42,11 +49,18 @@ while (<STDIN>) {
     my ($a_begin, $a_length, $b_begin, $b_length) = ($i - 1, 1, $i, 1);
     my ($a_begin_opp, $a_length_opp) = get_opposite_span(\%src2tgt, $a_begin, $a_length);
     my ($b_begin_opp, $b_length_opp) = get_opposite_span(\%src2tgt, $b_begin, $b_length);
+    
+    if ($debug) {
+      print STDERR "Span of A: $a_begin-", $a_begin+$a_length-1, "\n";
+      print STDERR "Opposite span of A: $a_begin_opp-", $a_begin_opp+$a_length_opp-1, "\n";
+      print STDERR "Span of B: $b_begin-", $b_begin+$b_length-1, "\n";
+      print STDERR "Opposite span of B: $b_begin_opp-", $b_begin_opp+$b_length_opp-1, "\n";
+    }
 
     # A or B are not aligned to anything
     next if ! defined($a_begin_opp) || ! defined($b_begin_opp);
 
-    next if $a_begin_opp <= $b_begin_opp + $b_length_opp; # no reordering
+    next if $a_begin_opp < $b_begin_opp + $b_length_opp; # no reordering
 
     # grow block A to the left
     #   
@@ -55,13 +69,14 @@ while (<STDIN>) {
     #   - allow A to grow to the first consistent span
     #   - after that, each extension of A must be consistent
 
+    print STDERR "Growing A\n" if $debug;
     while ($a_begin > 0) { 
       if (is_consistent_span(\%src2tgt, \%tgt2src, $a_begin, $a_length)) { 
         last if ! is_consistent_span(\%src2tgt, \%tgt2src, $a_begin - 1, $a_length + 1);
       }   
       my ($a_ext_begin_opp, $a_ext_length_opp) = 
         get_opposite_span(\%src2tgt, $a_begin - 1, $a_length + 1); 
-      if ($a_ext_begin_opp > $b_begin_opp + $b_length_opp) { 
+      if ($a_ext_begin_opp >= $b_begin_opp + $b_length_opp) { 
         $a_begin--;
         $a_length++;
         $a_begin_opp = $a_ext_begin_opp;
@@ -74,12 +89,13 @@ while (<STDIN>) {
     # never reached a consistent block A
     next if ! is_consistent_span(\%src2tgt, \%tgt2src, $a_begin, $a_length);
 
-    # grow B to the right
-    while ($b_begin + $b_length < $source_length) { 
+    # grow B to the right, keep span AB consistent
+    print STDERR "Growing B\n" if $debug;
+    while ($b_begin + $b_length <= $source_length) { 
       last if is_consistent_span(\%src2tgt, \%tgt2src, $a_begin, $a_length + $b_length);
       my ($b_ext_begin_opp, $b_ext_length_opp) = 
         get_opposite_span(\%src2tgt, $b_begin, $b_length + 1); 
-      if ($a_length_opp > $b_ext_begin_opp + $b_ext_length_opp) { 
+      if ($a_begin_opp >= $b_ext_begin_opp + $b_ext_length_opp) { 
         $b_length++;
         $b_begin_opp = $b_ext_begin_opp;
         $b_length_opp = $b_ext_length_opp;
@@ -90,6 +106,8 @@ while (<STDIN>) {
     
     # never reached a consistent block AB
     next if ! is_consistent_span(\%src2tgt, \%tgt2src, $a_begin, $a_length + $b_length);
+
+    print STDERR "Adding reordered span of length ", $a_length + $b_length, "\n" if $debug;
 
     $reordered_spans_length += $a_length + $b_length;
   }   
@@ -116,7 +134,7 @@ sub get_opposite_span {
   return undef if ! keys %points_to;
 
   my $opposite_begin = min(keys %points_to);
-  my $opposite_length = max(keys %points_to) - $opposite_begin;
+  my $opposite_length = max(keys %points_to) - $opposite_begin + 1;
 
   return ($opposite_begin, $opposite_length);
 }
@@ -124,6 +142,7 @@ sub get_opposite_span {
 # check span consistency (i.e. no target words are aligned outside source span)
 sub is_consistent_span {
   my ($src2tgt, $tgt2src, $begin, $length) = @_;
+  print STDERR "Checking span $begin-",$begin+$length-1, "\n" if $debug;
 
   my ($opposite_begin, $opposite_length) = get_opposite_span($src2tgt, $begin, $length);
 
@@ -131,8 +150,10 @@ sub is_consistent_span {
     my $has_link_outside = grep {
       $_ < $begin || $_ >= $begin + $length
     } @{ $tgt2src->{$i} };
+    print STDERR "Inconsisent\n" if $debug && $has_link_outside;
     return 0 if $has_link_outside;
   }
 
+  print STDERR "Consistent\n" if $debug;
   return 1;
 }
