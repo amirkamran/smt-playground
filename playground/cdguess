@@ -2,5 +2,5 @@
 # usage: . cdguess SPEC
 # will guess the step directory and chdir there
 
-d=`eman guess "$1"`
+d=`eman path "$1"`
 [ -d "$d" ] && cd $d && echo $d
