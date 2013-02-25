@@ -61,6 +61,7 @@ BJAMARGS=" --max-kenlm-order=8 $BJAMARGS "
 
 ./bjam -j4 --with-giza=\$mydir/bin \\
   \$SRILMARG \$IRSTLMARG \$BJAMARGS || die "Build failed"
+chmod -R a+rx .
 
 cd ../ || die "chdir back failed"
 
