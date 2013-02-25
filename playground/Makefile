@@ -4,7 +4,12 @@ SHELL=/bin/bash
 
 all:
 	# This Makefile just captures some further tasks you'd do in the
-	# playground, but most of them are now facilitated by ../scripts/eman
+	# playground, but most of them are now facilitated by eman
+
+reindex:
+	# reindexing both eman and corpman
+	eman reindex
+	./corpman reindex
 
 mertdetails:
 	head -n -0 exp.mert.S*/log \
