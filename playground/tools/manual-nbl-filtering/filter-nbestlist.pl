@@ -2,7 +2,7 @@
 # given a "rules" file, removes all items from nbest list that are forbidden
 #
 # format of the rules file:
-# 0||| word1 word2 word3
+# 0||| word1 word2 word3 word4---word5
 # sentid||| sequence of forbidden words
 
 use strict;
@@ -36,7 +36,7 @@ while (<$rulesh>) {
   my $words = $2;
   $words =~ s/\s*$//;
   my @words = split /\s+/, $words;
-  my $pattern = join(".*", map { "\Q $_ \E" } @words);
+  my $pattern = join(".*", map { s/---/  /g; "\Q $_ \E" } @words);
   my $oldpattern = $pats->{$sentid+1};
   if (!defined $oldpattern) {
     $oldpattern = "";
@@ -60,7 +60,7 @@ while (<>) {
   die "$nr:Bad format: $_" if ! /^\s*([0-9]+)\s*\|\|\|\s*(.*?)\|\|\|/;
   my $sentid = $1;
   my $sent = " ".$2." ";
-  $sent =~ s/ /  /g;
+  $sent =~ s/ +/  /g;
   my $regex = $pats->{$sentid+1};
   # print "CHECKING $sent AGAINST $regex\n" if defined $regex;
   if (defined $regex && $sent =~ /$regex/) {
