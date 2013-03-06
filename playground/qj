@@ -72,18 +72,29 @@ foreach my $tagrun (@tags) {
     $thisouttxt = load_file("$dir/$tagrun.txt.gz");
   } else {
     my ($tag, $run) = split /\//, $tagrun;
-    my ($dirname, $errmsg, $exitcode) = saferun3("eman guess $tag");
+    my ($dirname, $errmsg, $exitcode) = saferun3("eman path $tag");
     chomp $dirname;
-    $info = $dirname;
-    die "Failed to guess exp from tag $tag: $errmsg"
+    die "Failed to guess step from tag $tag: $errmsg"
       if $exitcode;
-    $thisreftxt = load_file("$dirname/evaluation.ref.0");
-    $thissrctxt =
-      ( -e "$dirname/evaluation.in.txt"
-        ? load_file("$dirname/evaluation.in.txt")
-        : load_file("$dirname/evaluation.in"));
-    my $thisoutfncode = defined $run ? "run$run" : "opt";
-    $thisouttxt = load_file("$dirname/evaluation.$thisoutfncode.txt");
+    ($info, undef, undef) = saferun3("eman path $tag");
+    chomp $info;
+    $info = $dirname if $info !~ /evaluator/; # get the short name of the step
+    $thisreftxt = load_file("$dirname/corpus.reference.0.gz");
+    my @thistranslstep = grep { /s.translate./ } split /\n/, load_file("$dirname/eman.deps");
+    die "Failed to guess translate step for $dirname"
+      if 1 != scalar(@thistranslstep);
+    my ($transldirname, $errmsg, $exitcode) = saferun3("eman path $thistranslstep[0]");
+    chomp $transldirname;
+    die "Failed to get path for transl step $thistranslstep[0]: $errmsg"
+      if $exitcode;
+    $thissrctxt = load_file("$transldirname/corpus.src.gz");
+      # the following would prefer detokenized text
+      #( -e "$transldirname/corpus.src.gz"
+      #  ? load_file("$transldirname/evaluation.in.txt")
+      #  : load_file("$transldirname/evaluation.in"));
+    #my $thisoutfncode = defined $run ? "run$run" : "opt";
+    #$thisouttxt = load_file("$dirname/evaluation.$thisoutfncode.txt");
+    $thisouttxt = load_file("$dirname/corpus.translation.gz");
   }
   print $infohdl "sys$ns\t$tagrun\t$info\n";
   if (defined $reftxt && defined $thisreftxt) {
