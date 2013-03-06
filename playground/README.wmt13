@@ -91,13 +91,65 @@ Potrebujeme jednotnou pipeline. Kterou pouzit?
 se na           sena            24      1
 na to           nato            18      2
 do konce        dokonce         9       30
-�e na           �ena            8       9
+že na           žena            8       9
 za to           zato            6       3
 jako by         jakoby          5       1
-z n�            zn�             5       5
-p�ed t�m        p�edt�m         4       10
+z ní            zní             5       5
+před tím        předtím         4       10
 
 Zde je evidentni, ze jsou to vsechno plane poplachy. Ale mohou tam byt veci
 jako "us." vs. "us .". Cisla za temi dvema variantami jsou pocty vyskytu jedne
 a druhe varianty.
+
+
+2013-03-05
+
+- experimentuju s ruznym poctem referencnich vet
+  - vetsi devset nepomohl
+  - vic referenci by melo pomoct
+  - posteditovane reference?
+    - dve varianty za sebou?
+    - dve varianty jako alternativni reference?
+  - spojeni obycejnych + posteditovanych?
+  ... vse celkem bez hmatatelnych rozdilu
+
+  ... takto se to vyhodnocuje:
+./qj devset-hpe-7sys 10.63.0.53 10.62.0.53 10.61.0.54 10.60.0.54 10.47.0.53 10.53.0.51 10.42.0.52 | sed 's/\*\*/2/;s/\*/1/' | tabrecalc 'EVAL COL1*COL2 LAVE\tCOL3' | grp --keys=2 --items=SUM1 | numsort 2
+
+dosavadni vysledky:
+sys1, 10.63.0.53        7
+sys3, 10.61.0.54        10
+sys5, 10.47.0.53        11
+sys6, 10.53.0.51        11
+sys2, 10.62.0.53        12
+sys4, 10.60.0.54        12
+sys7, 10.42.0.52        14
+
+nejlepsi 10.42.0.52 je prekvapive DEVwmt11-hpe1:wmt11-hpe2, druhy je DEVnewstest2011:wmt11-extraref1:wmt11-extraref2:wmt11-extraref3 a DEVnewstest2011:wmt11-extraref1
+
+- vyrobim korpus jen z titulku z monitoringu tisku
+  pak vysekame titulky ze vsech devtestu a vyladime na tom vlastni preklad
+    (bud obecneho mosese nebo navic s tim titulkovym lm)
+  a pak prelozime testset dvakrat: normalne a titulkove
+  ...a prislusne vety vezmeme z prislusnych casti
+
+
+Odlisna spojeni:
+- have to be careful not to get under an avalanche
+potrebuje frazi "not to get" = "abyste se nedostali/la/lo"
+...chtelo by to overit, jak se na takovehle pripady diva alignment...
+
+- "obviously, " to naopak pekne preklada jako "je zrejme, ze"
+
+- "believed in his motto saying that" = "rikajici", "ktere rika"
+  (prvni volba je atypicky slovni tvar, druha volba zas generuje slovo navic a tim je mozna znevyhodnena"
+
+Chyby:
+- pojmenovane entity!
+SRC     `` Charles University has been greatly involved in the festival . ''
+REF     „ univerzita Karlova má na festivalu velký podíl . “
+        „ Charles univerzity se významně podílely na festivalu “ .
+        „ Charles univerzity se významně podílely na festivalu . “
+        „ aktivit se významně podílely na festivalu “ . 
+        „ aktivit se významně podílely na festivalu . “
 
