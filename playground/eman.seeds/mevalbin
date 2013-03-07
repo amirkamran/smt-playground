@@ -25,10 +25,20 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-cp $PLAYGROUND/../src/multeval.tar.gz . \\
-&& tar xzf multeval.tar.gz \\
-&& rm multeval.tar.gz \\
+cp $PLAYGROUND/../src/multeval-0.5.1.tgz . \\
+&& tar xzf multeval-0.5.1.tgz \\
+&& rm multeval-0.5.1.tgz \\
 || die "Failed to extract Multeval"
+
+ln -s multeval-0.5.1 multeval || die "Failed to make symlink"
+cd multeval || die "Failed to chdir"
+echo "Testing multeval and downloading Meteor"
+./multeval.sh eval --refs example/refs.test2010.lc.tok.en.* \\
+                   --hyps-baseline example/hyps.lc.tok.en.baseline.opt* \\
+                   --hyps-sys1 example/hyps.lc.tok.en.sys1.opt* \\
+                   --hyps-sys2 example/hyps.lc.tok.en.sys2.opt* \\
+                   --meteor.language en \\
+|| die "Multeval test failed"
 
 # Standard command footer
 echo Done.
