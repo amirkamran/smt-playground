@@ -113,7 +113,7 @@ else
   echo Counting in $PARTS parts, tempdir=\$partstempdir
   zcat corpus.text.gz | split_even $PARTS \$partstempdir/part --gzip \
   || die "Splitting FAILED"
-  ls \$partstempdir/part*.gz > $tempdir/filelist
+  ls \$partstempdir/part*.gz > \$partstempdir/filelist
 
   echo Making batch counts
   make-batch-counts \$partstempdir/filelist 1 zcat \$partstempdir \\
