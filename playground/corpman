@@ -195,7 +195,7 @@ foreach my $line (split /\n/, $rulestext) {
       add_rule($outlang, $outfact, {
         'inlang'=>$outlang,
         'infacts'=>$outfacts,
-        # 'command'=>"../scripts/reduce_factors.pl $f",
+        # 'command'=>"$mydir/../scripts/reduce_factors.pl $f",
         # no command, this will be lazy-extracted
       });
       $f++;
@@ -528,7 +528,7 @@ sub lazy_build {
       my $subfactind = $subentry->{"factind"};
       my $cmd = "zcat $steppath";
       $cmd .= " | cut -f $subcolumn" if $subcolumn != -1;
-      $cmd .= " | ../scripts/reduce_factors.pl $subfactind" if $subfactind != -1;
+      $cmd .= " | $mydir/../scripts/reduce_factors.pl $subfactind" if $subfactind != -1;
       push @parts, $cmd;
       push @deps, $subentry->{"stepname"};
     }
