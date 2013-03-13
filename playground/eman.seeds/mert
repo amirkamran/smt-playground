@@ -127,7 +127,7 @@ $ZMERTMOSES \
   --metric="$ZMERTMETRIC" $ZMERTSEMPOSSOURCEFLAG \\
     $ZMERTFLAGS \\
   $MERTGRIDARGS \\
-  \$MERTFLAGS \\
+  $MERTFLAGS \\
   --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
   || die "Mert failed"
 KONEC
@@ -141,7 +141,7 @@ $MERTMOSES \
   \`pwd\`/moses \\
   \`pwd\`/moses.abs.ini \\
   $MERTGRIDARGS \\
-  \$MERTFLAGS \\
+  $MERTFLAGS \\
   --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
   || die "Mert failed"
 KONEC
@@ -180,8 +180,7 @@ ulimit -c 1 # core files limited to 1 byte
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
-export MERTFLAGS="$MERTFLAGS"
-echo export MERTFLAGS="$MERTFLAGS"
+echo There were our MERTFLAGS="$MERTFLAGS"
 
 # clone some importnant executables
 $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
