@@ -82,7 +82,7 @@ while (<$fh>) {
       # keep getting more words of the same freq
   }
   if ($gotwords <= $take_freq_words+1) {
-    print STDERR "gotw $gotwords, lastf $lastfreq, f $freq: $word\n";
+    # print STDERR "gotw $gotwords, lastf $lastfreq, f $freq: $word\n";
     $freqenough{$word} = 1 if $lastfreq;
   }
   $lastfreq = $freq;
@@ -90,7 +90,8 @@ while (<$fh>) {
 }
 close $fh;
 
-print STDERR "Asked to use $take_freq_words, will actually keep ",
+print STDERR "Asked to use top $take_freq_words words from: $freqlistf.\n";
+print STDERR "Will actually keep ",
   scalar(keys %freqenough), " of the available $nr ones.\n";
 
 my $nr = 0;
