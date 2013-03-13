@@ -40,14 +40,14 @@ if ($emit eq "tag") {
     my ($f, $l, $t) = @_;
     return $t;
   }
-} elsif ($emit =~ /^suff([0-9]+)$/) {
+} elsif ($emit =~ /^suf([0-9]+)$/) {
   my $suflen = $1;
   $emitf = sub {
     my ($f, $l, $t) = @_;
     return "...".$1 if $f =~ /(.{$suflen})$/;
     return $f;
   }
-} elsif ($emit =~ /^possuff([0-9]+)$/) {
+} elsif ($emit =~ /^possuf([0-9]+)$/) {
   my $suflen = $1;
   $emitf = sub {
     my ($f, $l, $t) = @_;
