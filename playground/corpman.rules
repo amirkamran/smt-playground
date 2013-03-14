@@ -25,6 +25,10 @@ csNm   	form|lemma|tag	csNm	pluslemma	../../scripts/construct_improved_czech_lem
 csNmT1   	form|lemma|tag	csNmT1	pluslemma	../../scripts/construct_improved_czech_lemma.pl
 csNmT1   	tag	csNmT1	pos	../../scripts/stem_factor.pl --stem=2
 csNmT1   	tag	csNmT1	poscng	../../scripts/stem_factor.pl --stem=5
+csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf2F1k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=possuf2 --take=1000
+csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf2F2k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=possuf2 --take=2000
+csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf3F1k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=possuf3 --take=1000
+csNmT1   	stc|lemma|tag	csNmT1	stcOtagF1k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=1000
 
 # Reversing the alignment preserves the number of tokens, so we treat it as a
 # 'change of a factor'
