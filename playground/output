@@ -16,7 +16,7 @@ e=`eman guess $1`
 
 case "$suffix" in
 in )
-  e=`eman tb --no-tree $e --ign=mert | grep translate`
+  e=`eman tb --notree $e --ign=mert | grep translate`
   fn=corpus.src
   ;;
 ref*)

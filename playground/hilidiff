@@ -14,6 +14,9 @@ for f in $inf $reff $hyp1 $hyp2; do
   [ -e "$f" ] || die "Can't read $f"
 done
 
+[ -x tools/compare_translations/merge_src_ref_tst.pl ] \
+|| die "Not found: tools/compare_translations/merge_src_ref_tst.pl"
+
 tools/compare_translations/merge_src_ref_tst.pl \
   src=<(cat $inf | reduce_factors.pl 0) \
   ref=$reff \
