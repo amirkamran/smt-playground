@@ -29,6 +29,9 @@ csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf2F1k	../../scripts/form_or_tag_based_on
 csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf2F2k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=possuf2 --take=2000
 csNmT1   	stc|lemma|tag	csNmT1	stcOpossuf3F1k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=possuf3 --take=1000
 csNmT1   	stc|lemma|tag	csNmT1	stcOtagF1k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=1000
+csNmT1   	stc|lemma|tag	csNmT1	stcOtagF2k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=2000
+csNmT1   	stc|lemma|tag	csNmT1	stcOtagF5k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=5000
+csNmT1   	stc|lemma|tag	csNmT1	stcOtagF500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
 
 # Reversing the alignment preserves the number of tokens, so we treat it as a
 # 'change of a factor'
