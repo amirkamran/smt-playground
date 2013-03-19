@@ -8,7 +8,7 @@ set -o pipefail  # safer pipes
 eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
      defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
      defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
-     defvar BJAMARGS default='' help='any extra arguments for the compilation of Moses' \
+     defvar BJAMARGS default=' --kenlm-max-order=6 -a ' help='any extra arguments for the compilation of Moses' \
 || exit 1
 
 # XXX we don't have any IRSTLM steps
@@ -57,7 +57,7 @@ cd moses || die "Chdir failed"
 
 [ -z "$SRILMSTEP" ] || SRILMARG=" --with-srilm=\`eman path $SRILMSTEP\`/srilm "
 [ -z "$IRSTLMSTEP" ] || IRSTLMARG=" --with-irstlm=\`eman path $IRSTLMSTEP\`/install "
-BJAMARGS=" --max-kenlm-order=8 $BJAMARGS "
+BJAMARGS="$BJAMARGS "
 
 ./bjam -j4 --with-giza=\$mydir/bin \\
   \$SRILMARG \$IRSTLMARG \$BJAMARGS || die "Build failed"
