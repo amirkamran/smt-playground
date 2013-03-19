@@ -153,3 +153,64 @@ REF     „ univerzita Karlova má na festivalu velký podíl . “
         „ aktivit se významně podílely na festivalu “ . 
         „ aktivit se významně podílely na festivalu . “
 
+
+2013-03-06
+
+zkousim to filtrovani nbl: s.mert.b46a12c6.20130306-1737
+
+
+
+2013-03-13
+s.evaluator.ad31eb1e.20130313-0059  ... prvni vetsi tm, ale jen baseline lm
+84747a50.20130313-1535 15.33±0.59 vetsi TM, vetsi LM, ale pomotane T1
+
+
+2013-03-13
+
+s.evaluator.249f2e54.20130313-2210  minibaseline T1
+s.evaluator.3f5e6eef.20130313-2347  bug: LM na form-or-tag, model na tag
+  -> oprava: s.evaluator.86ca92e0.20130314-1433
+s.evaluator.1b6fda72.20130313-2353  stc->stc+stcORpossuf2F1k
+  az bude, tak exploduj suf1, suf3, suf4, suf5, cng, tag, 200, 2k, 3k
+  a z toho jsou odvozeniny suf2F1k a suf2F2k
+  +stcOtagF500 je o drobecicek lepsi nez +tag v t0-0a1!
+
+
+
+TODO:
+- _NUM classes
+- vetsi/lepsi devset pro vetsi data
+- zjednoznacnit anglicke 'to understand' jako to-aby; a not-to-sign
+  ... nikdo to neumi poznat, jedine to je z valence ridiciho slova
+  ... co treba proste predikce z form|lemma|tag pro nasledujici TO uhodnout,
+  ma-li (rucni) funktor AIM?
+  Takto vysypu PCEDT: treex Write::Factored outcols=csA flags=escape_space:join_spaced_numbers -- /net/data/pcedt2.0/data/00/wsj_0001.treex.gz
+- zjednoznacnit anglicke ing?
+  ... earthquake came to Calif. >killing< more than 50k people -> prislo a zabilo
+
+
+2013-03-15
+
+porozovani ohledne ttable-limit: limit 1000 pomohl jen o 0.02:
+./hilidiff 249f2e54.20130313-2210 456db641.20130314-1649
+...chtelo by to proverit multimertem
+
+2013-03-19
+
+s.evaluator.9d18288a.20130320-0034 je t0a1-0a1 s velkymi LM, ale chybi tam
+news-taglm a dalsi; taky paralelni data nejsou maximalni, jen czeng
+
+s.evaluator.6310dd23.20130320-0035 je t0-0a1, zase velke LM, ale chybi veci
+jako vyse
+
+
+zkousim take stcOtagF500 na velkych datech (t0-0a1): s.evaluator.5865fe2e.20130320-0048
+
+a pak zkousim zvetsit paralelni data:
+default: s.evaluator.b1742407.20130319-2346
+1000phrases s200: s.evaluator.a1745cc4.20130319-1432
+
+
+
+Jina chyba:
+s.mert.5e566437.20130319-1430
