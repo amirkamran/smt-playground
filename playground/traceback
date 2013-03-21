@@ -1,3 +1,5 @@
 #!/bin/bash
 
-eman traceback --read-only --jobid --status --tag --log --vars "$@" 2>&1 | less -S
+eman traceback --read-only --jobid --status --tag --log --vars \
+  --ignore=corpus \
+  "$@" 2>&1 | less -S

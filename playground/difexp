@@ -25,6 +25,7 @@ scoresb=$(get_scores_file "$inb")
 echo "Calling eman traceback ... " "$@"
 if eman traceback "$ina" --tag --vars "$@" >> $tmpa \
   && eman traceback "$inb" --tag --vars "$@" >> $tmpb; then
-  diff --unified=500 $tmpa $tmpb | less -S
+  #diff --unified=500 $tmpa $tmpb | less -S
+  git diff --no-index --unified=500 $tmpa $tmpb
 fi
 rm -f $tmpa $tmpb

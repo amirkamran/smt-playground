@@ -6,10 +6,19 @@ all:
 	# This Makefile just captures some further tasks you'd do in the
 	# playground, but most of them are now facilitated by eman
 
+.PHONY: reindex
 reindex:
 	# reindexing both eman and corpman
 	eman reindex
 	./corpman reindex
+
+.PHONY: bl
+bl:
+	# recollect, redraw and show the file nicebleu.
+	# Use 'vimremake nicebleu' if you are just tuning the visualization
+	# rules but not collecting any new results.
+	make -B nicebleu
+	vim nicebleu
 
 mertdetails:
 	head -n -0 exp.mert.S*/log \
@@ -106,3 +115,13 @@ clean:
 	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.custom' -exec rm {} \;
 	# Other hot candidates to remove:
 	# s.tm.*/model/phrase-table*unfiltered*
+
+FREQAUG?=csNmT1+stc
+freqlist.%:
+	# vyrobi preqlist daneho korpusu, napr.
+	#  FREQAUG=enNm+lc make freqlist.czeng10
+	mkdir -p freqlists
+	eval $$(./corpman --cmd $*/$(FREQAUG)) \
+	| tr ' ' '\n' \
+	| see \
+	| gzip > freqlists/$*.$(FREQAUG).gz
