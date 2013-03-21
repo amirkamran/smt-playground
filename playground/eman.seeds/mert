@@ -168,6 +168,9 @@ ulimit -c 1 # core files limited to 1 byte
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
+# enable eman continue: remove output of previous attempts
+rm -rf moses* lmodel* ttable* mert-tuning
+
 # Blocked for the moment, we don't use sempos
 #if [ -d "$TMT_ROOT" ]; then
 #  # ensuring tectomt is actually inited!
