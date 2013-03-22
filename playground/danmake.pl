@@ -546,11 +546,13 @@ sub start_mert_for_model
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
     # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-    my $memory = $m->{mc} =~ m/gigaword/ ? '30g' : '15g';
+    my $memory = $m->{mc} =~ m/(gigaword|un)/ || $m->{pc} =~ m/un/ ? '30g' : '15g';
     # Default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
     my $priority = $memory eq '30g' ? -50 : -99;
     my $gridfl = "\"-p $priority -hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
-    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem 30g");
+    # The above was memory for decoder jobs. Now memory for the main mert job.
+    $memory = $m->{pc} =~ m/un/ ? '60g' : '30g';
+    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem $memory");
 }
 
 
@@ -1249,7 +1251,8 @@ sub redo_mert_memory
             @logs = sort(@logs);
             my $log = $logs[-1];
             my $logpath = "$step/$log";
-            my $decoder_died = dzsys::chompticks("grep 'The decoder died.' $logpath");
+            # We cannot use dzsys::chompticks() because grep returns 1 when it does not find anything. Chompticks would die on nonzero return code.
+            my $decoder_died = dzsys::qcticks("grep 'The decoder died.' $logpath");
             if($decoder_died)
             {
                 my $gridflags = dzsys::chompticks("eman vars $step | grep GRIDFLAGS");
@@ -1272,19 +1275,34 @@ sub redo_mert_memory
                 # So we must create a new clone of the step and run that instead ("redo").
                 # Set the highest possible priority because it may be more difficult to get a better machine.
                 $gridflags = "-p 0 -hard -l mf=${memory}g -l act_mem_free=${memory}g -l h_vmem=${memory}g";
+                # The above was memory for decoder jobs. Now memory for the main mert job.
+                ###!!! Problém! Tohle je redo. Nemáme přístup k původnímu popisu korpusů, abychom vyšší požadavek řídili názvem korpusu.
+                ###!!! Budeme tedy chtít víc paměti každopádně, ono to neuškodí, beztak je to něco velkého, když dekodér selhal.
+                #$memory = $m->{pc} =~ m/un/ ? '60g' : '30g';
+                $memory = '60g';
                 # Erase all environment variables. We want Eman to see only those we define on its command line (see below).
                 # Otherwise, it might think we want to reconstruct corpora with locale variables such as "LANGUAGE=en_US:en".
+                my %old_environment = %ENV;
                 foreach my $ev (keys(%ENV))
                 {
-                    delete($ENV{$ev});
+                    # Do not erase variables needed to run eman, though!
+                    ###!!! It would be better to explicitly list those variables that should be erased!
+                    ###!!! We would have to read eman.vars in order to know them.
+                    unless($ev =~ m/(PATH|PERL|LIB|SGE_)/)
+                    {
+                        delete($ENV{$ev});
+                    }
                 }
-                dzsys::saferun("GRIDFLAGS=\"$gridflags\" eman redo $step --mem 30g --priority 0 --start");
+                dzsys::saferun("GRIDFLAGS=\"$gridflags\" eman redo $step --mem $memory --priority 0 --start");
+                %ENV = %old_environment;
                 push(@to_remove, $step);
                 $n++;
             }
             else
             {
                 print("The mert step seems to have failed because of other reasons than the death of the decoder.\n");
+                print("Let's try to increase its own memory requirement.\n");
+                continue_step_memory($step);
             }
         }
     }
