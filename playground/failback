@@ -1,0 +1,7 @@
+#!/bin/bash
+# Shows a traceback of statuses but prints only jobs that are not DONE
+
+eman traceback --read-only --stat \
+  "$@" 2>&1 \
+  | grep -B 1 'Job:.*[^ DONE]' \
+  | grep -v '^--$'
