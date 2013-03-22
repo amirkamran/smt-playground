@@ -33,7 +33,7 @@ mertdetails:
 	> $@
 
 bleu:
-	#eman retag || echo "Ignoring errors"
+	eman retag || echo "Ignoring errors"
 	eman collect || echo "Ignoring errors"
 	cp eman.results $@.`./sitename`
 	cat $@.* \
