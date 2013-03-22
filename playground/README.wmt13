@@ -245,27 +245,48 @@ DOSUD NEJLEPSI:
 
 osy:
 - pocet jader v mgize: (maji i dalsi dva behy)
-  s.evaluator.84747a50.20130313-1535  1 jadro	15.33±0.59
-  s.evaluator.9eae61de.20130321-1706  12 jader 15.44±0.57
-  s.evaluator.4dd6ba39.20130321-1708  giza 15.48±0.58
+s.evaluator.84747a50.20130313-1535	1 jadro 	15.33±0.59 15.32±0.58 15.48±0.58	ali trval 113:59:38 (410378 s)
+s.evaluator.9eae61de.20130321-1706	12 jader	15.44±0.57 15.52±0.57 15.26±0.58	ali trval 51:23:53 (185033 s)
+s.evaluator.4dd6ba39.20130321-1708	giza    	15.48±0.58 15.56±0.59 15.54±0.58	ali trval 71:11:49 (256309 s)
+
+giza	s.evaluator.1c099ee7.20130322-0016,s.evaluator.006482eb.20130322-0016,s.evaluator.0486f26e.20130322-0017
+1jadro	s.evaluator.84747a50.20130313-1535,s.evaluator.1f6f117d.20130322-0016,s.evaluator.1c099ee7.20130322-0016
+12jader	s.evaluator.9eae61de.20130321-1706,s.evaluator.2286434b.20130322-0015,s.evaluator.184e9c42.20130322-0015
+
+giza vs. 1 jadro: s.multeval.357b2313.20130322-1548
+
+giza vs. 12 jader: s.multeval.9c971272.20130322-1549
+
+1 jadro vs. 12 jader: s.multeval.ea362f94.20130322-1550
+
+Interpretace:
+giza vs. 1 jadro:
+n=3            BLEU (s_sel/s_opt/p)   METEOR (s_sel/s_opt/p) TER (s_sel/s_opt/p)    Length (s_sel/s_opt/p) 
+baseline       15.5 (0.3/0.0/-)       21.1 (0.2/0.0/-)       66.9 (0.3/0.1/-)       98.0 (0.3/0.2/-)       
+system 1       15.4 (0.3/0.1/0.00)    21.0 (0.2/0.0/0.02)    67.0 (0.3/0.1/0.03)    97.9 (0.3/0.1/0.14)    
+...giza dava o 0.1 lepsi BLEU, METEOR i TER
+... a je pst 0.00 (p-value), ze by se pozorovany rozdil mohl objevit jen pri nahodnem mertu
+
+
+
   
 - alignment lemma/stem:
-  s.evaluator.6310dd23.20130320-0035
-  s.evaluator.dc354509.20130321-1613
+  s.evaluator.6310dd23.20130320-0035 (DONE)
+  s.evaluator.dc354509.20130321-1613 (RUNNING)
 
 - heldout pro lm:
   s.evaluator.6310dd23.20130320-0035 (DONE)
-  s.evaluator.3f93ce49.20130321-1828 (OUTDATED)
-  s.evaluator.1f4aa90d.20130322-0923 (RUNNING)
-  s.evaluator.1665152e.20130321-1836 (OUTDATED)
+  s.evaluator.5c4d7991.20130322-0025 (RUNNING)
+  s.evaluator.0fbdb860.20130322-1526 (RUNNING)
+  s.evaluator.ff7e1412.20130322-1353 (RUNNING)
 
 Reorderingy (jen czeng10):
 tag-tag pro 9d18288a.20130320-0034 (15.73): s.rm.5e144dfa.20130321-1852 (RUNNING) a asi stejny s.rm.cb891802.20130321-1841 (DONE) 
   ... zkousim s.rm.cb891802.20130321-1841 v s.evaluator.77d9e052.20130322-1011 pro 15.73
 stc-tag pro 6310dd23.20130320-0035 (16.21): s.rm.f714e29a.20130322-0957 (RUNNING)
 stc-stc univerzalni: s.rm.0fb000ee.20130321-1851 (DONE)
-  ... zkousim v s.evaluator.fc8fcaa6.20130322-1005 pro 16.21
-  ... zkousim v s.evaluator.dee12cfd.20130322-1011 pro 15.73
+  ... zkousim v s.evaluator.15700a6d.20130322-1308 (RUNNING) pro 16.21
+  ... zkousim v s.evaluator.a8ae18d4.20130322-1327 (RUNNING) pro 15.73
 
 Velke LM:
 mono-ctk-all/csNmT1+form+lemma+tag	s.corpus.a7c9f3d5.20130321-1509
@@ -274,3 +295,12 @@ mono-tisk-all/csNmT1+form+lemma+tag	s.corpus.b36e3420.20130321-1511
 Velky align: s.align.7daa5e91.20130321-1945
 
 t0-0a1 s mmi: s.evaluator.906b321f.20130321-1958 s.evaluator.27eb7a68.20130321-1959 s.evaluator.cc28fed5.20130321-1959
+
+
+2013-03-22
+
+prunelm: (zatim jen prvni ze tri)
+s.prunelm.dd6a8605.20130322-1439        RUNNING
+s.prunelm.2d4c0571.20130322-1442        RUNNING
+s.prunelm.cd915a7d.20130322-1453        RUNNING
+
