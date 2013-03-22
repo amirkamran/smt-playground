@@ -185,6 +185,7 @@ TODO:
   ... co treba proste predikce z form|lemma|tag pro nasledujici TO uhodnout,
   ma-li (rucni) funktor AIM?
   Takto vysypu PCEDT: treex Write::Factored outcols=csA flags=escape_space:join_spaced_numbers -- /net/data/pcedt2.0/data/00/wsj_0001.treex.gz
+   ... viz ./pcedt/
 - zjednoznacnit anglicke ing?
   ... earthquake came to Calif. >killing< more than 50k people -> prislo a zabilo
 
@@ -212,5 +213,64 @@ default: s.evaluator.b1742407.20130319-2346
 
 
 
-Jina chyba:
-s.mert.5e566437.20130319-1430
+
+2013-03-21
+
+continued to slide	nadale klesaly
+contract to make ...	smlouvu na vyrobu ...
+
+
+
+2013-03-21
+
+k postupu 4ae63906.20130314-1532 11.94±0.53 vyrabim i variantu, ktera bude mit alignment na lematech: s.evaluator.8c55840d.20130321-1052 (11.70) ... cili horsi!
+
+
+
+2013-03-21
+
+Pro Pavla Pecinu:
+s.evaluator.5cd35965.20130321-1100  ... odvozeno od 4ae63906.20130314-1532 11.94±0.53
+  bude to sypat peclemma+pectag01
+
+
+DOSUD NEJLEPSI:
+6310dd23.20130320-0035 16.21±0.57
+  ...odvozuju jeste 7gramy slov: s.evaluator.f21120f5.20130321-1117
+  ...ne, tohle uz nepujde, musel bych rucne vypinat kndiscount vsude mozne
+
+  ZKousim tedy udelat vsehcno roky v sedmigramech najednou: s.lm.10686e3c.20130321-1722
+  A take cely czeng najednou: s.lm.27136953.20130321-1724
+
+
+osy:
+- pocet jader v mgize: (maji i dalsi dva behy)
+  s.evaluator.84747a50.20130313-1535  1 jadro	15.33±0.59
+  s.evaluator.9eae61de.20130321-1706  12 jader 15.44±0.57
+  s.evaluator.4dd6ba39.20130321-1708  giza 15.48±0.58
+  
+- alignment lemma/stem:
+  s.evaluator.6310dd23.20130320-0035
+  s.evaluator.dc354509.20130321-1613
+
+- heldout pro lm:
+  s.evaluator.6310dd23.20130320-0035 (DONE)
+  s.evaluator.3f93ce49.20130321-1828 (OUTDATED)
+  s.evaluator.1f4aa90d.20130322-0923 (RUNNING)
+  s.evaluator.1665152e.20130321-1836 (OUTDATED)
+
+Reorderingy (jen czeng10):
+tag-tag pro 9d18288a.20130320-0034 (15.73): s.rm.5e144dfa.20130321-1852 (RUNNING) a asi stejny s.rm.cb891802.20130321-1841 (DONE) 
+  ... zkousim s.rm.cb891802.20130321-1841 v s.evaluator.77d9e052.20130322-1011 pro 15.73
+stc-tag pro 6310dd23.20130320-0035 (16.21): s.rm.f714e29a.20130322-0957 (RUNNING)
+stc-stc univerzalni: s.rm.0fb000ee.20130321-1851 (DONE)
+  ... zkousim v s.evaluator.fc8fcaa6.20130322-1005 pro 16.21
+  ... zkousim v s.evaluator.dee12cfd.20130322-1011 pro 15.73
+
+Velke LM:
+mono-ctk-all/csNmT1+form+lemma+tag	s.corpus.a7c9f3d5.20130321-1509
+mono-tisk-all/csNmT1+form+lemma+tag	s.corpus.b36e3420.20130321-1511
+
+Velky align: s.align.7daa5e91.20130321-1945
+
+t0-0a1 s mmi: s.evaluator.906b321f.20130321-1958 s.evaluator.27eb7a68.20130321-1959 s.evaluator.cc28fed5.20130321-1959
