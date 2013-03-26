@@ -12,6 +12,7 @@ if [ -e "$logf" ]; then
   echo Following $logf
   less $logf
 else
-  echo "No log yet. Could wait for it but not implemented"
+  echo "No log yet. Could wait for it but not implemented. Note step status:"
+  eman stat "$1"
   exit 1
 fi

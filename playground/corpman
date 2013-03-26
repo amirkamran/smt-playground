@@ -356,7 +356,7 @@ sub register {
     } else {
       if ($entry->{factind} == -1) {
         my $status = load_step_status($entry->{stepname});
-        if ($status =~ m/^FAILED|PREPFAILED$/) {
+        if ($status =~ m/^FAILED|PREPFAILED|OUTDATED$/) {
           print STDERR "Warning: corpus $entry->{stepname} is identical but has status $status!\n";
           create_index(1); # reindex, some corpora failed and we don't know
           $do_register = 1; # register the new corpus

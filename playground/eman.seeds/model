@@ -52,8 +52,10 @@ if [ -z "$RMSTEP" ]; then
   REORDFACTORS="0-0"
   DOTREORDTAG=""
 else
-  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] || die "Incompatible SRCAUGs"
-  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] || die "Incompatible TGTAUGs"
+  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible TGTAUGs"
   REORDERING=$(eman get-var $RMSTEP REORDERING) || die "Missed REORDERING"
   REORDFACTORS=$(eman get-var $RMSTEP REORDFACTORS) || die "Missed REORDFACTORS"
   [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] \

@@ -132,7 +132,7 @@ zcat corpus.heldout.gz > corpus.heldout
 first=1
 for thisfile in ${LMFILES//:/ }; do
   [ -e \$thisfile ] || thisfile=\$thisfile.gz
-  [ -e \$thisfile ] || die "Not a valid lm: \$lmexp, corpus.lm(.gz) missing"
+  [ -e \$thisfile ] || die "Not found: \$thisfile"
   if [ \$first == 1 ] ; then
     FILELIST=\$thisfile
     first=0

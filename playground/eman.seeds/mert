@@ -17,7 +17,7 @@ eman \
   defvar MOSESFLAGS default='' help='further flags for moses' \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
-  defvar EMAN_MEM default='6g' help='memory for sub for thread itself' \
+  defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
@@ -168,9 +168,6 @@ ulimit -c 1 # core files limited to 1 byte
 # init grid environment
 . /net/projects/SGE/user/sge_profile
 
-# enable eman continue: remove output of previous attempts
-rm -rf moses* lmodel* ttable* mert-tuning
-
 # Blocked for the moment, we don't use sempos
 #if [ -d "$TMT_ROOT" ]; then
 #  # ensuring tectomt is actually inited!
@@ -185,13 +182,17 @@ echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
 echo These were our MERTFLAGS="$MERTFLAGS"
 
-# clone some importnant executables
-$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+if [ ! -e moses ]; then
+  # clone some importnant executables
+  $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+fi
 
-## Clone the moses.ini and source files
-\$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-  $MODELSTEP/model/moses.ini \
-  || die "Failed to clone $MODELSTEP/model/moses.ini"
+if [ ! -e moses.ini ]; then
+  ## Clone the moses.ini and source files
+  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
+    $MODELSTEP/model/moses.ini \
+    || die "Failed to clone $MODELSTEP/model/moses.ini"
+fi
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1

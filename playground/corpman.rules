@@ -32,6 +32,11 @@ csNmT1   	stc|lemma|tag	csNmT1	stcOtagF1k	../../scripts/form_or_tag_based_on_cut
 csNmT1   	stc|lemma|tag	csNmT1	stcOtagF2k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=2000
 csNmT1   	stc|lemma|tag	csNmT1	stcOtagF5k	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=5000
 csNmT1   	stc|lemma|tag	csNmT1	stcOtagF500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
+csNmT1	form|lemma|tag	csNmT1	peclemma|pectag01	../tools/pecina_tag_simplification.pl ../tools/pecina_tag_simplification.configs/x-n00-v02-a00-c00-p10-r00-i00-t00.cfg
+csNmT1	form|lemma|tag	csNmT1	mmitag0050	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0050.map | ../../scripts/reduce_factors.pl 2
+csNmT1	form|lemma|tag	csNmT1	mmitag0100	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0100.map | ../../scripts/reduce_factors.pl 2
+csNmT1	form|lemma|tag	csNmT1	mmitag0400	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0400.map | ../../scripts/reduce_factors.pl 2
+csNmT1	form|lemma|tag	csNmT1	mmitag0800	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0800.map | ../../scripts/reduce_factors.pl 2
 
 # Reversing the alignment preserves the number of tokens, so we treat it as a
 # 'change of a factor'
