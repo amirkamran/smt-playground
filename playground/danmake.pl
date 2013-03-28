@@ -1064,6 +1064,42 @@ sub start_inited_steps
 
 
 #------------------------------------------------------------------------------
+# Continuation of failed steps often requires that files created by the
+# previous attempt be removed. Otherwise, eman.command will fail. Ondřej
+# opposes the possibility to ad "rm -rf ..." directly to eman.command (and to
+# eman.seeds where the recipe for eman.command is described). He claims that
+# he may need the files for manual investigation of problems, and this would
+# open door to erasing them accidentially. Thus we have to take care of the
+# cleaning before we call eman continue.
+#------------------------------------------------------------------------------
+sub clean_before_continue
+{
+    my $step = shift;
+    if($step =~ m/^s\.([A-Za-z0-9]+)\./)
+    {
+        my $type = $1; # lm|align|tm|model|mert|translate|evaluator
+        my %filemasks =
+        (
+            'lm' => 'corpus*',
+            'align' => 'corpus*',
+            'tm' => 'corpus* alignment* model*',
+            'model' => 'tm*',
+            'mert' => 'moses* lmodel* ttable* mert-tuning',
+            'translate' => 'moses* corpus*',
+            'evaluator' => 'corpus*'
+        );
+        my $mask = $filemasks{$type};
+        if($mask)
+        {
+            my $command = "cd $step ; rm -rf $mask";
+            dzsys::saferun($command) or die;
+        }
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
 # Identifies language model steps killed by the cluster because of exceeding
 # memory quota. Restarts them with higher memory requirement.
 #------------------------------------------------------------------------------
@@ -1167,6 +1203,7 @@ sub continue_step_memory
             }
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
+            clean_before_continue($step);
             dzsys::saferun("eman continue $step --mem ${memory}g${disk} --priority 0");
         }
     }
@@ -1207,16 +1244,18 @@ sub continue_tm_disk
                 $disk = $1;
             }
             # Do we have machines with more disk space?
-            if($disk>=500)
+            my $maxdisk = 1800; # iridium; ale jestli jsem se dostal tak daleko, měl jsem přepsat krok tm, aby ukládal na /net/cluster/TMP!
+            if($disk>=$maxdisk)
             {
-                print("Even 500g of /mnt/h space was not enough, giving up.\n");
+                print("Even ${maxdisk}g of /mnt/h space was not enough, giving up.\n");
                 next;
             }
             $disk *= 2;
             $disk = 50 if($disk<50);
-            $disk = 500 if($disk>500);
+            $disk = $maxdisk if($disk>$maxdisk);
             # Re-run the step with higher memory requirement.
             # Set the highest possible priority because it may be more difficult to get a better machine.
+            clean_before_continue($step);
             dzsys::saferun("eman continue $step --mem 30g --disk ${disk}g --priority 0");
             $n++;
         }

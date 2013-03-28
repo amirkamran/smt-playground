@@ -35,15 +35,15 @@ fi
 eman add-deps . $FORMSTEP
 
 if   [ "$LANGUAGE" == "cs" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::CS::TagMorce  Print::TaggedTokensWithLemma"
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::CS::TagFeaturama Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "de" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "en" ] ; then
   SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::EN::TagFeaturama W2A::EN::FixTags W2A::EN::Lemmatize Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "es" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "fr" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
 else
   die "Unknown language $LANGUAGE."
 fi
@@ -106,12 +106,10 @@ cd chunks || die "Cannot go to chunks folder."
 # --priority udává požadovanou prioritu, typicky se snižuje "-100" apod.
 # --memory udává požadovanou paměť, např. "4G", výchozí hodnota je "2G"
 # --qsub udává případné další parametry pro plánovač
-# Note DZ: I do not know what exactly the memory requirements of Morče depend on.
-# Nevertheless, some jobs exceeded (fatally) 6 gigabytes, so we must require more.
-# I suspect that there is a memory leak in Morče. Or all tagged text is stupidly kept in memory.
-# The more text is tagged, the more memory is used.
-echo treex -p -j$NJOBS --priority=-400 --memory=15G -L$LANGUAGE $SCENARIO --no-save
-treex -p -j$NJOBS --priority=-400 --memory=15G -L$LANGUAGE $SCENARIO --no-save \\
+# Note DZ: Since we switched cs|en taggers from Morče to Featurama we hopefully don't have to fear memory leaks.
+# Thus we may try again the default memory requirement.
+echo treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save
+treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save \\
   | $SCRIPTS/put_sentence_on_one_line.pl \\
   | gzip -c \\
   > \$outfile \\
