@@ -39,7 +39,7 @@ if   [ "$LANGUAGE" == "cs" ] ; then
 elif [ "$LANGUAGE" == "de" ] ; then
   SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "en" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::EN::TagMorce W2A::EN::FixTags W2A::EN::Lemmatize Print::TaggedTokensWithLemma"
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::EN::TagFeaturama W2A::EN::FixTags W2A::EN::Lemmatize Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "es" ] ; then
   SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "fr" ] ; then
