@@ -23,7 +23,7 @@ my $quickjudge = "/home/bojar/bin//quickjudge";
 die "usage: $0 evaluation-name tag1 tag2/RUN-NR ..."
   if !defined $evalname;
 
-if (-e "$dir/$evalname.info") {
+if (-s "$dir/$evalname.info") {
   print STDERR "The evaluation called $evalname already exists, interpreting:\n";
   print "Mark\tCount\tTag\n";
   my $infolines = load_file("$dir/$evalname.info");
