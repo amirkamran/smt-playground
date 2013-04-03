@@ -282,25 +282,71 @@ system 1       15.4 (0.3/0.1/0.00)    21.0 (0.2/0.0/0.02)    67.0 (0.3/0.1/0.03)
 
 Reorderingy (jen czeng10):
 tag-tag pro 9d18288a.20130320-0034 (15.73): s.rm.5e144dfa.20130321-1852 (RUNNING) a asi stejny s.rm.cb891802.20130321-1841 (DONE) 
-  ... zkousim s.rm.cb891802.20130321-1841 v s.evaluator.77d9e052.20130322-1011 pro 15.73
+  ... zkousim s.rm.cb891802.20130321-1841 (DONE) v s.evaluator.b225c1b0.20130328-1441 (OUTDATED) pro 15.73 => 16.14±0.56
 stc-tag pro 6310dd23.20130320-0035 (16.21): s.rm.f714e29a.20130322-0957 (RUNNING)
+  ... zkousim v s.evaluator.b9f8cde6.20130402-2223 pro 16.21
+      !!! ten rm je nejaky vadny, ma prazdnou tabulku
 stc-stc univerzalni: s.rm.0fb000ee.20130321-1851 (DONE)
-  ... zkousim v s.evaluator.15700a6d.20130322-1308 (RUNNING) pro 16.21
-  ... zkousim v s.evaluator.a8ae18d4.20130322-1327 (RUNNING) pro 15.73
+  ... zkousim v s.evaluator.60c74b1e.20130326-2159 (DONE) pro 16.21 => 15.93±0.57
+  ... zkousim v s.evaluator.3bf8fe83.20130328-1451 (DONE) pro 15.73 => 15.87±0.57
 
 Velke LM:
 mono-ctk-all/csNmT1+form+lemma+tag	s.corpus.a7c9f3d5.20130321-1509
 mono-tisk-all/csNmT1+form+lemma+tag	s.corpus.b36e3420.20130321-1511
 
+sedmigramovy LM:
+s.lm.66ef6679.20130322-0903 (mononews najednou): opr: s.lm.10686e3c.20130321-1722
+
 Velky align: s.align.7daa5e91.20130321-1945
 
-t0-0a1 s mmi: s.evaluator.906b321f.20130321-1958 s.evaluator.27eb7a68.20130321-1959 s.evaluator.cc28fed5.20130321-1959
-
+t0-0a1 s mmi: s.evaluator.0afd542a.20130324-1758
+s.evaluator.d0716f30.20130323-0742
+s.evaluator.4639b655.20130326-1143
 
 2013-03-22
 
 prunelm: (zatim jen prvni ze tri)
-s.prunelm.dd6a8605.20130322-1439        RUNNING
-s.prunelm.2d4c0571.20130322-1442        RUNNING
-s.prunelm.cd915a7d.20130322-1453        RUNNING
+s.prunelm.dd6a8605.20130322-1439 (OUTDATED)
+s.prunelm.2d4c0571.20130322-1442 (OUTDATED)
+s.prunelm.cd915a7d.20130322-1453 (DONE)
 
+Nahrady mixlm:
+orig                          	                              14	                              16
+s.mixlm.032fd94d.20130314-1548	s.prunelm.cd915a7d.20130322-1453	s.prunelm.0d0f1f93.20130324-2209
+s.mixlm.17acb910.20130313-1013	s.prunelm.20cc4acc.20130324-2212	
+s.mixlm.5946c8e8.20130313-1010	s.prunelm.ac2e42c9.20130324-2213	
+
+stcOtagF500: s.mixlm.7d806f57.20130322-1629	s.prunelm.63dee741.20130326-2312
+... otestuju 16.12±0.57 (4cff86bb.20130324-1410) ve variante s prunelm: s.evaluator.37b7f7bf.20130326-2318
+
+varianta s prunelm 12: s.evaluator.89de7dc0.20130326-1001 -> 16.06±0.58 (mert 51 hodin, maxvmem 15g, asi spis ucpany cluster)
+varianta s prunelm 14: s.evaluator.f05fa2f6.20130324-2229 -> 16.12±0.56 (mert 10 hodin, maxvmem 16g)
+varianta s prunelm 16: s.evaluator.ccd12273.20130326-0957
+
+
+Kriticka pozorovnani:
+- musim se vejit do 30g, jinak to pobezi tragicky pomalu
+  ... tak ne uplne, on to spis ucpal David Marecek...
+- musim pridat taglm na mononews
+  ... ale jak tak velky natrenujeme? asi bude nutno pouzit stupidbackoff nebo
+      nizsi ngramy :-/
+
+- zkusim vyrobit velky 10gr tagLM: s.mixlm.2f79af42.20130326-2339
+  ... ten by pak patril do kdeceho, zejmena (po pruningu) do f9a1252f.20130322-1622 16.28±0.58
+
+
+2013-03-26
+
+rucne opravuju s.mixlm.2d9a21b0.20130326-1504 spoustim v qsubmitu
+...hmm, tak to s pozadavkem na 80g zdechlo hned?
+
+
+2013-04-03
+
+pro Pavla pecinu devtest jako indomain a out of domain:
+o: s.evaluator.5b1efd7b.20130403-1308
+i: s.evaluator.c2bdc9e5.20130403-1309
+
+
+zkusim delku frazi:
+  s.evaluator.fee83a50.20130403-1421  ... prislusny translate jede s -T (s.translate.2185e4e0.20130403-1421)
