@@ -16,19 +16,26 @@ e=`eman path $1`
 
 case "$suffix" in
 in )
-  e=$(eman path $(eman tb --notree $1 --ign=mert | grep translate))
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
   fn=corpus.src
+  out=$e/$fn
+  ;;
+detok )
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
+  fn=translated.untok.gz
+  out=$e/$fn
   ;;
 ref*)
   fn=corpus.reference.$(echo $suffix | cut -d. -f2)
+  out=$e/$fn
   ;;
 "" )
   fn=corpus.translation
+  out=$e/$fn
 esac
 
 
 
-out=$e/$fn
 
 [ -e $out ] || die "No output available for $1 $2"
 
