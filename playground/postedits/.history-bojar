@@ -1,0 +1,27 @@
+_T=20130404_22:41:52_29149	 ls
+_T=20130404_22:42:06_29149	 ls
+_T=20130404_22:42:27_29149	 ziplines --delim wmt13-810d346d.en.gz wmt13-810d346d.cs.gz | less
+_T=20130404_22:42:56_29149	 ziplines --delim wmt13-810d346d.en.gz wmt13-810d346d.cs.gz | paste - - - | skiplinecmd 1 "shuf" | less
+_T=20130404_22:43:06_29149	 ziplines --delim wmt13-810d346d.en.gz wmt13-810d346d.cs.gz | paste - - - | skiplinecmd --skip=1 "shuf" | less
+_T=20130404_22:44:46_29149	 ls
+_T=20130404_22:44:52_29149	 rm tmp.295*
+_T=20130404_22:45:09_29149	 ziplines --delim wmt13-810d346d.en-untok.gz wmt13-810d346d.cs.gz | paste - - - | skiplinecmd --skip=1 "shuf" | less
+_T=20130404_22:45:51_29149	 ziplines --delim wmt13-810d346d.en-untok.gz wmt13-810d346d.cs.gz | paste - - - | skiplinecmd --skip=1 "shuf" | tr '\t' '\n' | less
+_T=20130404_22:46:21_29149	 ziplines --delim wmt13-810d346d.en-untok.gz wmt13-810d346d.cs.gz | paste - - - | skiplinecmd --skip=1 "shuf" | tr '\t' '\n' > wmt13encs-810d346d-postedited.txt
+_T=20130405_13:20:28_6029	 ls
+_T=20130405_13:20:29_6029	 h
+_T=20130405_13:21:03_6029	 ../output 5e3ba7d8.20130404-0902 src
+_T=20130405_13:21:21_6029	 ../output 5e3ba7d8.20130404-0902 in
+_T=20130405_13:27:29_30725	 ls ../s.translate.e76139db.20130320-0035]
+_T=20130405_13:27:30_30725	 ls ../s.translate.e76139db.20130320-0035
+_T=20130405_13:28:24_30725	 ../output detok
+_T=20130405_13:28:38_30725	 ../output 5e3ba7d8.20130404-0902 detok
+_T=20130405_13:28:45_30725	 zless /a/merkur3/TMP/bojar/wmt13-bojar/playground/s.translate.24ac873b.20130404-0902/translated.untok.gz
+_T=20130405_13:28:47_30725	 zless /a/merkur3/TMP/bojar/wmt13-bojar/playground/s.translate.24ac873b.20130404-0902/translated.untok.gz
+_T=20130405_13:29:19_6029	 e=5e3ba7d8.20130404-0902; eval $(cd ..; eman vars $e|grep TESTCORP); ziplines --delim $(../corpman $TESTCORP/en_txt+untoken) $(../output $e detok) | less
+_T=20130405_13:30:10_6029	 e=5e3ba7d8.20130404-0902; eval $(cd ..; eman vars $e|grep TESTCORP); ziplines --delim <(../corpman $TESTCORP/en_txt+untoken -dump ) $(../output $e detok) | less
+_T=20130405_13:31:29_6029	 e=5e3ba7d8.20130404-0902; eval $(cd ..; eman vars $e|grep TESTCORP); ziplines --delim <(../corpman $TESTCORP/en_txt+untoken -dump ) $(../output $e detok) | paste - - - | skiplinecmd --skip=1 "shuf" | tr '\t' '\n' > wmt13encs-$e.txt
+_T=20130405_13:31:29_6029	 git add .history-bojar
+_T=20130405_13:31:29_6029	 git add wmt13encs-5e3ba7d8.20130404-0902.txt
+_T=20130405_13:31:49_6029	 vim wmt13encs-5e3ba7d8.20130404-0902.txt
+_T=20130405_13:31:57_6029	 git commit .history-bojar wmt13*

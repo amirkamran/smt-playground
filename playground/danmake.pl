@@ -456,7 +456,7 @@ sub start_tm_for_align
 sub start_all_missing_tms
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t align u not t tm'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t align not u t tm'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -564,7 +564,7 @@ sub start_mert_for_model
 sub start_all_missing_merts
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t model u not t mert'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t model not u t mert'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -612,7 +612,7 @@ sub start_translate_for_mert
 sub start_all_missing_translates
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t mert u not t translate'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t mert not u t translate'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -659,7 +659,7 @@ sub start_evaluator_for_translate
 sub start_all_missing_evaluators
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t translate u not t evaluator'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t translate not u t evaluator'));
     my $n = 0;
     foreach my $step (@steps)
     {

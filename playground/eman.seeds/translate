@@ -161,6 +161,7 @@ fi
 $MOSESMAYPARALLEL \\
   -input-file ./corpus.src \\
   -alignment-output-file ./alignment \
+  -translation-details ./details \
   -config ./filtered-for-eval/moses.ini \\
 | sed 's/^ *//;s/ *\$//' \
 | gzip -c \\
@@ -169,6 +170,12 @@ $MOSESMAYPARALLEL \\
 
 sed -e 's/^ *//' -e 's/ *$//' -i alignment
 gzip alignment
+
+gzip details
+echo "Summarizing translation details"
+zcat details.gz \\
+| $PLAYGROUND/../scripts/summarize-moses-details.pl \\
+> details.summary
 
 echo "Detokenizing translation"
 zcat translated.gz \\

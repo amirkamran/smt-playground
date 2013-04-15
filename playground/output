@@ -11,25 +11,32 @@ set -o pipefail
 suffix="$2"
 [ ! -z "$suffix" ] || suffix=""
 
-e=`eman guess $1`
+e=`eman path $1`
 [ -d $e ] || die "Not an experiment: $e"
 
 case "$suffix" in
 in )
-  e=`eman tb --notree $e --ign=mert | grep translate`
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
   fn=corpus.src
+  out=$e/$fn
+  ;;
+detok )
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
+  fn=translated.untok.gz
+  out=$e/$fn
   ;;
 ref*)
   fn=corpus.reference.$(echo $suffix | cut -d. -f2)
+  out=$e/$fn
   ;;
 "" )
   fn=corpus.translation
+  out=$e/$fn
 esac
 
 
 
-out=$e/$fn
 
-[ -e $out ] || die "No output available"
+[ -e $out ] || die "No output available for $1 $2"
 
 echo $out

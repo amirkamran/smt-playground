@@ -504,7 +504,7 @@ sub lazy_build {
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{CONFLICT}) {
-      die "The corpus $corp/$lang+$facts is in conflict, see above or reindex.\n";
+      print STDERR "WARNING: The corpus $corp/$lang+$facts is in conflict, see above or reindex.\n";
     }
     if ($entry->{linecount} == -1) {
       die "The corpus $corp/$lang+$facts was registered by $entry->{stepname}, but it is not ready yet.\n";
@@ -753,15 +753,26 @@ sub add_entry {
     # C: automatic corpora of "selected factor" (these have isderived==1 and factind!=-1)
     # Possible conflicts:
     # old entry, new entry, resolution
-    # AA  die
-    # AB  die
+    # AA  confirm-identity-or-die
+    # AB  confirm-identity-or-die
     # AC  use C iff factind of A != -1; selecting one factor from existing corpus, use A otherwise
-    # BA  die
+    # BA  confirm-identity-or-die
     # BB  happens with remote playgrounds, prefer the older B
     # BC  prefer B (directly usable, C would require one more factor selection)
     # CA  as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
+    #
+    # confirm-identity-or-die is still implemented as a warning only, ideally,
+    # it would:
+    # 1. just emit a warning
+    # 2. later, at 'bigreindex' check (full diff!) the files and comment in all
+    # writable corpman.infos that the check was performed and was
+    # successful/failed
+    # -- if any of the corpman infos already knows they are equal, copy it
+    # wherever we can write to
+    # die only if they are not identical
+    # prefer the local one, if any
     my $oldtype = get_entry_source_type($oldentry);
     my $newtype = get_entry_source_type($newentry);
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
@@ -779,7 +790,7 @@ sub add_entry {
         $useentry = $entry_c;      
       }
     } elsif ($oldtype eq "A" || $newtype eq "A") {
-      $should_die = 1;
+      $should_die = 0;
       $msg = "Conflict involving a manually created corpus.";
     } elsif ($conflict_type eq "BB") {
       $should_die = 0;

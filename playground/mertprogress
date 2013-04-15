@@ -9,7 +9,7 @@ set -o pipefail
 
 [ ! -z "$1" ] || die "usage: $0 step-identifier"
 
-e=`eman guess $1`
+e=`eman path $1`
 
 [ -d $e ] || die "Not a step: $e"
 

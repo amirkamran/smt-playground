@@ -10,7 +10,7 @@ inf=`./output "$e1" in`
 reff=`./output "$e1" ref.0`
 hyp1=`./output "$e1"`
 hyp2=`./output "$e2"`
-for f in $inf $reff $hyp1 $hyp2; do
+for f in "$inf" "$reff" "$hyp1" "$hyp2"; do
   [ -e "$f" ] || die "Can't read $f"
 done
 

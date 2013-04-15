@@ -213,6 +213,9 @@ fi
 echo "Getting phrase counts..."
 ( $PLAYGROUND/tools/zwc -l model/*.gz | tee phrase-counts ) || die "Failed to count phrases"
 
+if [ 0 == \$(cut -f1 phrase-counts) ]; then
+  die "Empty ttable, perhaps full temp disk above?"
+fi
 
 # Standard command footer
 echo Done.

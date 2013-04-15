@@ -182,17 +182,13 @@ echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
 echo These were our MERTFLAGS="$MERTFLAGS"
 
-if [ ! -e moses ]; then
-  # clone some importnant executables
-  $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
-fi
+# clone some importnant executables
+[ -e moses ] || $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 
-if [ ! -e moses.ini ]; then
-  ## Clone the moses.ini and source files
-  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
+## Clone the moses.ini and source files
+[ -e moses.ini ] ||  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
     $MODELSTEP/model/moses.ini \
     || die "Failed to clone $MODELSTEP/model/moses.ini"
-fi
 
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
