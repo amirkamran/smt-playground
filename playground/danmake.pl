@@ -62,6 +62,12 @@ elsif($steptype eq 'complete')
     start_all_missing_translates();
     start_all_missing_evaluators();
 }
+elsif($steptype eq 'combine')
+{
+    ###!!! Časem budu chtít, aby tenhle typ akce byl obecnější, ale teď mi stačí kombinace newseuro a un (až po krok tm, za ním už by to mohlo běžet standardně).
+    combine_newseuro_un();
+    exit(0);
+}
 elsif($steptype eq 'korpus')
 {
     start_korpus();
@@ -912,6 +918,26 @@ sub get_corpus_size
 
 
 #------------------------------------------------------------------------------
+# Připraví překladový model pro kombinaci newseuro a un. Výsledný korpus
+# pojmenuje newseuro-un, aby se nemíchal s news-euro-un, který byl vytvořen
+# v létě 2012 postaru.
+#------------------------------------------------------------------------------
+sub combine_newseuro_un
+{
+    foreach my $pair ('es-en', 'fr-en')
+    {
+        $pair =~ m/^(.+)-en$/;
+        my $l1 = $1;
+        my $l2 = 'en';
+        combine_corpora("newseuro-un.$pair", "newseuro.$pair", "un.$pair", $l1, $l2);
+        #combine_alignments("newseuro-un.$pair", "newseuro.$pair", "un.$pair", $l1, $l2);
+        #create_tm_for_combined_corpus("newseuro-un.$pair", $l1, $l2);
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
 # Spojí dva korpusy do jednoho pod novým jménem. Více méně je to něco, co umí
 # i corpman, až na to, že výsledný korpus nemusí mít dlouhý název obsahující
 # plusy, čímž omezíme případy, kdy corpman bude vymýšlet nechtěné způsoby při
@@ -1006,7 +1032,9 @@ sub combine_alignments
 sub find_corpus
 {
     my $spec = shift;
-    my $corpman = dzsys::chompticks("corpman $spec");
+    # Wait for the creation of the corpus if it does not exist yet.
+    # The returned path must not contain 's.fake.1'.
+    my $corpman = dzsys::chompticks("corpman $spec --wait");
     my @corpman = split(/\s+/, $corpman);
     my $path = "$ENV{STATMT}/playground/$corpman[0]/$corpman[1]";
     return $path;
@@ -1027,8 +1055,8 @@ sub create_tm_for_combined_corpus
     my $mosesstep = find_step('mosesgiza', 'd');
     # Combined corpora typically involve large parts such as the UN corpus and tens of millions of lines.
     # We will thus require large amounts of memory and disk space.
-    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
-    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g --priority 50") or die;
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g --priority 50") or die;
 }
 
 
