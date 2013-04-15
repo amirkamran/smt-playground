@@ -23,8 +23,8 @@ scoresa=$(get_scores_file "$ina")
 scoresb=$(get_scores_file "$inb")
 [ -e "$scoresb" ] && ( cat $scoresb | tt | prefix -- "++ " >> $tmpb )
 echo "Calling eman traceback ... " "$@"
-if eman traceback "$ina" --tag --vars "$@" >> $tmpa \
-  && eman traceback "$inb" --tag --vars "$@" >> $tmpb; then
+if eman traceback "$ina" --stat --tag --vars "$@" >> $tmpa \
+  && eman traceback "$inb" --stat --tag --vars "$@" >> $tmpb; then
   #diff --unified=500 $tmpa $tmpb | less -S
   git diff --no-index --unified=500 $tmpa $tmpb
 fi

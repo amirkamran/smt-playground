@@ -1,7 +1,21 @@
 #!/bin/bash
 # Shows a traceback of statuses but prints only jobs that are not DONE
 
+tempfile=/tmp/failback.$$
 eman traceback --read-only --stat \
   "$@" 2>&1 \
   | grep -B 1 'Job:.*[^ DONE]' \
-  | grep -v '^--$'
+  | grep -v '^--$' \
+  | tee $tempfile
+
+s=`tail -n2 $tempfile | sed -n '1s/^[^s]*//p'`
+logf=`ls -t $s/log.o* 2>/dev/null | head -n1`
+[ -z "$logf" ] && logf=$s/log
+if [ -e "$logf" ]; then
+  echo Following $logf
+  cat $tempfile <(echo -------------) $logf | less
+else
+  echo "No log found for $s"
+  exit 1
+fi
+rm $tempfile
