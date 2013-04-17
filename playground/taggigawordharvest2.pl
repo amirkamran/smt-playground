@@ -12,7 +12,8 @@ binmode(STDERR, ':utf8');
 # Když už víme, co nedoběhlo, pokusit se to opravit.
 if($ARGV[0] eq 'opravit')
 {
-    znova_oznackovat(84723, 102494);
+#    znova_oznackovat(84723, 102494); # Tohle už je opraveno, ale přehlédl jsem, že 99999 sice existuje, ale je prázdný.
+    znova_oznackovat(99999);
     exit;
 }
 # Když už budeme všechny výstupní soubory číst, mohli bychom je rovnou protlačit závěrečným filtrem a vyrobit z nich faktorizovaný korpus.
