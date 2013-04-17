@@ -17,6 +17,7 @@ eman \
   defvar PARTS default='1' help='build a huge lm in N parts' \
   defvar LMFLAGS default='' help='flags for ngram-count like -unk' \
   defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
 
 # Set local bash variables
