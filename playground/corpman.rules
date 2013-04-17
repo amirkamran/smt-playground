@@ -37,6 +37,8 @@ csNmT1   	form|lemma|tag	csNmT1	subpos|case|number|gender	../../scripts/case_num
 csNmT1   	stc|lemma|mmitag1000	csNmT1	stcOmmitag1000F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
 csNmT1   	stc|lemma|mmitag0800	csNmT1	stcOmmitag0800F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
 csNmT1   	stc|lemma|mmitag0400	csNmT1	stcOmmitag0400F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
+*   	stc	*	stcCcs50	../tools/map_tokens.pl ../tools/map_tokens.maps/enstc-to-cscls50.gz
+*   	stcCcs50	*	stcCcs50lcstem4	lowercase.pl | ../../scripts/stem_factor.pl --stem=4
 csNmT1	form|lemma|tag	csNmT1	peclemma|pectag01	../tools/pecina_tag_simplification.pl ../tools/pecina_tag_simplification.configs/x-n00-v02-a00-c00-p10-r00-i00-t00.cfg
 csNmT1	form|lemma|tag	csNmT1	mmitag0050	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0050.map | ../../scripts/reduce_factors.pl 2
 csNmT1	form|lemma|tag	csNmT1	mmitag0100	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0100.map | ../../scripts/reduce_factors.pl 2
