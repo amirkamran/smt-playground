@@ -44,6 +44,8 @@ elif [ "$LANGUAGE" == "es" ] ; then
   SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
 elif [ "$LANGUAGE" == "fr" ] ; then
   SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
+elif [ "$LANGUAGE" == "ru" ] ; then
+  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
 else
   die "Unknown language $LANGUAGE."
 fi

@@ -199,24 +199,25 @@ sub get_corpora_seed
 {
     my @corpora0 =
     (
-      { 'corpus' => 'czeng',         'parallel' => 1, 'languages' => ['cs', 'en'] },
-      { 'corpus' => 'un',            'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
-      { 'corpus' => 'gigafren',      'parallel' => 1, 'languages' => ['fr', 'en'] },
-      { 'corpus' => 'newsall',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'gigaword',      'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2008',       'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2009',       'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2010',       'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2011',       'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2012',       'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
+      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
+      { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+      { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2010',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
     );
     # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
     # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
-    # V nové verzi zase nejsou k dispozici samostatné větší jednojazyčné mutace korpusů.
     my $v8 = 1;
     if($v8)
     {
-        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
+#        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
+        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] });
     }
     else
     {
@@ -279,10 +280,11 @@ sub get_monolingual_corpora
     my @mcorpora;
     foreach my $c (@corpora)
     {
+        # Corpora without language pair in name:
         # Newsall and gigaword are monolingual-only corpora.
         # There are special monolingual versions of newseuro for all the languages. They are registered with corpman without the language code extension.
-        # Besides, we can also use target languages of the large parallel corpora (czeng, un, gigafren).
-        if(!$c->{parallel} || $c->{corpus} =~ m/^(czeng|gigafren)$/)
+        # Besides, we can also use target languages of the large parallel corpora (czeng, newseuro-czeng, un, gigafren).
+        if(!$c->{parallel} || $c->{corpus} =~ m/^((newseuro-)?czeng|gigafren)$/)
         {
             foreach my $l (@{$c->{languages}})
             {

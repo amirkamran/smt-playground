@@ -49,12 +49,21 @@
 # CORPUS=gigafren LANGUAGE=fr eman init korpus --start
 # CORPUS=gigafren LANGUAGE=en eman init korpus --start
 
-# # Monolingual training corpora
+# Monolingual training corpora
 # CORPUS=newseuro LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro LANGUAGE=de eman init korpus --start
 # CORPUS=newseuro LANGUAGE=en eman init korpus --start
 # CORPUS=newseuro LANGUAGE=es eman init korpus --start
 # CORPUS=newseuro LANGUAGE=fr eman init korpus --start
+
+# New version of newseuro based on news-commentary-v8, released for WMT 2013
+# CORPUS=news8euro LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro LANGUAGE=de eman init korpus --start
+# CORPUS=news8euro LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro LANGUAGE=es eman init korpus --start
+# CORPUS=news8euro LANGUAGE=fr eman init korpus --start
+# CORPUS=news8euro LANGUAGE=ru eman init korpus --start
+
 # CORPUS=newsall LANGUAGE=cs eman init korpus --start
 # CORPUS=newsall LANGUAGE=de eman init korpus --start
 # CORPUS=newsall LANGUAGE=en eman init korpus --start
@@ -152,7 +161,11 @@ elif [ "$CORPUS" == "news8euro" ] ; then
   elif [[ "$PAIR" =~ '-en' ]] ; then
     READINPUT="zcat $WMT/training/europarl-v7.$PAIR.$LANGUAGE.gz $WMT/training/news-commentary-v8.$PAIR.$LANGUAGE.gz"
   elif [ -z "$PAIR" ] ; then # monolingual version of newseuro
-    READINPUT="zcat $WMT/training/europarl-v7.$LANGUAGE.gz $WMT/training/news-commentary-v7.$LANGUAGE.gz"
+    if [[ "$LANGUAGE" == "ru" ]] ; then # Russian without Europarl
+      READINPUT="zcat $WMT/training/news-commentary-v8.$LANGUAGE.gz"
+    else
+      READINPUT="zcat $WMT/training/europarl-v7.$LANGUAGE.gz $WMT/training/news-commentary-v8.$LANGUAGE.gz"
+    fi
   else
     die "Unknown language pair $PAIR for corpus $CORPUS"
   fi
