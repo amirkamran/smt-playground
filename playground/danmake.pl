@@ -202,8 +202,10 @@ sub get_corpora_seed
       { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
       { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
       { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
       { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
       { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
       { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
@@ -216,7 +218,7 @@ sub get_corpora_seed
     my $v8 = 1;
     if($v8)
     {
-#        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
+        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
         push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] });
     }
     else
@@ -291,7 +293,7 @@ sub get_monolingual_corpora
                 push(@mcorpora, {'corpus' => $c->{corpus}, 'language' => $l});
             }
         }
-        elsif($c->{corpus} eq 'un')
+        elsif($c->{corpus} =~ m/^(newseuro-)?un$/)
         {
             foreach my $p (@{$c->{pairs}})
             {
@@ -381,7 +383,7 @@ sub start_korpus
     {
         ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
         ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-        next unless($c->{corpus} eq 'news8euro');
+        next unless($c->{corpus} eq 'news8all');
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
@@ -405,10 +407,20 @@ sub start_tag
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
+        ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+        ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+        next unless ($c->{corpus} =~ m/^news8/);
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
-        dzsys::saferun($command) or die;
+        if($dryrun)
+        {
+            print("$command\n");
+        }
+        else
+        {
+            dzsys::saferun($command) or die;
+        }
     }
 }
 
@@ -574,7 +586,7 @@ sub start_mert_for_model
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
     # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-    my $memory = $m->{mc} =~ m/(gigaword|un)/ || $m->{pc} =~ m/un/ ? '30g' : '15g';
+    my $memory = $m->{mc} =~ m/(czeng|giga|un)/ || $m->{pc} =~ m/(czeng|giga|un)/ ? '30g' : '15g';
     # Default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
     my $priority = $memory eq '30g' ? -50 : -99;
     my $gridfl = "\"-p $priority -hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
