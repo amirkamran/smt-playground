@@ -69,9 +69,21 @@
 # CORPUS=newsall LANGUAGE=en eman init korpus --start
 # CORPUS=newsall LANGUAGE=es eman init korpus --start
 # CORPUS=newsall LANGUAGE=fr eman init korpus --start
+
+# New version of newsall for WMT 2013: new news from 2012; changed punctuation and added Russian for previous years
+# (Old version will be removed later. We must select a unique name until that happens.)
+# CORPUS=news8all LANGUAGE=cs eman init korpus --start
+# CORPUS=news8all LANGUAGE=de eman init korpus --start
+# CORPUS=news8all LANGUAGE=en eman init korpus --start
+# CORPUS=news8all LANGUAGE=es eman init korpus --start
+# CORPUS=news8all LANGUAGE=fr eman init korpus --start
+# CORPUS=news8all LANGUAGE=ru eman init korpus --start
+
 # CORPUS=gigaword LANGUAGE=en eman init korpus --start
 # CORPUS=gigaword LANGUAGE=es eman init korpus --start
 # CORPUS=gigaword LANGUAGE=fr eman init korpus --start
+
+# Development and test data sets
 # CORPUS=wmt2008 LANGUAGE=cs eman init korpus --start
 # CORPUS=wmt2008 LANGUAGE=de eman init korpus --start
 # CORPUS=wmt2008 LANGUAGE=en eman init korpus --start
@@ -205,13 +217,26 @@ elif [ "$CORPUS" == "gigafren" ] ; then
   # untar it
   # cd $PLAYGROUND
   READINPUT="zcat $WMT/giga-fren.release2.$LANGUAGE.gz"
-elif [ "$CORPUS" == "newsall" ] ; then
+###!!! Note that we can no longer create the old version of newsall.
+###!!! The source packages have been overwritten by the new version.
+#elif [ "$CORPUS" == "newsall" ] ; then
   # cd $WMT
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2007.tgz
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2008.tgz
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2009.tgz
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2010.tgz
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2011.tgz
+  # untar it
+  # cd $PLAYGROUND
+#  READINPUT="zcat $WMT/training-monolingual/news.*.$LANGUAGE.shuffled.gz"
+elif [ "$CORPUS" == "news8all" ] ; then
+  # cd $WMT
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2007.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2008.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2009.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2010.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2011.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2012.tgz
   # untar it
   # cd $PLAYGROUND
   READINPUT="zcat $WMT/training-monolingual/news.*.$LANGUAGE.shuffled.gz"
