@@ -491,7 +491,8 @@ Je tam ale evidentni problem s pojmenovanymi entitami: tluce se to, zahazuju roz
 baseline: 4ae63906.20130314-1532 11.94±0.53
 se zhrubovanim: s.evaluator.e8828d33.20130410-0959  0.1187
 
-
+Taky se podivej na historii prikazu v adresari:
+/a/merkur3/TMP/bojar/wmt13-bojar/playground/wmt-baselines/s.tm.4bfc76ec.20130313-1327/model
 
 2013-04-10
 
@@ -556,7 +557,7 @@ ALILABEL=enNmT1-lemma-csNmT1-lemma
 ALIORREVALI=ali
 ALISYM=gdfa
 a pak:
-ziplines --delim <(./corpman -dump $CORP/$SRCAUG) <(ziplines --item-d='\t' <(./corpman -dump $CORP/$TGTAUG) <(./corpman -dump $CORP/$SRCAUG) <(./corpman -dump $CORP/$ALISYM-$ALILABEL+$ALIORREVALI) | tools/move_info_along_ali.pl ) | tr ' ' '\t' | blockwise transpose | tt | less
+ziplines --delim <(./corpman -dump $CORP/$SRCAUG) <(ziplines --item-d='\t' <(./corpman -dump $CORP/$TGTAUG) <(./corpman -dump $CORP/$SRCAUG) <(./corpman -dump $CORP/$ALISYM-$ALILABEL+$ALIORREVALI | ../scripts/reverse_alignment.pl ) | tools/move_info_along_ali.pl ) | tr ' ' '\t' | blockwise transpose | tt | less
 
 
 
@@ -567,7 +568,7 @@ na 5: s.evaluator.5862c133.20130416-0046 -> 0.1636
 na 4: s.evaluator.bb59e9bf.20130416-0055 -> 0.1631
 na 6: s.evaluator.54f6a944.20130416-0056 -> 0.1647
 na 7: s.evaluator.aecb8ce9.20130417-0001 
-na 8: s.evaluator.a6636099.20130417-0011
+na 8: s.evaluator.a6636099.20130417-0011 -> 0.1629
 **** Pomohlo nepatrne, kdyz jsem pouzil jen fraze do delky 6.
 To by ale taky mohlo naznacovat, ze spravna delka fraze je takova, ktera
 odpovida ngramu LM.
@@ -657,3 +658,102 @@ Co jsou uzitecne rozdily, tj. checklist, co nezapomenout:
 Jaky devset:
 baseline 04556990.20130307-1347 10.66±0.53
 dve reference: c1e52f36.20130305-1718 0.1062
+... cili podle bleu je nejlepsi ladit jen na wmt11
+
+
+
+2013-04-17
+
+zkousim zjistit, jak vselijak se preklada 'to', abych to pak zkusil hadat jen z anglictiny a tim zlepsil preklad:
+
+ziplines --delim <(./corpman -dump $CORP/$SRCAUG) <(ziplines --item-d='\t' <(./corpman -dump $CORP/$TGTAUG) <(./corpman -dump $CORP/$SRCAUG) <(./corpman -dump $CORP/$ALISYM-$ALILABEL+$ALIORREVALI | ../scripts/reverse_alignment.pl ) | tools/move_info_along_ali.pl ) | tr ' ' '\t' | blockwise transpose | tt | grep '^to ' | head -n 20000 | see > clip-20k-translations-of-to
+
+Dalo by se tomu rikat tgt-side-tagging (nebo tagging by the target)
+
+
+2013-04-17
+
+Velke zapomenute modely prorezu:
+
+s.prunelm.6e612092.20130417-1959 (DONE)	cwc-articles	6
+s.prunelm.1b34d02b.20130417-2021 (RUNNING)	cwc-articles	7
+s.prunelm.6e396383.20130417-2000 (DONE)	cwc-blogs	6
+s.prunelm.3ebbe0bb.20130417-2015 (RUNNING)	cwc-blogs	7
+s.prunelm.77b932ff.20130417-2004 (RUNNING)	cnk-news	7
+s.prunelm.7ce3231b.20130417-2006 (DONE)	cnk-other	7
+
+s.prunelm.aa9f1cfa.20130417-2155	cwc-articles	10 tag
+s.prunelm.e9c2e609.20130417-2200 (RUNNING)	cnk-news	10 tag
+
+Pak jsou i dalsi korpusy, ale ty nemaji csNmT1:
+mono-cwc-discussions/csNm+form  65253322
+mono-w2c/csNm+form      9026781
+
+Zkusim pouzit hodne LM:
+Odvozuju z: f4b02947.20130417-0028 (16.46)
+  cwc-oba 6gr: s.evaluator.2dcf7793.20130418-0857 ... uz potrebuje 50g :-(
+
+
+2013-04-17
+
+Predikce prekladu 'to':
+
+takto jsem to vyrobil:
+ziplines --item-d='\t' <(./corpman -dump czeng10+europarl/csNmT1+form+lemma+tag) <(./corpman -dump czeng10+europarl/enNmT1+stc) <(./corpman -dump czeng10+europarl/gdfa-enNmT1-lemma-csNmT1-lemma+ali | ../scripts/reverse_alignment.pl ) | tools/move_info_along_ali.pl | gzip > czeng10+europarl-csNmT1+form+lemma+tag-back-in-enNmT1-for-classes-of-to.gz
+
+priprava odpovedi klasifikatoru viz toklas.o7323637
+
+
+Takhle se pak muzu divat soucasne na vstup a ocekavany vystup klasifikatoru:
+./factor_combinator.pl <(./corpman czeng10+europarl/enNmT1+stc -dump) -1 0 <(zcat czeng10+europarl-csNmT1+form+lemma+tag-back-in-enNmT1-for-classes-of-to.gz | tools/construct_class_of_en_to_from_czech_flt.pl) -1 0 | less
+
+
+Takhle jsem si udelal vzorek na 500k vetach:
+(pozor, je tam zkraceny korpus, je to jen CzEng:)
+./factor_combinator.pl <(./corpman czeng10/enNmT1+stc -dump) -1 0 <(./corpman czeng10/enNmT1+form+lemma+tag -dump) -1 1  <(./corpman czeng10/enNmT1+form+lemma+tag -dump) -1 2 <(zcat czeng10+europarl-csNmT1+form+lemma+tag-back-in-enNmT1-for-classes-of-to.gz | tools/construct_class_of_en_to_from_czech_flt.pl) -1 0 | head -n 500000 | gzip > toclass-minicorpus-500k.gz
+
+Takhle jsem ho prevedl na featury:
+zcat toclass-minicorpus-500k.gz  | tools/predict_en_to_class.pl clipmodel --train --temp=toclass-minicorpus-500k
+
+A takhle se to trenuje a vyhodnocuje cross-validaci:
+cd ../src/maxent
+./src/opt/maxent ../../playground/toclass-minicorpus-500k.events -n10 -mclipmodel
+
+Kdyz je to 50k vet, tak je uspesnost kolem 34.548%
+Kdyz je to 500k vet, tak spis: 42.1458% (okenko +-3)
+500k vet, okenko +-4: stejne, ne-li horsi: 41.7374%
+
+Zjednodusena predikce: (jen -, aby, az, Vf, V, R, N, ...)
+50k vet: 48.75%
+500k vet: 53.2496%
+
+
+
+2013-04-18
+
+Sestavim si veliky tuning set:
+
+OUTCORP=bigref11a,b,c,d
+
+konkatenaci techto casti:
+
+en          	a           	b              	c              	d
+newstest2011	newstest2011	wmt11-extraref1	wmt11-extraref2	wmt11-extraref3
+wmt11-hpe1  	wmt11-hpe1  	wmt11-hpe2     	wmt11-hpe1     	wmt11-hpe2
+newstest2009	newstest2009	newstest2009   	newstest2009   	newstest2009
+newstest2008	newstest2008	newstest2008   	newstest2008   	newstest2008
+newstest2007	newstest2007	newstest2007   	newstest2007   	newstest2007
+
+OUTCORP=bigref11a OUTLANG=en_txt OUTFACTS=untoken OUTLINECOUNT=11583
+
+OUTCORP=bigref11a OUTLANG=en_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_COMMAND="../corpman newstest2011+wmt11-hpe1+newstest2009+newstest2008+newstest2007/en_txt+untoken --dump" eman init corpus --start
+OUTCORP=bigref11a OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_COMMAND="../corpman newstest2011+wmt11-hpe1+newstest2009+newstest2008+newstest2007/cs_txt+untoken --dump" eman init corpus --start
+
+OUTCORP=bigref11b OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_COMMAND="../corpman wmt11-extraref1+wmt11-hpe2+newstest2009+newstest2008+newstest2007/cs_txt+untoken --dump" eman init corpus --start
+OUTCORP=bigref11c OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_COMMAND="../corpman wmt11-extraref2+wmt11-hpe1+newstest2009+newstest2008+newstest2007/cs_txt+untoken --dump" eman init corpus --start
+OUTCORP=bigref11d OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_COMMAND="../corpman wmt11-extraref3+wmt11-hpe2+newstest2009+newstest2008+newstest2007/cs_txt+untoken --dump" eman init corpus --start
+
+Na bigrefu zkusim vyladit nejvetsi model:
+base	s.evaluator.54f6a944.20130416-0056	0.1647
+MERT	s.evaluator.b88ae5c3.20130418-1202
+MIRA	?
