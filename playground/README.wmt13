@@ -727,6 +727,10 @@ Zjednodusena predikce: (jen -, aby, az, Vf, V, R, N, ...)
 50k vet: 48.75%
 500k vet: 53.2496%
 
+druhe zjednoduseni: - aby az, Vf, Vs, V, ale uz ne treba A
+500k:	53.5338%
+500k-GIS: 54.7392%
+
 
 
 2013-04-18
