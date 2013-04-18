@@ -25,13 +25,13 @@ na k do se pro s podle muset chtít uvedený o mít který v ¾e být ten za
 );
 
 my @preferred_tags = qw(
-Vf Vs
+Vf
 V N A 
 R
 J D
 );
 
-my @preferred_lemmas = qw(a¾  aby); # jednodussi cilove kategorie
+my @preferred_lemmas = qw(a¾  aby)
 
 my $nr = 0;
 while (<>) {
