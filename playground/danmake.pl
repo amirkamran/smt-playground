@@ -62,6 +62,13 @@ elsif($steptype eq 'complete')
     start_all_missing_translates();
     start_all_missing_evaluators();
 }
+elsif($steptype eq 'combine')
+{
+    ###!!! Časem budu chtít, aby tenhle typ akce byl obecnější, ale teď mi stačí kombinace newseuro a un (až po krok tm, za ním už by to mohlo běžet standardně).
+    #combine_newseuro_un();
+    combine_newseuro_czeng();
+    exit(0);
+}
 elsif($steptype eq 'korpus')
 {
     start_korpus();
@@ -120,13 +127,11 @@ elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
         my $pmc = $pcorpus->{corpus} =~ m/^newseuro/ ? 'newseuro' : $pcorpus->{corpus};
         push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
         push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
-        ###!!! Anglický Gigaword zatím vynechat! Značkování havarovalo a i když jsem to nějak poslepoval, výsledek stejně obsahuje chyby.
-        ###!!! Nejlepší bude už to konečně vyhodit a přejít na značkování Featuramou.
-        if($l1 =~ m/^(es|fr)$/)
+        if($l1 =~ m/^(en|es|fr)$/)
         {
             push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
         }
-        if($l2 =~ m/^(es|fr)$/)
+        if($l2 =~ m/^(en|es|fr)$/)
         {
             push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
         }
@@ -194,19 +199,33 @@ sub get_corpora_seed
 {
     my @corpora0 =
     (
-      { 'corpus' => 'newseuro', 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] },
-      { 'corpus' => 'czeng',    'parallel' => 1, 'languages' => ['cs', 'en'] },
-      { 'corpus' => 'un',       'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
-      { 'corpus' => 'gigafren', 'parallel' => 1, 'languages' => ['fr', 'en'] },
-      { 'corpus' => 'newseuro', 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'newsall',  'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'gigaword', 'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2008',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2009',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2010',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2011',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2012',  'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
+      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
+      { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+      { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2010',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
     );
+    # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
+    # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
+    my $v8 = 1;
+    if($v8)
+    {
+        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
+        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] });
+    }
+    else
+    {
+        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] });
+        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] });
+    }
     return @corpora0;
 }
 
@@ -263,17 +282,18 @@ sub get_monolingual_corpora
     my @mcorpora;
     foreach my $c (@corpora)
     {
+        # Corpora without language pair in name:
         # Newsall and gigaword are monolingual-only corpora.
         # There are special monolingual versions of newseuro for all the languages. They are registered with corpman without the language code extension.
-        # Besides, we can also use target languages of the large parallel corpora (czeng, un, gigafren).
-        if(!$c->{parallel} || $c->{corpus} =~ m/^(czeng|gigafren)$/)
+        # Besides, we can also use target languages of the large parallel corpora (czeng, newseuro-czeng, un, gigafren).
+        if(!$c->{parallel} || $c->{corpus} =~ m/^((newseuro-)?czeng|gigafren)$/)
         {
             foreach my $l (@{$c->{languages}})
             {
                 push(@mcorpora, {'corpus' => $c->{corpus}, 'language' => $l});
             }
         }
-        elsif($c->{corpus} eq 'un')
+        elsif($c->{corpus} =~ m/^(newseuro-)?un$/)
         {
             foreach my $p (@{$c->{pairs}})
             {
@@ -361,8 +381,18 @@ sub start_korpus
     my @corpora = get_corpora();
     foreach my $c (@corpora)
     {
+        ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+        ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+        next unless($c->{corpus} eq 'news8all');
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
-        dzsys::saferun($corpusinit) or die;
+        if($dryrun)
+        {
+            print("$corpusinit\n");
+        }
+        else
+        {
+            dzsys::saferun($corpusinit) or die;
+        }
     }
 }
 
@@ -377,10 +407,20 @@ sub start_tag
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
+        ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+        ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+        next unless ($c->{corpus} =~ m/^news8/);
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
-        dzsys::saferun($command) or die;
+        if($dryrun)
+        {
+            print("$command\n");
+        }
+        else
+        {
+            dzsys::saferun($command) or die;
+        }
     }
 }
 
@@ -456,7 +496,7 @@ sub start_tm_for_align
 sub start_all_missing_tms
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t align u not t tm'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t align not u t tm'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -546,7 +586,7 @@ sub start_mert_for_model
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
     # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-    my $memory = $m->{mc} =~ m/(gigaword|un)/ || $m->{pc} =~ m/un/ ? '30g' : '15g';
+    my $memory = $m->{mc} =~ m/(czeng|giga|un)/ || $m->{pc} =~ m/(czeng|giga|un)/ ? '30g' : '15g';
     # Default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
     my $priority = $memory eq '30g' ? -50 : -99;
     my $gridfl = "\"-p $priority -hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
@@ -564,7 +604,7 @@ sub start_mert_for_model
 sub start_all_missing_merts
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t model u not t mert'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t model not u t mert'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -612,7 +652,7 @@ sub start_translate_for_mert
 sub start_all_missing_translates
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t mert u not t translate'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t mert not u t translate'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -659,7 +699,7 @@ sub start_evaluator_for_translate
 sub start_all_missing_evaluators
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t translate u not t evaluator'));
+    @steps = split(/\n/, dzsys::chompticks('eman select t translate not u t evaluator'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -912,6 +952,39 @@ sub get_corpus_size
 
 
 #------------------------------------------------------------------------------
+# Připraví překladový model pro kombinaci newseuro a czengu. Výsledný korpus
+# pojmenuje newseuro-czeng.
+#------------------------------------------------------------------------------
+sub combine_newseuro_czeng
+{
+    #combine_corpora('newseuro-czeng', 'newseuro.cs-en', 'czeng', 'cs', 'en');
+    #combine_alignments('newseuro-czeng', 'newseuro.cs-en', 'czeng', 'cs', 'en');
+    create_tm_for_combined_corpus('newseuro-czeng', 'cs', 'en');
+}
+
+
+
+#------------------------------------------------------------------------------
+# Připraví překladový model pro kombinaci newseuro a un. Výsledný korpus
+# pojmenuje newseuro-un, aby se nemíchal s news-euro-un, který byl vytvořen
+# v létě 2012 postaru.
+#------------------------------------------------------------------------------
+sub combine_newseuro_un
+{
+    foreach my $pair ('es-en', 'fr-en')
+    {
+        $pair =~ m/^(.+)-en$/;
+        my $l1 = $1;
+        my $l2 = 'en';
+        #combine_corpora("newseuro-un.$pair", "newseuro.$pair", "un.$pair", $l1, $l2);
+        #combine_alignments("newseuro-un.$pair", "newseuro.$pair", "un.$pair", $l1, $l2);
+        create_tm_for_combined_corpus("newseuro-un.$pair", $l1, $l2);
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
 # Spojí dva korpusy do jednoho pod novým jménem. Více méně je to něco, co umí
 # i corpman, až na to, že výsledný korpus nemusí mít dlouhý název obsahující
 # plusy, čímž omezíme případy, kdy corpman bude vymýšlet nechtěné způsoby při
@@ -1006,7 +1079,9 @@ sub combine_alignments
 sub find_corpus
 {
     my $spec = shift;
-    my $corpman = dzsys::chompticks("corpman $spec");
+    # Wait for the creation of the corpus if it does not exist yet.
+    # The returned path must not contain 's.fake.1'.
+    my $corpman = dzsys::chompticks("corpman $spec --wait");
     my @corpman = split(/\s+/, $corpman);
     my $path = "$ENV{STATMT}/playground/$corpman[0]/$corpman[1]";
     return $path;
@@ -1027,8 +1102,8 @@ sub create_tm_for_combined_corpus
     my $mosesstep = find_step('mosesgiza', 'd');
     # Combined corpora typically involve large parts such as the UN corpus and tens of millions of lines.
     # We will thus require large amounts of memory and disk space.
-    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
-    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g") or die;
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language1+stc TGTAUG=$language2+stc ALILABEL=$language1-lemma-$language2-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g --priority -50") or die;
+    dzsys::saferun("BINARIES=$mosesstep SRCCORP=$corpus SRCAUG=$language2+stc TGTAUG=$language1+stc ALILABEL=$language2-lemma-$language1-lemma DECODINGSTEPS=t0-0 eman init tm --start --mem 60g --disk 200g --priority -50") or die;
 }
 
 
