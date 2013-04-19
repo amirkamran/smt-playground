@@ -38,20 +38,21 @@ my $templateh = my_save($tempfile.".outtoks") if $do_predict;
 my $nr = 0;
 while (<>) {
   $nr++;
+  print STDERR "." if $nr % 100000 == 0;
+  print STDERR "($nr)" if $nr % 1000000 == 0;
   chomp;
   my @intoks = split / /, trim($_);
 
   # split tokens into factors for further use
-  my @tokens;
-  for (my $i=0; $i<@intoks; $i++) {
-    my $token = $intoks[$i];
+  my @tokens = ();
+  foreach my $token (@intoks) {
     my @facts = split /\|/, $token;
     my ($stc, $lemma, $tag, $mayclass) = @facts;
     die "$nr:Bad input token: $token"
       if !defined $tag || !defined $stc || !defined $lemma;
     die "$nr:Training mode but not class: $token"
       if $do_train && !defined $mayclass;
-    @tokens[$i] = \@facts;
+    push @tokens, [@facts];
   }
   # process tokens
   my @outtoks = ();
@@ -66,8 +67,9 @@ while (<>) {
       my %features = ();
       for my $d (-3..-1,1..3) {
         my $lem;
-        if ($i+$d >= 0) {
-          $lem = $tokens[$i+$d]->[1] // "<undef>";
+        if ($i+$d >= 0 && $i+$d < @tokens) {
+          $lem = $tokens[$i+$d]->[1];
+          $lem = "<undef>" if !defined $lem;
         } else  {
           $lem = "<undef>";
         }
@@ -75,8 +77,9 @@ while (<>) {
         $features{"lembef:$lem"} = 1 if $d < 0;
         $features{"lemaft:$lem"} = 1 if $d > 0;
         my $tg;
-        if ($i+$d >= 0) {
-          $tg = $tokens[$i+$d]->[2] // "<undef>";
+        if ($i+$d >= 0 && $i+$d < @tokens) {
+          $tg = $tokens[$i+$d]->[2];
+          $tg = "<undef>" if !defined $tg;
         } else  {
           $tg = "<undef>";
         }
@@ -90,14 +93,48 @@ while (<>) {
       push @outtoks, "-" if $do_predict;
     }
   }
+  die "$nr:Nonsense: mismatched number of intoks and outtoks:\n@intoks\n@outtoks\n@tokens\n"
+    if $do_predict && scalar(@intoks) != scalar(@outtoks);
   print $templateh join(" ", @outtoks), "\n" if $do_predict;
 }
+print STDERR "Processed $nr events.\n";
 close($templateh) if $do_predict;
 close($eventh);
 
 # run maxent
+my $maxent = "/net/tmp/bojar/wmt13-bojar/src/maxent/src/opt/maxent";
+if ($do_train) {
+  safesystem("$maxent $tempfile.events --model='$modelfile' --binary --gis 1>&2")
+    or die "Failed to train the model";
+} else {
+  # do predict
+  safesystem("$maxent $tempfile.events --model='$modelfile' --binary --predict --output=$tempfile.predicted 1>&2")
+    or die "Failed to predict";
 
-# implant predictions into the prepared template and emit to stdout
+  print STDERR "Printing linearized output to stdout.\n";
+  # implant predictions into the prepared template and emit to stdout
+  my $predsh = my_open("$tempfile.predicted");
+  my $templateh = my_open("$tempfile.outtoks");
+  while (<$templateh>) {
+    chomp;
+    my @toks = split / /;
+    for (my $i=0; $i<@toks; $i++) {
+      print " " if $i > 0;
+      if ($toks[$i] eq "-") {
+        print "-";
+      } else {
+        my $prediction = <$predsh>;
+        die "Predictions file too short: $tempfile.predicted"
+          if ! defined $prediction;
+        chomp $prediction;
+        print $prediction;
+      }
+    }
+    print "\n";
+  }
+  close $predsh;
+  close $templateh;
+}
 
 
 sub trim {
@@ -154,4 +191,23 @@ sub my_save {
   open $hdl, $opn or die "Can't write to '$opn': $!";
   binmode $hdl, ":utf8";
   return $hdl;
+}
+
+sub safesystem {
+  print STDERR "Executing: @_\n";
+  system(@_);
+  if ($? == -1) {
+      print STDERR "Failed to execute: @_\n  $!\n";
+      exit(1);
+  }
+  elsif ($? & 127) {
+      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+          ($? & 127),  ($? & 128) ? 'with' : 'without';
+      exit(1);
+  }
+  else {
+    my $exitcode = $? >> 8;
+    print STDERR "Exit code: $exitcode\n" if $exitcode;
+    return ! $exitcode;
+  }
 }
