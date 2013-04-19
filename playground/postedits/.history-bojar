@@ -25,3 +25,11 @@ _T=20130405_13:31:29_6029	 git add .history-bojar
 _T=20130405_13:31:29_6029	 git add wmt13encs-5e3ba7d8.20130404-0902.txt
 _T=20130405_13:31:49_6029	 vim wmt13encs-5e3ba7d8.20130404-0902.txt
 _T=20130405_13:31:57_6029	 git commit .history-bojar wmt13*
+_T=20130405_13:32:19_6029	 git commit .history-bojar wmt13encs-*
+_T=20130405_13:32:52_6029	 gzip < wmt13encs-5e3ba7d8.20130404-0902.txt > wmt13encs-5e3ba7d8.20130404-0902.txt.gz
+_T=20130405_13:32:59_6029	 pathname wmt13encs-5e3ba7d8.20130404-0902.txt.gz
+_T=20130405_13:49:25_6029	 eman tb 5e3ba7d8.20130404-0902 -ign=corpus | grep tm
+_T=20130410_13:53:17_15743	 ls
+_T=20130410_13:54:10_15743	 zless wmt13encs-5e3ba7d8.20130404-0902.txt.gz
+_T=20130410_13:54:20_15743	 pathname wmt13encs-5e3ba7d8.20130404-0902.txt.gz
+_T=20130410_13:57:08_15743	 ssh taur
