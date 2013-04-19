@@ -516,7 +516,7 @@ s.align.43e881c3.20130330-0147	mononews2008  ... tohle vypada v nahledu OK
 
 zkusim tedy ten ladeny 12-11hpe predelat, aby pouzit jako paralelni data jen
 mononews2009tmt
--> s.evaluator.81f1fc7a.20130414-2341
+-> s.evaluator.160f1a1d.20130419-0939
 
 
 
@@ -567,7 +567,7 @@ podle Philippovy rady zkousim u 16.42 zmensit max-phrase-length:
 na 5: s.evaluator.5862c133.20130416-0046 -> 0.1636
 na 4: s.evaluator.bb59e9bf.20130416-0055 -> 0.1631
 na 6: s.evaluator.54f6a944.20130416-0056 -> 0.1647
-na 7: s.evaluator.aecb8ce9.20130417-0001 
+na 7: s.evaluator.aecb8ce9.20130417-0001 -> 0.1645
 na 8: s.evaluator.a6636099.20130417-0011 -> 0.1629
 **** Pomohlo nepatrne, kdyz jsem pouzil jen fraze do delky 6.
 To by ale taky mohlo naznacovat, ze spravna delka fraze je takova, ktera
@@ -675,23 +675,41 @@ Dalo by se tomu rikat tgt-side-tagging (nebo tagging by the target)
 
 Velke zapomenute modely prorezu:
 
-s.prunelm.6e612092.20130417-1959 (DONE)	cwc-articles	6
-s.prunelm.1b34d02b.20130417-2021 (RUNNING)	cwc-articles	7
-s.prunelm.6e396383.20130417-2000 (DONE)	cwc-blogs	6
-s.prunelm.3ebbe0bb.20130417-2015 (RUNNING)	cwc-blogs	7
-s.prunelm.77b932ff.20130417-2004 (RUNNING)	cnk-news	7
-s.prunelm.7ce3231b.20130417-2006 (DONE)	cnk-other	7
+s.prunelm.6e612092.20130417-1959 (DONE)   	cwc-articles	6
+s.prunelm.1b34d02b.20130417-2021 (DONE)   	cwc-articles	7
+s.prunelm.6e396383.20130417-2000 (DONE)   	cwc-blogs   	6
+s.prunelm.3ebbe0bb.20130417-2015 (RUNNING)	cwc-blogs   	7
+s.prunelm.77b932ff.20130417-2004 (FAILED)	cnk-news    	7
+s.prunelm.7ce3231b.20130417-2006 (DONE)   	cnk-other   	7
 
-s.prunelm.aa9f1cfa.20130417-2155	cwc-articles	10 tag
-s.prunelm.e9c2e609.20130417-2200 (RUNNING)	cnk-news	10 tag
+s.prunelm.aa9f1cfa.20130417-2155 (RUNNING)	cwc-articles	10 tag
+s.prunelm.e9c2e609.20130417-2200 (FAILED)	cnk-news	10 tag
+  ... rucne opravuju s.lm.f83ea0e1.20130417-2155
 
 Pak jsou i dalsi korpusy, ale ty nemaji csNmT1:
 mono-cwc-discussions/csNm+form  65253322
 mono-w2c/csNm+form      9026781
 
+Alesovy korpusy:
+s.lm.4a4cb068.20130313-1343 (DONE)    mono-cwc-articles	pouzito
+s.lm.bd0ac0bd.20130313-1413 (DONE)    mono-cnk-other   	prekonano 7gr
+s.lm.6eb3e145.20130312-1627 (DONE)    europarl         	nepouzivam
+s.lm.9f2327ed.20130313-1351 (DONE)    mono-cwc-blogs	pouzito
+
+Rucni oprava spadleho velkeho LM se dela takto:
+ssh STROJ
+tempdir=/mnt/h/tmp/exp.lm.8RHf13
+outdir=/net/tmp/bojar/wmt13-bojar/playground/s.lm.9921e4a8.20130417-2004
+cd $tempdir
+qsubmit -queue='*@STROJ*' -mem=30g "SRILMDIR1=$(cat /a/merkur3/TMP/bojar/wmt13-bojar/playground/wmt-corpora/s.srilm.2a0e3a00.20130211-1907/srilm.path)/bin/; SRILMDIR2=$(cat /a/merkur3/TMP/bojar/wmt13-bojar/playground/wmt-corpora/s.srilm.2a0e3a00.20130211-1907/srilm.path)/bin/i686/; export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH; make-big-lm -read $tempdir/*.ngrams.gz -name $tempdir/biglm -order 10 -interpolate -kndiscount -lm $outdir/corpus.lm"
+
 Zkusim pouzit hodne LM:
 Odvozuju z: f4b02947.20130417-0028 (16.46)
   cwc-oba 6gr: s.evaluator.2dcf7793.20130418-0857 ... uz potrebuje 50g :-(
+
+Odvozuju z: s.evaluator.aecb8ce9.20130417-0001 (0.1645, maxpl 7)
+  s.prunelm.1b34d02b.20130417-2021 7gr-cwc-art (a mononews a tagy z CzEngu)
+  -> s.evaluator.2e69e025.20130418-1842
 
 
 2013-04-17
@@ -729,8 +747,9 @@ Zjednodusena predikce: (jen -, aby, az, Vf, V, R, N, ...)
 
 druhe zjednoduseni: - aby az, Vf, Vs, V, ale uz ne treba A
 500k:	53.5338%
-500k-GIS: 54.7392%
+500k-GIS: 54.7392% (predikce na trenovaich datech dava 75.2894%)
 
+500k-GIS, jen lexikalni a nikoli pozicni featury: 52.1313%
 
 
 2013-04-18
@@ -759,5 +778,5 @@ OUTCORP=bigref11d OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_C
 
 Na bigrefu zkusim vyladit nejvetsi model:
 base	s.evaluator.54f6a944.20130416-0056	0.1647
-MERT	s.evaluator.b88ae5c3.20130418-1202
-MIRA	?
+MERT	s.evaluator.dd320acc.20130419-0724
+MIRA	s.evaluator.3385cc6b.20130419-0948
