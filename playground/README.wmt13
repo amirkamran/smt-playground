@@ -583,7 +583,11 @@ HLOUPE CHYBY:
 - Austria 's pavillion: Rakousko je pavilonu
 - the US credit unions -> za USA , družstevní záložny
 ...cili na zdrojove strane bych potreboval zduraznit, ze neco je privlastovaci
+...POS model t0a1-t0a1 je kapku lepsi, ale stejne mnoho jmen nezvlada
+   (Goodlattes', Moreno's, lawsuit's)
 - was asked by a customer -> byl požádán , aby zákazník
+- the ADB ' s forecast of 7.5 per cent economic
+  => the Bad prognóza 7 , 5 procent
 
 
 
@@ -678,13 +682,19 @@ Velke zapomenute modely prorezu:
 s.prunelm.6e612092.20130417-1959 (DONE)   	cwc-articles	6
 s.prunelm.1b34d02b.20130417-2021 (DONE)   	cwc-articles	7
 s.prunelm.6e396383.20130417-2000 (DONE)   	cwc-blogs   	6
-s.prunelm.3ebbe0bb.20130417-2015 (RUNNING)	cwc-blogs   	7
-s.prunelm.77b932ff.20130417-2004 (FAILED)	cnk-news    	7
+s.prunelm.3ebbe0bb.20130417-2015 (FAILED)	cwc-blogs   	7
+s.prunelm.0e2319de.20130419-1402 (DONE)	cnk-news    	7
+  ... rucne opravuju s.lm.9921e4a8.20130417-2004
 s.prunelm.7ce3231b.20130417-2006 (DONE)   	cnk-other   	7
 
-s.prunelm.aa9f1cfa.20130417-2155 (RUNNING)	cwc-articles	10 tag
+s.prunelm.aa9f1cfa.20130417-2155 (OUTDATED)	cwc-articles	10 tag
+  oprava: s.klm.eeea10ba.20130421-0051
+  a na ni navazuje s.prunelm.4aef063a.20130421-0053
 s.prunelm.e9c2e609.20130417-2200 (FAILED)	cnk-news	10 tag
   ... rucne opravuju s.lm.f83ea0e1.20130417-2155
+  ... radsi predelavam pomoci klm:
+      s.klm.b0e2b8ad.20130421-0046
+      ...a na to navazuje s.prunelm.5c296ad6.20130421-0054
 
 Pak jsou i dalsi korpusy, ale ty nemaji csNmT1:
 mono-cwc-discussions/csNm+form  65253322
@@ -709,7 +719,7 @@ Odvozuju z: f4b02947.20130417-0028 (16.46)
 
 Odvozuju z: s.evaluator.aecb8ce9.20130417-0001 (0.1645, maxpl 7)
   s.prunelm.1b34d02b.20130417-2021 7gr-cwc-art (a mononews a tagy z CzEngu)
-  -> s.evaluator.2e69e025.20130418-1842
+  -> s.evaluator.2e69e025.20130418-1842 16.63±0.54
 
 
 2013-04-17
@@ -719,7 +729,11 @@ Predikce prekladu 'to':
 takto jsem to vyrobil:
 ziplines --item-d='\t' <(./corpman -dump czeng10+europarl/csNmT1+form+lemma+tag) <(./corpman -dump czeng10+europarl/enNmT1+stc) <(./corpman -dump czeng10+europarl/gdfa-enNmT1-lemma-csNmT1-lemma+ali | ../scripts/reverse_alignment.pl ) | tools/move_info_along_ali.pl | gzip > czeng10+europarl-csNmT1+form+lemma+tag-back-in-enNmT1-for-classes-of-to.gz
 
-priprava odpovedi klasifikatoru viz toklas.o7323637
+... to ted pro prunik budu mit ulozeno jako korpus:
+     czeng10+europarl/enNmT1+csINTstc+csINTlemma+csINTtag
+     (s.corpus.9e2e04e9.20130419-1238)
+
+log viz toklas.o7323637
 
 
 Takhle se pak muzu divat soucasne na vstup a ocekavany vystup klasifikatoru:
@@ -729,6 +743,24 @@ Takhle se pak muzu divat soucasne na vstup a ocekavany vystup klasifikatoru:
 Takhle jsem si udelal vzorek na 500k vetach:
 (pozor, je tam zkraceny korpus, je to jen CzEng:)
 ./factor_combinator.pl <(./corpman czeng10/enNmT1+stc -dump) -1 0 <(./corpman czeng10/enNmT1+form+lemma+tag -dump) -1 1  <(./corpman czeng10/enNmT1+form+lemma+tag -dump) -1 2 <(zcat czeng10+europarl-csNmT1+form+lemma+tag-back-in-enNmT1-for-classes-of-to.gz | tools/construct_class_of_en_to_from_czech_flt.pl) -1 0 | head -n 500000 | gzip > toclass-minicorpus-500k.gz
+
+... podklad pro tools/construct_class_of_en_to_from_czech_flt.pl
+    tedy dostanu pozadavkem na korpus:
+    czeng10+europarl/enNmT1+csINTstc+csINTlemma+csINTtag
+    ... a vystup ukladam do faktoru toclass01
+
+Takhle jsem to provedl v kroku korpus:
+OUTLINECOUNT=15478910 OUTCORP=czeng10+europarl OUTLANG=enNmT1 OUTFACTS=toclass01 RUN_COMMAND="../tools/construct_class_of_en_to_from_czech_flt.pl" STEPNAME=s.corpus.9e2e04e9.20130419-1238 FILENAME=corpus.txt.gz eman init corpus --start
+
+
+A dalsi krok je trenovani:
+
+Podklad pro trenovani je tento korpus
+    czeng10+europarl/enNmT1+form+lemma+tag+toclass
+    (forma se ve skutecnosti nepouziva, davam ji tam jen protoze se rychleji
+    takovy korpus sestavoval -- nemusel jsem ho vyrabet -- ale kdybych musel,
+    tak je lepsi rovnou formu neuvadet a upravit i skript
+    tools/predict_en_to_class.pl)
 
 Takhle jsem ho prevedl na featury:
 zcat toclass-minicorpus-500k.gz  | tools/predict_en_to_class.pl clipmodel --train --temp=toclass-minicorpus-500k
@@ -750,6 +782,8 @@ druhe zjednoduseni: - aby az, Vf, Vs, V, ale uz ne treba A
 500k-GIS: 54.7392% (predikce na trenovaich datech dava 75.2894%)
 
 500k-GIS, jen lexikalni a nikoli pozicni featury: 52.1313%
+
+500k-GIS -alignment zalozen na pruniku: 72.7933%
 
 
 2013-04-18
@@ -778,5 +812,66 @@ OUTCORP=bigref11d OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_C
 
 Na bigrefu zkusim vyladit nejvetsi model:
 base	s.evaluator.54f6a944.20130416-0056	0.1647
-MERT	s.evaluator.dd320acc.20130419-0724
+MERT	s.evaluator.dd320acc.20130419-0724	0.1631
 MIRA	s.evaluator.3385cc6b.20130419-0948
+
+Novy nejvetsi:
+base	s.evaluator.2e69e025.20130418-1842	0.1663
+MERT	s.evaluator.b5e0b0c7.20130419-2342
+
+a ten MERT zkusim take na bigrefu:
+  s.evaluator.b5e0b0c7.20130419-2342
+
+
+2013-04-19
+
+V ramci odstraneni hloupych chyb zkusim mert na velkem devsetu t0a1-0a1 *s* reorderingem.
+Rucne model sestavuju z s.evaluator.b225c1b0.20130328-1441 a s.evaluator.dd320acc.20130419-0724
+=> s.evaluator.09235bda.20130419-1038
+   ... nejak jsem blbec pouzil spatny tm
+   oprava: s.evaluator.5bcf4626.20130420-2205
+   oprava: s.evaluator.e270ce19.20130421-0041
+
+
+2013-04-19
+
+Zkoumam, ktera slova jsou casto zarovnana na NULL, napadlo mne to, kdyz jsem se dival na preklady 'to':
+
+NULL                                            to|TO   0.1188230
+na|RR--4----------                              to|TO   0.0917442
+k|RR--3----------                               to|TO   0.0659280
+aby|J,-------------                             to|TO   0.0478492
+se|P7-X4----------                              to|TO   0.0407166
+do|RR--2----------                              to|TO   0.0358436
+pro|RR--4----------                             to|TO   0.0274111
+s|RR--7----------                               to|TO   0.0223520
+podle|RR--2----------                           to|TO   0.0191064
+ke|RV--3----------                              to|TO   0.0131588
+na|RR--6----------                              to|TO   0.0115121
+že|J,-------------                              to|TO   0.0113417
+v|RR--6----------                               to|TO   0.0088140
+o|RR--4----------                               to|TO   0.0079569
+o|RR--6----------                               to|TO   0.0077580
+si|P7-X3----------                              to|TO   0.0061279
+chcete|VB-P---2P-AA---                          to|TO   0.0056790
+musí|VB-S---3P-AA---                            to|TO   0.0053501
+a|J^-------------                               to|TO   0.0052474
+za|RR--4----------                              to|TO   0.0050220
+
+
+
+2013-04-19
+
+velikost ttablu:
+/net/tmp/bojar/wmt13-bojar/playground/s.tm.82dadcf1.20130312-2202/model/phrase-table.0,1-0,1.gz
+
+55227432794	rozbalena
+8215065557	gzip (standard)
+6880453441	gzip jednotlivych sloupcu
+
+zabaleno po sloucich:
+1074925103	column 1
+2153882164	column 2
+3263437733	column 3
+579409	column 4
+387629032	column 5
