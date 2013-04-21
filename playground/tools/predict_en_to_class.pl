@@ -8,19 +8,29 @@
 
 use strict;
 use Getopt::Long;
+use File::Temp qw /tempdir/;
+use File::Path;
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
+my $maxent = "/net/tmp/bojar/wmt13-bojar/src/maxent/src/opt/maxent";
 my $print_help = 0;
 my $do_train = 0;
-my $tempfile = "./temp-trainfile"; # XXX
+my $keep = 0;
+my $tempdir = "/tmp";
 GetOptions(
   "help" => \$print_help,
   "train" => \$do_train,
-  "tempfile=s" => \$tempfile,
+  "tempdir=s" => \$tempdir,
+  "maxent=s" => \$maxent,
+  "keep" => \$keep,
 ) or exit 1;
+
+my $tmp = tempdir("toclassXXXX", CLEANUP=>0, DIR=>$tempdir);
+print STDERR "My tempdir: $tmp\n";
+my $tempfile = "$tmp/temp";
 
 my $do_predict = !$do_train;
 
@@ -102,7 +112,6 @@ close($templateh) if $do_predict;
 close($eventh);
 
 # run maxent
-my $maxent = "/net/tmp/bojar/wmt13-bojar/src/maxent/src/opt/maxent";
 if ($do_train) {
   safesystem("$maxent $tempfile.events --model='$modelfile' --binary --gis 1>&2")
     or die "Failed to train the model";
@@ -134,6 +143,12 @@ if ($do_train) {
   }
   close $predsh;
   close $templateh;
+}
+
+if ($keep) {
+  print STDERR "Keeping $tmp, delete yourself.\n";
+} else {
+  rmtree($tmp);
 }
 
 
