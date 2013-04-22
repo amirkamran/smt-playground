@@ -99,15 +99,24 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-gunzip corpus.src.gz
-gunzip corpus.tgt.gz
+zcat < corpus.src.gz > corpus.src
+zcat < corpus.tgt.gz | paste corpus.src - | sed 's/	/ ||| /' > falign.in
 
-# align, TODO run there/back in parallel
-paste corpus.src corpus.tgt | sed 's/	/ ||| /' > falign.in
-./fast_align -v -d -o -i falign.in $FALIGNARGS > align.left || "Failed to align there"
-./fast_align -v -d -o -r -i falign.in $FALIGNARGS > align.right || "Failed to align back"
+# align
+echo "Started align at "\`date '+%Y%m%d-%H%M'\`
+./fast_align -v -d -o -i falign.in $FALIGNARGS \\
+  > align.left 2> align.left.log \\
+  || "Failed to align there" &
+
+./fast_align -v -d -o -r -i falign.in $FALIGNARGS \\
+  > align.right 2> align.right.log \\
+  || "Failed to align back" &
+
+echo "Waiting on alignment to finish..."
+wait
 
 # symmetrize, TODO other symmetrizations
+echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
 paste align.left align.right | $PLAYGROUND/tools/symmetrize.py gd fa \
   | gzip -c > alignment.gz || die "Failed to symmetrize"
 
