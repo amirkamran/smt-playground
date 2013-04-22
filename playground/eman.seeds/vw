@@ -19,7 +19,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-git clone git@github.com:ales-t/vowpal_wabbit.git || die "Failed to clone VW"
+git clone git://github.com/hal3/vowpal_wabbit.git || die "Failed to clone VW"
 cd vowpal_wabbit || die "Failed to chdir to vowpal_wabbit"
 ./autogen.sh --prefix=\$(pwd) || die "Configure failed"
 make -j 8 || die "Compilation failed"
