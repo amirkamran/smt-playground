@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prepare moses translation model, i.e. extract phrases
+# train a global lexicon model/discriminative word lexicon
 
 set -o pipefail
 function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
@@ -104,11 +104,6 @@ echo "Running consolidate..."
 \$GLMSCRIPT --action consolidate \\
   \$GLMARGS < glm.train > glm.consolidate \\
   || die "Failed to consolidate"
-
-echo "Updating moses.ini..."
-cp $TMDIR/model/moses.ini \$mydir/model/moses.ini || die "Failed to clone moses.ini"
-echo -e "\n[global-lexical-file]\n$FACTORS \$mydir/model/glm\n\n[weight-lex]\n1.0\n" \\
-  >> \$mydir/model/moses.ini
 
 # Standard command footer
 echo Done.
