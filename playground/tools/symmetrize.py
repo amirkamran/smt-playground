@@ -107,7 +107,7 @@ for arg in sys.argv[1:]:
     algorithms.append(sym_table[arg])
 
 for line in sys.stdin:
-    cols = line.rstrip().split("\t")
+    cols = line.rstrip("\n").split("\t")
     there = parse_align(cols[0])
     back = parse_align(cols[1], True) # invert points
 
