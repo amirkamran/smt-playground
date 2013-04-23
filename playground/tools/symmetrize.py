@@ -23,7 +23,7 @@ def compare_points(x, y):
 # parse one line of Giza++-formatted word alignment
 def parse_align(align_str, inv = False):
     pts = set()
-    for pt in align_str.split(' '):
+    for pt in filter(None, align_str.split(' ')):
         x, y = [int(i) for i in pt.split('-')]
         if inv:
             x, y = y, x
