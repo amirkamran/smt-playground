@@ -9,6 +9,7 @@ eman \
     help="step of type tm used for training" \
   defvar FACTORS default='0-0' \
     help='which factors to use in DWL' \
+  defvar TOPK default='1000' help='how many most-frequent word to train on' \
   defvar BINARIES type=reqstep inherit=TMSTEP \
     help="the step containing compiled tools" \
   defvar SRCCORP inherit=TMSTEP \
@@ -90,7 +91,7 @@ GLMARGS=" --corpus-stem \\
   --model \$mydir/model/glm "
 
 echo "Running list..."
-\$GLMSCRIPT --action list \$GLMARGS > glm.list || die "Failed to list"
+head -n $TOPK model/tgt.vcb | cut -f2 > glm.list || die "Failed to create list"
 
 echo "Running train..."
 $PLAYGROUND/../scripts/qruncmd \\
