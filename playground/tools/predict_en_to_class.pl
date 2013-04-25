@@ -19,7 +19,7 @@ my $maxent = "/net/tmp/bojar/wmt13-bojar/src/maxent/src/opt/maxent";
 my $print_help = 0;
 my $do_train = 0;
 my $keep = 0;
-my $tempdir = "/tmp";
+my $tempdir = "/mnt/h/tmp";
 GetOptions(
   "help" => \$print_help,
   "train" => \$do_train,

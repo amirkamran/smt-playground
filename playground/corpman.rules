@@ -52,6 +52,11 @@ csNmT1	form|lemma|tag	csNmT1	mmitag1200	../tools/pecina_map_tag_classes.pl ../to
 csNmT1	form|lemma|tag	csNmT1	mmitag1300	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-1300.map | ../../scripts/reduce_factors.pl 2
 csNmT1	form|lemma|tag	csNmT1	mmitag1400	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-1400.map | ../../scripts/reduce_factors.pl 2
 
+# Ondrej applies a classifier
+enNmT1	form|lemma|tag	enNmT1	toclass01p5k	../tools/predict_en_to_class.pl ../toclass-models/01czeng10europarl.model.5000
+enNmT1	form|lemma|tag	enNmT1	toclass01p10k	../tools/predict_en_to_class.pl ../toclass-models/01czeng10europarl.model.10000
+enNmT1	stc|toclass01	enNmT1	toclass01exact	../tools/toclass_keep_tag_just_for_to.pl
+
 # Reversing the alignment preserves the number of tokens, so we treat it as a
 # 'change of a factor'
 *	ali	*	revali	../../scripts/reverse_alignment.pl
