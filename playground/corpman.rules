@@ -17,9 +17,11 @@
 *      	form            	*     	stem6       	../../scripts/stem_factor.pl --stem=6
 en_txt 	untoken       	enNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
 cs_txt 	untoken       	csNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
+de_txt 	untoken       	deNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/deNm.scen
 ru_txt 	untoken       	ru_mssTok  	form	../tools/run_moses_tokenizer.sh
 enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
+deNm   	form|lemma|tag	deNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNminput   	form|lemma|tag	csNmT1input	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNm	pluslemma	../../scripts/construct_improved_czech_lemma.pl
 csNmT1   	form|lemma|tag	csNmT1	pluslemma	../../scripts/construct_improved_czech_lemma.pl
