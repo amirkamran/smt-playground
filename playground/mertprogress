@@ -10,8 +10,14 @@ set -o pipefail
 [ ! -z "$1" ] || die "usage: $0 step-identifier"
 
 e=`eman path $1`
-
 [ -d $e ] || die "Not a step: $e"
+
+if [ ! -d $e/mert-tuning ]; then
+  # traceback to get the mert
+  m=`eman tb --notree $1 | grep '^s.mert\.' | head -n1`
+  e=`eman path "$m"`
+  [ -d $e ] || die "Failed to find even the mert prerequisite of $1"
+fi
 
 cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
 

@@ -1141,7 +1141,7 @@ sub start_inited_steps
 #------------------------------------------------------------------------------
 # Continuation of failed steps often requires that files created by the
 # previous attempt be removed. Otherwise, eman.command will fail. Ondřej
-# opposes the possibility to ad "rm -rf ..." directly to eman.command (and to
+# opposes the possibility to add "rm -rf ..." directly to eman.command (and to
 # eman.seeds where the recipe for eman.command is described). He claims that
 # he may need the files for manual investigation of problems, and this would
 # open door to erasing them accidentially. Thus we have to take care of the
@@ -1347,7 +1347,7 @@ sub continue_tm_disk
 sub redo_mert_memory
 {
     # Look for failed mert steps.
-    my @steps = split(/\n/, dzsys::chompticks('eman select t mert f'));
+    my @steps = map {$_ =~ s/^\s+//; $_ =~ s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t mert f'));
     my $n = 0;
     my @to_remove;
     foreach my $step (@steps)

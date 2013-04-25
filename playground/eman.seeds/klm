@@ -1,0 +1,109 @@
+#!/bin/bash
+# eman seed for constructing an n-gram language model using kenlm
+# binarization now excluded, because there are different (KenLM/IrstLM)
+# binarization options
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar MOSESGIZA type=reqstep help='where is kenlm compiled' \
+  defvar CORP help='the shortname of corpus, use ++ to concatenate on the fly' \
+  defvar CORPAUG help='the language+factors for the lm' \
+  defvar ORDER help='the lm order' \
+  defvar LMFLAGS default='' help='flags for lmplz like --vocab_estimate' \
+  defvar EMAN_MEM default='30g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# add source corpus to deps
+for subcorp in $(echo $CORP | sed 's/++/ /g'); do
+  corpstep=$($PLAYGROUND/corpman --init $subcorp/$CORPAUG | cut -f1)
+  [ ! -z "$corpstep" ] || die "Missing source corpus"
+  eman add-deps . $corpstep
+done
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Emit the main script to be used in the running phase
+
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
+#KENLMMEM=$(perl -e '$a="'$EMAN_MEM'"; $u=substr($a, -1, 1);print ($a-1); print uc($u)."\n";')
+#echo "Reduced EMAN_MEM ($EMAN_MEM) to $KENLMMEM for kenlm"
+# well, lmplz actually needs much more mem than the sorting limit
+KENLMMEM=6G
+
+# convert the dependencies to absolute paths
+MOSESGIZADIR=`eman path $MOSESGIZA`
+
+cat << KONEC > eman.command
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# init grid environment; sometimes needed for ./augment.pl
+. /net/projects/SGE/user/sge_profile
+
+function mkcorpus() {
+  # If local copy of corpus already exists (we are running 'eman continue') remove it first.
+  rm -f corpus.\$2.gz
+  corpspec=\$($PLAYGROUND/corpman --wait \$1)
+  echo "corpman for \$1 returned: \$corpspec" # for the logfile
+  step_file_col=(\$corpspec)
+  corpfile=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
+  [ -e \$corpfile ] \\
+    || die "Failed to prepare \$1, corpus file not found: \$corpfile"
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    $PLAYGROUND/../scripts/wiseln \$corpfile \\
+      corpus.\$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column \${step_file_col[2]} from \$corpfile"
+    zcat \$corpfile | cut -f "\${step_file_col[2]}" \\
+    | gzip -c > corpus.\$2.gz
+  fi
+}
+
+INFILES=""
+for subcorp in $(echo $CORP | sed 's/++/ /g'); do
+  mkcorpus \$subcorp/$CORPAUG \$subcorp.text
+  INFILES="\$INFILES corpus.\$subcorp.text.gz"
+done
+
+zcat \$INFILES \
+| $MOSESGIZADIR/moses/bin/lmplz \
+  --temp_prefix $tempdir/klm \
+  --memory $KENLMMEM \
+  --order $ORDER \
+  --verbose_header \
+| gzip > corpus.lm.gz \
+|| die "Failed to construct the LM"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

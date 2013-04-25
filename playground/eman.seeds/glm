@@ -1,0 +1,117 @@
+#!/bin/bash
+# train a global lexicon model/discriminative word lexicon
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+eman \
+  defvar TMSTEP default='' type=reqstep \
+    help="step of type tm used for training" \
+  defvar FACTORS default='0-0' \
+    help='which factors to use in DWL' \
+  defvar TOPK default='1000' help='how many most-frequent word to train on' \
+  defvar BINARIES type=reqstep inherit=TMSTEP \
+    help="the step containing compiled tools" \
+  defvar SRCCORP inherit=TMSTEP \
+    help="source corpus name" \
+  defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
+  defvar SRCAUG inherit=TMSTEP help="the string describing lang+factors of src corpus" \
+  defvar TGTAUG inherit=TMSTEP help="the string describing lang+factors of tgt corpus" \
+  defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
+|| exit 1
+
+eval `eman bash-loadvars`
+
+PLAYGROUND=`eman path`
+
+BINARIESDIR=`eman path $BINARIES`
+TMDIR=`eman path $TMSTEP`
+SCRIPTS_ROOTDIR="$BINARIESDIR/moses/scripts"
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf corpus* alignment* model*
+
+function mkcorpus() {
+  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman \$1))
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    STEPPATH=\$(eman path \${step_file_col[0]})
+    $PLAYGROUND/../scripts/wiseln \$STEPPATH/\${step_file_col[1]} \\
+      \$2.gz \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column from \$step_file_col"
+    eval \$($PLAYGROUND/corpman --cmd \$1) \\
+    | gzip -c > \$2.gz
+  fi
+}
+
+## Prepare the corpus from more factors
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+mkdir corpus
+
+cd corpus
+mkcorpus $SRCCORP/$SRCAUG corpus.src
+mkcorpus $TGTCORP/$TGTAUG corpus.tgt
+cd ..
+
+mkdir model
+for s in src tgt ; do
+  zcat corpus/corpus.\$s.gz | $PLAYGROUND/tools/make-vocabulary.pl > model/\$s.vcb
+done
+
+mkdir \$mydir/train.tmp || die "Failed to create temporary dir"
+
+GLMSCRIPT="$BINARIESDIR/moses/scripts/training/train-global-lexicon-model.perl"
+GLMARGS=" --corpus-stem \\
+  \$mydir/corpus/corpus \\
+  --tmp-dir \$mydir/train.tmp \\
+  --lex-dir \$mydir/model/ \\
+  --f src --e tgt \\
+  --model \$mydir/model/glm "
+
+echo "Running list..."
+head -n $TOPK model/tgt.vcb | cut -f2 > glm.list || die "Failed to create list"
+
+echo "Running train..."
+$PLAYGROUND/../scripts/qruncmd \\
+  --promise-line-for-line \\
+  --jobs=$JOBS --attempts=5 \\
+  --join --jobname dwl \\
+  "\$GLMSCRIPT \$GLMARGS --action train" glm.list \\
+  > glm.train || die "Failed to train models"
+
+echo "Running consolidate..."
+\$GLMSCRIPT --action consolidate \\
+  \$GLMARGS < glm.train > glm.consolidate \\
+  || die "Failed to consolidate"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

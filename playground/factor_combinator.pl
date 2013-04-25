@@ -19,11 +19,15 @@ my %fname_to_columns;
 while (0 < scalar @ARGV) {
   my $fname = shift;
   my $column = shift;
-  my $factor = shift;
-  die "Bad usage!" if $column !~ /^-?[0-9]+$/ || $factor !~ /^-?[0-9]+$/;
-  $fname_to_stream{$fname} = my_open($fname);
-  $fname_to_columns{$fname}->{$column} = 1;
-  push @wishes, [$fname, $column, $factor];
+  my $factors = shift;
+  die "Bad usage!" if $column !~ /^-?[0-9]+$/;
+  foreach my $factor (split /,/, $factors) {
+    die "Bad factor: $factor" if $factor !~ /^-?[0-9]+$/;
+    $fname_to_stream{$fname} = my_open($fname)
+      if !defined $fname_to_stream{$fname};
+    $fname_to_columns{$fname}->{$column} = 1;
+    push @wishes, [$fname, $column, $factor];
+  }
 }
 
 die "Nothing to do." if 0 == scalar @wishes;

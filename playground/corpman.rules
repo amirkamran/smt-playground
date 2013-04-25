@@ -17,9 +17,11 @@
 *      	form            	*     	stem6       	../../scripts/stem_factor.pl --stem=6
 en_txt 	untoken       	enNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
 cs_txt 	untoken       	csNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
+de_txt 	untoken       	deNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/deNm.scen
 ru_txt 	untoken       	ru_mssTok  	form	../tools/run_moses_tokenizer.sh
 enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
+deNm   	form|lemma|tag	deNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNminput   	form|lemma|tag	csNmT1input	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNm	pluslemma	../../scripts/construct_improved_czech_lemma.pl
 csNmT1   	form|lemma|tag	csNmT1	pluslemma	../../scripts/construct_improved_czech_lemma.pl
@@ -37,6 +39,8 @@ csNmT1   	form|lemma|tag	csNmT1	subpos|case|number|gender	../../scripts/case_num
 csNmT1   	stc|lemma|mmitag1000	csNmT1	stcOmmitag1000F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
 csNmT1   	stc|lemma|mmitag0800	csNmT1	stcOmmitag0800F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
 csNmT1   	stc|lemma|mmitag0400	csNmT1	stcOmmitag0400F500	../../scripts/form_or_tag_based_on_cutoff.pl ../freqlists/mononews-czeng-freqlist.gz --emit=tag --take=500
+*   	stc	*	stcCcs50	../tools/map_tokens.pl ../tools/map_tokens.maps/enstc-to-cscls50.gz
+*   	stcCcs50	*	stcCcs50lcstem4	lowercase.pl | ../../scripts/stem_factor.pl --stem=4
 csNmT1	form|lemma|tag	csNmT1	peclemma|pectag01	../tools/pecina_tag_simplification.pl ../tools/pecina_tag_simplification.configs/x-n00-v02-a00-c00-p10-r00-i00-t00.cfg
 csNmT1	form|lemma|tag	csNmT1	mmitag0050	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0050.map | ../../scripts/reduce_factors.pl 2
 csNmT1	form|lemma|tag	csNmT1	mmitag0100	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-0100.map | ../../scripts/reduce_factors.pl 2
@@ -47,6 +51,11 @@ csNmT1	form|lemma|tag	csNmT1	mmitag1100	../tools/pecina_map_tag_classes.pl ../to
 csNmT1	form|lemma|tag	csNmT1	mmitag1200	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-1200.map | ../../scripts/reduce_factors.pl 2
 csNmT1	form|lemma|tag	csNmT1	mmitag1300	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-1300.map | ../../scripts/reduce_factors.pl 2
 csNmT1	form|lemma|tag	csNmT1	mmitag1400	../tools/pecina_map_tag_classes.pl ../tools/pecina_map_tag_classes.maps/mmi-classes-1400.map | ../../scripts/reduce_factors.pl 2
+
+# Ondrej applies a classifier
+enNmT1	form|lemma|tag	enNmT1	toclass01p5k	../tools/predict_en_to_class.pl ../toclass-models/01czeng10europarl.model.5000
+enNmT1	form|lemma|tag	enNmT1	toclass01p10k	../tools/predict_en_to_class.pl ../toclass-models/01czeng10europarl.model.10000
+enNmT1	stc|toclass01	enNmT1	toclass01exact	../tools/toclass_keep_tag_just_for_to.pl
 
 # Reversing the alignment preserves the number of tokens, so we treat it as a
 # 'change of a factor'
