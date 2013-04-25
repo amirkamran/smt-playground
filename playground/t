@@ -7,7 +7,7 @@ s=`if [ -d $1 ]; then echo $1; else eman path --read-only "$1"; fi`
 [ -d "$s" ] || die "Bad step specifier: $1"
 
 # under sge, wait for log.o*, otherwise wait for log
-if qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null; then
+if qsub -help nonexistent-file 2>&1 | grep GE >/dev/null 2>/dev/null; then
   # echo SGE
   suffix=.o
 else
