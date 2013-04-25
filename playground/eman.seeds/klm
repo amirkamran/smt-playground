@@ -23,10 +23,11 @@ eman \
 eval `eman bash-loadvars`
 
 # add source corpus to deps
-corpstep=$($PLAYGROUND/corpman --init $CORP/$CORPAUG | cut -f1)
-[ ! -z "$corpstep" ] || die "Missing source corpus"
-
-eman add-deps . $corpstep
+for subcorp in $(echo $CORP | sed 's/++/ /g'); do
+  corpstep=$($PLAYGROUND/corpman --init $subcorp/$CORPAUG | cut -f1)
+  [ ! -z "$corpstep" ] || die "Missing source corpus"
+  eman add-deps . $corpstep
+done
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
