@@ -443,13 +443,21 @@ sub opravit_lematizaci_news8
     {
         $step =~ s/^\s+//;
         $step =~ s/\s+$//;
-        #print("$step\n");
-        dzsys::saferun("mv $step/corpman.info $step/corpman-zablokovano.info");
-        dzsys::saferun("eman fail $step");
+        if(0)
+        {
+            #print("$step\n");
+            dzsys::saferun("mv $step/corpman.info $step/corpman-zablokovano.info");
+            dzsys::saferun("eman fail $step");
+        }
+        else
+        {
+            # Vytvořit novou instanci tohoto kroku podle nové šablony.
+            dzsys::saferun("eman redo $step --start") or die;
+        }
     }
     my $n = scalar(@steps);
     print("Celkem nalezeno $n kroků.\n");
-    dzsys::saferun("eman reindex ; corpman reindex");
+    dzsys::saferun("eman reindex ; eman qstat");
 }
 
 
