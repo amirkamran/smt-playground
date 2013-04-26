@@ -11,7 +11,7 @@ PLAYGROUND=`eman path` # eman playground directory
 # Ensure all the required variables are set (or provide the default)
 eman \
   defvar MOSESGIZA type=reqstep help='where is kenlm compiled' \
-  defvar CORP help='the shortname of corpus' \
+  defvar CORP help='the shortname of corpus, use ++ to concatenate on the fly' \
   defvar CORPAUG help='the language+factors for the lm' \
   defvar ORDER help='the lm order' \
   defvar LMFLAGS default='' help='flags for lmplz like --vocab_estimate' \
@@ -23,10 +23,11 @@ eman \
 eval `eman bash-loadvars`
 
 # add source corpus to deps
-corpstep=$($PLAYGROUND/corpman --init $CORP/$CORPAUG | cut -f1)
-[ ! -z "$corpstep" ] || die "Missing source corpus"
-
-eman add-deps . $corpstep
+for subcorp in $(echo $CORP | sed 's/++/ /g'); do
+  corpstep=$($PLAYGROUND/corpman --init $subcorp/$CORPAUG | cut -f1)
+  [ ! -z "$corpstep" ] || die "Missing source corpus"
+  eman add-deps . $corpstep
+done
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -82,9 +83,13 @@ function mkcorpus() {
   fi
 }
 
-mkcorpus $CORP/$CORPAUG text
+INFILES=""
+for subcorp in $(echo $CORP | sed 's/++/ /g'); do
+  mkcorpus \$subcorp/$CORPAUG \$subcorp.text
+  INFILES="\$INFILES corpus.\$subcorp.text.gz"
+done
 
-zcat corpus.text.gz \
+zcat \$INFILES \
 | $MOSESGIZADIR/moses/bin/lmplz \
   --temp_prefix $tempdir/klm \
   --memory $KENLMMEM \

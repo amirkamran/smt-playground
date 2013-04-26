@@ -295,7 +295,7 @@ stc-stc univerzalni: s.rm.0fb000ee.20130321-1851 (DONE)
 
 Velke LM:
 mono-ctk-all/csNmT1+form+lemma+tag	s.corpus.a7c9f3d5.20130321-1509
-mono-tisk-all/csNmT1+form+lemma+tag	s.corpus.b36e3420.20130321-1511
+mono-tisk-all/csNmT1+form+lemma+tag	s.corpus.b36e3420.20130321-1511 (FAILED)
 
 sedmigramovy LM: (misto sestigramu)
 s.lm.10686e3c.20130321-1722 (DONE 3.8G), lm sam je 2.7
@@ -328,6 +328,12 @@ stcOtagF500: s.mixlm.7d806f57.20130322-1629	s.prunelm.63dee741.20130326-2312
 varianta s prunelm 12: s.evaluator.89de7dc0.20130326-1001 -> 16.06±0.58 (mert 51 hodin, maxvmem 15g, asi spis ucpany cluster)
 varianta s prunelm 14: s.evaluator.f05fa2f6.20130324-2229 -> 16.12±0.56 (mert 10 hodin, maxvmem 16g)
 varianta s prunelm 16: s.evaluator.ccd12273.20130326-0957 -> 16.00±0.56 (mert47 hodin, maxvmem 18g)
+
+Prehled velikosti pruningu:
+full	4.8G
+12	368M
+14	684M
+16	1.3G
 
 
 Kriticka pozorovnani:
@@ -642,12 +648,13 @@ A takto se pak divam, v cem ten diff spocival:
 :map <F1> V:!(cut -f8 \| cut -d' ' -f1 \| xargs cat ; echo ----------------------------------------)\| write bojar pts/12<CR>u
 
 Co jsou uzitecne rozdily, tj. checklist, co nezapomenout:
+NEZAPOMENOUT:
 
 - europarl v paralelnich datech?
 - nezvysovat limit cbp
 - cdb mit nastavene na 0
 - nezmensovat max-phrase-length
-- neladit na hpe
+- neladit na hpe ... ani se, proste asi ladit na bigrefu.
 - ladit na 2 referencich radsi nez dlouhem devsetu
 - ovsem je lepsi ladit na *konkatenaci* obyc+hpe nez konkatenaci mnoha obyc
   s.evaluator.6b1ab349.20130222-1204-s.evaluator.ed379474.20130305-2317
@@ -657,6 +664,7 @@ Co jsou uzitecne rozdily, tj. checklist, co nezapomenout:
   s.evaluator.0a0f57cb.20130305-1722-s.evaluator.e1ec6500.20130305-1716
 - zdrojove tagy preklad kazi: t0a1-0a1 je horsi nez t0-0a1
   s.evaluator.49bc89b5.20130314-1317-s.evaluator.66f26076.20130312-2300
+- *POUZIT* toclass
 
 
 Jaky devset:
@@ -687,14 +695,15 @@ s.prunelm.0e2319de.20130419-1402 (DONE)	cnk-news    	7
   ... rucne opravuju s.lm.9921e4a8.20130417-2004
 s.prunelm.7ce3231b.20130417-2006 (DONE)   	cnk-other   	7
 
-s.prunelm.aa9f1cfa.20130417-2155 (OUTDATED)	cwc-articles	10 tag
-  oprava: s.klm.eeea10ba.20130421-0051
-  a na ni navazuje s.prunelm.4aef063a.20130421-0053
-s.prunelm.e9c2e609.20130417-2200 (FAILED)	cnk-news	10 tag
-  ... rucne opravuju s.lm.f83ea0e1.20130417-2155
-  ... radsi predelavam pomoci klm:
-      s.klm.b0e2b8ad.20130421-0046
-      ...a na to navazuje s.prunelm.5c296ad6.20130421-0054
+s.prunelm.2d41966e.20130422-1049 (RUNNING)	cwc-articles	10 tag
+s.prunelm.ce6fb5e4.20130422-1046 (RUNNING)	cnk-news	10 tag
+  ... pruning se porad nedari, zkousim binarizovat klm
+      ... s.klm.db846172.20130421-2236 (DONE) bez binarizace je velky 19GB, s
+      binarizaci trie q8b8a22 jen 5.8 GB (trvalo to 4 hodiny a zabralo 13GB)
+
+tak klesam, jen 8gr, presouvam, binarizuju:
+s.prunelm.081e22be.20130423-2337 (DONE)	cwc-articles	8gr tag
+s.prunelm.93cfa467.20130423-1333 (DONE)    	cnk-news    	8gr tag
 
 Pak jsou i dalsi korpusy, ale ty nemaji csNmT1:
 mono-cwc-discussions/csNm+form  65253322
@@ -752,6 +761,8 @@ Takhle jsem si udelal vzorek na 500k vetach:
 Takhle jsem to provedl v kroku korpus:
 OUTLINECOUNT=15478910 OUTCORP=czeng10+europarl OUTLANG=enNmT1 OUTFACTS=toclass01 RUN_COMMAND="../tools/construct_class_of_en_to_from_czech_flt.pl" STEPNAME=s.corpus.9e2e04e9.20130419-1238 FILENAME=corpus.txt.gz eman init corpus --start
 
+Analogicky provedu prepclass01:
+s.corpus.902edc7c.20130425-0155
 
 A dalsi krok je trenovani:
 
@@ -813,14 +824,11 @@ OUTCORP=bigref11d OUTLANG=cs_txt OUTFACTS=untoken OUTLINECOUNT=11583 TAKE_FROM_C
 Na bigrefu zkusim vyladit nejvetsi model:
 base	s.evaluator.54f6a944.20130416-0056	0.1647
 MERT	s.evaluator.dd320acc.20130419-0724	0.1631
-MIRA	s.evaluator.3385cc6b.20130419-0948
+MIRA	s.evaluator.3385cc6b.20130419-0948	0.1633
 
 Novy nejvetsi:
 base	s.evaluator.2e69e025.20130418-1842	0.1663
-MERT	s.evaluator.b5e0b0c7.20130419-2342
-
-a ten MERT zkusim take na bigrefu:
-  s.evaluator.b5e0b0c7.20130419-2342
+MERT	s.evaluator.b5e0b0c7.20130419-2342	0.1641
 
 
 2013-04-19
@@ -829,8 +837,9 @@ V ramci odstraneni hloupych chyb zkusim mert na velkem devsetu t0a1-0a1 *s* reor
 Rucne model sestavuju z s.evaluator.b225c1b0.20130328-1441 a s.evaluator.dd320acc.20130419-0724
 => s.evaluator.09235bda.20130419-1038
    ... nejak jsem blbec pouzil spatny tm
-   oprava: s.evaluator.5bcf4626.20130420-2205
-   oprava: s.evaluator.e270ce19.20130421-0041
+   oprava: s.evaluator.5bcf4626.20130420-2205 (OUTDATED)
+   oprava: s.evaluator.e270ce19.20130421-0041 (OUTDATED)
+   oprava: s.evaluator.eb674e6f.20130421-1328 (RUNNING)
 
 
 2013-04-19
@@ -875,3 +884,367 @@ zabaleno po sloucich:
 3263437733	column 3
 579409	column 4
 387629032	column 5
+
+
+2013-04-22
+
+Pokusy od Ceslava:
+
+misto s.tm.82dadcf1.20130312-2202 v pokusu s.evaluator.7bd26138.20130403-2206
+(16.14) zkusim jeho ruzne pruningy eppexem:
+
+s.tm-eb.952d0ab9.20130419-1226 => s.evaluator.6383514c.20130422-0041 => 0.1607
+s.tm-eb.07416cf5.20130419-1238 => s.evaluator.fa652bbf.20130422-0043 => 0.1602
+s.tm-eb.48560242.20130419-1227 => s.evaluator.bbdf554e.20130422-0043 => 0.1607
+
+Chystam taky svuj prvni eppexi extrakt: s.tm-e.27055f5d.20130422-1422
+
+(minuly pokus nejak narazil na problem s pameti: s.tm-e.9f5c65c9.20130422-0035)
+...jenze mam obavu, ze radek 15478892 spojeneho korpusu je vadny:
+...protoze to takhle nadavalo: ....15478892:Bad input token: /|2011/Done. at tools/predict_en_to_class.pl line 61, <> line 15478892.
+...jenze rucne ten radek prosel a zadny divny token neobsahoval :-(
+...ale rucne zas neprosel maxent:
+Executing: /net/tmp/bojar/wmt13-bojar/src/maxent/src/opt/maxent /mnt/h/tmp/toclassOIHF/temp.events --model='clip-bug-model' --binary --gis 1>&2
+fail to mmap file: Cannot allocate memory
+std::runtime_error caught:fail to mmap file
+
+Ten dobry s.tm-e.27055f5d.20130422-1422 sice dobehl, ale ma toclass i u jinych slov :-//
+...oprava bude: s.tm-e.9db1efbb.20130423-1450
+
+
+
+2013-04-22
+
+pro Martina Vitu prekladam cvicne nejlepsim modelem kratke vety z inzeratu:
+./corpman jobsTest/en_txt+untoken ... vstup
+pouzil nejlepsi model s.evaluator.2e69e025.20130418-1842 (16.63)
+-> s.evaluator.1eccf72a.20130422-1050   0.2647
+Zkusim i MERT spustit na tomto testsetu, coz da samozrejme prehnane dobre vysledky, ale aspon uvidime, ma-li sanci naucit se mene preusporadavat.
+-> s.evaluator.1bda00e9.20130422-1227 0.3107
+
+
+2013-04-22
+
+zkusil jsem binarizaci
+/net/tmp/bojar/wmt13-bojar/playground/s.mixlm.40a9f774.20130322-0839/corpus.lm.gz
+(to je nejcastejni pouzivany mixlm, podle clip-top-lms)
+default probing zabral misto 4.8 GB dokonce 8.3 GB (trvalo to 25 minut)
+(prikaz byl: ../s.mosesgiza.807b847c.20130319-2330/moses/bin/build_binary corpus.lm.gz corpus.bin.gz)
+
+
+
+2013-04-22
+
+toclass zkusim pouzit v prekladu
+baseline: t0a1-0 tag: 66f26076.20130312-2300 (0.1178)
+vylepseny t0a1-0 toclass01p10k: 
+  zajimavy tam bude uz krok tm a jeho lexikalni preklady:
+    s.tm.d0dfa952.20130422-2138
+
+
+2013-04-22
+
+prestava to byt pouzitelne, musim zmensit modely
+Budu zkouset filtrovani na 66f26076.20130312-2300 (11.78)
+Cilem je udelat krok filtmodel, ktery bude po dokonceni rozumne dat na SSD
+Odkazovat by se mel na kroky LM, ktere by take mely sedet na SSD.
+
+Zkusim na to taky pouzit cmph: zde moses, ktery by to mel mit vkompilovane:
+s.mosesgiza.e33f4d81.20130422-1608 ...spadl, asi chybelo /src na konci cesty, nebo cmph musi byt nainstalovan
+Zkousim nove s.mosesgiza.b16e6834.20130424-1848
+
+Zkusim zmensit LM pouzite v nejvetsim pokusu: 2e69e025.20130418-1842 (16.63±0.54)
+0:s.prunelm.1b34d02b.20130417-2021
+0:s.prunelm.66ef5c8f.20130415-0003
+1:s.mixlm.40a9f774.20130322-0839
+
+Natrvdo jsem proste zamenil obsah corpus.lm.gz za ten binarizovany
+base mert byl zde: s.mert.a079f1ae.20130418-1821  (Finished loading LanguageModels: 1541 seconds
+trie mert zde:     s.mert.89a52416.20130422-2257
+evaluator: base:	2e69e025.20130418-1842
+evaluator novy:  	s.evaluator.2b523a9e.20130422-2257 16.66
+
+Dalsi kroky budou:
+- prorez a binarizuj s.mixlm.40a9f774.20130322-0839
+  -> s.prunelm.3082e413.20130422-2148 (presunuto)
+- pridej vsechny stcLM, ktere uz mas, mas totiz cnk-news i cwc-articles
+- pridej vetsi LM na tagach
+  kandidati:
+    - s.prunelm.93cfa467.20130423-1333 (DONE) cnk-news 8gr
+    - s.prunelm.081e22be.20130423-2337 
+- vylad to na bigrefu
+
+
+Variace na nejvetsi pokus:
+base: s.evaluator.2b523a9e.20130422-2257 (DONE) 16.66
+mixlm prorezan: s.evaluator.5f4846d7.20130423-1333 (DONE) 16.60
+mixlm prorezan + bigref: s.evaluator.67079e37.20130423-1604 (DONE) 0.1646
+mixlm prorezan + bigref + r0-0: s.evaluator.8107c53a.20130423-1658 (FAILED)
+
+  ./qj large-bigref s.evaluator.2b523a9e.20130422-2257 s.evaluator.67079e37.20130423-1604
+  vim qj.data/large-bigref.anot
+  ... zatim to vypada blede, lepsi mensi devset :-//
+  ... tak uz se to zacina chylit na spravnou stranu: bigref v rucnim lepsi
+
+
+Prehled existujicich LM
+ignore, mame prorezany                	s.mixlm.40a9f774.20130322-0839
+tagUSE                                	s.prunelm.3082e413.20130422-2148
+ignore maly heldout                   	s.mixlm.032fd94d.20130314-1548
+ignore, maly heldout                  	s.prunelm.cd915a7d.20130322-1453
+USE                                   	s.prunelm.1b34d02b.20130417-2021
+ignore (protoze maly heldout)         	s.prunelm.20cc4acc.20130324-2212
+USE                                   	s.prunelm.66ef5c8f.20130415-0003
+ignore, protoze neprorezano a maly rad	s.mixlm.239778cb.20130322-0007
+ignore, duplicita k s.prunelm.66ef5c8f	s.prunelm.54c3d9d7.20130416-0053
+maly rad, maly heldout                	s.mixlm.17acb910.20130313-1013
+ignore, nize se prorezava             	s.mixlm.88dbac7d.20130322-0007
+USE-binarizuj,odsun                   	s.prunelm.e273924a.20130425-0113
+ignore: maly heldout                  	s.prunelm.ac2e42c9.20130324-2213
+ignore maly heldout                   	s.mixlm.5946c8e8.20130313-1010
+
+
+Az na s.prunelm.e273924a.20130425-0113 (dosud se chysta) jsem existujici zkusil spustit zde: s.evaluator.444184fe.20130425-0126
+
+A minimalisticky, jen ten nejvetsi LM na stc a jen ten nejvetsi na tagy:
+s.evaluator.b15bd161.20130425-0133 16.13
+
+Co nejak udelat source-side-valency? Anglickym predlozkam hadat ceske podle anglickeho kontextu?
+
+
+Zajimave pozorovani:
+vyhodnoceno na hpe1 (vyladeno na wmt12) se zda, ze je lepsi reordering na formach nez forma-tag
+dcb164b9.20130414-2349 38.71±0.96
+45c0542c.20130414-2356 37.41±0.97
+
+chci to premerit na bigrefu (to mohu, ladilo se na wmt12), ale az po binarizaci a odsunu modelu:
+s.mixlm.9a071e7a.20130410-1403  ... odsunuto
+s.mixlm.8182465a.20130410-1402  ... odsunuto
+s.mixlm.8faac4de.20130410-1608  ... odsunuto
+Jeste bych ovsem mel udelat binarizaci+odsuny RM!
+
+cili az dobehnou binarizace, udelam odsuny a pak
+for e in dcb164b9.20130414-2349 45c0542c.20130414-2356; do
+  eman tb $e -sv TESTCORP=bigref...no jo, ale musim overit, ze to snese vic referenci
+
+
+
+Ovsem jine pozorovani rika, ze je lepsi r1-1 nez r0-0, tedy jeste over difexp:
+
+7bd26138.20130403-2206 16.14±0.56  ... ano, tyto dva jsou skutecne identicke
+b225c1b0.20130328-1441 16.14±0.56 r1-1 ... ano, rozdil je skutecne jen v RM
+3bf8fe83.20130328-1451 15.87±0.57 r0-0
+
+Cili bych k velkemu pokusu (16.66) mel prihodit r0-0 a r0-1.
+A eppexem bych mel zkusit t0a1-0a1 s reorderingem 0-0, 0-1 i 1-1.
+(proc vlastne eppexem: protoze nemam takovyhle tm na czeng10+europarl)
+Spoustim: s.tm-e.aab99890.20130423-1451 (FAILED)
+...selhalo, protoze tm-e nedela corpman-init a korpus nebyl pripraven
+... oprava: s.tm-e.c0657c5a.20130423-2326 (RUNNING)
+... no a kdyz je to tak rychle, tak jeste t0a1-0a1Bt0-0a1 ...
+
+A taky bych mel do corpman.rules pridat pravidlo na toclass01exact, udelat tim
+czeng10+europarl
+(uz bezi s.corpus.ec22a5b1.20130423-1432, cili je pristupny:
+./corpman czeng10+europarl/enNmT1+stc+toclass01exact)
+a eppexem natrenovat.
+-> a zde ho zkousim: s.evaluator.52470228.20130423-2255  16.41
+base: neni uplne presne baseline, protoze ma jinou extrakci frazi,
+ale jinak stejne: 2b523a9e.20130422-2257 16.66±0.58
+
+Tak i podle rucniho hodnoceni se to zda preklad kazit: 
+18:18 tauri4 playground$./qj toclass01 2b523a9e.20130422-2257 52470228.20130423-2255
+The evaluation called toclass01 already exists, interpreting:
+Mark    Count   Tag
+Executing: /home/bojar/bin//quickjudge --print qj.data/toclass01 2>/dev/null | cut -f2,3 | see
+*       6       sys1, 2b523a9e.20130422-2257
+-       5       sys2, 52470228.20130423-2255
+-       5       sys1, 2b523a9e.20130422-2257
+*       3       sys2, 52470228.20130423-2255
+**      1       sys1, 2b523a9e.20130422-2257
+
+ZKousim jeste tm-e, ktera nebude prorezavat: s.tm-e.fb634ca2.20130424-1855
+(protoze to pry stejne moc nepomaha)
+-> s.evaluator.b484cb7a.20130424-1902 0.1634
+
+Chtel jsem porovnat spravedlivejsi baseline, ale porovnal jsem blbost, porovnal jsem dve varianty toclass01:
+
+52470228.20130423-2255	0.1641 eppex --limits=1:0:1,2:0:1,3:0:1,4:1:2,5:1:...
+b484cb7a.20130424-1902	0.1634
+...a lidske hodnoceni souhlasi s BLEU: lepsi bylo eppex filtrovat
+
+./qj toclass01-better-bsln b484cb7a.20130424-1902 52470228.20130423-2255
+Mark         	Count	Tag
+*            	   10	sys2, 52470228.20130423-2255
+equally-wrong	    9	sys1, b484cb7a.20130424-1902
+equally-wrong	    9	sys2, 52470228.20130423-2255
+*            	    4	sys1, b484cb7a.20130424-1902
+**           	    2	sys2, 52470228.20130423-2255
+equally-fine 	    1	sys2, 52470228.20130423-2255
+**           	    1	sys1, b484cb7a.20130424-1902
+equally-fine 	    1	sys1, b484cb7a.20130424-1902
+
+Spravedlivejsi baseline:
+- bude pouzitvat tuto tm: s.tm-e.6f04c0af.20130425-1410 havaroval -> s.tm-e.f9baba82.20130425-1419
+- bude celkove tato: s.evaluator.18a68cac.20130425-1415
+
+
+Jedine muzu zkusit ty dva dohromady spojit jako dve varianty...
+
+
+
+Takto se spousti binarizace hotoveho lm:
+cd s.lm...
+qsubmit "../s.mosesgiza.807b847c.20130319-2330/moses/bin/build_binary trie -q 8 -b 8 -a 22 corpus.lm.gz corpus.trie.q8b8a22 && mv corpus.lm.gz corpus.lm.gz.orig && ln -s corpus.trie.q8b8a22 corpus.lm.gz" -mem=30g
+
+Takto se dela odsun na SSD:
+e=s.prunelm.3082e413.20130422-2148
+cp -r $e /net/cluster/SSD/bojar/wmt13-ssd/ && mv $e blocked-$e && ln -s /net/cluster/SSD/bojar/wmt13-ssd/$e ./
+
+A odsun jedineho souboru:
+e=s.translate.4bc4816e.20130422-0043
+
+
+BUGS: filtermodel dela distortion file rozbaleny (a nebinarizovany)
+
+
+2013-04-24
+
+ozivuju twostep:
+klm udelam: 6gr cnk-news, cwc-articles; prune 14
+frazovou tabulku takto:
+ALICORP=czeng10+europarl ALILABEL=enNmT1-lemma-csNmT1-lemma ALIORREVALI=ali ALISTEP=s.align.f2983f43.20130313-1325 ALISYM=gdfa BINARIES=s.eppex.7d489612.20130217-1815 DECODINGSTEPS=t0-0 EMAN_DISK=100g EMAN_MEM=80g EPPEX="/net/tmp/merkur3/TMP/przywara/versions/eppex-v.2.3.1" EPPEX_PARAMS="--GZOutput --limits=1:0:1,2:0:1,3:0:1,4:1:2,5:1:3,6:3:5,7:6:9" SRCAUG=enNmT1+stc SRCCORP=czeng10+europarl TGTAUG=csNmT1+pluslemma eman init tm-e
+=> s.tm-e.d33ed8fc.20130424-0702
+
+K tomu se vari klm: s.klm.4dcd050a.20130424-1417 (DONE)  ... kandidat na smazani
+... takze spoustim pruning: s.prunelm.94339869.20130424-1940
+... ani 100 GB ram pro prozerani 7gr pluslemat nestacilo...
+... spoustim nyni 150 GB ram, prorezat s limitem 8: s.prunelm.be0001d4.20130425-1449
+...cpoustim tedy pripravu jen 5gr: s.prunelm.1cdd0af2.20130425-0121 ... binarizuju ... odsouvam
+
+Pak tedy muzu spustit mert:
+
+
+
+2013-04-24
+
+Jdu varit jeden spojeny obri LM pro in-domain a jeden pro out-of-domain:
+
+Zde soucastky: (IN/OUT/DEL), DEL nepouzij
+Co vsechno pouziju do LM pro cestinu:
+
+DEL	mononews2011_tmt/csNmT1+form+lc+lcstem4+lemma+tag	15226715
+DEL	czeng10tmt/csNmT1+form+lc+lcstem4+lemma+stc+tag	14833358
+DEL	czeng_tmt/csNmT1+form+lemma+stc+tag	14833358
+DEL	mononews2009_tmt/csNmT1+form+lc+lcstem4+lemma+stc+tag	14433084
+DEL	mononews2012_tmt/csNmT1+form+lc+lcstem4+lemma+tag	13821909
+DEL	mononews2008_tmt/csNmT1+form+lc+lcstem4+lemma+stc+tag	13162864
+DEL	mononews2010_tmt/csNmT1+form+lc+lcstem4+lemma+tag	5995867
+DEL	mononews2007_tmt/csNmT1+form+lc+lcstem4+lemma+stc+tag	3875314
+DEL	newstest2012tmt/csNmT1+form+lemma+stc+tag	3003
+DEL	newstest2012tmt_tmt/csNmT1+form+lemma+stc+tag	3003
+DEL	newstest2011tmt/csNmT1+form+lemma+stc+tag	2939
+DEL	newstest2011tmt_tmt/csNmT1+form+lemma+stc+tag	2939
+#
+IN	mononews2011/csNmT1+form+lc+lemma+stc+tag	7172089
+IN	mononews2012/csNmT1+form+lc+lemma+stc+tag	7073569
+IN	mononews2009/csNmT1+form+lc+lemma+stc+tag	4205601
+IN	mononews2008/csNmT1+form+lc+lemma+stc+tag	4058171
+IN	mononews2010/csNmT1+form+lc+lemma+stc+tag	2326339
+IN	mononews2007/csNmT1+form+lc+lemma+stc+tag	76942
+#
+DEL	czeng10+europarl/int-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/gdfa-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/revgdf-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/revgdfa-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/right-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/union-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/gdf-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10+europarl/left-enNmT1-lemma-csNmT1-lemma+ali	15478910
+DEL	czeng10/revgdfa-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/union-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/gdfa-enNmT1-lemma-csNmT1-lemma+ali+revali	14833358
+DEL	czeng10/gdf-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/right-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/left-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/int-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	czeng10/revgdf-enNmT1-lemma-csNmT1-lemma+ali	14833358
+DEL	c-news/revgdfa-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/right-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/union-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/left-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/int-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/gdfa-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/revgdf-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	c-news/gdf-enNmT1-lemma-csNmT1-lemma+ali	197053
+DEL	newstest2012/csNmT1_s.translate.be4b2f49.20130321-1243+ali+peclemma+untok	3003
+DEL	newstest2012/csNmT1_s.translate.7b687806.20130321-1100+ali+peclemma+untok	3003
+#
+OUT	mono-cwc-blogs/csNmT1+form+lemma+stc+tag	79576393
+OUT	mono-cwc-discussions/csNmT1+form+lemma+stc+tag	65253322
+IN	mono-cwc-articles/csNmT1+form+lemma+stc+tag	36724488
+#
+OUT	c-fiction/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	4248821
+OUT	c-eu/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	3911727
+OUT	c-subtitles/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	3015631
+OUT	c-paraweb/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	1845727
+OUT	c-techdoc/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	1581777
+IN	c-news/csNmT1+form+lc+lcstem4+lemma+mmitag0050+mmitag0400+mmitag0800+mmitag1000+mmitag1100+mmitag1200+mmitag1300+mmitag1400+peclemma+pectag01+stc+stcOmmitag0400F500+stcOmmitag0800F500+stcOmmitag1000F500+stcOpossuf2F1k+stcOpossuf2F2k+stcOpossuf3F1k+stcOtagF1k+stcOtagF200+stcOtagF2k+stcOtagF500+stcOtagF5k+tag	197053
+OUT	c-navajo/csNmT1+form+lemma+mmitag0400+stc+stcOtagF500+tag	32622
+#
+DEL	mono-tisk-all/csNmT1+form+lemma+stc+tag	258402584
+IN	mono-tisk-2002/csNmT1+form+lemma+tag	15148644
+IN	mono-tisk-2000/csNmT1+form+lemma+tag	14988121
+IN	mono-tisk-1999/csNmT1+form+lemma+tag	14145311
+IN	mono-tisk-2001/csNmT1+form+lemma+tag	13072277
+IN	mono-tisk-1998/csNmT1+form+lemma+tag	7036208
+#
+IN	mono-ctk-all/csNmT1+form+lemma+stc	47004141
+DEL	mono-ctk-2010/csNmT1+form+lemma+tag	4066183
+DEL	mono-ctk-2009/csNmT1+form+lemma+tag	3855667
+DEL	mono-ctk-2008/csNmT1+form+lemma+tag	3839963
+DEL	mono-ctk-2011/csNmT1+form+lemma+tag	3825290
+DEL	mono-ctk-2006/csNmT1+form+lemma+tag	3749080
+DEL	mono-ctk-2004/csNmT1+form+lemma+tag	3738834
+DEL	mono-ctk-2005/csNmT1+form+lemma+tag	3735605
+DEL	mono-ctk-2007/csNmT1+form+lemma+tag	3670868
+DEL	mono-ctk-2003/csNmT1+form+lemma+tag	3438377
+DEL	mono-ctk-2002/csNmT1+form+lemma+tag	3244837
+DEL	mono-ctk-2001/csNmT1+form+lemma+tag	3230280
+DEL	mono-ctk-2000/csNmT1+form+lemma+tag	2870085
+DEL	mono-ctk-1998/csNmT1+form+lemma+tag	1422298
+DEL	mono-ctk-1999/csNmT1+form+lemma+tag	1271317
+DEL	mono-ctk-2012/csNmT1+form+lemma+tag	1045457
+#
+IN	mono-cnk-news/csNmT1+form+lemma+pluslemma+stc+tag	28081778
+#
+OUT	mono-cnk-other/csNmT1+form+lemma+stc+tag	7560793
+OUT	europarl/csNmT1+form+lemma+pluslemma+stc+tag	645552
+OUT	ccrawl/csNmT1+form+lemma+stc+tag	161838
+OUT	dbpedia-en-cs/csNmT1+form+lemma+stc+tag	151134
+#
+DEL	czeng10+europarl+ccrawl/csNmT1+lemma+stc	15640748
+DEL	czeng10+europarl/csNmT1+form+lemma+pluslemma+stc+tag	15478910
+DEL	czeng/csNmT1+form+lemma+stc+tag	14833358
+DEL	czeng10/csNmT1+form+lc+lcstem4+lemma+mmitag0050+mmitag0400+mmitag0800+pluslemma+stc+stcOtagF500+tag	14833358
+DEL	subt/csNmT1+form+lemma+stc+tag	6062122
+DEL	dbpedia-cs-de/csNmT1+form+lemma+stc+tag	124082
+DEL	bigref11a/csNmT1+form+lemma+stc+tag	11583
+DEL	bigref11b/csNmT1+form+lemma+stc+tag	11583
+DEL	bigref11c/csNmT1+form+lemma+stc+tag	11583
+DEL	bigref11d/csNmT1+form+lemma+stc+tag	11583
+DEL	newstest2011/csNmT1+form+lemma+mmitag0050+mmitag0800+peclemma+pectag01+pluslemma+stc+stcOmmitag0800F500+stcOpossuf2F1k+tag	3003
+DEL	newstest2012/csNmT1+case+form+gender+lc+lemma+number+peclemma+pectag01+pluslemma+stc+subpos+tag	3003
+DEL	newstest2009/csNmT1+form+lemma+stc+tag	2525
+DEL	newstest2010/csNmT1+form+lemma+mmitag0400+pluslemma+stc+stcOtagF500+tag	2489
+DEL	newstest2008/csNmT1+form+lemma+stc+tag	2051
+DEL	newstest2007/csNmT1+form+lemma+stc+tag	2007
+DEL	wmt11-hpe1/csNmT1+form+lemma+stc+tag	1997
+DEL	jobsTest/csNmT1+form+lemma+stc+tag	370
+
+IN: c-news++mono-cnk-news++mono-ctk-all++mono-cwc-articles++mononews2007++mononews2008++mononews2009++mononews2010++mononews2011++mononews2012++mono-tisk-1998++mono-tisk-1999++mono-tisk-2000++mono-tisk-2001++mono-tisk-2002
+
+OUT: ccrawl++c-eu++c-fiction++c-navajo++c-paraweb++c-subtitles++c-techdoc++dbpedia-en-cs++europarl++mono-cnk-other++mono-cwc-blogs++mono-cwc-discussions
+
+
+Spoustim pripravu vsech stc, vic clip-run-stc.sh.out

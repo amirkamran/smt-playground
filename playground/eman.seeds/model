@@ -3,6 +3,7 @@
 #   translation model(s)
 #   (optional reordering model)
 #   language models
+#   (optional global lexicon model)
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -13,6 +14,8 @@ PLAYGROUND=`eman path` # eman playground directory
 eman \
   defvar TMS help='extracted phrases, a colon-separated lists of s.tm' \
   defvar LMS help='tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep' \
+  defvar GLM help='optional glm step, format: factors:glmstep, e.g. 0-0:s.glm.xyz' \
+    default='' \
   defvar CONFIGARGS default='' \
     help='additional arguments passed to train-model.perl' \
   defvar RMSTEP default='' help='lexicalized reordering model' \
@@ -69,6 +72,11 @@ done
 
 [ -z "$RMSTEP" ] || eman add-deps . $RMSTEP || die "Bad RMSTEP: $RMSTEP"
 [ -z "$RMSTEP" ] || RMSTEP=$(eman path $RMSTEP)
+
+if [ -n "$GLM" ] ; then
+  GLMFACTORS=`echo "$GLM" | cut -d':' -f1`
+  GLMDIR=$(eman path `echo "$GLM" | cut -d':' -f2`)
+fi
 
 ## Create the tag based on LMs
 i=1
@@ -213,6 +221,13 @@ done
 mkdir model
 $PLAYGROUND/../scripts/merge_moses_models.pl --append-unknown --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
   || die "Merge moses.ini failed"
+
+if [ -n "$GLMDIR" ] ; then
+  mkdir glm
+  wiseln $GLMDIR/model/glm glm/glm || die "Failed to clone glm"
+  echo -e "\n[global-lexical-file]\n$GLMFACTORS \$mydir/glm/glm\n\n[weight-lex]\n1.0\n" \\
+    | tee glm/moses.ini >> \$mydir/model/moses.ini || die "Failed to add glm to moses.ini"
+fi
 
 # Standard command footer
 echo Done.

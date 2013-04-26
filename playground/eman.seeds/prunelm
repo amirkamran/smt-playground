@@ -11,7 +11,7 @@ eman \
   defvar SRILMSTEP type=reqstep inherit=FULLLM \
     help="the step containing compiled tools" \
   defvar LMPRUNE \
-    help="Pruning limit" \
+    help="Pruning limit; smaller means smaller output file, good around 14" \
   defvar ORDER inherit=FULLLM \
     help="n-gram order" \
   defvar CORP inherit=FULLLM \

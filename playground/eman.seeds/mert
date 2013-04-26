@@ -186,8 +186,9 @@ echo These were our MERTFLAGS="$MERTFLAGS"
 [ -e moses ] || $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 
 ## Clone the moses.ini and source files
-[ -e moses.ini ] ||  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
-    $MODELSTEP/model/moses.ini \
+[ -e moses.ini ] ||  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
+    --symlink \\
+    $MODELSTEP/model/moses.ini \\
     || die "Failed to clone $MODELSTEP/model/moses.ini"
 
 ## We're using irstlm, change the lmodel-file type:
