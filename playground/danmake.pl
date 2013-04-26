@@ -31,9 +31,10 @@ die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|compl
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
-    if(0)
+    if(1)
     {
         # Put your own temporary special goal here and switch it on by changing 0 -> 1 above.
+        opravit_lematizaci_news8();
     }
     else
     {
@@ -422,6 +423,33 @@ sub start_tag
             dzsys::saferun($command) or die;
         }
     }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Jednorázová oprava značkování. Martin Popel v listopadu 2012 přidal do bloku
+# Tag default lemmatize=0, čímž způsobil, že mé loňské scénáře přestaly
+# fungovat a první týden jsem je pouštěl zbytečně. Zabrala naštěstí aspoň
+# angličtina, kde jsem nepočítal s tím, že Featurama umí lemmata přiřadit, a
+# použil jsem místo toho zvláštní lematizační blok. Ostatní jazyky musím
+# předělat.
+#------------------------------------------------------------------------------
+sub opravit_lematizaci_news8
+{
+    # Zjistit seznam pokažených značkovacích kroků.
+    my @steps = split(/\n/, dzsys::safeticks("eman select t tag tre C:news8 not tre L:en"));
+    foreach my $step (@steps)
+    {
+        $step =~ s/^\s+//;
+        $step =~ s/\s+$//;
+        #print("$step\n");
+        dzsys::saferun("mv $step/corpman.info $step/corpman-zablokovano.info");
+        dzsys::saferun("eman fail $step");
+    }
+    my $n = scalar(@steps);
+    print("Celkem nalezeno $n kroků.\n");
+    dzsys::saferun("eman reindex ; corpman reindex");
 }
 
 

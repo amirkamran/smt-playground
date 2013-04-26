@@ -35,17 +35,17 @@ fi
 eman add-deps . $FORMSTEP
 
 if   [ "$LANGUAGE" == "cs" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::CS::TagFeaturama Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::CS::TagFeaturama lemmatize=1"
 elif [ "$LANGUAGE" == "de" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::TagTreeTagger    lemmatize=1"
 elif [ "$LANGUAGE" == "en" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::EN::TagFeaturama W2A::EN::FixTags W2A::EN::Lemmatize Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::EN::TagFeaturama W2A::EN::FixTags W2A::EN::Lemmatize"
 elif [ "$LANGUAGE" == "es" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::TagTreeTagger    lemmatize=1"
 elif [ "$LANGUAGE" == "fr" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::TagTreeTagger    lemmatize=1"
 elif [ "$LANGUAGE" == "ru" ] ; then
-  SCENARIO="Read::Sentences \$from W2A::TokenizeOnWhitespace W2A::TagTreeTagger    Print::TaggedTokensWithLemma"
+  SCENARIO="W2A::TokenizeOnWhitespace W2A::TagTreeTagger    lemmatize=1"
 else
   die "Unknown language $LANGUAGE."
 fi
@@ -55,10 +55,10 @@ fi
 
 if   [[ "$CORPUS" =~ ^wmt ]] ; then
   NJOBS=2
-elif [[ "$CORPUS" =~ ^giga ]] || [[ "$CORPUS" =~ ^un ]] ; then
+elif [[ "$CORPUS" =~ ^giga ]] || [[ "$CORPUS" =~ ^un ]] || [[ "$CORPUS" =~ all ]] ; then
   NJOBS=100
 else
-  NJOBS=30
+  NJOBS=40
 fi
 
 cat > eman.command << KONEC
@@ -79,20 +79,21 @@ outfile=\$mydir/tagged.txt.gz
 # The corpus of forms will be splitted to smaller files 1000 lines each.
 rm -rf chunks
 mkdir chunks || die "Cannot create the chunks folder."
+mkdir chunks/input || die "Cannot create the chunks/input folder."
+mkdir chunks/output || die "Cannot create the chunks/output folder."
 fnl=\$(gunzip -c \$infile | wc -l)
 # We assume that the corpus file is gzipped and that it does not contain multiple columns.
 date
 echo Splitting the input file to chunks of 1000 lines.
-gunzip -c \$infile | split -d -a6 - chunks/
+gunzip -c \$infile | split -d -a6 - chunks/input/
 date
 echo Renaming and gzipping the chunks.
-rm -f filelist.txt
-for f in chunks/* ; do
+for f in chunks/input/* ; do
   mv \$f \$f.txt
   gzip \$f.txt
-  echo \$mydir/\$f.txt.gz >> filelist.txt
 done
-from="from=@\$mydir/filelist.txt"
+from="from='"'!'"\$mydir/chunks/input/*.txt.gz'"
+to="to=. compress=1 substitute={input}{output}"
 
 # Invoke Treex and tag the corpus.
 ###!!! We may want to use a Treex installed within a special treex step.
@@ -100,24 +101,28 @@ from="from=@\$mydir/filelist.txt"
 ###!!! It would mean that the treex step is an ancestor of all tag steps.
 date
 echo Invoking Treex.
+which treex
 cd chunks || die "Cannot go to chunks folder."
 # treex -Lfr Read::Sentences from=@/net/data/augmented_corpora/news.2011.fr/fr.tagged/filelist.txt W2A::TokenizeOnWhitespace W2A::TagTreeTagger Print::TaggedTokensWithLemma --no-save
 # Parametry pro paralelizaci Treexu na clusteru:
+# --survive by měl myslím zajistit, že i když jedna úloha ohlásí chybu, Treex nepozabíjí ty ostatní.
 # -p zapíná paralelizaci.
 # -j udává počet úloh, na které se to má rozdělit.
 # --priority udává požadovanou prioritu, typicky se snižuje "-100" apod.
-# --memory udává požadovanou paměť, např. "4G", výchozí hodnota je "2G"
+# --memory udává požadovanou paměť, např. "4G", výchozí hodnota je "2G" (měla by stačit, pokud neznačkujeme Morčetem, které teče)
 # --qsub udává případné další parametry pro plánovač
-# Note DZ: Since we switched cs|en taggers from Morče to Featurama we hopefully don't have to fear memory leaks.
-# Thus we may try again the default memory requirement.
-echo treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save
-treex -p -j$NJOBS --priority=-400 -L$LANGUAGE $SCENARIO --no-save \\
-  | $SCRIPTS/put_sentence_on_one_line.pl \\
-  | gzip -c \\
-  > \$outfile \\
+treexcommand="treex --survive -p -j$NJOBS --priority=-400 -L$LANGUAGE Read::Sentences \$from $SCENARIO Print::TaggedTokensWithLemma factor=1 \$to"
+#treexcommand="treex --survive -p -j$NJOBS --priority=-400 -L$LANGUAGE Read::Sentences \$from $SCENARIO Write::Factored outcols=${LANGUAGE}m \$to"
+echo \$treexcommand
+\$treexcommand \\
+  &> \$mydir/chunks/treex.log \\
   || die "Treex failed."
+echo Collecting the output chunks.
+# We have to make sure that the output files are sorted correctly. I do not know whether bash guarantees that, so I prefer to sort them here.
+# The list of files can be very long (even over 100,000) and we should not list all files on one command line.
+perl -e 'opendir(DIR, "output") or die("Cannot read output: \$!"); @files=readdir(DIR); open(OUT, "| gzip -c > '\$outfile'") or die("Cannot write to outfile: \$!"); foreach my \$f (sort @files) {print STDERR ("\$f"); if(\$f =~ m/^\d+\.gz\$/) {my \$nl = 0; open(IN, "gunzip -c output/\$f |") or die("Cannot read output/\$f: \$!"); while(<IN>) {print OUT; \$nl++;} print STDERR (" ... \$nl lines");} print STDERR ("\n");}'
 cd \$mydir
-# Check that the tagged corpus has number of lines identical to the corpus of forms.
+# Check that the number of lines of the tagged corpus is identical to the corpus of forms.
 tnl=\$(gunzip -c \$outfile | wc -l)
 echo Input file \$infile has \$fnl lines.
 echo Output file \$outfile has \$tnl lines.
