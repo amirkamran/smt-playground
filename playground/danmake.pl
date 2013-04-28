@@ -525,7 +525,7 @@ sub start_lm
 sub start_align
 {
     my $m = shift; # reference to hash with model parameters
-    my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
+    my $gizastep = find_step('mosesgiza', 'd');
     # Odstranit corpman.index a vynutit tak přeindexování.
     # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
     dzsys::saferun('rm -f corpman.index') or die;
