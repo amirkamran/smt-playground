@@ -511,8 +511,9 @@ sub start_lm
     my $m = shift; # reference to hash with model parameters
     my $srilmstep = find_step('srilm', 'd');
     # Velké korpusy potřebují více paměti. Zatím nejmenší korpus, kterému nestačilo výchozích 6g, byl francouzský se 4+ mil. řádků.
+    # Korpus gigafren má zase 22+ mil. řádků, ale 60g paměti mu bylo málo (francouzský lm).
     my $n_lines = get_corpus_size($m->{mc}, $m->{t}, 'stc');
-    my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=30000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
+    my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=20000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
     dzsys::saferun("SRILMSTEP=$srilmstep CORP=$m->{mc} CORPAUG=$m->{t}+stc ORDER=6 eman init lm --start$mem") or die;
 }
 
