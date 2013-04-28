@@ -672,13 +672,20 @@ sub start_mert_for_model
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
     # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-    my $memory = $m->{mc} =~ m/(czeng|giga|un)/ || $m->{pc} =~ m/(czeng|giga|un)/ ? '30g' : '15g';
-    # Default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
-    my $priority = $memory eq '30g' ? -50 : -99;
-    my $gridfl = "\"-p $priority -hard -l mf=$memory -l act_mem_free=$memory -l h_vmem=$memory\"";
-    # The above was memory for decoder jobs. Now memory for the main mert job.
-    $memory = $m->{pc} =~ m/un/ ? '60g' : '30g';
-    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem $memory");
+    my $dmemory = '15g'; # memory requirement for decoder jobs
+    my $omemory = '15g'; # memory requirement for optimization job
+    my $dpriority = -99;
+    my $opriority = -100;
+    if($m->{pc} =~ m/(czeng|un|giga)/ || $m->{mc3} eq 'gigaword')
+    {
+        $dmemory = '30g';
+        $omemory = '42g'; # DZ: Some of my un merts died with 30g.
+        # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
+        $dpriority = -50;
+        $opriority = 0;
+    }
+    my $gridfl = "\"-p $dpriority -hard -l mf=$dmemory -l act_mem_free=$dmemory -l h_vmem=$dmemory\"";
+    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem $omemory --priority $opriority");
 }
 
 
