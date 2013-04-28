@@ -965,7 +965,11 @@ sub find_dr_step_hash
     my @tags;
     push(@tags, "S:$m->{s}");
     push(@tags, "T:$m->{t}");
-    if($steptype =~ m/^(model|mert|translate|evaluator)$/)
+    if($steptype eq 'lm')
+    {
+        push(@tags, "LM:$m->{mc}");
+    }
+    elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
     {
         push(@tags, "TM:$m->{pc}");
         push(@tags, "LM:$m->{mc}");
