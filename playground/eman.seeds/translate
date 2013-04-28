@@ -116,8 +116,10 @@ ulimit -c 1 # core files limited to 1 byte
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
-# clone some importnant executables
-$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Moses missing"
+if [ ! -e moses ]; then
+  # clone some importnant executables
+  $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
+fi
 
 TARGETLAN_FOR_DETOKENIZER=`echo $REFAUG | sed 's/^\(..\).*/\1/'`
 if ! echo "test" | \$SCRIPTS_ROOTDIR/tokenizer/detokenizer.perl \\
@@ -128,31 +130,33 @@ fi
 
 
 function mkcorpus() {
-  $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
-  step_file_col=(\$($PLAYGROUND/corpman \$1))
-  if [ "\${step_file_col[2]}" == "-1" ]; then
-    STEPPATH=\$(eman path \${step_file_col[0]})
-    $PLAYGROUND/../scripts/wiseln \$STEPPATH/\${step_file_col[1]} \\
-      corpus.\$2.gz \
-    || die "Failed to clone \$2 corpus \$1"
-  else
-    echo "Selecting the column from \$step_file_col"
-    eval \$($PLAYGROUND/corpman --cmd \$1) \\
-    | gzip -c > corpus.\$2.gz
+  if [ ! -e corpus.\$2.gz ]; then
+    $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
+    step_file_col=(\$($PLAYGROUND/corpman \$1))
+    if [ "\${step_file_col[2]}" == "-1" ]; then
+      STEPPATH=\$(eman path \${step_file_col[0]})
+      $PLAYGROUND/../scripts/wiseln \$STEPPATH/\${step_file_col[1]} \\
+        corpus.\$2.gz \
+      || die "Failed to clone \$2 corpus \$1"
+    else
+      echo "Selecting the column from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --cmd \$1) \\
+      | gzip -c > corpus.\$2.gz
+    fi
   fi
 }
 
 mkcorpus $TESTCORP/$SRCAUG src
 gunzip -c corpus.src.gz > corpus.src
 
-## Clone the moses.ini and source files
-\$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
-  --symlink \\
-  $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
-
-\$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Failed to absolutize"
-
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval \`pwd\`/moses.abs.ini corpus.src || die "Failed to filter"
+if [ ! -e moses.ini ]; then
+  ## Clone the moses.ini and source files
+  \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
+    --symlink \\
+    $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
+  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Failed to absolutize"
+  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval \`pwd\`/moses.abs.ini corpus.src || die "Failed to filter"
+fi
 
 $MOSESMAYPARALLEL \\
   -input-file ./corpus.src \\
