@@ -676,7 +676,15 @@ sub start_mert_for_model
     my $omemory = '15g'; # memory requirement for optimization job
     my $dpriority = -99;
     my $opriority = -100;
-    if($m->{pc} =~ m/(czeng|un|giga)/ || $m->{mc3} eq 'gigaword')
+    if($m->{pc} =~ m/newseuro-un/)
+    {
+        $dmemory = '50g'; # es-en and en-es died on 30g, one of them even without gigaword lm
+        $omemory = '60g';
+        # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
+        $dpriority = -50;
+        $opriority = 0;
+    }
+    elsif($m->{pc} =~ m/(czeng|un|giga)/ || $m->{mc3} eq 'gigaword')
     {
         $dmemory = '30g';
         $omemory = '42g'; # DZ: Some of my un merts died with 30g.
