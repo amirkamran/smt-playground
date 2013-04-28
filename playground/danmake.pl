@@ -27,7 +27,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -78,6 +78,11 @@ elsif($steptype eq 'korpus')
 elsif($steptype eq 'tag')
 {
     start_tag();
+    exit(0);
+}
+elsif($steptype eq 'stc')
+{
+    start_stc_corpus();
     exit(0);
 }
 # Kroky lm pracují pouze s jednojazyčnými korpusy.
@@ -410,7 +415,7 @@ sub start_tag
     {
         ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
         ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-        next unless ($c->{corpus} =~ m/^news8/);
+        next unless ($c->{corpus} =~ m/^news8/ && $c->{language} eq 'en');
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
@@ -421,6 +426,37 @@ sub start_tag
         else
         {
             dzsys::saferun($command) or die;
+        }
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts creating of the stc factor for all corpora. This step
+# can be automatically invoked before training the language model. Invoking it
+# in advance and in parallel helps avoid wating when starting the lm steps
+# (every lm step will wait for its stc corpus during the preparation stage).
+#------------------------------------------------------------------------------
+sub start_stc_corpus
+{
+    my @corpora = get_corpora();
+    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+    @corpora = grep {$_->{corpus} =~ m/^news8/} (@corpora);
+    print STDERR ("Creating the stc factor for ", scalar(@corpora), " corpora...\n");
+    foreach my $c (@corpora)
+    {
+        my $corpname = $c->{corpus};
+        $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
+        my $command = "corpman $corpname/$c->{language}+stc --start";
+        if($dryrun)
+        {
+            print("$command\n");
+        }
+        else
+        {
+            dzsys::saferun($command);
         }
     }
 }
@@ -833,8 +869,10 @@ sub find_step
         return $stepcache{$select};
     }
     my $step = dzsys::chompticks("eman select $select");
+    $step =~ s/^\s+//;
+    $step =~ s/\s+$//;
     # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-    my @steps = split(/\s+/, $step);
+    my @steps = map {s/^\s+//; s/\s+$//; $_} split(/\s+/, $step);
     my $n = scalar(@steps);
     if($n==0)
     {
@@ -1223,11 +1261,11 @@ sub continue_lm_memory
     my @steps;
     if($select_failed)
     {
-        @steps = split(/\n/, dzsys::chompticks('eman select t lm f'));
+        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm f'));
     }
     else
     {
-        @steps = split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
+        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
     }
     my $n = 0;
     foreach my $step (@steps)
@@ -1254,7 +1292,7 @@ sub continue_lm_memory
 sub continue_missing_running_steps
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select s running nq'));
+    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select s running nq'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -1331,7 +1369,7 @@ sub continue_step_memory
 sub continue_tm_disk
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t tm f'));
+    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t tm f'));
     my $n = 0;
     foreach my $step (@steps)
     {
