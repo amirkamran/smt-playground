@@ -27,7 +27,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -78,6 +78,11 @@ elsif($steptype eq 'korpus')
 elsif($steptype eq 'tag')
 {
     start_tag();
+    exit(0);
+}
+elsif($steptype eq 'stc')
+{
+    start_stc_corpus();
     exit(0);
 }
 # Kroky lm pracují pouze s jednojazyčnými korpusy.
@@ -143,7 +148,9 @@ elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
 @models = filter_models($onlys, $onlyt, $firstcorpus, $lastcorpus, \@ARGV, @models);
 foreach my $m (@models)
 {
-    print("$m->{s}-$m->{t}\t$m->{pc}\t$m->{mc}\t$m->{mc2}\t$m->{mc3}\n");
+    # Is the step already running or done?
+    $m->{step} = find_dr_step_hash($steptype, $m);
+    print("$m->{s}-$m->{t}\t$m->{pc}\t$m->{mc}\t$m->{mc2}\t$m->{mc3}\t$m->{step}\n");
 }
 printf("Total %d models.\n", scalar(@models));
 if($dryrun)
@@ -167,7 +174,10 @@ my %start_step =
 );
 foreach my $m (@models)
 {
-    &{$start_step{$steptype}}($m);
+    if(!defined($m->{step}))
+    {
+        &{$start_step{$steptype}}($m);
+    }
 }
 # Make sure eman knows about new tags etc.
 dzsys::saferun("eman reindex ; eman qstat");
@@ -410,7 +420,7 @@ sub start_tag
     {
         ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
         ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-        next unless ($c->{corpus} =~ m/^news8/);
+        next unless ($c->{corpus} =~ m/^news8/ && $c->{language} eq 'en');
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
@@ -421,6 +431,37 @@ sub start_tag
         else
         {
             dzsys::saferun($command) or die;
+        }
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts creating of the stc factor for all corpora. This step
+# can be automatically invoked before training the language model. Invoking it
+# in advance and in parallel helps avoid wating when starting the lm steps
+# (every lm step will wait for its stc corpus during the preparation stage).
+#------------------------------------------------------------------------------
+sub start_stc_corpus
+{
+    my @corpora = get_corpora();
+    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+    @corpora = grep {$_->{corpus} =~ m/^news8/} (@corpora);
+    print STDERR ("Creating the stc factor for ", scalar(@corpora), " corpora...\n");
+    foreach my $c (@corpora)
+    {
+        my $corpname = $c->{corpus};
+        $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
+        my $command = "corpman $corpname/$c->{language}+stc --start";
+        if($dryrun)
+        {
+            print("$command\n");
+        }
+        else
+        {
+            dzsys::saferun($command);
         }
     }
 }
@@ -443,13 +484,21 @@ sub opravit_lematizaci_news8
     {
         $step =~ s/^\s+//;
         $step =~ s/\s+$//;
-        #print("$step\n");
-        dzsys::saferun("mv $step/corpman.info $step/corpman-zablokovano.info");
-        dzsys::saferun("eman fail $step");
+        if(0)
+        {
+            #print("$step\n");
+            dzsys::saferun("mv $step/corpman.info $step/corpman-zablokovano.info");
+            dzsys::saferun("eman fail $step");
+        }
+        else
+        {
+            # Vytvořit novou instanci tohoto kroku podle nové šablony.
+            dzsys::saferun("eman redo $step --start") or die;
+        }
     }
     my $n = scalar(@steps);
     print("Celkem nalezeno $n kroků.\n");
-    dzsys::saferun("eman reindex ; corpman reindex");
+    dzsys::saferun("eman reindex ; eman qstat");
 }
 
 
@@ -562,8 +611,17 @@ sub start_model
     my $m = shift; # reference to hash with model parameters
     my $tmstep = find_tm($m);
     my $lmsteps = get_lmsequence($m);
-    dzsys::saferun("TMS=$tmstep LMS=\"$lmsteps\" eman init model --start --mem 30g");
-    start_mert($m);
+    ###!!! Check whether the step has been successfully launched previously.
+    ###!!! If so, do not create a duplicate step.
+    if(my $step = find_dr_step_hash('model', $m))
+    {
+        print STDERR ("Step $step is already RUNNING or DONE, will not create again.\n");
+    }
+    else
+    {
+        dzsys::saferun("TMS=$tmstep LMS=\"$lmsteps\" eman init model --start --mem 30g");
+        start_mert($m);
+    }
 }
 
 
@@ -746,6 +804,169 @@ sub start_all_missing_evaluators
 
 
 #------------------------------------------------------------------------------
+# Získá od emana seznam kroků, jejich stavů a značek. Na rozdíl od eman select
+# si může všimnout, že některé kroky na hřišti jsou bez značky, čili asi
+# vznikly až po posledním eman reindex nebo eman retag a eman select tre by je
+# nenašel. Tento vlastní index nám také umožní rychle zjistit, zda krok, který
+# se chystáme vyrobit, už neexistuje.
+#------------------------------------------------------------------------------
+sub get_list_of_steps
+{
+    # Získání seznamu všech kroků je drahé (na hřišti mohou být tisíce kroků).
+    # Proto si seznam ukládáme v cachi a případné změny v ní udržujeme sami.
+    return @steplistcache if(@steplistcache);
+    my $list = dzsys::chompticks('eman --status --tag ls');
+    my @list0 = split(/\n/, $list);
+    my @list;
+    foreach my $line (@list0)
+    {
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
+        # Pozor! Značka může obsahovat mezery. Sloupce tedy odděluje \t, ale ne \s+.
+        my ($step, $status, $tag) = split(/\t/, $line);
+        # Pro jistotu...
+        die("Step '$step' contains whitespace") if($step =~ m/\s/);
+        die("Unknown status '$status'") unless($status =~ m/^(INITED|PREPARED|PREPFAILED|RUNNING|FAILED|DONE|OUTDATED)$/);
+        # Je značka prázdná? Pomohlo by přeznačkování?
+        # Není jisté, že přeznačkování pomůže. Možná prostě pro daný druh kroku nemáme definované značkovací schéma.
+        # Druhy kroků, u kterých značku neočekáváme, zde vyjmenujeme:
+        if(!defined($tag) && $step !~ m/^s\.(czeng|joshua|morfessor|mosesgiza|podvod|srilm|treex|wmt|wmtintersecttrain)\./)
+        {
+            dzsys::saferun("eman retag $step") or die;
+            my $newline = dzsys::chompticks("eman tag $step");
+            $newline =~ s/^\s+//;
+            $newline =~ s/\s+$//;
+            ($step, $tag) = split(/\t/, $newline);
+            if(!defined($tag))
+            {
+                print STDERR ("WARNING: Retagging did not help. Step $step has undefined tag.\n");
+            }
+        }
+        # Značka je v mém případě většinou seznam značek oddělených mezerami. Příklad:
+        # DEV:wmt10v6b LM:newsall LM:newseuro LMA:fr+stc LMO:6 S:en T:fr TM:newseuro-un.fr-en
+        my @tags = split(/\s+/, $tag);
+        push(@list, {'step' => $step, 'status' => $status, 'tags' => \@tags});
+    }
+    # Zapamatovat si seznam v globální cachi a předpokládat, že po celý jeden běh danmake.pl zůstává platný.
+    # Znamená to, že kroky, které vyrobíme, musíme do cachovaného seznamu průběžně přidávat.
+    @steplistcache = @list;
+    return @list;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Samostatnější implementace hledání kroku. Nevolá eman select, čímž jednak
+# šetříme čas (použijeme náš nacachovaný seznam všech kroků), jednak se
+# zbavujeme závislosti na tom, zda má eman aktuální index.
+#------------------------------------------------------------------------------
+sub find_steps_1
+{
+    my $steptype = shift;
+    my @tags = @_;
+    my @list = grep
+    {
+        my $record = $_;
+        my $ok = $record->{step} =~ m/^s\.$steptype\./;
+        foreach my $tag (@tags)
+        {
+            $ok = $ok && grep {$_ eq $tag} (@{$record->{tags}});
+        }
+        # Jeden krok může být postaven na několika různých jazykových modelech.
+        # Jestliže hledáme krok s jazykovým modelem X, nechceme dostat krok postavený na kombinaci X a Y.
+        if(grep {m/^LM:/} (@tags) && grep {my $x = $_; m/^LM:/ && !grep {$_ eq $x} (@tags)} (@{$record->{tags}}))
+        {
+            $ok = 0;
+        }
+        $ok;
+    }
+    (get_list_of_steps());
+    return @list;
+}
+
+
+
+#------------------------------------------------------------------------------
+# Hledá běžící nebo hotový krok pro konkrétní úlohu. Možné výsledky:
+# - Pro tuto úlohu neexistuje žádný krok, bez ohledu na stav.
+#   => Vrátí undef. Krok můžeme vytvořit a nevznikne duplikát.
+# - Existuje právě jeden takový krok ve stavu DONE.
+#   => Vrátí název kroku (nebo záznam s údaji o kroku?)
+#      Pokud jsme ho chtěli vyrábět, přeskočíme ho.
+#      Pokud jsme ho potřebovali jako předka, máme ho.
+# - Neexistuje DONE, ale existuje právě jeden RUNNING.
+#   => Postupujeme stejně jako u DONE.
+# - Ostatní případy. Dostupné kroky jsou ve stavech, které vyžadují zvláštní
+#   zásah (např. INITED, FAILED), nebo máme duplicitní hotové kroky, ze kterých
+#   neumíme automaticky vybrat (a nejspíš chceme zvláštní zásah úklid).
+#   => Hodíme výjimku. Pokud volající tuto alternativu považuje za legitimní,
+#      pak musí použít jinou funkci.
+#------------------------------------------------------------------------------
+sub find_dr_step
+{
+    my @list = find_steps_1(@_);
+    if(scalar(@list)==0)
+    {
+        return undef;
+    }
+    else
+    {
+        my @done = grep {$_->{status} eq 'DONE'} (@list);
+        if(scalar(@done)==1)
+        {
+            return $done[0]{step};
+        }
+        elsif(scalar(@done)==0)
+        {
+            my @running = grep {$_->{status} eq 'RUNNING'} (@list);
+            if(scalar(@running)==1)
+            {
+                return $running[0]{step};
+            }
+        }
+        # Jestliže jsme se dostali až sem, nelze jednoznačně vybrat krok, který je DONE, případně RUNNING.
+        # Na hřišti je nepořádek, který by si měl uživatel uklidit, než bude pokračovat. Proto výjimka.
+        print STDERR ("Nelze jednoznačně vybrat použitelný krok se značkami\n");
+        print STDERR (join(' ', @_), "\n");
+        foreach my $step (@list)
+        {
+            print STDERR ("$step->{step}\t$step->{status}\t", join(' ', @{$step->{tags}}), "\n");
+        }
+        die;
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Najde použitelný krok pro model zadaný jako hash, který vyrábíme z tabulky
+# korpusů.
+#------------------------------------------------------------------------------
+sub find_dr_step_hash
+{
+    my $steptype = shift;
+    my $m = shift; # reference to hash with model parameters
+    my @tags;
+    push(@tags, "S:$m->{s}");
+    push(@tags, "T:$m->{t}");
+    if($steptype =~ m/^(model|mert|translate|evaluator)$/)
+    {
+        push(@tags, "TM:$m->{pc}");
+        push(@tags, "LM:$m->{mc}");
+        push(@tags, "LM:$m->{mc2}") if(defined($m->{mc2}));
+        push(@tags, "LM:$m->{mc3}") if(defined($m->{mc3}));
+    }
+    else
+    {
+        confess("Not implemented for step type $steptype");
+    }
+    my $step = find_dr_step($steptype, @tags);
+    return $step;
+}
+
+
+
+#------------------------------------------------------------------------------
 # Najde krok s odpovídajícím jazykovým modelem.
 #------------------------------------------------------------------------------
 sub find_lm
@@ -825,8 +1046,10 @@ sub find_step
         return $stepcache{$select};
     }
     my $step = dzsys::chompticks("eman select $select");
+    $step =~ s/^\s+//;
+    $step =~ s/\s+$//;
     # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-    my @steps = split(/\s+/, $step);
+    my @steps = map {s/^\s+//; s/\s+$//; $_} split(/\s+/, $step);
     my $n = scalar(@steps);
     if($n==0)
     {
@@ -1215,11 +1438,11 @@ sub continue_lm_memory
     my @steps;
     if($select_failed)
     {
-        @steps = split(/\n/, dzsys::chompticks('eman select t lm f'));
+        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm f'));
     }
     else
     {
-        @steps = split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
+        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
     }
     my $n = 0;
     foreach my $step (@steps)
@@ -1246,7 +1469,7 @@ sub continue_lm_memory
 sub continue_missing_running_steps
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select s running nq'));
+    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select s running nq'));
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -1323,7 +1546,7 @@ sub continue_step_memory
 sub continue_tm_disk
 {
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select t tm f'));
+    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t tm f'));
     my $n = 0;
     foreach my $step (@steps)
     {
