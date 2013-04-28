@@ -963,14 +963,20 @@ sub find_dr_step_hash
     my $steptype = shift;
     my $m = shift; # reference to hash with model parameters
     my @tags;
-    push(@tags, "S:$m->{s}");
-    push(@tags, "T:$m->{t}");
     if($steptype eq 'lm')
     {
+        push(@tags, "LMA:$m->{t}+stc");
         push(@tags, "LM:$m->{mc}");
+    }
+    elsif($steptype eq 'align')
+    {
+        push(@tags, "C:$m->{pc}");
+        push(@tags, "A:$m->{s}-lemma-$m->{t}-lemma");
     }
     elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
     {
+        push(@tags, "S:$m->{s}");
+        push(@tags, "T:$m->{t}");
         push(@tags, "TM:$m->{pc}");
         push(@tags, "LM:$m->{mc}");
         push(@tags, "LM:$m->{mc2}") if(defined($m->{mc2}));
