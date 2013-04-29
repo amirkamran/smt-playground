@@ -677,7 +677,7 @@ sub start_mert_for_model
     my $omemory = '15g'; # memory requirement for optimization job
     my $dpriority = -99;
     my $opriority = -100;
-    if($m->{pc} =~ m/newseuro-un/)
+    if($m->{pc} =~ m/news\d?euro-un/)
     {
         $dmemory = '50g'; # es-en and en-es died on 30g, one of them even without gigaword lm
         $omemory = '80g'; # es-en and en-es with gigaword died on 60g
