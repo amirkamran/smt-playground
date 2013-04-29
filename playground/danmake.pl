@@ -685,8 +685,15 @@ sub start_mert_for_model
     my $omemory = '15g'; # memory requirement for optimization job
     my $dpriority = -99;
     my $opriority = -100;
-    # The gigafren corpus is huge so I am putting it at the same level with newseuro-un, without waiting for it to fail on something smaller.
-    if($m->{pc} =~ m/(news\d?euro-un|gigafren)/)
+    if($m->{pc} eq 'gigafren')
+    {
+        $dmemory = '50g';
+        $omemory = '100g'; # fr-en without gigaword lm died on 80g
+        # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
+        $dpriority = -40;
+        $opriority = 0;
+    }
+    elsif($m->{pc} =~ m/(news\d?euro-un|gigafren)/)
     {
         $dmemory = '50g'; # es-en and en-es died on 30g, one of them even without gigaword lm
         $omemory = '80g'; # es-en and en-es with gigaword died on 60g
