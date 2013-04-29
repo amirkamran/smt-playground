@@ -222,7 +222,8 @@ sub get_corpora_seed
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2010',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+      { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+      { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
     );
     # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
     # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
@@ -393,6 +394,7 @@ sub start_korpus
     ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
     ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
     @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
+    print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
