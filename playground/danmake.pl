@@ -677,7 +677,8 @@ sub start_mert_for_model
     my $omemory = '15g'; # memory requirement for optimization job
     my $dpriority = -99;
     my $opriority = -100;
-    if($m->{pc} =~ m/news\d?euro-un/)
+    # The gigafren corpus is huge so I am putting it at the same level with newseuro-un, without waiting for it to fail on something smaller.
+    if($m->{pc} =~ m/(news\d?euro-un|gigafren)/)
     {
         $dmemory = '50g'; # es-en and en-es died on 30g, one of them even without gigaword lm
         $omemory = '80g'; # es-en and en-es with gigaword died on 60g
@@ -685,7 +686,7 @@ sub start_mert_for_model
         $dpriority = -50;
         $opriority = 0;
     }
-    elsif($m->{pc} =~ m/(czeng|un|giga)/ || $m->{mc3} eq 'gigaword')
+    elsif($m->{pc} =~ m/(czeng|un)/ || $m->{mc3} eq 'gigaword')
     {
         $dmemory = '30g';
         $omemory = '42g'; # DZ: Some of my un merts died with 30g.
