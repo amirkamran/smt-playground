@@ -1,8 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Supervised truecasing (based on the lemma).
 # Expects: form|lemma
 # Peeks at the first char of the lemma and lowercases the form if necessary.
 # The form is either appended as a third factor or replaced in place.
+use utf8;
 use strict;
 use Getopt::Long;
 
@@ -88,8 +89,13 @@ while (<>) {
       my $is_first_in_sent = ($wi == 0);
       my $lemma = $facts[$lemf];
       if ($striplem) {
+        ###!!! DZ: Every now and then I get the 'Malformed UTF-8 character (fatal)' error on the following regexes and I don't know why.
+        if (!utf8::is_utf8($lemma)) { print STDERR ("Bad lemma\n"); print STDERR ("$lemma\n"); }
+        else {
+        #print STDERR ("Lemma $lemma seems OK.\n");
         $lemma =~ s/(.)[`_].*$/\1/;
         $lemma =~ s/(.)-[0-9]+$/\1/;
+        }
       }
       my $truecased = perform_case($lemma, $facts[$formf]);
       my $shape = guess_case($lemma)
