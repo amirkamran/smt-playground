@@ -704,7 +704,7 @@ sub start_mert_for_model
     elsif($m->{pc} =~ m/(czeng|un)/ || $m->{mc3} eq 'gigaword')
     {
         $dmemory = '42g'; # Experiments with parallel newseuro and English Gigaword died with 30g.
-        $omemory = '42g'; # Some of my un merts died with 30g.
+        $omemory = '72g'; # Some of my un merts died with 30g. Newseuro cs-en + Gigaword died with 60g.
         # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
         $dpriority = -50;
         $opriority = 0;
