@@ -130,7 +130,7 @@ elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
         my $l2 = $pcorpus->{languages}[1];
         # Základní jazykový model vždy tvoří cílová strana paralelního korpusu.
         # Druhý jazykový model vždy tvoří news.all v příslušném jazyce.
-        my $pmc = $pcorpus->{corpus} =~ m/^newseuro/ ? 'newseuro' : $pcorpus->{corpus};
+        my $pmc = $pcorpus->{corpus} =~ m/^(news\d+euro)/ ? $1 : $pcorpus->{corpus};
         push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
         push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
         if($l1 =~ m/^(en|es|fr)$/)
@@ -227,7 +227,7 @@ sub get_corpora_seed
     );
     # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
     # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
-    my $v8 = 0;
+    my $v8 = 1;
     if($v8)
     {
         push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
@@ -675,10 +675,6 @@ sub start_mert_for_model
     my $modelstep = shift;
     my $m = shift; # reference to hash with model parameters ###!!! needed for memory requirements; not available when called from start all missing merts!
     confess if(!defined($m)); ###!!!
-    # Note that the wmt10v6b corpus (a version of newstest2010) is not created by any step created by this danmake.pl script.
-    # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
-    # See the wiki for how to do it:
-    # https://wiki.ufal.ms.mff.cuni.cz/user:zeman:eman#ondruv-navod-jak-prevzit-existujici-augmented-corpus
     # The mert step submits parallel translation jobs to the cluster.
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
@@ -712,7 +708,7 @@ sub start_mert_for_model
         $opriority = 0;
     }
     my $gridfl = "\"-p $dpriority -hard -l mf=$dmemory -l act_mem_free=$dmemory -l h_vmem=$dmemory\"";
-    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt10v6b eman init mert --start --mem $omemory --priority $opriority");
+    dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt2012 eman init mert --start --mem $omemory --priority $opriority");
 }
 
 
@@ -762,7 +758,7 @@ sub start_translate_for_mert
     # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
     # See the wiki for how to do it:
     # https://wiki.ufal.ms.mff.cuni.cz/user:zeman:eman#ondruv-navod-jak-prevzit-existujici-augmented-corpus
-    dzsys::saferun("MERTSTEP=$mertstep TESTCORP=wmt12v6b eman init translate --start --mem 30g");
+    dzsys::saferun("MERTSTEP=$mertstep TESTCORP=wmt2013 eman init translate --start --mem 30g");
 }
 
 
@@ -1100,7 +1096,7 @@ sub find_step
     if($n==0)
     {
         my $for = " for $emanselect" if($emanselect);
-        die("No $steptype step found$for");
+        confess("No $steptype step found$for");
     }
     elsif($n>1)
     {
