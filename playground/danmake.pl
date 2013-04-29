@@ -534,6 +534,8 @@ sub start_align
     my $n_lines = get_corpus_size($m->{pc}, $m->{s}, 'lemma');
     my $disk = $n_lines>=3000000 ? '100g' : '15g';
     dzsys::saferun("GIZASTEP=$gizastep CORPUS=$m->{pc} SRCALIAUG=$m->{s}+lemma TGTALIAUG=$m->{t}+lemma eman init align --start --disk $disk") or die;
+    # Eman cannot find newly created steps until their tags have been added to the index.
+    dzsys::saferun('eman retag');
     start_tm($m);
 }
 
@@ -621,6 +623,8 @@ sub start_model
     else
     {
         dzsys::saferun("TMS=$tmstep LMS=\"$lmsteps\" eman init model --start --mem 30g");
+        # Eman cannot find newly created steps until their tags have been added to the index.
+        dzsys::saferun('eman retag');
         start_mert($m);
     }
 }
@@ -654,6 +658,8 @@ sub start_mert
     my $m = shift; # reference to hash with model parameters
     my $modelstep = find_model($m);
     start_mert_for_model($modelstep, $m);
+    # Eman cannot find newly created steps until their tags have been added to the index.
+    dzsys::saferun('eman retag');
     start_translate($m);
 }
 
@@ -730,6 +736,8 @@ sub start_translate
     my $m = shift; # reference to hash with model parameters
     my $mertstep = find_mert($m);
     start_translate_for_mert($mertstep);
+    # Eman cannot find newly created steps until their tags have been added to the index.
+    dzsys::saferun('eman retag');
     start_evaluator($m);
 }
 
