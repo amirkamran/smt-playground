@@ -226,7 +226,7 @@ sub get_corpora_seed
     );
     # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
     # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
-    my $v8 = 1;
+    my $v8 = 0;
     if($v8)
     {
         push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
@@ -687,13 +687,13 @@ sub start_mert_for_model
     my $opriority = -100;
     if($m->{pc} eq 'gigafren')
     {
-        $dmemory = '50g';
+        $dmemory = '75g'; # en-fr without gigaword lm died on 50g
         $omemory = '100g'; # fr-en without gigaword lm died on 80g
         # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
         $dpriority = -40;
         $opriority = 0;
     }
-    elsif($m->{pc} =~ m/(news\d?euro-un|gigafren)/)
+    elsif($m->{pc} =~ m/news\d?euro-un/)
     {
         $dmemory = '50g'; # es-en and en-es died on 30g, one of them even without gigaword lm
         $omemory = '80g'; # es-en and en-es with gigaword died on 60g
