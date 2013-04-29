@@ -653,7 +653,7 @@ sub start_mert
 {
     my $m = shift; # reference to hash with model parameters
     my $modelstep = find_model($m);
-    start_mert_for_model($modelstep);
+    start_mert_for_model($modelstep, $m);
     start_translate($m);
 }
 
@@ -665,6 +665,8 @@ sub start_mert
 sub start_mert_for_model
 {
     my $modelstep = shift;
+    my $m = shift; # reference to hash with model parameters ###!!! needed for memory requirements; not available when called from start all missing merts!
+    confess if(!defined($m)); ###!!!
     # Note that the wmt10v6b corpus (a version of newstest2010) is not created by any step created by this danmake.pl script.
     # I manually created a step of type 'podvod' symlinked the existing augmented corpus there and registered it with corpman.
     # See the wiki for how to do it:
