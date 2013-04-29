@@ -390,11 +390,11 @@ sub start_korpus
     # However, the index could still refer to them.
     unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
+    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     foreach my $c (@corpora)
     {
-        ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-        ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-        next unless($c->{corpus} eq 'news8all');
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
@@ -415,12 +415,12 @@ sub start_korpus
 sub start_tag
 {
     my @corpora = get_corpora();
+    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
+    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
-        ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-        ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-        next unless ($c->{corpus} =~ m/^news8/ && $c->{language} eq 'en');
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
@@ -448,7 +448,7 @@ sub start_stc_corpus
     my @corpora = get_corpora();
     ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
     ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-    @corpora = grep {$_->{corpus} =~ m/^news8/} (@corpora);
+    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Creating the stc factor for ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
