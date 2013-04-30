@@ -687,7 +687,7 @@ sub start_mert_for_model
     if($m->{pc} eq 'gigafren')
     {
         $dmemory = '75g'; # en-fr without gigaword lm died on 50g
-        $omemory = '100g'; # fr-en without gigaword lm died on 80g
+        $omemory = '150g'; # fr-en without gigaword lm died on 120g
         # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
         $dpriority = -40;
         $opriority = 0;
