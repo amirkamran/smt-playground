@@ -44,7 +44,7 @@ $PLAYGROUND/corpman register -- alignment.gz -1 $CORPUS gdfa-$ALILABEL ali $srcc
 
 # convert the dependencies to absolute paths
 FABINPATH=`eman path $FABINSTEP`
-wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
+$PLAYGROUND/../scripts/wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
