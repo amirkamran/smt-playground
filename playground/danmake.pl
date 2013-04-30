@@ -513,9 +513,10 @@ sub start_lm
     my $m = shift; # reference to hash with model parameters
     my $srilmstep = find_step('srilm', 'd');
     # Velké korpusy potřebují více paměti. Zatím nejmenší korpus, kterému nestačilo výchozích 6g, byl francouzský se 4+ mil. řádků.
+    # Španělský news8all má 13+ mil. řádků a 30g paměti mu nestačilo.
     # Korpus gigafren má zase 22+ mil. řádků, ale 60g paměti mu bylo málo (francouzský lm).
     my $n_lines = get_corpus_size($m->{mc}, $m->{t}, 'stc');
-    my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=20000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
+    my $mem = $n_lines>=50000000 ? ' --mem 200g' : $n_lines>=10000000 ? ' --mem 100g' : $n_lines>=4000000 ? ' --mem 30g' : '';
     dzsys::saferun("SRILMSTEP=$srilmstep CORP=$m->{mc} CORPAUG=$m->{t}+stc ORDER=6 eman init lm --start$mem") or die;
 }
 
@@ -701,7 +702,7 @@ sub start_mert_for_model
     }
     elsif($m->{pc} =~ m/(czeng|un)/ || $m->{mc3} eq 'gigaword')
     {
-        $dmemory = '42g'; # Experiments with parallel newseuro and English Gigaword died with 30g.
+        $dmemory = '80g'; # Experiments with parallel newseuro and English Gigaword died with 60g.
         $omemory = '72g'; # Some of my un merts died with 30g. Newseuro cs-en + Gigaword died with 60g.
         # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
         $dpriority = -50;
