@@ -131,15 +131,15 @@ elsif($steptype =~ m/^(model|mert|translate|evaluator)$/)
         # Základní jazykový model vždy tvoří cílová strana paralelního korpusu.
         # Druhý jazykový model vždy tvoří news.all v příslušném jazyce.
         my $pmc = $pcorpus->{corpus} =~ m/^(news\d+euro)/ ? $1 : $pcorpus->{corpus};
-        push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
-        push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall'});
+        push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'news8all'});
+        push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'news8all'});
         if($l1 =~ m/^(en|es|fr)$/)
         {
-            push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
+            push(@models, {'s' => $l2, 't' => $l1, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'news8all', 'mc3' => 'gigaword'});
         }
         if($l2 =~ m/^(en|es|fr)$/)
         {
-            push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'newsall', 'mc3' => 'gigaword'});
+            push(@models, {'s' => $l1, 't' => $l2, 'pc' => $pcorpus->{corpus}, 'mc' => $pmc, 'mc2' => 'news8all', 'mc3' => 'gigaword'});
         }
     }
 }
