@@ -680,10 +680,10 @@ sub start_mert_for_model
     # These may be memory-intensive for some of the larger language models we use.
     # So we have to use the GRIDFLAGS parameter to make sure the jobs will get a machine with enough memory.
     # (Note that the GRIDFLAGS value will be later inherited by the translate step.)
-    my $dmemory = '15g'; # memory requirement for decoder jobs
-    my $omemory = '15g'; # memory requirement for optimization job
-    my $dpriority = -99;
-    my $opriority = -100;
+    my $dmemory; # memory requirement for decoder jobs
+    my $omemory; # memory requirement for optimization job
+    my $dpriority; # priority of every submitted decoder job
+    my $opriority; # priority of the main optimization job
     if($m->{pc} eq 'gigafren')
     {
         $dmemory = '75g'; # en-fr without gigaword lm died on 50g
@@ -703,10 +703,17 @@ sub start_mert_for_model
     elsif($m->{pc} =~ m/(czeng|un)/ || $m->{mc3} eq 'gigaword')
     {
         $dmemory = '80g'; # Experiments with parallel newseuro and English Gigaword died with 60g.
-        $omemory = '72g'; # Some of my un merts died with 30g. Newseuro cs-en + Gigaword died with 60g.
+        $omemory = '80g'; # Some of my un merts died with 30g. News8euro ru-en + Gigaword died with 72g.
         # Eman default priority is -100. Use a higher value if we need more powerful (= less abundant) machines.
         $dpriority = -50;
         $opriority = 0;
+    }
+    else # standard news8euro with additional lm news8all
+    {
+        $dmemory = '15g';
+        $omemory = '20g'; # es-en mert died with 15g
+        $dpriority = -99;
+        $opriority = -100;
     }
     my $gridfl = "\"-p $dpriority -hard -l mf=$dmemory -l act_mem_free=$dmemory -l h_vmem=$dmemory\"";
     dzsys::saferun("GRIDFLAGS=$gridfl MODELSTEP=$modelstep DEVCORP=wmt2012 eman init mert --start --mem $omemory --priority $opriority");
