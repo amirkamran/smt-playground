@@ -60,7 +60,7 @@ while (<>) {
     print;
     if ($section eq "ttable-file") {
       $drop_old_ttables = 1;
-      print "1 0 0 1 $emptyttablefile\n"; # add our ttable
+      print "1 0 0 0 $emptyttablefile\n"; # add our ttable
     } elsif ($section eq "lmodel-file") {
       print "8 0 $hyplmorder $hyplmfile\n"; # add our lm
     } elsif ($section eq "weight-l") {
