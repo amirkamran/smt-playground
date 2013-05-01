@@ -22,6 +22,7 @@ eman \
   defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
   defvar MOSESFLAGS default='' inherit=MERTSTEP help='further flags for moses' \
+  defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -110,6 +111,7 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
+mybase=\$(basename \$mydir)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
@@ -158,14 +160,30 @@ if [ ! -e moses.ini ]; then
   ## Clone the moses.ini and source files
   \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
     --symlink \\
+    $MERTSTEPDIR/moses.ini \\
+  || die "Failed to clone the full model"
+  \$SCRIPTS_ROOTDIR/ems/support/reuse-weights.perl \\
     $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini \\
-  || die "Failed to clone"
+    < ./moses.ini > moses.mertweights.ini \\
+  || die "Failed to apply weights from mert"
   \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \\
-    \`pwd\`/moses.ini > moses.abs.ini \\
+    \`pwd\`/moses.mertweights.ini > moses.abs.ini \\
   || die "Failed to absolutize"
+fi
+
+if [ ! -e filtered-for-eval ]; then
+  if [ x$SSD == x ]; then
+    filteroutdir=filtered-for-eval
+  else
+    filteroutdir=$SSD/\$mybase/filtered-for-eval
+    ln -s \$filteroutdir ./ \\
+      || die "Failed to prepare symlink for filtered tables"
+  fi
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
-    --filterflags="--Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable --tempdir=$tempdir" \\
-    filtered-for-eval \`pwd\`/moses.abs.ini corpus.src \\
+    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    --no-binarize-distortion-model \\
+    --tempdir=$tempdir \\
+    \$filteroutdir \`pwd\`/moses.abs.ini corpus.src \\
   || die "Failed to filter"
 fi
 

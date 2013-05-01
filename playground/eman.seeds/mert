@@ -18,6 +18,8 @@ eman \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
   defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
+  defvar EMAN_DISK default='6g' help='free space on the temp disk' \
+  defvar EMAN_CORES default='4' help='number of CPUs to use in Moses' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
@@ -28,6 +30,7 @@ eman \
   defvar TREEXSTEP default='' help='for zmert SemPOS tmt (used to be TMT_ROOT; untested)' \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
+  defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
 || exit 1
 
 # Set local bash variables
@@ -88,6 +91,10 @@ if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
 
+if [ ! -z "$EMAN_CORES" ]; then
+  MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
+fi
+
 if [ $JOBS -eq 0 ]; then
   GRIDARGS=""
   MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
@@ -114,6 +121,11 @@ cube)
   ;;
 esac
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
 case "$MERTPRG" in
 zmert)
   cat << KONEC > command.mert
@@ -136,11 +148,11 @@ mert)
   cat << KONEC > command.mert
 $MERTMOSES \
   --working-dir=\`pwd\`/mert-tuning \\
-  --filterflags="--Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable --tempdir=$tempdir" \\
+  --no-filter-phrase-table \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
+  \`pwd\`/filtered-for-mert/moses.ini \\
   $MERTGRIDARGS \\
   $MERTFLAGS \\
   --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
@@ -152,11 +164,6 @@ KONEC
   ;;
 esac
 
-tempdir=/mnt/h/tmp
-  # best choice for ufal
-[ -d $tempdir ] || tempdir=/tmp
-  # the default
-
 cat << KONEC > eman.command
 #!/bin/bash
 # This is the command to be run here
@@ -166,6 +173,7 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
+mybase=\$(basename \$mydir)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
@@ -201,6 +209,22 @@ echo These were our MERTFLAGS="$MERTFLAGS"
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Absolutize failed"
+
+if [ ! -e filtered-for-mert ]; then
+  if [ x$SSD == x ]; then
+    filteroutdir=filtered-for-mert
+  else
+    filteroutdir=$SSD/\$mybase/filtered-for-mert
+    ln -s \$filteroutdir ./ \\
+      || die "Failed to prepare symlink for filtered tables"
+  fi
+  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
+    --no-binarize-distortion-model \\
+    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    --tempdir=$tempdir \\
+    \$filteroutdir \`pwd\`/moses.abs.ini tuning.in \\
+  || die "Failed to filter"
+fi
 
 # This is the actual mert to run
 `cat command.mert`
