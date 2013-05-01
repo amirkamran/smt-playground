@@ -136,6 +136,7 @@ mert)
   cat << KONEC > command.mert
 $MERTMOSES \
   --working-dir=\`pwd\`/mert-tuning \\
+  --filterflags="--Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable --tempdir=$tempdir" \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
@@ -150,6 +151,11 @@ KONEC
   die "Bad search algorithm: $SEARCH"
   ;;
 esac
+
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
 
 cat << KONEC > eman.command
 #!/bin/bash

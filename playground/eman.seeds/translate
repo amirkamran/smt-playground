@@ -96,6 +96,11 @@ else
   MOSESMAYPARALLEL="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -feed-decoder-via-stdin -decoder ./moses"
 fi
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
 cat << KONEC > eman.command
 #!/bin/bash
 # This is the command to be run here
@@ -153,9 +158,15 @@ if [ ! -e moses.ini ]; then
   ## Clone the moses.ini and source files
   \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
     --symlink \\
-    $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
-  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Failed to absolutize"
-  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval \`pwd\`/moses.abs.ini corpus.src || die "Failed to filter"
+    $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini \\
+  || die "Failed to clone"
+  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \\
+    \`pwd\`/moses.ini > moses.abs.ini \\
+  || die "Failed to absolutize"
+  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
+    --filterflags="--Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable --tempdir=$tempdir" \\
+    filtered-for-eval \`pwd\`/moses.abs.ini corpus.src \\
+  || die "Failed to filter"
 fi
 
 $MOSESMAYPARALLEL \\
