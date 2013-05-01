@@ -109,7 +109,8 @@ for arg in sys.argv[1:]:
 for line in sys.stdin:
     cols = line.rstrip("\n").split("\t")
     there = parse_align(cols[0])
-    back = parse_align(cols[1], True) # invert points
+    # XXX need an option to specify whether back alignment is inverted
+    back = parse_align(cols[1]) 
 
     align = set()
     for alg in algorithms:
