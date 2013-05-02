@@ -27,7 +27,7 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|proposeremoval|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
 if($steptype eq 'special')
 {
@@ -62,6 +62,12 @@ elsif($steptype eq 'complete')
     start_all_missing_merts();
     start_all_missing_translates();
     start_all_missing_evaluators();
+}
+# Find steps depending on a step being removed and propose command to remove them all.
+elsif($steptype eq 'proposeremoval')
+{
+    propose_removal_of_dependencies($ARGV[0]);
+    exit(0);
 }
 elsif($steptype eq 'combine')
 {
@@ -481,11 +487,9 @@ sub start_stc_corpus
 sub opravit_lematizaci_news8
 {
     # Zjistit seznam pokažených značkovacích kroků.
-    my @steps = split(/\n/, dzsys::safeticks("eman select t tag tre C:news8 not tre L:en"));
+    my @steps = eman('select t tag tre C:news8 not tre L:en');
     foreach my $step (@steps)
     {
-        $step =~ s/^\s+//;
-        $step =~ s/\s+$//;
         if(0)
         {
             #print("$step\n");
@@ -579,7 +583,7 @@ sub start_tm_for_align
 sub start_all_missing_tms
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t align not u t tm'));
+    @steps = eman('select t align not u t tm');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -728,7 +732,7 @@ sub start_mert_for_model
 sub start_all_missing_merts
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t model not u t mert'));
+    @steps = eman('select t model not u t mert');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -778,7 +782,7 @@ sub start_translate_for_mert
 sub start_all_missing_translates
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t mert not u t translate'));
+    @steps = eman('select t mert not u t translate');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -825,7 +829,7 @@ sub start_evaluator_for_translate
 sub start_all_missing_evaluators
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t translate not u t evaluator'));
+    @steps = eman('select t translate not u t evaluator');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -855,13 +859,10 @@ sub get_list_of_steps
     # Získání seznamu všech kroků je drahé (na hřišti mohou být tisíce kroků).
     # Proto si seznam ukládáme v cachi a případné změny v ní udržujeme sami.
     return @steplistcache if(@steplistcache);
-    my $list = dzsys::chompticks('eman --status --tag ls');
-    my @list0 = split(/\n/, $list);
+    my @list0 = eman('ls --status --tag');
     my @list;
     foreach my $line (@list0)
     {
-        $line =~ s/^\s+//;
-        $line =~ s/\s+$//;
         # Pozor! Značka může obsahovat mezery. Sloupce tedy odděluje \t, ale ne \s+.
         my ($step, $status, $tag) = split(/\t/, $line);
         # Pro jistotu...
@@ -873,9 +874,7 @@ sub get_list_of_steps
         if(!defined($tag) && $step !~ m/^s\.(czeng|joshua|morfessor|mosesgiza|podvod|srilm|treex|wmt|wmtintersecttrain)\./)
         {
             dzsys::saferun("eman retag $step") or die;
-            my $newline = dzsys::chompticks("eman tag $step");
-            $newline =~ s/^\s+//;
-            $newline =~ s/\s+$//;
+            my ($newline) = eman("tag $step");
             ($step, $tag) = split(/\t/, $newline);
             if(!defined($tag))
             {
@@ -1095,11 +1094,9 @@ sub find_step
         print STDERR ("Cached:    ( eman select $select ) => $stepcache{$select}\n");
         return $stepcache{$select};
     }
-    my $step = dzsys::chompticks("eman select $select");
-    $step =~ s/^\s+//;
-    $step =~ s/\s+$//;
+    my @steps = eman("select $select");
+    my $step;
     # Pokud je k dispozici několik zdrojových kroků, vypsat varování a vybrat ten první.
-    my @steps = map {s/^\s+//; s/\s+$//; $_} split(/\s+/, $step);
     my $n = scalar(@steps);
     if($n==0)
     {
@@ -1108,9 +1105,10 @@ sub find_step
     }
     elsif($n>1)
     {
+        ###!!! Jenže bychom se měli vyhnout krokům ve stavu FAILED, ABOLISHED a OUTDATED!
         print STDERR ("WARNING: $n $steptype steps found, using $steps[0]\n");
-        $step = $steps[0];
     }
+    $step = $steps[0];
     $stepcache{$select} = $step;
     return $step;
 }
@@ -1425,7 +1423,7 @@ sub start_inited_steps
 {
     # Look for steps that have been initialized but not started.
     my @steps;
-    @steps = split(/\n/, dzsys::chompticks('eman select s inited'));
+    @steps = eman('select s inited');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -1488,11 +1486,11 @@ sub continue_lm_memory
     my @steps;
     if($select_failed)
     {
-        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm f'));
+        @steps = eman('select t lm f');
     }
     else
     {
-        @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t lm s running nq'));
+        @steps = eman('select t lm s running nq');
     }
     my $n = 0;
     foreach my $step (@steps)
@@ -1519,7 +1517,7 @@ sub continue_lm_memory
 sub continue_missing_running_steps
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select s running nq'));
+    @steps = eman('select s running nq');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -1596,7 +1594,7 @@ sub continue_step_memory
 sub continue_tm_disk
 {
     my @steps;
-    @steps = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t tm f'));
+    @steps = eman('select t tm f');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -1648,7 +1646,7 @@ sub continue_tm_disk
 sub redo_mert_memory
 {
     # Look for failed mert steps.
-    my @steps = map {$_ =~ s/^\s+//; $_ =~ s/\s+$//; $_} split(/\n/, dzsys::chompticks('eman select t mert f'));
+    my @steps = eman('select t mert f');
     my $n = 0;
     my @to_remove;
     foreach my $step (@steps)
@@ -1732,6 +1730,97 @@ sub redo_mert_memory
 
 
 #------------------------------------------------------------------------------
+# Gets the name of a step that we want to remove from playground. (If we have
+# to use eman redo instead of eman continue on a FAILED step, the failed step
+# will be never used again. We could mark it as OUTDATED or ABOLISHED but we
+# generally try to avoid that, in order to keep playground uncluttered. So we
+# rm -rf the step folder.) The function then searches for other steps that will
+# become useless after the removal, and proposes to remove them as well. For
+# safety reasons, the function does not remove the steps. It just generates the
+# command that the user can copy and launch if they believe that it is OK.
+#
+# The function typically applies to mert steps that had to be redone because of
+# underestimated memory requirements in GRIDFLAGS. We want to remove dependent
+# translate and evaluator steps.
+#------------------------------------------------------------------------------
+sub propose_removal_of_dependencies
+{
+    my $step0 = shift;
+    # Get the descendants of the step.
+    my @lines = eman("tf --status --tag $step0 --notree");
+    my @steps;
+    for(my $i = 0; $i<scalar(@lines); $i += 2)
+    {
+        my $step = $lines[$i];
+        my $info = $lines[$i+1];
+        confess("'$step' does not seem to be a step name") unless($step =~ m/^s\./);
+        my ($status, $tags);
+        if($info =~ m/^Job:\s+([A-Z]+)\s+(.*)$/)
+        {
+            $status = $1;
+            $tags = $2;
+        }
+        else
+        {
+            confess("I do not understand the step info line '$info'");
+        }
+        # We do not expect the descendants to be anything but FAILED, especially not DONE.
+        if($status ne 'FAILED')
+        {
+            print("WARNING: Status of step $step is $status, expected FAILED.\n");
+        }
+        push(@steps, $step);
+    }
+    # If we are removing a mert step because we cloned it using eman redo, we want to keep the parent model step.
+    # (It is also the parent of the new clone of the mert step.)
+    # However, if we are removing it just because we do not want to do that sort of experiment any more,
+    # then the model step may become obsolete, too.
+    if($step0 =~ m/^s\.mert\./)
+    {
+        @lines = eman("tb $step0 --notree");
+        # First line is the $step0 itself, second line is its (first) predecessor.
+        # (Mert step has other predecessors such as mosesgiza or corpus (DEV data) but we rely on that model will be always listed first (not guaranteed...))
+        my $parent = $lines[1];
+        confess("Expected model as parent of mert, got '$parent'") unless($parent =~ m/^s\.model\./);
+        @lines = eman("users $parent --notree");
+        if(scalar(@lines)==1)
+        {
+            # Just in case of bug in eman, check that the user is really $step0.
+            if($lines[0] ne $step0)
+            {
+                confess("The parent of '$step0' is '$parent', it has only one child but it is not '$step0'. It is '$lines[0]'.\n");
+            }
+            print("The parent of $step0 is $parent and it has no other children so it can probably be removed as well.\n");
+            push(@steps, $parent);
+        }
+    }
+    # Prepare a command to remove the steps. The user should check that the proposal seems OK, then copy the command and launch it manually.
+    my $command = 'rm -rf '.join(' ', @steps).' ; eman reindex';
+    print("You can use the following command to remove the given step and its relatives that will become obsolete too:\n");
+    print("\t$command\n");
+}
+
+
+
+#------------------------------------------------------------------------------
+# Calls eman and returns its standard output as list of lines. Cleans the
+# output, i.e. removes leading and trailing whitespaces, which is important
+# because the typical output is a list of steps, which we need to further
+# assign to environment variables etc.
+#
+# Example usage:
+# my @failed_steps = eman('select f');
+#------------------------------------------------------------------------------
+sub eman
+{
+    my $eman_arguments = join(' ', @_); # without the 'eman' command
+    my @lines = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::safeticks("eman $eman_arguments"));
+    return @lines;
+}
+
+
+
+#------------------------------------------------------------------------------
 # Archív kroků, které jsem generoval dnes už zastaralým způsobem, zatím nebyl
 # čas je předělat a ani jsem je ještě k ničemu nepotřeboval.
 #------------------------------------------------------------------------------
@@ -1773,7 +1862,7 @@ sub spustit_stare_dosud_nekonvertovane_kroky
     # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
     if($steptype =~ m/^(morfalign|all)$/)
     {
-        my $gizastep = dzsys::chompticks('eman select t mosesgiza d');
+        my ($gizastep) = eman('select t mosesgiza d');
         # Odstranit corpman.index a vynutit tak přeindexování.
         # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
         dzsys::saferun("rm -f corpman.index") or die;
@@ -1791,7 +1880,7 @@ sub spustit_stare_dosud_nekonvertovane_kroky
     # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.
     if($steptype =~ m/^(binarize|all)$/)
     {
-        my $joshuastep = dzsys::chompticks('eman ls joshua');
+        my ($joshuastep) = eman('ls joshua');
         foreach my $pair (@pairs)
         {
             my ($src, $tgt) = @{$pair};
