@@ -49,6 +49,15 @@ while(<RES>)
     {
         $record{pair} = 'xx-yy';
     }
+    # As we currently have a mixture of translate steps run either on wmt2012 or wmt2013 test sets, we want to sort the results according to this as well.
+    if($record{tags} =~ m/TST:(\S+)/)
+    {
+        $record{test} = $1;
+    }
+    else
+    {
+        $record{test} = 'zzz'; # last in alphabet
+    }
     push(@results, \%record);
 }
 close(RES);
@@ -57,7 +66,11 @@ close(RES);
     my $vysledek = $a->{pair} cmp $b->{pair};
     unless($vysledek)
     {
-        $vysledek = $b->{bleu} <=> $a->{bleu};
+        $vysledek = $a->{test} cmp $b->{test};
+        unless($vysledek)
+        {
+            $vysledek = $b->{bleu} <=> $a->{bleu};
+        }
     }
     return $vysledek;
 }
@@ -66,8 +79,13 @@ foreach my $r (@results)
 {
     if($lastpair && $r->{pair} ne $lastpair)
     {
-        print('-' x 80, "\n");
+        print('=' x 80, "\n");
+    }
+    elsif($lasttest && $r->{test} ne $lasttest)
+    {
+        print('.' x 80, "\n");
     }
     print("$r->{pair}\t$r->{bleu}\t$r->{bleuint}\t$r->{tags}\t$r->{step}\n");
     $lastpair = $r->{pair};
+    $lasttest = $r->{test};
 }
