@@ -582,8 +582,7 @@ sub start_tm_for_align
 #------------------------------------------------------------------------------
 sub start_all_missing_tms
 {
-    my @steps;
-    @steps = eman('select t align not u t tm');
+    my @steps = eman('select t align not u t tm');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -731,8 +730,7 @@ sub start_mert_for_model
 #------------------------------------------------------------------------------
 sub start_all_missing_merts
 {
-    my @steps;
-    @steps = eman('select t model not u t mert');
+    my @steps = eman('select t model not u t mert');
     my $n = 0;
     foreach my $step (@steps)
     {
@@ -781,8 +779,8 @@ sub start_translate_for_mert
 #------------------------------------------------------------------------------
 sub start_all_missing_translates
 {
-    my @steps;
-    @steps = eman('select t mert not u t translate');
+    #my @steps = eman('select t mert not u t translate');
+    my @steps = eman('select t mert d not u t translate tre TST:wmt2013');
     my $n = 0;
     foreach my $step (@steps)
     {
