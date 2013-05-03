@@ -71,5 +71,7 @@ dzsys::saferun("cat sysout.detok.txt | $scriptpath/normalize-punctuation.pl $tgt
 dzsys::saferun("cat sysout.detok.txt | $scriptpath/wrap-xml.pl $tgt $sgmlsrc $sysname > sysout.$tgt.sgml") or die;
 dzsys::saferun("cat sysout.detok.normalized.txt | $scriptpath/wrap-xml.pl $tgt $sgmlsrc $sysname > sysout.$tgt.normalized.sgml") or die;
 print("To submit the results to the WMT site, call:\n");
+print("\tmatrix_create_systems.pl -usr YOUR_USER_NAME -psw YOUR_PASSWORD $sysname\n");
+print("\t\t(This script will register your system for all language pairs containing Czech and/or English.)\n");
 print("\tmatrix_submit_results.pl -usr YOUR_USER_NAME -psw YOUR_PASSWORD -src $src -tgt $tgt -notes $estep sysout.$tgt.sgml\n");
 print("\tmatrix_submit_results.pl -usr YOUR_USER_NAME -psw YOUR_PASSWORD -src $src -tgt $tgt -notes $estep sysout.$tgt.normalized.sgml\n");

@@ -6,7 +6,7 @@
 use utf8;
 sub usage
 {
-    print STDERR ("Usage: matrix_create_systems.pl <options>\n");
+    print STDERR ("Usage: matrix_create_systems.pl <options> <system-name>\n");
     print STDERR ("Options:\n");
     print STDERR ("       -usr: user name for matrix.statmt.org\n");
     print STDERR ("       -psw: password\n");
@@ -29,6 +29,12 @@ if(!$konfig{uzivatel} || !$konfig{heslo})
     usage();
     confess("Unknown user or password");
 }
+$sysname = $ARGV[0];
+if(!defined($sysname))
+{
+    usage();
+    confess("Missing name of the MT system");
+}
 
 # Create web client.
 my $ua = htmlform::vytvorit_klienta();
@@ -48,9 +54,9 @@ htmlform::nastavit_hodnotu($formular, 'login', $konfig{uzivatel});
 htmlform::nastavit_hodnotu($formular, 'password', $konfig{heslo});
 my $podvoj = htmlform::ziskat_pole_dvojic($formular, 'Log in');
 $response = htmlform::post($ua, $url, $podvoj, 'application/x-www-form-urlencoded');
-foreach my $src qw(cs de en es fr)
+foreach my $src qw(cs de en es fr ru)
 {
-    foreach my $tgt qw(cs de en es fr)
+    foreach my $tgt qw(cs de en es fr ru)
     {
         if($src ne $tgt && ($src =~ m/^(cs|en)$/ || $tgt =~ m/^(cs|en)$/))
         {
@@ -63,7 +69,8 @@ foreach my $src qw(cs de en es fr)
             }
             $html = $response->content();
             $formular = htmlform::precist_formular($html);
-            htmlform::nastavit_hodnotu($formular, 'system[name]', 'uk-dan-moses');
+            htmlform::nastavit_hodnotu($formular, 'system[name]', $sysname);
+            htmlform::nastavit_hodnotu($formular, 'system[constraint_system]', 1);
             htmlform::nastavit_hodnotu($formular, 'system[software]', 'Moses');
             htmlform::nastavit_hodnotu($formular, 'system[source_lang]', uc($src));
             htmlform::nastavit_hodnotu($formular, 'system[target_lang]', uc($tgt));

@@ -77,6 +77,7 @@ close(RES);
 (@results);
 foreach my $r (@results)
 {
+    # Separate language pairs and test sets by horizontal lines.
     if($lastpair && $r->{pair} ne $lastpair)
     {
         print('=' x 80, "\n");
@@ -84,6 +85,16 @@ foreach my $r (@results)
     elsif($lasttest && $r->{test} ne $lasttest)
     {
         print('.' x 80, "\n");
+    }
+    # Is this the best result for the given language pair and for the required test set?
+    if(!defined($lastpair) || $r->{pair} ne $lastpair || !defined($lasttest) || $r->{test} ne $lasttest)
+    {
+        # This is the first, i.e. best scored result for the given language pair and test set.
+        # Is it the required test set?
+        if($r->{test} eq 'wmt2013')
+        {
+            print('!'); ###!!!
+        }
     }
     print("$r->{pair}\t$r->{bleu}\t$r->{bleuint}\t$r->{tags}\t$r->{step}\n");
     $lastpair = $r->{pair};
