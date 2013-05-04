@@ -23,6 +23,10 @@ eman \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
   defvar MOSESFLAGS default='' inherit=MERTSTEP help='further flags for moses' \
   defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
+  defvar _DELETE_FILTERED_MODEL help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
+  defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
+  defvar EMAN_DISK default='6g' help='free space on the temp disk' \
+  defvar EMAN_CORES default='4' help='number of CPUs to use in Moses' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -81,6 +85,15 @@ $PLAYGROUND/corpman register -- alignment.gz \
 [ -z "$INIT_ONLY" ] || exit 0
 
 MOSESPARALLEL="$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
+
+
+# XXX This is actually wrong! EMAN_CORES should be set only if JOBS==0
+# For parallel merts, EMAN_CORES of the main job is 1 and only the subjobs
+# should book more cores...
+if [ ! -z "$EMAN_CORES" ]; then
+  MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
+fi
+
 
 if [ $JOBS == 0 ]; then
   GRIDARGS=""
@@ -225,10 +238,16 @@ $PLAYGROUND/corpman register -- alignment.gz \
   -1 $TESTCORP $OUTLANG $ALIFACT \$linecount 0 \
 || die "Can't register linecount of the output alignment"
 
-echo "You could prepare detailed output for manual inpection:"
-echo ./moses -input-file ./corpus.src -config ./filtered-for-eval-opt/moses.ini \\
-  -verbose 3 \\
-  2>&1
+if [ x$_DELETE_FILTERED_MODEL == xyes ]; then
+  echo "Removing \$filteroutdir and $SSD/\$mybase"
+  rm -rf \$filteroutdir
+  rmdir $SSD/\$mybase
+else
+  echo "You could prepare detailed output for manual inpection:"
+  echo ./moses -input-file ./corpus.src -config ./filtered-for-eval-opt/moses.ini \\
+    -verbose 3 \\
+    2>&1
+fi
 #  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
 #  | head -c 300k \\
 #  > translated.verbose

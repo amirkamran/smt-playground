@@ -31,6 +31,7 @@ eman \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
   defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
+  defvar _DELETE_FILTERED_MODEL help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
 || exit 1
 
 # Set local bash variables
@@ -91,6 +92,9 @@ if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
 
+# XXX This is actually wrong! EMAN_CORES should be set only if JOBS==0
+# For parallel merts, EMAN_CORES of the main job is 1 and only the subjobs
+# should book more cores...
 if [ ! -z "$EMAN_CORES" ]; then
   MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
 fi
@@ -228,6 +232,12 @@ fi
 
 # This is the actual mert to run
 `cat command.mert`
+
+if [ x$_DELETE_FILTERED_MODEL == xyes ]; then
+  echo "Removing \$filteroutdir and $SSD/\$mybase"
+  rm -rf \$filteroutdir
+  rmdir $SSD/\$mybase
+fi
 
 # Standard command footer
 echo Done.
