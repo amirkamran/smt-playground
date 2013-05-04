@@ -1,15 +1,32 @@
 #!/usr/bin/env perl
 # Collects BLEU scores from evaluator steps.
-# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# Copyright © 2012-2013 Dan Zeman <zeman@ufal.mff.cuni.cz>
 # License: GNU GPL
 
 use utf8;
+sub usage
+{
+    print STDERR ("Usage: harvest.pl [-usr <user> -psw <password>] > harvest.txt\n");
+    print STDERR ("Options:\n");
+    print STDERR ("       -usr: user name for matrix.statmt.org\n");
+    print STDERR ("       -psw: password\n");
+    print STDERR ("Creates a table of known results, sorted by languages, test sets and scores.\n");
+    print STDERR ("If the credentials for matrix.statmt.org are provided, submits best results there!\n");
+    print STDERR ("BEWARE: Understand what the submission scripts do before using them!\n");
+}
 use open ':utf8';
 binmode(STDIN, ':utf8');
 binmode(STDOUT, ':utf8');
 binmode(STDERR, ':utf8');
+use Carp;
+use Getopt::Long;
 use dzsys;
 
+GetOptions
+(
+    'usr=s' => \$usr,
+    'psw=s' => \$psw,
+);
 # Make sure that all evaluator steps have a tag that identifies the corpora used.
 dzsys::saferun("eman retag") or die;
 # Ask Eman to collect names, states, tags and scores of all evaluator steps.
@@ -49,6 +66,15 @@ while(<RES>)
     {
         $record{pair} = 'xx-yy';
     }
+    # As we currently have a mixture of translate steps run either on wmt2012 or wmt2013 test sets, we want to sort the results according to this as well.
+    if($record{tags} =~ m/TST:(\S+)/)
+    {
+        $record{test} = $1;
+    }
+    else
+    {
+        $record{test} = 'zzz'; # last in alphabet
+    }
     push(@results, \%record);
 }
 close(RES);
@@ -57,17 +83,44 @@ close(RES);
     my $vysledek = $a->{pair} cmp $b->{pair};
     unless($vysledek)
     {
-        $vysledek = $b->{bleu} <=> $a->{bleu};
+        $vysledek = $a->{test} cmp $b->{test};
+        unless($vysledek)
+        {
+            $vysledek = $b->{bleu} <=> $a->{bleu};
+        }
     }
     return $vysledek;
 }
 (@results);
 foreach my $r (@results)
 {
+    # Separate language pairs and test sets by horizontal lines.
     if($lastpair && $r->{pair} ne $lastpair)
     {
-        print('-' x 80, "\n");
+        print('=' x 80, "\n");
+    }
+    elsif($lasttest && $r->{test} ne $lasttest)
+    {
+        print('.' x 80, "\n");
+    }
+    # Submit results if required.
+    if($usr && $psw)
+    {
+        # Is this the best result for the given language pair and for the required test set?
+        if(!defined($lastpair) || $r->{pair} ne $lastpair || !defined($lasttest) || $r->{test} ne $lasttest)
+        {
+            # This is the first, i.e. best scored result for the given language pair and test set.
+            # Is it the required test set?
+            if($r->{test} eq 'wmt2013')
+            {
+                print('!'); # Mark submitted experiments in the harvest overview.
+                print STDERR ("Submitting $r->{step} ($r->{pair})...\n");
+                dzsys::saferun("presubmit.pl $r->{step} cu-zeman") or die;
+                dzsys::saferun("matrix_submit_results.pl -usr $usr -psw $psw -step $r->{step}") or die;
+            }
+        }
     }
     print("$r->{pair}\t$r->{bleu}\t$r->{bleuint}\t$r->{tags}\t$r->{step}\n");
     $lastpair = $r->{pair};
+    $lasttest = $r->{test};
 }

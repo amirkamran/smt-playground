@@ -44,7 +44,7 @@ $PLAYGROUND/corpman register -- alignment.gz -1 $CORPUS gdfa-$ALILABEL ali $srcc
 
 # convert the dependencies to absolute paths
 FABINPATH=`eman path $FABINSTEP`
-wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
+$PLAYGROUND/../scripts/wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
 
 # Emit the main script to be used in the running phase
 cat > eman.command << KONEC
@@ -106,11 +106,11 @@ zcat < corpus.tgt.gz | paste corpus.src - | sed 's/	/ ||| /' > falign.in
 echo "Started align at "\`date '+%Y%m%d-%H%M'\`
 ./fast_align -v -d -o -i falign.in $FALIGNARGS \\
   > align.left 2> align.left.log \\
-  || "Failed to align there" &
+  || die "Failed to align there" &
 
 ./fast_align -v -d -o -r -i falign.in $FALIGNARGS \\
   > align.right 2> align.right.log \\
-  || "Failed to align back" &
+  || die "Failed to align back" &
 
 echo "Waiting on alignment to finish..."
 wait

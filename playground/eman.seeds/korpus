@@ -109,6 +109,13 @@
 # CORPUS=wmt2012 LANGUAGE=en eman init korpus --start
 # CORPUS=wmt2012 LANGUAGE=es eman init korpus --start
 # CORPUS=wmt2012 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=ru eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=ru eman init korpus --start
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -122,7 +129,7 @@ SCRIPTS=$STATMT/scripts
 PLAYGROUND=$STATMT/playground
 WMT=/net/data/wmt
 eman \
-     defvar CORPUS help='newseuro|news8euro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
+     defvar CORPUS help='newseuro|news8euro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2013' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
      defvar LANGUAGE help='language code (create separate step for each language)' \
 || exit 1
@@ -245,10 +252,10 @@ elif [ "$CORPUS" == "gigaword" ] ; then
     die "Unknown language $LANGUAGE for corpus $CORPUS"
   fi
   READINPUT="$STATMT/projects/danwmt/gigaword.pl $LANGUAGE"
-elif [[ "$CORPUS" =~ wmt20[01][89012] ]] ; then
+elif [[ "$CORPUS" =~ wmt20[01][890123] ]] ; then
   # cd $WMT
-  # wget http://www.statmt.org/wmt12/dev.tgz
-  # wget http://www.statmt.org/wmt12/test.tgz
+  # wget http://www.statmt.org/wmt13/dev.tgz
+  # wget http://www.statmt.org/wmt13/test.tgz
   # untar it
   # cd $PLAYGROUND
   newstest=$(echo $CORPUS | sed 's/wmt/newstest/')
