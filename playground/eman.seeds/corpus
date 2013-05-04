@@ -122,7 +122,8 @@ else
   || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
 fi
 
-rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
+# Avoid forced reindex for speedup; let's see what breaks...
+# rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
 echo Done.
 eman succeed \$mydir
