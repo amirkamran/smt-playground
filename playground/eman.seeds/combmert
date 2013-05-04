@@ -219,6 +219,7 @@ fi
 
 ## Clone the moses.ini and source files
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \
+  --symlink \
   ../$TARGMODELSTEP/model/moses.ini \
   || die "Failed to clone ../$TARGMODELSTEP/model/moses.ini"
 
