@@ -181,7 +181,7 @@ const AlignType &GetInitial(const AlignType &l, const AlignType &r, const AlignT
 // define function pointer type for symmetrization algorithms
 typedef void (*AlgType)(State &);
 
-// print program Usage
+// print program usage
 string Usage() {
   return "Usage: symmetrize align.left align.right symmetrization [symmetrization2 [...]]"
     "\n\nSupported algorithms: l, r, i, u, g, d, f, fa"
@@ -189,7 +189,7 @@ string Usage() {
     "\nMultiple symmetrizations are separated by tabs in the output.";
 }
 
-// convert alignment to string, XXX could be faster
+// print word alignment
 void PrintAlign(const AlignType &ali) {
   AlignType::const_iterator it = ali.begin();
   while (it != ali.end()) {
