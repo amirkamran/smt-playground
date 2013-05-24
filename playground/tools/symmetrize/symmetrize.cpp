@@ -74,12 +74,15 @@ AlignType parseLine(const string &line) {
       pt.y = num;
       num = 0;
       align.insert(pt);
+      pt.x = -1; 
     } else {
       Die("Unexpected character " + c);
     }
   }
-  pt.y = num;
-  align.insert(pt);
+  if (pt.x != -1) {
+    pt.y = num;
+    align.insert(pt);
+  }
   return align;
 }
 
@@ -125,8 +128,11 @@ void moveUnalignedPoint(State &state, const Point &pt) {
 
 // union, move all points from extra to current
 void U(State &s) {
-  BOOST_FOREACH(const Point &pt, s.extra) {
-    movePoint(s, pt);
+  AlignType::iterator it, toMove;
+  it = s.extra.begin();
+  while (it != s.extra.end()) {
+    toMove = it; ++it;
+    movePoint(s, *toMove);
   }
 }
 
@@ -156,15 +162,21 @@ void GD(State &s) {
 
 // final
 void F(State &s) {
-  BOOST_FOREACH(const Point &pt, s.extra) {
-    moveUnalignedPoint(s, pt);    
+  AlignType::iterator it, toMove;
+  it = s.extra.begin();
+  while (it != s.extra.end()) {
+    toMove = it; ++it;
+    moveUnalignedPoint(s, *toMove);
   }
 }
 
 // final-and
 void FA(State &s) {
-  BOOST_FOREACH(const Point &pt, s.extra) {
-    if (unalignedAnd(s, pt)) movePoint(s, pt);    
+  AlignType::iterator it, toMove;
+  it = s.extra.begin();
+  while (it != s.extra.end()) {
+    toMove = it; ++it;
+    if (unalignedAnd(s, *toMove)) movePoint(s, *toMove);
   }
 }
 
@@ -173,7 +185,8 @@ void FA(State &s) {
 enum Initial { INTER, LEFT, RIGHT };
 
 // return alignment based on Initial enum value
-const AlignType &GetInitial(const AlignType &l, const AlignType &r, const AlignType &i, Initial init) {
+const AlignType &GetInitial(const AlignType &l, const AlignType &r, 
+    const AlignType &i, Initial init) {
   switch (init) {
     case LEFT:  return l;
     case RIGHT: return r;
@@ -267,6 +280,10 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < syms.size(); i++) {
       State state;
       state.current = GetInitial(leftAli, rightAli, intersection, inits[i]);
+      set_difference(leftAli.begin(), leftAli.end(), state.current.begin(), state.current.end(),
+          inserter(state.extra, state.extra.begin()));
+      set_difference(rightAli.begin(), rightAli.end(), state.current.begin(), state.current.end(),
+          inserter(state.extra, state.extra.begin()));
       BOOST_FOREACH(const AlgType &alg, syms[i]) {
         alg(state);
       }
