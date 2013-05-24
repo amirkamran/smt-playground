@@ -194,7 +194,6 @@ const AlignType &GetInitial(const AlignType &l, const AlignType &r,
 }
 
 // define function pointer type for symmetrization algorithms
-// typedef void (*AlgType)(State &);
 typedef function<void (State &)> AlgType;
 
 // print program usage
