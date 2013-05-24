@@ -108,13 +108,13 @@ void movePoint(State &state, const Point &pt) {
 // either source or target side of the point is unaligned
 bool unalignedOr(const State &state, const Point &pt) {
   return state.alignedSrc.find(pt.x) == state.alignedSrc.end()
-    || state.alignedTgt.find(pt.x) == state.alignedTgt.end();
+    || state.alignedTgt.find(pt.y) == state.alignedTgt.end();
 }
 
 // both source and target side of the point is unaligned
 bool unalignedAnd(const State &state, const Point &pt) {
   return state.alignedSrc.find(pt.x) == state.alignedSrc.end()
-    && state.alignedTgt.find(pt.x) == state.alignedTgt.end();
+    && state.alignedTgt.find(pt.y) == state.alignedTgt.end();
 }
 
 // add point to alignment if it is unalignedOr
