@@ -121,7 +121,7 @@ wait
 
 # symmetrize, TODO other symmetrizations
 echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
-./symmetrize align.left align.right g+d+fa \
+./symmetrize align.left align.right gd+fa \
   | gzip -c > alignment.gz || die "Failed to symmetrize"
 
 # Standard command footer

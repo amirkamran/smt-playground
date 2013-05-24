@@ -133,20 +133,24 @@ void U(State &s) {
 // grow
 void G(State &s) {
   BOOST_FOREACH(const Point &pt, s.current) {
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y));
-    moveUnalignedPoint(s, Point(pt.x, pt.y + 1));
     moveUnalignedPoint(s, Point(pt.x - 1, pt.y));
     moveUnalignedPoint(s, Point(pt.x, pt.y - 1));
+    moveUnalignedPoint(s, Point(pt.x + 1, pt.y));
+    moveUnalignedPoint(s, Point(pt.x, pt.y + 1));
   }
 }
 
-// diag
-void D(State &s) {
+// grow-diag
+void GD(State &s) {
   BOOST_FOREACH(const Point &pt, s.current) {
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y + 1));
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y - 1));
-    moveUnalignedPoint(s, Point(pt.x - 1, pt.y + 1));
+    moveUnalignedPoint(s, Point(pt.x - 1, pt.y));
+    moveUnalignedPoint(s, Point(pt.x, pt.y - 1));
+    moveUnalignedPoint(s, Point(pt.x + 1, pt.y));
+    moveUnalignedPoint(s, Point(pt.x, pt.y + 1));
     moveUnalignedPoint(s, Point(pt.x - 1, pt.y - 1));
+    moveUnalignedPoint(s, Point(pt.x - 1, pt.y + 1));
+    moveUnalignedPoint(s, Point(pt.x + 1, pt.y - 1));
+    moveUnalignedPoint(s, Point(pt.x + 1, pt.y + 1));
   }
 }
 
@@ -224,8 +228,8 @@ int main(int argc, char **argv) {
         sym.push_back(U);
       } else if (s == "g") {
         sym.push_back(G);
-      } else if (s == "d") {
-        sym.push_back(D);
+      } else if (s == "gd") {
+        sym.push_back(GD);
       } else if (s == "f") {
         sym.push_back(F);
       } else if (s == "fa") {
