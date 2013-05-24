@@ -86,7 +86,7 @@ AlignType parseLine(const string &line) {
 // state of symmetrization:
 // - current points
 // - extra points that can be added by symmetrization algorithms
-// - currently unaligned points on the source and target sides
+// - currently aligned points on the source and target sides
 struct State {
   AlignType current, extra;
   set<int> alignedSrc, alignedTgt;
