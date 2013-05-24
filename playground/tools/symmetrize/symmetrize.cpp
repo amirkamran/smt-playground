@@ -145,7 +145,7 @@ void U(State &s) {
   }
 }
 
-// grow
+// grow(-diag)
 void G(State &s, const vector<Point> &neighbors) {
   bool changed = true;
   while (changed) {
@@ -289,11 +289,21 @@ int main(int argc, char **argv) {
     // go over requested symmetrizations
     for (size_t i = 0; i < syms.size(); i++) {
       State state;
+
+      // initialize currently aligned points
       state.current = GetInitial(leftAli, rightAli, intersection, inits[i]);
+      BOOST_FOREACH(const Point &pt, state.current) {
+        state.alignedSrc.insert(pt.x);
+        state.alignedTgt.insert(pt.y);
+      }
+
+      // initialize extra points
       set_difference(leftAli.begin(), leftAli.end(), state.current.begin(), state.current.end(),
           inserter(state.extra, state.extra.begin()));
       set_difference(rightAli.begin(), rightAli.end(), state.current.begin(), state.current.end(),
           inserter(state.extra, state.extra.begin()));
+
+      // run symmetrization algorithms
       BOOST_FOREACH(const AlgType &alg, syms[i]) {
         alg(state);
       }
