@@ -3,10 +3,8 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <iterator>
 #include <cstdlib>
 #include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/gzip.hpp> 
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -14,7 +12,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/join.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
