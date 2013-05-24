@@ -15,6 +15,8 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 
 using namespace boost::algorithm;
 using namespace boost::iostreams;
@@ -97,11 +99,14 @@ struct State {
 
 // add point to alignment, i.e. move point from extra pts. to current pts.
 // also remove its words from the sets of unaligned items
-void movePoint(State &state, const Point &pt) {
+bool movePoint(State &state, const Point &pt) {
   if (state.extra.erase(pt) == 1) {
     state.current.insert(pt);
     state.alignedSrc.insert(pt.x);
     state.alignedTgt.insert(pt.y);
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -118,8 +123,12 @@ bool unalignedAnd(const State &state, const Point &pt) {
 }
 
 // add point to alignment if it is unalignedOr
-void moveUnalignedPoint(State &state, const Point &pt) {
-  if (unalignedOr(state, pt)) movePoint(state, pt);
+bool moveUnalignedPoint(State &state, const Point &pt) {
+  if (unalignedOr(state, pt)) {
+    return movePoint(state, pt);
+  } else {
+    return false;
+  }
 }
 
 //
@@ -137,26 +146,15 @@ void U(State &s) {
 }
 
 // grow
-void G(State &s) {
-  BOOST_FOREACH(const Point &pt, s.current) {
-    moveUnalignedPoint(s, Point(pt.x - 1, pt.y));
-    moveUnalignedPoint(s, Point(pt.x, pt.y - 1));
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y));
-    moveUnalignedPoint(s, Point(pt.x, pt.y + 1));
-  }
-}
-
-// grow-diag
-void GD(State &s) {
-  BOOST_FOREACH(const Point &pt, s.current) {
-    moveUnalignedPoint(s, Point(pt.x - 1, pt.y));
-    moveUnalignedPoint(s, Point(pt.x, pt.y - 1));
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y));
-    moveUnalignedPoint(s, Point(pt.x, pt.y + 1));
-    moveUnalignedPoint(s, Point(pt.x - 1, pt.y - 1));
-    moveUnalignedPoint(s, Point(pt.x - 1, pt.y + 1));
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y - 1));
-    moveUnalignedPoint(s, Point(pt.x + 1, pt.y + 1));
+void G(State &s, const vector<Point> &neighbors) {
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    BOOST_FOREACH(const Point &pt, s.current) {
+      BOOST_FOREACH(const Point &n, neighbors) {
+        changed = changed || moveUnalignedPoint(s, Point(pt.x + n.x, pt.y + n.y));
+      }
+    }
   }
 }
 
@@ -196,7 +194,8 @@ const AlignType &GetInitial(const AlignType &l, const AlignType &r,
 }
 
 // define function pointer type for symmetrization algorithms
-typedef void (*AlgType)(State &);
+// typedef void (*AlgType)(State &);
+typedef function<void (State &)> AlgType;
 
 // print program usage
 string Usage() {
@@ -228,6 +227,18 @@ int main(int argc, char **argv) {
   vector<vector<AlgType> > syms; // requested symmetrizations
   vector<Initial> inits;         // their respective initial alignments
 
+  vector<Point> neighbors;
+  neighbors.push_back(Point(-1, 0));
+  neighbors.push_back(Point(0, -1));
+  neighbors.push_back(Point(1, 0));
+  neighbors.push_back(Point(0, 1));
+
+  vector<Point> neighborsDiag(neighbors);
+  neighborsDiag.push_back(Point(-1, -1));
+  neighborsDiag.push_back(Point(-1, 1));
+  neighborsDiag.push_back(Point(1, -1));
+  neighborsDiag.push_back(Point(1, 1));
+
   // parse command-line arguments, get symmetrizations
   for (int i = 3; i < argc; i++) {
     vector<string> algs;
@@ -240,9 +251,9 @@ int main(int argc, char **argv) {
       } else if (s == "u") {
         sym.push_back(U);
       } else if (s == "g") {
-        sym.push_back(G);
+        sym.push_back(bind(G, _1, neighbors));
       } else if (s == "gd") {
-        sym.push_back(GD);
+        sym.push_back(bind(G, _1, neighborsDiag));
       } else if (s == "f") {
         sym.push_back(F);
       } else if (s == "fa") {
