@@ -31,7 +31,7 @@ eman \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
   defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
-  defvar _DELETE_FILTERED_MODEL help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
+  defvar _DELETE_FILTERED_MODEL default='no' help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
 || exit 1
 
 # Set local bash variables
