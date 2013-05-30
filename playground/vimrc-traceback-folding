@@ -1,0 +1,25 @@
+" source this file to support vim folding of tracebacks
+" use <shift>-left/right to fold/unfold a subtree
+" Ondrej Bojar, based on
+" http://vim.wikia.com/wiki/Folding_for_plain_text_files_based_on_indentation
+
+function MyIndent (lnum)
+  " measures the indentation in a traceback, i.e. ignores the 'branches' drawing
+  let intext = getline(a:lnum)
+  " echo intext
+  let notree = tr(intext, "|", " ")
+  return match(notree, '\S')
+endfunction
+
+setlocal foldmethod=expr
+"setlocal foldexpr=(getline(v:lnum)=~'^$')?-1:((indent(v:lnum)<indent(v:lnum+1))?('>'.indent(v:lnum+1)):indent(v:lnum))
+setlocal foldexpr=(getline(v:lnum)=~'^$')?-1:((MyIndent(v:lnum)<MyIndent(v:lnum+1))?('>'.MyIndent(v:lnum+1)):MyIndent(v:lnum))
+set foldtext=getline(v:foldstart)
+set fillchars=fold:\ "(there's a space after that \)
+highlight Folded ctermfg=DarkGreen ctermbg=Black
+
+
+nnoremap <S-Right> zo
+inoremap <S-Right> <C-O>zo
+nnoremap <S-Left> zc
+inoremap <S-Left> <C-O>zc
