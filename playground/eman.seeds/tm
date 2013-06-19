@@ -170,9 +170,9 @@ if \\
         --force-factored-filenames \\
 	    --first-step 4 --last-step 6 \\
 	    --root-dir \$tempdir \\
-	    --alignment-file=alignment \\
+	    --alignment-file=\$tempdir/alignment \\
 	    --alignment=custom \\
-	    --corpus=corpus/corpus \\
+	    --corpus=\$tempdir/corpus/corpus \\
 	    --f src --e tgt \\
         $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
@@ -198,6 +198,8 @@ if \\
 ; then
   success=1
   rm -f \$tempdir/model/extract* # delete temporary files of extracted phrases
+  # Workaround - train-model.perl for whatever reason doesn't delete temporary ungzipped corpus and alignment:
+  rm -f \$tempdir/alignment.*.src \$tempdir/alignment.*.tgt \$tempdir/alignment.*.custom
   echo "COPYING TEMPDIR \$tempdir BACK"
   rsync -uavz \$tempdir/* ./ || die "Assumed success but rsync back failed"
   echo "COPIED"

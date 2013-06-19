@@ -400,6 +400,8 @@ Ceslav:
 
 Zajimave, takze zde naopak kratsi fraze v BLEU pomohly.
 
+DO CLANKU uvadet i prumerne delky frazi
+
 2013-04-03
 
 zkusim taky pridat tectopreklad roku 2012 od Petry:
@@ -414,7 +416,7 @@ zkusim take maximalne zvetsit paralelni data, pridat europarl
 cili po vzoru 23167e07.20130320-2358 15.97±0.57 udelat i f9a1252f.20130322-1622 16.28±0.58
 => s.evaluator.5e3ba7d8.20130404-0902 => 0.1638
 
-
+DO CLANKU overit, ze jsme nezapomneli europarl
 
 2013-04-04
 
@@ -597,6 +599,23 @@ HLOUPE CHYBY:
 - s.evaluator.635a8808.20130430-1403 (preklad do pluslemmat)
   - councillors will => Form-bude , cili to chtelo otagovat anglicke will cislem.
 
+
+Pozorovani od Silvie:
+- naprosto notorická chyba je nerozeznání vztažné věty.  Přitom jestli je v
+pořádku parsování, tak by to mělo být dobře rozpoznatelné ze struktury stromu,
+ne, jestli se říká "auto, které ukradli včera", nebo "auto ukradli včera"!
+- Další podobná chyba je převracení příčinné souvislosti (proto, protože)
+- interpretace takových těch předložkových příslovcí jako instead a except, kdy
+se to má přeložit jako "místo X", a kdy "místo toho, X", nebo "místo toho, aby
+X".
+
+Chyby starsiho mosese s gerundii:
+- feel like listening to something: google vynecha, moses udela spatny tvar
+- mp3 player lies at home, forgotten: zapomenut asi neni dost casty tvar, ani Google ho nezna
+Source   	Whenever you feel like listening to something , you can reach for your cell phone in your pocket , while the MP3 player lies at home , forgotten .
+Reference	Kdykoliv dostanete chuť si něco poslechnout , mobil v kapse nahmatáte , zatímco MP3 přehrávač leží zapomenutý doma .
+Google   	Kdykoliv budete mít chuť na něco , co můžete dostat na svůj mobilní telefon v kapse , zatímco MP3 přehrávač leží doma , zapomněl .
+Moses    	Jak se ti zlíbí , naslouchající , můžete zavolat na mobil v kapse , zatímco MP3 přehrávač leží doma , zapomněl .
 
 
 2013-04-17
