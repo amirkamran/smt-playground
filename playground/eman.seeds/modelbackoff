@@ -1,0 +1,265 @@
+#!/bin/bash
+# eman seed for the preparation of moses.ini file by combining:
+#   translation model(s)
+#   (optional reordering model)
+#   language models
+#   (optional global lexicon model)
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar TMS help='extracted phrases, a colon-separated lists of s.tm' \
+  defvar LMS help='tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep' \
+  defvar GLM help='optional glm step, format: factors:glmstep, e.g. 0-0:s.glm.xyz' \
+    default='' \
+  defvar CONFIGARGS default='' \
+    help='additional arguments passed to train-model.perl' \
+  defvar RMSTEP default='' help='lexicalized reordering model' \
+  defvar MOSESSTEP default='' \
+    help='moses scripts and binaries (default to inherit from the first TM)' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# Eman should support inheriting many vars from a step at once
+tmone=`echo $TMS | cut -d: -f1`
+eman \
+  defvar MOSESSTEP type='reqstep' default="$(eman get-var $tmone BINARIES)" \
+    help="Failed to inherit from $tmone" \
+  defvar SRCAUG default="$(eman get-var $tmone SRCAUG)" \
+  defvar TGTAUG default="$(eman get-var $tmone TGTAUG)" \
+  defvar DECODINGSTEPS default="$(eman get-var $tmone DECODINGSTEPS)" \
+  defvar THRESHOLD default="$(eman get-var $tmone THRESHOLD)" \
+  defvar CUTOFF default="$(eman get-var $tmone CUTOFF)" \
+|| exit 1
+
+# Set (update) local bash variables
+eval `eman bash-loadvars`
+
+eman add-deps . $MOSESSTEP $(echo $TMS | tr : ' ') \
+|| die "Failed to add some deps"
+
+### updated up to here
+
+MOSESSTEPDIR=$(eman path $MOSESSTEP)
+SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
+
+# Load variables from RMexp
+if [ -z "$RMSTEP" ]; then
+  REORDERING=distance
+  REORDFACTORS="0-0"
+  DOTREORDTAG=""
+else
+  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible TGTAUGs"
+  REORDERING=$(eman get-var $RMSTEP REORDERING) || die "Missed REORDERING"
+  REORDFACTORS=$(eman get-var $RMSTEP REORDFACTORS) || die "Missed REORDFACTORS"
+  [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] \
+    || die "Bad reordering model: $RMSTEP"
+  DOTREORDTAG=".$REORDTAG"
+fi
+
+for tm in `echo $TMS | tr ':' ' '`; do
+  tmtag=$tmtag"TM"`eman tag $tm`
+done
+
+[ -z "$RMSTEP" ] || eman add-deps . $RMSTEP || die "Bad RMSTEP: $RMSTEP"
+[ -z "$RMSTEP" ] || RMSTEP=$(eman path $RMSTEP)
+
+if [ -n "$GLM" ] ; then
+  GLMFACTORS=`echo "$GLM" | cut -d':' -f1`
+  GLMDIR=$(eman path `echo "$GLM" | cut -d':' -f2`)
+fi
+
+## Create the tag based on LMs
+i=1
+for lm in `echo $LMS | sed 's/:::/ /g'`; do
+  eval `$PLAYGROUND/../scripts/makearg --delim=: $lm factor lmstep lmtype`
+  [ ! -z "$lmstep" ] || die "Bad LM specifier: $lm, expected <factor>:<lmstep>"
+  eman add-deps . $lmstep
+  # default to kenlm
+  lmtypetag=${lmtype:-ken}
+  order=`eman get-var $lmstep ORDER` || die "Missing variable $lmstep:ORDER"
+  i=$(($i+1))
+  factor=`echo $factor | sed 'y/\,/+/'`
+  lmtag=$lmtag"LM$factor-$order-"`eman tag $lmstep`-$lmtypetag
+done
+i=$(($i-1))
+
+if [ ! -z "$THRESHOLD" ]; then
+  SIGFILTERTAG=SIG$THRESHOLD"N"$CUTOFF
+fi
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+DECRYPT=$PLAYGROUND/tools/decrypt_mapping_steps_for_training.pl
+[ -x $DECRYPT ] || die "Missing: $DECRYPT"
+
+DECRYPTEDSTEPS=`eval $DECRYPT $DECODINGSTEPS`
+
+cat << KONEC > eman.command
+#!/bin/bash
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# If local copy of input files already exists (we are running 'eman continue') remove it first.
+rm -rf tm*
+
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+## Clone the TMs
+i=0
+for tm in \`echo $TMS | tr ':' ' '\`; do
+  i=\$((\$i + 1))
+  tm=\$(eman path \$tm)
+  for f in \$tm/model/*gz ; do
+    mkdir -p tm.\$i/model
+    $PLAYGROUND/../scripts/wiseln \$f ./tm.\$i/model/\`basename \$f\` || die "Failed to clone \$f in \$tm"
+  done
+done
+
+## computing backoff tags
+backofftag="[decoding-graph-backoff]\\\\n"
+
+first="yes"
+
+for tm in \`echo $TMS | tr ':' ' '\`; do
+  i=\$((\$i + 1))
+  tm=\$(eman path \$tm)
+  for f in \$tm/model/*gz ; do
+    if [ \$first == "yes" ]; then
+        backofftag=\$backofftag"0\\\\n"
+        first="no"
+    else
+        backofftag=\$backofftag"20\\\\n"
+    fi
+  done
+done
+
+
+
+## Cloning reordering model
+if [ ! -z "$RMSTEP" ]; then
+  cd tm.1/model || die "Failed to implant reordmodel to tm.1"
+  for f in $RMSTEP/model/reordering-table*gz ; do
+    $PLAYGROUND/../scripts/wiseln \$f ./\`basename \$f\` \\
+      || die "Failed to clone \$f"
+  done
+  cd \$mydir || die "Chdir back failed"
+fi
+
+
+## Clone the lms
+echo "Cloning LMs"
+i=1
+for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
+  eval \`$PLAYGROUND/../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
+  lmstepdir=\$(eman path \$lmstep)
+  echo "Cloning lm from \$lmstep (\$lmstepdir), using lmtype \$lmtype"
+  if [ x\$lmtype == xblm ]; then
+    numericlmtype=1
+    lmsuffix=blm
+  elif [ x\$lmtype == xflm ]; then
+    numericlmtype=7
+    lmsuffix=flm
+  else
+    numericlmtype=8
+    lmsuffix=lm
+  fi
+
+  if [ \$lmsuffix == flm ]; then
+    $PLAYGROUND/../scripts/wiseln \$lmstepdir/config.prepared.flm ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link flm: \$lmstepdir/config.prepared.flm"
+  else
+    if [ -e \$lmstepdir/corpus.\$lmsuffix.gz ] ; then
+      # prefer gzipped, kenlm (8) supports this
+      lmsuffix=\$lmsuffix.gz
+    fi
+    $PLAYGROUND/../scripts/wiseln \$lmstepdir/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
+      || die "Failed to link lm: \$lmstepdir/corpus.\$lmsuffix"
+  fi
+
+  order=\`eman get-var \$lmstep ORDER\` || die "Missing variable \$lmstep:ORDER"
+
+  lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
+  i=\$((\$i+1))
+done
+i=\$((\$i-1))
+
+echo lmopts: \$lmopts
+
+i=0
+for tm in \`echo $TMS | tr ':' ' '\`; do
+  tmstep=\$(eman path \$tm)
+  i=\$((\$i + 1))
+  cd tm.\$i/
+  \$SCRIPTS_ROOTDIR/training/train-model.perl \\
+    --force-factored-filenames \\
+    --first-step 9 --last-step 9 \\
+    --root-dir . \\
+    --alignment-file=alignment \\
+    --alignment=custom \\
+    --corpus=corpus/corpus \\
+    --f src --e tgt \\
+    --reordering $REORDERING \\
+    --reordering-factors $REORDFACTORS \\
+    $CONFIGARGS \\
+    \$lmopts \\
+    $DECRYPTEDSTEPS \\
+  || die "Failed to create moses.ini"
+  if [ -e \$tmstep/var-SCRADDED ]; then
+	cd model
+	# Some scores has been added to TM -> add corresponding weights to moses.ini.
+	WEIGHTS_ADDER=$PLAYGROUND/tools/alter-moses-ini-ttable-weights.pl
+	[ -x \$WEIGHTS_ADDER ] || die "Missing: \$WEIGHTS_ADDER"
+	cp ./moses.ini ./moses.ini.copy || die "Copy of moses.ini failed"
+	cat ./moses.ini.copy | \$WEIGHTS_ADDER \`cat \$tmstep/var-SCRADDED\` > ./moses.ini || die "Adding weights of new scores failed!"
+	rm ./moses.ini.copy
+	cd ..
+  fi
+  cd \$mydir
+done
+
+mkdir model
+$PLAYGROUND/../scripts/merge_moses_models.pl --append-unknown --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
+  || die "Merge moses.ini failed"
+
+if [ -n "$GLMDIR" ] ; then
+  mkdir glm
+  wiseln $GLMDIR/model/glm glm/glm || die "Failed to clone glm"
+  echo -e "\n[global-lexical-file]\n$GLMFACTORS \$mydir/glm/glm\n\n[weight-lex]\n1.0\n" \\
+    | tee glm/moses.ini >> \$mydir/model/moses.ini || die "Failed to add glm to moses.ini"
+fi
+
+
+## Adding the actuall backoffs to moses.ini
+cat ./model/moses.ini | sed 's/\[ttable-limit\]/'\$backofftag'\\n[ttable-limit]/' > ./model/moses.ini.copy
+mv ./model/moses.ini.copy ./model/moses.ini
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
