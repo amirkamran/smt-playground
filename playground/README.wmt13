@@ -945,6 +945,22 @@ Zkusim i MERT spustit na tomto testsetu, coz da samozrejme prehnane dobre vysled
 -> s.evaluator.1bda00e9.20130422-1227 0.3107
 
 
+2013-06-19
+
+pro Martina Vitu prelozim nova data lepsim modelem.
+Nepouziju Chimeru (tj. s.evaluator.435dc5b5.20130504-0011+depfix)
+ale pouziju Plain Moses ze stejneho clanku. Tj. s.evaluator.7eb64b56.20130501-1359
+  ten na WMT12 dosahl 17.07 oproti tomu 16.63 pouzitemu vyse
+-> s.evaluator.bb0ead96.20130619-1444 (0.2917)
+
+a pripravuju taky korpusy jobsTest2test a jobsTest2dev pro vyladeni mosese
+baseline (dev bigref): s.evaluator.6154b656.20130708-1355
+better (dev jobsTest2dev): s.evaluator.6f82d271.20130708-1402
+
+... az to dobehne, tak to dej sem: /home/bojar/diplomka/vyuka/smt_ufal/NPFL087/current/projects/traslating-job-descriptions
+
+
+
 2013-04-22
 
 zkusil jsem binarizaci
@@ -1235,6 +1251,11 @@ e=s.translate.4bc4816e.20130422-0043
 BUGS: filtermodel dela distortion file rozbaleny (a nebinarizovany)
 
 
+Takto se pak napr. spusti i filtrace na lokalni disk:
+
+eman tb s.evaluator.5f0d2b11.20130502-0159 -i corpus -sv JOBS=0 -sv SSD="\/mnt\/h\/tmp\/bojar\/" -s '/threads 4/threads 8/' -sv EMAN_CORES=8 -sv EMAN_DISK=60g -sv EMAN_MEM=50g -s /30g/50g/g -s /s.tm.16be60b1.20130417-0001/s.tm-e.5859e865.20130501-2258/ -i tm -i klm -i prunelm -i mixlm | _DELETE_FILTERED_MODEL=yes EMAN_DISK=60g EMAN_MEM=50g EMAN_CORES=8 eman clone -start
+
+
 2013-04-24
 
 ozivuju twostep:
@@ -1425,10 +1446,10 @@ INSMALL: c-news++mono-ctk-2008++mono-ctk-2009++mono-ctk-2010++mono-ctk-2011++mon
 
 
 Pokusy s neprorezanymi obrimy daty:
-s.evaluator.1cd281b0.20130430-1409 (RUNNING)	4gr IN + 4gr OUT + 10gr TAG
-s.evaluator.a71332aa.20130430-1411 (RUNNING)	5gr IN + 10gr TAG
-s.evaluator.79d9d29f.20130430-1404 (RUNNING)	4gr IN + 10gr TAG
-s.evaluator.5075c7de.20130430-1414 (RUNNING)	5gr IN + 4gr OUT + 10gr TAG
+s.evaluator.1cd281b0.20130430-1409 (FAILED)	4gr IN + 4gr OUT + 10gr TAG
+s.evaluator.a71332aa.20130430-1411 (FAILED)	5gr IN + 10gr TAG
+s.evaluator.79d9d29f.20130430-1404 (FAILED)	4gr IN + 10gr TAG
+s.evaluator.5075c7de.20130430-1414 (FAILED)	5gr IN + 4gr OUT + 10gr TAG
 ...tady je evidentne potreba dat **malo** jobu
 s.evaluator.f1321ae1.20130501-0910 (DONE)	3gr IN + 7gr mononews + 10gr TAG, 5 jobu, za ziva jsem zbinarizoval -> 0.1694
 s.evaluator.545c79e8.20130501-1226 (DONE)	4gr IN + 7gr mononews + 10gr TAG ! jen 5 jobu  , stejne jsem to zabil a ted zkousim binarizovat ttable -> 0.1707
