@@ -74,3 +74,11 @@ csNmT1 	tag           	csNmT1	mot5        	../../scripts/construct_mot.pl --sche
 csNmT1 	lof|mot0      	csNmT1	lofplusmot0 	sed '\'s/\|/+/g\''
 csNmT1 	lof|mot5      	csNmT1	lofplusmot5 	sed '\'s/\|/+/g\''
 csNmT1 	lof1|mot5     	csNmT1	lof1plusmot5	sed '\'s/\|/+/g\''
+
+# Snowball stemmer
+csNmT1	lc	csNmT1	snstem	../../scripts/snowball_wrapper.sh -l czech
+csNmT1	lc	csNmT1	stem_brno	../../scripts/snowball_wrapper.sh -l czech2
+enNmT1	lc	enNmT1	stem_porter	../../scripts/snowball_wrapper.sh -l porter
+enNmT1	lc	enNmT1	snstem	../../scripts/snowball_wrapper.sh -l english
+deNmT1	lc	deNmT1	snstem	../../scripts/snowball_wrapper.sh -l german
+frNmT1	lc	frNmT1	snstem	../../scripts/snowball_wrapper.sh -l french
