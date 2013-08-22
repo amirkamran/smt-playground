@@ -5,19 +5,39 @@
 # the first four fields on the line. (Not yet implemented!)
 #
 # inlng	infacts       	outlng	outfacts      	command
-*      	form          	*     	lc            	lowercase.pl
+*      	form          	*     	lc            	../../scripts/lowercase.pl
 *      	form|lemma    	*     	stc           	../tools/add_truecased_form.pl 0:1:0:1 --replace-form --no-info | reduce_factors.pl 0
 *      	lc            	*     	lcstem3       	../../scripts/stem_factor.pl --stem=3
 *      	lc            	*     	lcstem4       	../../scripts/stem_factor.pl --stem=4
 *      	lc            	*     	lcstem5       	../../scripts/stem_factor.pl --stem=5
 *      	lc            	*     	lcstem6       	../../scripts/stem_factor.pl --stem=6
+*      	lc            	*     	lcstem7       	../../scripts/stem_factor.pl --stem=7
 *      	form            	*     	stem4       	../../scripts/stem_factor.pl --stem=4
 *      	form            	*     	stem3       	../../scripts/stem_factor.pl --stem=3
 *      	form            	*     	stem5       	../../scripts/stem_factor.pl --stem=5
 *      	form            	*     	stem6       	../../scripts/stem_factor.pl --stem=6
-en_txt 	untoken       	enNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
-cs_txt 	untoken       	csNm  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
-ru_txt 	untoken       	ru_mssTok  	form	../tools/run_moses_tokenizer.sh
+*      	tag            	*     	fftag       	../../scripts/stem_ff.pl
+*      	tag            	*     	ftag       	../../scripts/stem_factor.pl --stem=1
+*      	lc            	*     	lchalfstem       	../tools/halfstemming.pl
+#tokenization
+en_txt 	untoken       	en_tokenized_lemmatized_treex  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
+cs_txt 	untoken       	cs_tokenized_lemmatized_treex  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
+ru_txt 	untoken       	ru_tokenized_lemmatized_treetagger  	form|lemma|tag	perl /a/merkur2/ufallabhome/bilek/russianfix/find_repeat.pl
+
+#u_txt 	form       	ru_tokenized_lemmatized_treetagger  	form|lemma|tag	/a/merkur2/ufallabhome/bilek/treetagger/run_data.sh
+
+#debility
+#cs_tokenized_lemmatized_treex 	form|lemma|tag 	cs_lemmatized_treex 	form|lemma|tag 	cat
+
+#lemmatization
+en 	form       	en_lemmatized_treex  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/enNm.scen
+cs 	form       	cs_lemmatized_treex  	form|lemma|tag	../tools/runtreex.sh ../treex_scenarios/csNm.scen
+ru 	form       	ru_lemmatized_treetagger  	form|lemma|tag	perl /a/merkur2/ufallabhome/bilek/russianfix/find_repeat.pl
+
+#treetagger is doing tokenization too
+
+
+#some other mess
 enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNminput   	form|lemma|tag	csNmT1input	form|lemma|tag	../../scripts/further-tokenize-factored.pl
@@ -26,12 +46,12 @@ csNmT1   	form|lemma|tag	csNmT1	pluslemma	../../scripts/construct_improved_czech
 csNmT1   	tag	csNmT1	pos	../../scripts/stem_factor.pl --stem=2
 csNmT1   	tag	csNmT1	poscng	../../scripts/stem_factor.pl --stem=5
 
-# Reversing the alignment preserves the number of tokens, so we treat it as a
-# 'change of a factor'
+# Reversing the alignment preserves the number of tokens, so we treat it as 'change of a factor'
+
 *	ali	*	revali	../../scripts/reverse_alignment.pl
 
-# The following is an ugly hack that creates identity alignment for tokens
-# tokenized like stc is:
+# The following is an ugly hack that creates identity alignment for tokens tokenized like stc is:
+
 csNmT1	stc	csNmT1-stc	ali	../../scripts/make_identity_ali.pl
 
 ta_txt	untoken	ta	form	/home/bojar/diplomka/granty/emplus/wmt12/playground/s.moses.542a93b3.20120115-0115/moses/scripts/tokenizer/tokenizer.perl

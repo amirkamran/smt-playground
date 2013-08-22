@@ -91,6 +91,9 @@ else
   else
     PGRIDFLAGS="$GRIDFLAGS -p -100 -cwd -S /bin/bash"
   fi
+
+  PGRIDFLAGS=`echo $PGRIDFLAGS|sed -s "s/'/'\"'\"'/g"`
+
   MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $PGRIDFLAGS ' "
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $PGRIDFLAGS ' "
   MOSESMAYPARALLEL="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -feed-decoder-via-stdin -decoder ./moses"

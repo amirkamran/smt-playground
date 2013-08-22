@@ -16,8 +16,13 @@ while(<IN>) {
     print STDERR "($nr)" if $nr % 100000 == 0;
     chomp; s/ +/ /g; s/^ //; s/ $//;
     my $first = 1;
-    foreach (split) {
-        my @FACTOR = split(/\|/);
+    foreach my $t (split) {
+        
+        my @FACTOR = split(/\|/, $t);
+        if ($t=~/^(.*)\|\|$/){
+            @FACTOR=($1,$1,$1, $1, $1, $1, $1);
+        }
+        
         print OUT " " unless $first;
         $first = 0;
         my $first_factor = 1;

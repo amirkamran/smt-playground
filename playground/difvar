@@ -1,15 +1,1 @@
-#!/bin/bash
-
-need="$3"
-
-if [ -z "$need" ]; then
-  need=MODEL
-fi
-
-a=`./traceback $1 | grep $need | head -n1 | cut -d: -f2 | cut -d= -f2`
-b=`./traceback $2 | grep $need | head -n1 | cut -d: -f2 | cut -d= -f2`
-
-echo A: $a
-echo B: $b
-
-diff -u $a/VARS $b/VARS
+/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/difvar

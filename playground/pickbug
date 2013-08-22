@@ -1,18 +1,1 @@
-#!/bin/bash
-
-re="$1"
-out="$2"
-
-input=evaluation.in
-ref=evaluation.ref.0
-hyp=evaluation.opt.out
-
-[ ! -z "$out" ] || out=bug
-
-grep "$re" -n $input $ref $hyp | cut -d: -f2 | sort -u > $out.lines
-greplines $out.lines < $input > $out.in
-greplines $out.lines < $ref > $out.ref
-greplines $out.lines < $hyp > $out.hyp
-
-echo "Selected:"
-wc -l $out.in $out.ref $out.hyp
+/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/pickbug

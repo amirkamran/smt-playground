@@ -1,8 +1,0 @@
-# normalizace a rovnou vytisk, bez moznosti parsovat
-Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
-Normalize_plaintext::Czech
-SCzechW_to_SCzechM::Tokenize_joining_numbers
-SCzechW_to_SCzechM::TagMorce
-Print::Factored
-  TMT_PARAM_PRINT_FACTORED=SCzechM
-  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output

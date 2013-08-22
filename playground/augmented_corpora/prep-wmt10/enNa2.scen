@@ -1,6 +1,0 @@
-Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=20
-SEnglishA_to_SEnglishA::AugmentForCzech
-  TMT_PARAM_AUGMENT_FOR_CZECH=verbneg:simpquotes
-Print::Factored
-  TMT_PARAM_PRINT_FACTORED=SEnglishAT
-  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output

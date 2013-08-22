@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 [submodule "scripts/eman"]
 	path = scripts/eman
 	url = https://redmine.ms.mff.cuni.cz/eman.git
+=======
+[submodule "contrib/arrow-pipelines/python/libs/pypeline"]
+	path = contrib/arrow-pipelines/python/libs/pypeline
+	url = git://github.com/ianj-als/pypeline.git
+>>>>>>> 3a9a983089d8c9861c2689039847bec6aa04b6a5

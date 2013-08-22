@@ -1,7 +1,0 @@
-1
-f_a : 3 f_a(-1) f_a(-2) f_b(-1) anything.count.gz anything.lm.gz 5
-        f_a1,f_a2,f_b1      f_a2,f_b1    	kndiscount gtmin 3 interpolate combine mean
-        f_a1,f_a2             f_a2           kndiscount gtmin 3 interpolate
-        f_a1,f_b1            f_a1           kndiscount gtmin 2 interpolate
-        f_b1                  f_b1          kndiscount gtmin 1 interpolate
-        0                       0               kndiscount gtmin 1

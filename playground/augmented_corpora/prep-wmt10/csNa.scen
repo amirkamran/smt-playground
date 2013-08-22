@@ -1,4 +1,0 @@
-Miscel::SuicideIfMemFull TMT_PARAM_MEMLIMIT=10
-Print::Factored
-  TMT_PARAM_PRINT_FACTORED=SCzechAT
-  TMT_PARAM_PRINT_FACTORED_DESTINATION=factored_output

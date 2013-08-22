@@ -14,6 +14,8 @@ set -o pipefail  # safer pipes
 
 PLAYGROUND=`eman path` # eman playground directory
 
+LOCALENFO=`locale | sed 's/^/export /'`
+
 # Ensure all the required variables are set (or provide the default)
 eman defvar RUN_COMMAND default='' \
      defvar COMBINE_PARTS default='' \
@@ -41,7 +43,7 @@ eman add-deps . $DEPS
 [ -n "`which qsub`" ] || export JOBS=0
 
 # other vars, not influencing exact output
-SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
+SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-50000}
   # even for big corpora, use at most 30k lines per job
 
 # double check our input is a corpus
@@ -96,6 +98,9 @@ fi
 
 cat > eman.command << KONEC
 #!/bin/bash
+
+$LOCALENFO
+
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`

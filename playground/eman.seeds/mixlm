@@ -80,7 +80,7 @@ done
 CORP=$NAMELIST eman defvar CORP
 
 # Remember the core settings
-echo MIX.$NAMELIST+$CORPAUG.$ORDER$lmtypetag > eman.tag
+echo MIXLM:$NAMELIST+$CORPAUG.$ORDER$lmtypetag > eman.tag
 
 
 TMP=/mnt/h/tmp

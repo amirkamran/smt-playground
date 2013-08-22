@@ -1,5 +1,1 @@
-# modelusers 'modelname'
-
-lcat --glob='exp.mert*/info.modelexp' \
-| grep "$1" \
-| cut -d/ -f1
+/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/modelusers

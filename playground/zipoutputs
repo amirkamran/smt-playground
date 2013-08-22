@@ -1,10 +1,1 @@
-#!/bin/bash
-# zips outputs from several steps
-
-for s in "$@"; do \
-  outs="$outs "`./output $s`
-done
-if [ $# -ge 2 ]; then
-  maydelim=--delim
-fi
-ziplines --diff-only $maydelim $outs | less -S
+/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/zipoutputs

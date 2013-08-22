@@ -37,6 +37,10 @@ MOSESDIR="$(eman path $MOSESSTEP)"
 SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
 MOSESCMD="$MOSESDIR/bin/moses"
 
+#SRILMSTEPDIR=$(eman path $SRILMSTEP)
+#SRILMDIR1=$SRILMSTEPDIR/srilm/bin/
+#SRILMDIR=$SRILMSTEPDIR/srilm/bin/i686-m64/
+
 echo $MODELSTEP > info.modelexp
 
 MODELSTEP=$(eman path $MODELSTEP)
@@ -98,6 +102,10 @@ else
   else
     PGRIDFLAGS="$GRIDFLAGS -p -100 -cwd -S /bin/bash"
   fi
+  
+  PGRIDFLAGS=`echo $PGRIDFLAGS|sed -s "s/'/'\"'\"'/g"`
+
+  
   MERTGRIDARGS="--jobs=$JOBS --queue-flags=' $PGRIDFLAGS ' "
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $PGRIDFLAGS ' "
 fi
@@ -122,7 +130,7 @@ $ZMERTMOSES \
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
+  \`pwd\`/moses_b.abs.ini \\
   --mertdir=\$SCRIPTS_ROOTDIR/../../moses/zmert/ \\
   --metric="$ZMERTMETRIC" $ZMERTSEMPOSSOURCEFLAG \\
     $ZMERTFLAGS \\
@@ -139,7 +147,7 @@ $MERTMOSES \
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
+  \`pwd\`/moses_b.abs.ini \\
   $MERTGRIDARGS \\
   \$MERTFLAGS \\
   --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
@@ -194,10 +202,17 @@ $PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
   $MODELSTEP/model/moses.ini \
   || die "Failed to clone $MODELSTEP/model/moses.ini"
 
+#Binarize the models - filthy hack, but FUCK IT
+/a/merkur2/ufallabhome/CzeRusT/playground/ufal-smt-playground/playground/s.mosesgiza.7194244a.20121129-1810/moses/bin/build_binary trie lmodel-file.1.gz binarized.1 
+/a/merkur2/ufallabhome/CzeRusT/playground/ufal-smt-playground/playground/s.mosesgiza.7194244a.20121129-1810/moses/bin/build_binary trie lmodel-file.2.gz binarized.2 
+
+
 ## We're using irstlm, change the lmodel-file type:
 # ../set_lm_type.pl ./moses.ini || die "Failed to set lmtype" || exit 1
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Absolutize failed"
+
+cat moses.abs.ini | sed 's/lmodel-file\.1\.gz/binarized.1/g' | sed 's/lmodel-file\.2\.gz/binarized.2/g' > moses_b.abs.ini
 
 # This is the actual mert to run
 `cat command.mert`
