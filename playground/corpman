@@ -890,7 +890,7 @@ sub get_entry_source_type {
 sub create_index {
   # if reindexing during 'register', some eman steps may not have eman.status
   my $soft_checks = shift;
-  `(echo soft-checks $soft_checks, reindex $reindex, cmd $cmd @ARGV; hostname; date)  >> /net/tmp/bojar/wmt13-bojar/playground/corpman.when-reindexed`;
+  #`(echo soft-checks $soft_checks, reindex $reindex, cmd $cmd @ARGV; hostname; date)  >> /net/tmp/bojar/wmt13-bojar/playground/corpman.when-reindexed`;
   print STDERR "Indexing...\n" if $verbose;
   undef $index; # discard old index
   my $subdirs_hdl = my_open("eman.subdirs");
