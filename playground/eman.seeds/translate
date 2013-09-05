@@ -26,7 +26,7 @@ eman \
   defvar _DELETE_FILTERED_MODEL default='no' help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
   defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
   defvar EMAN_DISK default='6g' help='free space on the temp disk' \
-  defvar EMAN_CORES default='4' help='number of CPUs to use in Moses' \
+  defvar EMAN_CORES default='1' help='number of CPUs to use in Moses' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -194,8 +194,6 @@ if [ ! -e filtered-for-eval ]; then
   fi
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
     --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
-    --no-binarize-distortion-model \\
-    --tempdir=$tempdir \\
     \$filteroutdir \`pwd\`/moses.abs.ini corpus.src \\
   || die "Failed to filter"
 fi

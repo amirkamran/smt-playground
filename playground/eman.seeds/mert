@@ -19,7 +19,7 @@ eman \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
   defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
   defvar EMAN_DISK default='6g' help='free space on the temp disk' \
-  defvar EMAN_CORES default='4' help='number of CPUs to use in Moses' \
+  defvar EMAN_CORES default='1' help='number of CPUs to use in Moses' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
@@ -223,9 +223,7 @@ if [ ! -e filtered-for-mert ]; then
       || die "Failed to prepare symlink for filtered tables"
   fi
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
-    --no-binarize-distortion-model \\
     --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
-    --tempdir=$tempdir \\
     \$filteroutdir \`pwd\`/moses.abs.ini tuning.in \\
   || die "Failed to filter"
 fi
