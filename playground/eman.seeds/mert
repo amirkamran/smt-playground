@@ -37,6 +37,10 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
+# check for qsub
+[ -n "`which qsub`" ] || export JOBS=0
+[ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
+
 MOSESDIR="$(eman path $MOSESSTEP)"
 SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
 MOSESCMD="$MOSESDIR/bin/moses"
