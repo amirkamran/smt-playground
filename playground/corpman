@@ -51,6 +51,7 @@ my $start = 0;
 my $wait = 0;
 my $dumpcmd = 0;
 my $dump = 0;
+my $show_linecount = 0;
 my $factorindex = 0;
 my $register = 0;
 my $fakeno = 1; # the step number for dry-runs
@@ -65,6 +66,7 @@ GetOptions(
   "wait!" => \$wait,
   "cmd!" => \$dumpcmd,
   "dump!" => \$dump,
+  "linecount!" => \$show_linecount,
   "factorindex!" => \$factorindex,
   "verbose!" => \$verbose,
   "read-only|readonly!" => \$readonly,
@@ -90,6 +92,7 @@ Options:
   --cmd      ... emit a tiny shell script that dumps the corpus to stdout,
                  implies --wait
   --dump     ... dump the corpus to stdout, implies --wait
+  --linecount... print just the number of lines in the corpus
   --factorindex
              ... include the indices of factors (or -1 if all factors) in the
                  output; do not create new step just because of factor
@@ -130,11 +133,12 @@ if (! defined $cmd && ! $reindex) {
 $reindex = 1 if defined $cmd && $cmd eq "reindex";
 
 # switch implications
-$wait = 1 if $dumpcmd || $dump;
+$wait = 1 if $dumpcmd || $dump || $show_linecount;
 $start = 1 if $wait;
 $init = 1 if $start; # start implies to init
 
-die "Incompatible requests: --dump and --cmd" if $dumpcmd && $dump;
+die "Only one of the following is possible: --dump --cmd --linecout" 
+  if ($dumpcmd+$dump+$show_linecount) > 1;
 
 # constants:
 my $yes_derived = 1;
@@ -290,6 +294,8 @@ if ($cmd eq "reindex") {
     print "$maygunzip $steppath/$filename";
     print " | cut -f $column" if $column != -1;
     print "\n";
+  } elsif ($show_linecount) {
+    print $entry->{linecount}, "\n";
   } elsif ($dump) {
     ###!!! --factorindex will not yet work as expected with --dump
     my $h = my_open("$steppath/$filename");
