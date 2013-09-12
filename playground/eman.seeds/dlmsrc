@@ -1,0 +1,82 @@
+#!/bin/bash
+# eman seed for Discriminative Lexicon Model Source Context File
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman defvar MOSESSTEP help='where is moses and scripts' \
+  defvar CORPAUG help='which corpus/language to use' \
+  defvar EMAN_JOBS default=0 help='how many jobs to submit, 0 to disable SGE' \
+  defvar EMAN_CHUNKSIZE default=1000000 help='even big corpora are done in at most 1M lines' \
+  defvar FORMFACTNAME default=stc help='what is the name of the plain word form' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# input columns
+#info[0]: position (starting from 1)
+#info[1]: word
+#info[2]: lemma
+#info[3]: POS
+#info[4]: --
+#info[5]: dependency position
+#info[6]: dependency name  ... probably not used
+#info[7]: semantic label   ... probably not used
+
+# check for qsub
+[ -n "`which qsub`" ] || export JOBS=0
+[ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
+
+CORPSPEC=$CORPAUG+ord+$FORMFACTNAME+lemma+tag+ord+gov+ord+ord
+echo "Checking if our input corpus exists with all the necessary factors."
+$PLAYGROUND/corpman --init $CORPSPEC \
+|| die "Corpus not found"
+
+MOSESDIR="$(eman path $MOSESSTEP)"
+[ -d "$MOSESDIR"/moses/scripts ] || die "Not a valid moses step: $MOSESDIR"
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+set -o pipefail
+mydir=\$(pwd)
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+EXTR=$MOSESDIR/moses/phrase-extract/extract-psd/extract_rich_context_factors.perl
+[ -e \$EXTR ] || die "Can't find \$EXTR"
+
+$PLAYGROUND/corpman --dump $CORPSPEC \\
+| factors2vertical \\
+| sed 's/^<s .*>$//' \\
+| skip 1 \\
+| eval \$EXTR \\
+| gzip -c > context-factors-file.gz \\
+|| die "Failed to prepare the context factors file"
+
+echo "Checking output number of lines of corpus.txt.gz"
+nl=\$(zcat context-factors-file.gz | wc -l)
+expnl=\$($PLAYGROUND/corpman --linecount $CORPSPEC)
+
+# just a check
+[ "\$nl" -eq "\$expnl" ] \\
+|| die "Mismatched number of lines, expected \$expnl, got \$nl"
+
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
