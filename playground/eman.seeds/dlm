@@ -1,0 +1,120 @@
+#!/bin/bash
+# eman seed for Discriminative Lexicon Model
+# extracts features and trains a vw model
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar DLMINIFILE default='' \
+    help="the config file for dlm extractor" \
+  defvar CEPTSTEP type=reqstep \
+    help="where extracted cepts are" \
+  defvar SRCCTXSTEP type=reqstep \
+    help="where extracted source contexts are" \
+  defvar MOSESSTEP type=reqstep inherit=CEPTSTEP:MOSESSTEP \
+    help="the step containing compiled tools" \
+  defvar VWSTEP type=reqstep inherit=MOSESSTEP:VWSTEP \
+    help="the step containing compiled tools" \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+PLAYGROUND=`eman path`
+
+BOOSTPATH=`eman getvar $VWSTEP BOOSTPATH`
+
+MOSESSTEPDIR=`eman path $MOSESSTEP`
+VWSTEPDIR=`eman path $VWSTEP`
+SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
+
+CEPTSTEPDIR=`eman path $CEPTSTEP`
+SRCCTXSTEPDIR=`eman path $SRCCTXSTEP`
+
+if [ -z "$DLMINIFILE" ]; then
+  # use the default DLM ini
+  DLMINIPATH=$MOSESSTEPDIR/moses/scripts/ems/example/data/psd-features.ini
+else
+  DLMINIPATH=$DLMINIFILE
+fi
+
+VWARGS=$(grep 'train *= *' $DLMINIPATH | cut -d= -f2-)
+[ -z "$VWARGS" ] && die "Failed to get vw training args from $DLMINIPATH"
+
+normalization=$(grep 'normalization *= *' $DLMINIPATH | cut -d= -f2- | sed 's/ *//g')
+case $normalization in
+logistic_loss_basic) VWLOSSNORM=logistic ;;
+squared_loss) VWLOSSNORM=squared ;;
+*) die "Bad loss normalization: $normalization" ;;
+esac
+
+# Don't continue if we are not preparing the step yet
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+set -o pipefail
+set -x
+mydir=\$(pwd)
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+
+export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
+
+# Get local versions of the files
+$PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/cept-table.gz ./cept-table.gz
+$PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/extract-file.gz ./extract-file.gz
+$PLAYGROUND/../scripts/wiseln $SRCCTXSTEPDIR/context-factors-file.gz \
+    ./context-factors-file.gz
+
+$MOSESSTEPDIR/moses/bin/extract-dwl \\
+   ./extract-file.gz \\
+   ./context-factors-file.gz \\
+   ./cept-table.gz \\
+   $DLMINIPATH \\
+   >(gzip -c > vw-train.gz) \\
+   >(gzip -c > vw-index.gz) \\
+|| die "Failed to prepare input data for vw"
+
+echo "Ensuring vw cache is not here"
+rm -f vw.cache
+
+PREFIX=$BOOSTPATH
+## set all env.vars necessary for boost
+LIBDIR=\$PREFIX/lib
+#If you're installing to a non-standard path, tell programs where to find things:
+export PATH=\$PREFIX/bin\${PATH:+:\$PATH}
+export LD_LIBRARY_PATH=\$LIBDIR\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
+export LIBRARY_PATH=\$LIBDIR\${LIBRARY_PATH:+:\$LIBRARY_PATH}
+export CPATH=\$PREFIX/include\${CPATH:+:\$CPATH}
+
+echo "VWARGS=$VWARGS"
+echo "Training vw."
+zcat vw-train.gz \\
+| $VWSTEPDIR/vowpal_wabbit/bin/vw $VWARGS \\
+    --loss_function=$VWLOSSNORM \\
+    --initial_t 1 \\
+    -c \\
+    -f vw-model \\
+|| die "Failed to train vw"
+
+set +x
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

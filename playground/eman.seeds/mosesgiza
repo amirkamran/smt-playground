@@ -29,7 +29,7 @@ if [ ! -z "$VWSTEP" ]; then
 fi
 
 cat > eman.command << KONEC
-#!/bin/bash
+#!/bin/bash -x
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
@@ -37,6 +37,7 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
 set -o pipefail
+set -x # detailed logging of eman.command
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
@@ -88,6 +89,7 @@ ln -s ../moses/bin/moses \\
 
 
 # Standard command footer
+set +x # no more detailed logging of eman.command
 echo Done.
 eman succeed \$mydir
 echo "=============================="
