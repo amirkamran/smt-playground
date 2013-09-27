@@ -101,17 +101,19 @@ mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
 zcat < corpus.src.gz > corpus.src
-zcat < corpus.tgt.gz | paste corpus.src - > galign.in
+zcat < corpus.tgt.gz > corpus.tgt
 
 # align
 echo "Started align at "\`date '+%Y%m%d-%H%M'\`
-./wordalign --no-viterbi -i galign.in $GALIGNARGS \\
+paste corpus.src corpus.tgt \\
+  |./wordalign --no-viterbi -m $GALIGNARGS \\
   > align.left 2> align.left.log \\
   || die "Failed to align there" &
 
-./wordalign --no-viterbi -i galign.in $GALIGNARGS \\
+paste corpus.tgt corpus.src \\
+  |./wordalign --no-viterbi -m $GALIGNARGS 2> align.right.log \\
   | $PLAYGROUND/../scripts/reverse_alignment.pl \\
-  > align.right 2> align.right.log \\
+  > align.right \\
   || die "Failed to align back" &
 
 echo "Waiting on alignment to finish..."
