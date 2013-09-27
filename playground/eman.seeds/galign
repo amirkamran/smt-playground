@@ -106,12 +106,12 @@ zcat < corpus.tgt.gz > corpus.tgt
 # align
 echo "Started align at "\`date '+%Y%m%d-%H%M'\`
 paste corpus.src corpus.tgt \\
-  |./wordalign --no-viterbi -m $GALIGNARGS \\
+  |./wordalign -c 4 --no-viterbi -m $GALIGNARGS \\
   > align.left 2> align.left.log \\
   || die "Failed to align there" &
 
 paste corpus.tgt corpus.src \\
-  |./wordalign --no-viterbi -m $GALIGNARGS 2> align.right.log \\
+  |./wordalign -c 4 --no-viterbi -m $GALIGNARGS 2> align.right.log \\
   | $PLAYGROUND/../scripts/reverse_alignment.pl \\
   > align.right \\
   || die "Failed to align back" &
