@@ -37,30 +37,21 @@ PLAYGROUND=`eman path`
 [ -n "`which qsub`" ] || export JOBS=0
 [ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
 
-# check (if the alistep is indeed an align step and not a trick like idali)
-# whether the corpus matches
-KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS | perl -pe 's/^"(.*)"$/$1/')
-[ "$KNOWNALICORPUS" == "$SRCCORP" ] \
-  || [ "$KNOWNALICORPUS" == "" ] \
-  || die "Nonmatching alistep: different corpus: $KNOWNALICORPUS vs $SRCCORP"
-KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL | perl -pe 's/^"(.*)"$/$1/')
-[ "$KNOWNALILABEL" == "$ALILABEL" ] \
-  || [ "$KNOWNALILABEL" == "" ] \
-  || die "Nonmatching alistep: different ALILABEL: $KNOWNALILABEL vs $ALILABEL"
-
 MOSESSTEPDIR=`eman path $MOSESSTEP`
 SCRIPTS_ROOTDIR="$MOSESSTEPDIR/moses/scripts"
 
-# check (if the alistep is indeed an align step and not a trick like idali)
-# whether the corpus matches
-KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS | perl -pe 's/^"(.*)"$/$1/')
-[ "$KNOWNALICORPUS" == "$SRCCORP" ] \
-  || [ "$KNOWNALICORPUS" == "" ] \
-  || die "Nonmatching alistep: different corpus: $KNOWNALICORPUS vs $SRCCORP"
-KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL | perl -pe 's/^"(.*)"$/$1/')
-[ "$KNOWNALILABEL" == "$ALILABEL" ] \
-  || [ "$KNOWNALILABEL" == "" ] \
-  || die "Nonmatching alistep: different ALILABEL: $KNOWNALILABEL vs $ALILABEL"
+if [ ! -z "$ALISTEP" ]; then
+  # check (if the alistep is indeed an align step and not a trick like idali)
+  # whether the corpus matches
+  KNOWNALICORPUS=$(eman getvar $ALISTEP CORPUS | perl -pe 's/^"(.*)"$/$1/')
+  [ "$KNOWNALICORPUS" == "$SRCCORP" ] \
+    || [ "$KNOWNALICORPUS" == "" ] \
+    || die "Nonmatching alistep: different corpus: $KNOWNALICORPUS vs $SRCCORP"
+  KNOWNALILABEL=$(eman getvar $ALISTEP ALILABEL | perl -pe 's/^"(.*)"$/$1/')
+  [ "$KNOWNALILABEL" == "$ALILABEL" ] \
+    || [ "$KNOWNALILABEL" == "" ] \
+    || die "Nonmatching alistep: different ALILABEL: $KNOWNALILABEL vs $ALILABEL"
+fi
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
