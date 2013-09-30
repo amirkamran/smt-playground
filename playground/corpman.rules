@@ -83,3 +83,10 @@ enNmT1	lc	enNmT1	stem_porter	../../scripts/snowball_wrapper.sh -l porter
 enNmT1	lc	enNmT1	snstem	../../scripts/snowball_wrapper.sh -l english
 deNmT1	lc	deNmT1	snstem	../../scripts/snowball_wrapper.sh -l german
 frNmT1	lc	frNmT1	snstem	../../scripts/snowball_wrapper.sh -l french
+
+# simple tokenization
+cs_txt	untoken	csTok	form	../../scripts/tokenizer.pl -l cs
+de_txt	untoken	deTok	form	../../scripts/tokenizer.pl -l de
+en_txt	untoken	enTok	form	../../scripts/tokenizer.pl -l en
+es_txt	untoken	esTok	form	../../scripts/tokenizer.pl -l es
+fr_txt	untoken	frTok	form	../../scripts/tokenizer.pl -l fr
