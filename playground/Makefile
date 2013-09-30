@@ -32,6 +32,24 @@ mertdetails:
 	    print:START pick '^== Ended:\s*([-0-9]+)' \
 	> $@
 
+dlmloss:
+	eman retag || echo "Ignoring errors"
+	eman collect || echo "Ignoring errors"
+	cat eman.results \
+	| colgrep 3 --inv --re='^TAG' \
+	| list2tab 1,2,5 3 4 - \
+	| dett | sed 's/		/	-	/g' \
+	| dett | sed 's/		/	-	/g' \
+	| dett | sed 's/	$$/	-/g' \
+	| tee clip.recut \
+	| recut 1,5-,2,4,3 \
+	| numsort testLOSS \
+	| solve_first --skip=1 '^[\S]+\t[0-9.]' \
+	| tt --utf8 \
+	> $@
+
+	
+
 bleu:
 	eman retag || echo "Ignoring errors"
 	eman collect || echo "Ignoring errors"

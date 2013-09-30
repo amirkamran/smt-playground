@@ -21,6 +21,8 @@ eman \
     help="the step containing compiled tools" \
   defvar VWSTEP type=reqstep inherit=MOSESSTEP \
     help="the step containing compiled tools" \
+  defvar VWPASSES default='10' help="number of passes when training" \
+  defvar VWFLAGS default=' --noconstant -b 26 -q st --loss_function logistic ' help="flags to pass to vw on top of DLMINIFILE" \
   defvar EMAN_MEM default='6g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
@@ -41,7 +43,7 @@ SRCCTXSTEPDIR=`eman path $SRCCTXSTEP`
 
 if [ -z "$DLMINIFILE" ]; then
   # use the default DLM ini
-  DLMINIPATH=$MOSESSTEPDIR/moses/scripts/ems/example/data/psd-features.ini
+  DLMINIPATH=$PLAYGROUND/configs/dlm.ini
 else
   DLMINIPATH=$DLMINIFILE
 fi
@@ -50,7 +52,7 @@ fi
 if [ -z "$DLMSTEP_TO_EVAL" ]; then
   trainortest=train
   modelusage=f
-  EXTRAVWARGS="-c"
+  EXTRAVWARGS="-c --passes $VWPASSES"
 else
   trainortest=predict
   modelusage=i
@@ -96,6 +98,10 @@ $PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/extract-file.gz ./extract-file.gz
 $PLAYGROUND/../scripts/wiseln $SRCCTXSTEPDIR/context-factors-file.gz \
     ./context-factors-file.gz
 
+[ \$(zcat cept-table.gz | wc -l) -ne 0 ] || die "Empty cept-table.gz"
+[ \$(zcat extract-file.gz | wc -l) -ne 0 ] || die "Empty extract-file.gz"
+[ \$(zcat context-factors-file.gz | wc -l) -ne 0 ] || die "Empty context-factors-file.gz"
+
 $MOSESSTEPDIR/moses/bin/extract-dwl \\
    ./extract-file.gz \\
    ./context-factors-file.gz \\
@@ -118,14 +124,19 @@ export LIBRARY_PATH=\$LIBDIR\${LIBRARY_PATH:+:\$LIBRARY_PATH}
 export CPATH=\$PREFIX/include\${CPATH:+:\$CPATH}
 
 if [ $trainortest == predict ]; then
-  ln -s $modelpath vw-model.orig
-  cp $modelpath vw-model \\
-  || die "Failed to clone model from $modelpath"
+  $PLAYGROUND/../scripts/wiseln $modelpath ./vw-model
+  [ ! -z vw-model ] || die "Got empty model"
+  # below is explicit copying; not needed since we now trust vw does not
+  # overwrite the file
+  #ln -s $modelpath vw-model.orig
+  #cp $modelpath vw-model \\
+  #|| die "Failed to clone model from $modelpath"
 fi
 
-echo "Running vw with VWARGS: $VWARGS"
+echo "Running vw:"
 zcat vw-input.gz \\
 | $VWSTEPDIR/vowpal_wabbit/bin/vw $VWARGS \\
+    $VWFLAGS \\
     --initial_t 1 \\
     -$modelusage vw-model \\
     $EXTRAVWARGS \\
