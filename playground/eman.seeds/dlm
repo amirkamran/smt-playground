@@ -9,16 +9,20 @@ PLAYGROUND=`eman path` # eman playground directory
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-  defvar DLMINIFILE default='' \
+  defvar DLMSTEP_TO_EVAL type=optstep default='' \
+    help="set nonempty to evaluate existing model" \
+  defvar DLMINIFILE default='' inherit=DLMSTEP_TO_EVAL \
     help="the config file for dlm extractor" \
   defvar CEPTSTEP type=reqstep \
     help="where extracted cepts are" \
   defvar SRCCTXSTEP type=reqstep \
     help="where extracted source contexts are" \
-  defvar MOSESSTEP type=reqstep inherit=CEPTSTEP:MOSESSTEP \
+  defvar MOSESSTEP type=reqstep inherit=CEPTSTEP \
     help="the step containing compiled tools" \
-  defvar VWSTEP type=reqstep inherit=MOSESSTEP:VWSTEP \
+  defvar VWSTEP type=reqstep inherit=MOSESSTEP \
     help="the step containing compiled tools" \
+  defvar VWPASSES default='10' help="number of passes when training" \
+  defvar VWFLAGS default=' --noconstant -b 26 -q st --loss_function logistic ' help="flags to pass to vw on top of DLMINIFILE" \
   defvar EMAN_MEM default='6g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
@@ -39,23 +43,39 @@ SRCCTXSTEPDIR=`eman path $SRCCTXSTEP`
 
 if [ -z "$DLMINIFILE" ]; then
   # use the default DLM ini
-  DLMINIPATH=$MOSESSTEPDIR/moses/scripts/ems/example/data/psd-features.ini
+  DLMINIPATH=$PLAYGROUND/configs/dlm.ini
 else
   DLMINIPATH=$DLMINIFILE
 fi
 
-VWARGS=$(grep 'train *= *' $DLMINIPATH | cut -d= -f2-)
-[ -z "$VWARGS" ] && die "Failed to get vw training args from $DLMINIPATH"
+# are we training or testing?
+if [ -z "$DLMSTEP_TO_EVAL" ]; then
+  trainortest=train
+  modelusage=f
+  EXTRAVWARGS="-c --passes $VWPASSES"
+else
+  trainortest=predict
+  modelusage=i
+  modelpath=`eman path $DLMSTEP_TO_EVAL`/vw-model
+  EXTRAVWARGS="--raw_predictions >(gzip -c > raw-predictions.gz)"
+fi
 
-normalization=$(grep 'normalization *= *' $DLMINIPATH | cut -d= -f2- | sed 's/ *//g')
-case $normalization in
-logistic_loss_basic) VWLOSSNORM=logistic ;;
-squared_loss) VWLOSSNORM=squared ;;
-*) die "Bad loss normalization: $normalization" ;;
-esac
+# copy args from config file
+VWARGS=$(grep "$trainortest *= *" $DLMINIPATH | cut -d= -f2-)
+[ -z "$VWARGS" ] \
+  && die "Failed to get vw args for $trainortest from $DLMINIPATH"
+
+# normalization=$(grep 'normalization *= *' $DLMINIPATH | cut -d= -f2- | sed 's/ *//g')
+# case $normalization in
+# logistic_loss_basic) VWLOSSNORM=logistic ;;
+# squared_loss) VWLOSSNORM=squared ;;
+# *) die "Bad loss normalization: $normalization" ;;
+# esac
 
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
+
+$PLAYGROUND/../scripts/wiseln $DLMINIPATH ./dlm.ini
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -78,13 +98,17 @@ $PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/extract-file.gz ./extract-file.gz
 $PLAYGROUND/../scripts/wiseln $SRCCTXSTEPDIR/context-factors-file.gz \
     ./context-factors-file.gz
 
+[ \$(zcat cept-table.gz | wc -l) -ne 0 ] || die "Empty cept-table.gz"
+[ \$(zcat extract-file.gz | wc -l) -ne 0 ] || die "Empty extract-file.gz"
+[ \$(zcat context-factors-file.gz | wc -l) -ne 0 ] || die "Empty context-factors-file.gz"
+
 $MOSESSTEPDIR/moses/bin/extract-dwl \\
    ./extract-file.gz \\
    ./context-factors-file.gz \\
    ./cept-table.gz \\
-   $DLMINIPATH \\
-   >(gzip -c > vw-train.gz) \\
-   >(gzip -c > vw-index.gz) \\
+   ./dlm.ini \\
+   >(gzip -c > vw-input.gz) \\
+   >(gzip -c > dlm-index.gz) \\
 || die "Failed to prepare input data for vw"
 
 echo "Ensuring vw cache is not here"
@@ -99,14 +123,23 @@ export LD_LIBRARY_PATH=\$LIBDIR\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
 export LIBRARY_PATH=\$LIBDIR\${LIBRARY_PATH:+:\$LIBRARY_PATH}
 export CPATH=\$PREFIX/include\${CPATH:+:\$CPATH}
 
-echo "VWARGS=$VWARGS"
-echo "Training vw."
-zcat vw-train.gz \\
+if [ $trainortest == predict ]; then
+  $PLAYGROUND/../scripts/wiseln $modelpath ./vw-model
+  [ ! -z vw-model ] || die "Got empty model"
+  # below is explicit copying; not needed since we now trust vw does not
+  # overwrite the file
+  #ln -s $modelpath vw-model.orig
+  #cp $modelpath vw-model \\
+  #|| die "Failed to clone model from $modelpath"
+fi
+
+echo "Running vw:"
+zcat vw-input.gz \\
 | $VWSTEPDIR/vowpal_wabbit/bin/vw $VWARGS \\
-    --loss_function=$VWLOSSNORM \\
+    $VWFLAGS \\
     --initial_t 1 \\
-    -c \\
-    -f vw-model \\
+    -$modelusage vw-model \\
+    $EXTRAVWARGS \\
 || die "Failed to train vw"
 
 set +x

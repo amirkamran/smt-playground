@@ -26,6 +26,8 @@ ulimit -c 1 # core files limited to 1 byte
 
 git clone git://github.com/hal3/vowpal_wabbit.git || die "Failed to clone VW"
 cd vowpal_wabbit || die "Failed to chdir to vowpal_wabbit"
+patch -p 1 < ../../../src/vw-patch-for-ring-size.patch \\
+|| die "Failed to patch for larger ring size"
 ./autogen.sh --prefix=\$(pwd) $BOOSTARG || die "Configure failed"
 make -j 8 || die "Compilation failed"
 make test || die "Internal test failed"
