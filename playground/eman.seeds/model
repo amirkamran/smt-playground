@@ -3,6 +3,7 @@
 #   translation model(s)
 #   (optional reordering model)
 #   language models
+#   (optional global lexicon model)
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -13,6 +14,10 @@ PLAYGROUND=`eman path` # eman playground directory
 eman \
   defvar TMS help='extracted phrases, a colon-separated lists of s.tm' \
   defvar LMS help='tgtfactoridx:lmstep:::tgtfactoridx:lmstep:::tgtfactoridx:lmstep' \
+  defvar GLM help='optional glm step, format: factors:glmstep, e.g. 0-0:s.glm.xyz' \
+    default='' \
+  defvar CONFIGARGS default='' \
+    help='additional arguments passed to train-model.perl' \
   defvar RMSTEP default='' help='lexicalized reordering model' \
   defvar MOSESSTEP default='' \
     help='moses scripts and binaries (default to inherit from the first TM)' \
@@ -50,8 +55,10 @@ if [ -z "$RMSTEP" ]; then
   REORDFACTORS="0-0"
   DOTREORDTAG=""
 else
-  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] || die "Incompatible SRCAUGs"
-  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] || die "Incompatible TGTAUGs"
+  [ "$SRCAUG" == $(eman get-var $RMSTEP SRCAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible SRCAUGs"
+  [ "$TGTAUG" == $(eman get-var $RMSTEP TGTAUG) ] \
+    || [ "$PROMISEAUGMATCH" == yes ] || die "Incompatible TGTAUGs"
   REORDERING=$(eman get-var $RMSTEP REORDERING) || die "Missed REORDERING"
   REORDFACTORS=$(eman get-var $RMSTEP REORDFACTORS) || die "Missed REORDFACTORS"
   [ ! -z "$REORDERING" ] && [ ! -z "$REORDFACTORS" ] \
@@ -65,6 +72,11 @@ done
 
 [ -z "$RMSTEP" ] || eman add-deps . $RMSTEP || die "Bad RMSTEP: $RMSTEP"
 [ -z "$RMSTEP" ] || RMSTEP=$(eman path $RMSTEP)
+
+if [ -n "$GLM" ] ; then
+  GLMFACTORS=`echo "$GLM" | cut -d':' -f1`
+  GLMDIR=$(eman path `echo "$GLM" | cut -d':' -f2`)
+fi
 
 ## Create the tag based on LMs
 i=1
@@ -189,6 +201,7 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
     --f src --e tgt \\
     --reordering $REORDERING \\
     --reordering-factors $REORDFACTORS \\
+    $CONFIGARGS \\
     \$lmopts \\
     $DECRYPTEDSTEPS \\
   || die "Failed to create moses.ini"
@@ -206,8 +219,15 @@ for tm in \`echo $TMS | tr ':' ' '\`; do
 done
 
 mkdir model
-$PLAYGROUND/../scripts/merge_moses_models.pl --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
+$PLAYGROUND/../scripts/merge_moses_models.pl --append-unknown --no-concat-lms tm.*/model/moses.ini > ./model/moses.ini \
   || die "Merge moses.ini failed"
+
+if [ -n "$GLMDIR" ] ; then
+  mkdir glm
+  wiseln $GLMDIR/model/glm glm/glm || die "Failed to clone glm"
+  echo -e "\n[global-lexical-file]\n$GLMFACTORS \$mydir/glm/glm\n\n[weight-lex]\n1.0\n" \\
+    | tee glm/moses.ini >> \$mydir/model/moses.ini || die "Failed to add glm to moses.ini"
+fi
 
 # Standard command footer
 echo Done.

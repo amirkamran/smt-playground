@@ -3,7 +3,7 @@
 # The step preprocesses the downloaded corpus, saves the result and registers it with corpman.
 # This solution is probably temporary. We may later want to replace it by standard corpus steps.
 
-# # Parallel training corpora
+# Parallel training corpora
 # CORPUS=newseuro PAIR=cs-en LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro PAIR=cs-en LANGUAGE=en eman init korpus --start
 # CORPUS=newseuro PAIR=de-en LANGUAGE=de eman init korpus --start
@@ -18,6 +18,28 @@
 # CORPUS=newseuro PAIR=es-cs LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro PAIR=fr-cs LANGUAGE=fr eman init korpus --start
 # CORPUS=newseuro PAIR=fr-cs LANGUAGE=cs eman init korpus --start
+
+# New version of newseuro based on news-commentary-v8, released for WMT 2013
+# CORPUS=news8euro PAIR=cs-en LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro PAIR=cs-en LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro PAIR=de-en LANGUAGE=de eman init korpus --start
+# CORPUS=news8euro PAIR=de-en LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro PAIR=es-en LANGUAGE=es eman init korpus --start
+# CORPUS=news8euro PAIR=es-en LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro PAIR=fr-en LANGUAGE=fr eman init korpus --start
+# CORPUS=news8euro PAIR=fr-en LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro PAIR=ru-en LANGUAGE=ru eman init korpus --start
+# CORPUS=news8euro PAIR=ru-en LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro PAIR=de-cs LANGUAGE=de eman init korpus --start
+# CORPUS=news8euro PAIR=de-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro PAIR=es-cs LANGUAGE=es eman init korpus --start
+# CORPUS=news8euro PAIR=es-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro PAIR=fr-cs LANGUAGE=fr eman init korpus --start
+# CORPUS=news8euro PAIR=fr-cs LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro PAIR=ru-cs LANGUAGE=ru eman init korpus --start
+# CORPUS=news8euro PAIR=ru-cs LANGUAGE=cs eman init korpus --start
+
+# Large parallel corpora, not available for all language pairs
 # CORPUS=czeng LANGUAGE=cs eman init korpus --start
 # CORPUS=czeng LANGUAGE=en eman init korpus --start
 # CORPUS=un PAIR=es-en LANGUAGE=es eman init korpus --start
@@ -26,20 +48,42 @@
 # CORPUS=un PAIR=fr-en LANGUAGE=en eman init korpus --start
 # CORPUS=gigafren LANGUAGE=fr eman init korpus --start
 # CORPUS=gigafren LANGUAGE=en eman init korpus --start
-# # Monolingual training corpora
+
+# Monolingual training corpora
 # CORPUS=newseuro LANGUAGE=cs eman init korpus --start
 # CORPUS=newseuro LANGUAGE=de eman init korpus --start
 # CORPUS=newseuro LANGUAGE=en eman init korpus --start
 # CORPUS=newseuro LANGUAGE=es eman init korpus --start
 # CORPUS=newseuro LANGUAGE=fr eman init korpus --start
+
+# New version of newseuro based on news-commentary-v8, released for WMT 2013
+# CORPUS=news8euro LANGUAGE=cs eman init korpus --start
+# CORPUS=news8euro LANGUAGE=de eman init korpus --start
+# CORPUS=news8euro LANGUAGE=en eman init korpus --start
+# CORPUS=news8euro LANGUAGE=es eman init korpus --start
+# CORPUS=news8euro LANGUAGE=fr eman init korpus --start
+# CORPUS=news8euro LANGUAGE=ru eman init korpus --start
+
 # CORPUS=newsall LANGUAGE=cs eman init korpus --start
 # CORPUS=newsall LANGUAGE=de eman init korpus --start
 # CORPUS=newsall LANGUAGE=en eman init korpus --start
 # CORPUS=newsall LANGUAGE=es eman init korpus --start
 # CORPUS=newsall LANGUAGE=fr eman init korpus --start
+
+# New version of newsall for WMT 2013: new news from 2012; changed punctuation and added Russian for previous years
+# (Old version will be removed later. We must select a unique name until that happens.)
+# CORPUS=news8all LANGUAGE=cs eman init korpus --start
+# CORPUS=news8all LANGUAGE=de eman init korpus --start
+# CORPUS=news8all LANGUAGE=en eman init korpus --start
+# CORPUS=news8all LANGUAGE=es eman init korpus --start
+# CORPUS=news8all LANGUAGE=fr eman init korpus --start
+# CORPUS=news8all LANGUAGE=ru eman init korpus --start
+
 # CORPUS=gigaword LANGUAGE=en eman init korpus --start
 # CORPUS=gigaword LANGUAGE=es eman init korpus --start
 # CORPUS=gigaword LANGUAGE=fr eman init korpus --start
+
+# Development and test data sets
 # CORPUS=wmt2008 LANGUAGE=cs eman init korpus --start
 # CORPUS=wmt2008 LANGUAGE=de eman init korpus --start
 # CORPUS=wmt2008 LANGUAGE=en eman init korpus --start
@@ -65,6 +109,13 @@
 # CORPUS=wmt2012 LANGUAGE=en eman init korpus --start
 # CORPUS=wmt2012 LANGUAGE=es eman init korpus --start
 # CORPUS=wmt2012 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2012 LANGUAGE=ru eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=cs eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=de eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=en eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=es eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=fr eman init korpus --start
+# CORPUS=wmt2013 LANGUAGE=ru eman init korpus --start
 
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
@@ -76,9 +127,9 @@ set -o pipefail  # safer pipes
 [ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
 SCRIPTS=$STATMT/scripts
 PLAYGROUND=$STATMT/playground
-WMT=/net/data/wmt2012
+WMT=/net/data/wmt
 eman \
-     defvar CORPUS help='newseuro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2012' \
+     defvar CORPUS help='newseuro|news8euro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2013' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
      defvar LANGUAGE help='language code (create separate step for each language)' \
 || exit 1
@@ -110,6 +161,30 @@ if [ "$CORPUS" == "newseuro" ] ; then
     READINPUT="zcat $WMT/training/europarl-v7.$PAIR.$LANGUAGE.gz $WMT/training/news-commentary-v7.$PAIR.$LANGUAGE.gz"
   elif [ -z "$PAIR" ] ; then # monolingual version of newseuro
     READINPUT="zcat $WMT/training/europarl-v7.$LANGUAGE.gz $WMT/training/news-commentary-v7.$LANGUAGE.gz"
+  else
+    die "Unknown language pair $PAIR for corpus $CORPUS"
+  fi
+elif [ "$CORPUS" == "news8euro" ] ; then
+  # cd $WMT
+  # wget http://www.statmt.org/wmt13/training-parallel-europarl-v7.tgz
+  # wget http://www.statmt.org/wmt13/training-parallel-nc-v8.tgz
+  # untar it
+  # cd $PLAYGROUND
+  # There is no Russian Europarl.
+  if [[ "$PAIR" =~ 'ru-cs' ]] ; then
+    READINPUT="zcat $WMT/training/news-commentary-v8.$PAIR/$LANGUAGE.gz"
+  elif [[ "$PAIR" =~ 'ru-en' ]] ; then
+    READINPUT="zcat $WMT/training/news-commentary-v8.$PAIR.$LANGUAGE.gz"
+  elif [[ "$PAIR" =~ '-cs' ]] ; then
+    READINPUT="zcat $WMT/training/europarl-v7.$PAIR/$LANGUAGE.gz $WMT/training/news-commentary-v8.$PAIR/$LANGUAGE.gz"
+  elif [[ "$PAIR" =~ '-en' ]] ; then
+    READINPUT="zcat $WMT/training/europarl-v7.$PAIR.$LANGUAGE.gz $WMT/training/news-commentary-v8.$PAIR.$LANGUAGE.gz"
+  elif [ -z "$PAIR" ] ; then # monolingual version of newseuro
+    if [[ "$LANGUAGE" == "ru" ]] ; then # Russian without Europarl
+      READINPUT="zcat $WMT/training/news-commentary-v8.$LANGUAGE.gz"
+    else
+      READINPUT="zcat $WMT/training/europarl-v7.$LANGUAGE.gz $WMT/training/news-commentary-v8.$LANGUAGE.gz"
+    fi
   else
     die "Unknown language pair $PAIR for corpus $CORPUS"
   fi
@@ -149,7 +224,9 @@ elif [ "$CORPUS" == "gigafren" ] ; then
   # untar it
   # cd $PLAYGROUND
   READINPUT="zcat $WMT/giga-fren.release2.$LANGUAGE.gz"
-elif [ "$CORPUS" == "newsall" ] ; then
+###!!! Note that we can no longer create the old version of newsall.
+###!!! The source packages have been overwritten by the new version.
+#elif [ "$CORPUS" == "newsall" ] ; then
   # cd $WMT
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2007.tgz
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2008.tgz
@@ -158,16 +235,27 @@ elif [ "$CORPUS" == "newsall" ] ; then
   # wget http://www.statmt.org/wmt12/training-monolingual-news-2011.tgz
   # untar it
   # cd $PLAYGROUND
+#  READINPUT="zcat $WMT/training-monolingual/news.*.$LANGUAGE.shuffled.gz"
+elif [ "$CORPUS" == "news8all" ] ; then
+  # cd $WMT
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2007.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2008.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2009.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2010.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2011.tgz
+  # wget http://www.statmt.org/wmt13/training-monolingual-news-2012.tgz
+  # untar it
+  # cd $PLAYGROUND
   READINPUT="zcat $WMT/training-monolingual/news.*.$LANGUAGE.shuffled.gz"
 elif [ "$CORPUS" == "gigaword" ] ; then
   if [ "$LANGUAGE" != "en" ] && [ "$LANGUAGE" != "es" ] && [ "$LANGUAGE" != "fr" ] ; then
     die "Unknown language $LANGUAGE for corpus $CORPUS"
   fi
   READINPUT="$STATMT/projects/danwmt/gigaword.pl $LANGUAGE"
-elif [[ "$CORPUS" =~ wmt20[01][89012] ]] ; then
+elif [[ "$CORPUS" =~ wmt20[01][890123] ]] ; then
   # cd $WMT
-  # wget http://www.statmt.org/wmt12/dev.tgz
-  # wget http://www.statmt.org/wmt12/test.tgz
+  # wget http://www.statmt.org/wmt13/dev.tgz
+  # wget http://www.statmt.org/wmt13/test.tgz
   # untar it
   # cd $PLAYGROUND
   newstest=$(echo $CORPUS | sed 's/wmt/newstest/')

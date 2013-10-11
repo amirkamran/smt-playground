@@ -23,6 +23,8 @@ use File::Temp qw /tempdir/;
 use threads;
 use File::Path;
 use File::Basename;
+use File::Copy;
+use Cwd 'abs_path';
 
 binmode(STDIN, ":utf8");
 binmode(STDOUT, ":utf8");
@@ -38,6 +40,7 @@ my @dirsyms = ();
 my $bindir = "/no/bindir/specified";
 my $mgizadir = undef;
 my $mgizacores = undef;
+my $mgizamodel = undef;
 my $lfactors = undef;
 my $rfactors = undef;
 my $lcol = 0;
@@ -57,6 +60,7 @@ GetOptions(
   "bindir=s" => \$bindir,
   "mgizadir=s" => \$mgizadir,
   "mgizacores=i" => \$mgizacores,
+  "mgizamodel=s" => \$mgizamodel,
   "tempdir=s" => \$tempdir,
   "continue-dir=s" => \$continue_dir, # continue working in this directory
   # Splits are not supported yet.
@@ -181,23 +185,40 @@ confess "No sentences!" if $insents == 0;
 
 print STDERR "Running GIZA on $insents sentences.\n";
 
-## BEWARE Do not rename vcb-*.classes or GIZA won't find it and won't complain
-may_parallel(
-  sub { make_classes("$tmp/txt-a", "$tmp/vcb-a.classes") },
-  sub { make_classes("$tmp/txt-b", "$tmp/vcb-b.classes") }
-);
+my ($vcba, $vcbb);
 
-my $vcba_file = "$tmp/vcb-a";
-my $vcbb_file = "$tmp/vcb-b";
-my ($vcba, $vcbb) = may_parallel(
-  sub { collect_vocabulary("$tmp/txt-a", $vcba_file) },
-  sub { collect_vocabulary("$tmp/txt-b", $vcbb_file) }
-);
-print STDERR "Vocabulary sizes: "
+if (defined $mgizamodel) {
+  if (! defined $mgizadir) {
+    die "Only MGIZA++ supports using existing models.";
+  }
+  $mgizamodel = abs_path($mgizamodel);
+  print STDERR "Running MGIZA++ alignment with model: $mgizamodel\n";
+  symlink "$mgizamodel/vcb-a.classes", "$tmp/vcb-a.classes";
+  symlink "$mgizamodel/vcb-b.classes", "$tmp/vcb-b.classes";
+  ($vcba, $vcbb) = may_parallel(
+    sub { update_vocab("$tmp/txt-a", "$mgizamodel/vcb-a", "$tmp/vcb-a") },
+    sub { update_vocab("$tmp/txt-b", "$mgizamodel/vcb-b", "$tmp/vcb-b") }
+  );
+} else {
+  ## BEWARE Do not rename vcb-*.classes or GIZA won't find it and won't complain
+  may_parallel(
+    sub { make_classes("$tmp/txt-a", "$tmp/vcb-a.classes") },
+    sub { make_classes("$tmp/txt-b", "$tmp/vcb-b.classes") }
+  );
+
+  my $vcba_file = "$tmp/vcb-a";
+  my $vcbb_file = "$tmp/vcb-b";
+  ($vcba, $vcbb) = may_parallel(
+    sub { collect_vocabulary("$tmp/txt-a", $vcba_file) },
+    sub { collect_vocabulary("$tmp/txt-b", $vcbb_file) }
+  );
+  print STDERR "Vocabulary sizes: "
   .(scalar keys %$vcba)
   ." and "
   .(scalar keys %$vcbb)
   ."\n";
+}
+
 my %vcb = ("a"=>$vcba, "b"=>$vcbb);
 
 my %alifilename = ();
@@ -800,7 +821,9 @@ sub run_giza {
     #}
   }
 
-  my %GizaDefaultOptions =
+  my %GizaDefaultOptions;
+  if (! $mgizamodel) {
+    %GizaDefaultOptions =
       (p0 => .999 ,
        m1 => 5 ,
        m2 => 0 ,
@@ -817,6 +840,26 @@ sub run_giza {
        c => $traincorpus,
        CoocurrenceFile => $cooc_file,
        o => $outprefix);
+  } else {
+    %GizaDefaultOptions =
+      (previoust => "$mgizamodel/$a-$b.t3.final" ,
+       previousa => "$mgizamodel/$a-$b.a3.final" ,
+       previousd => "$mgizamodel/$a-$b.d3.final" ,
+       previousn => "$mgizamodel/$a-$b.n3.final" ,
+       previousd4 => "$mgizamodel/$a-$b.d4.final" ,
+       previousd42 => "$mgizamodel/$a-$b.D4.final" ,
+       m1 => 0 , 
+       m2 => 0 , 
+       mh => 0 , 
+       m3 => 0 , 
+       m4 => 1 , 
+       restart => 11 ,
+       s => $vcbb_file,
+       t => $vcba_file,
+       c => $traincorpus,
+       CoocurrenceFile => $cooc_file,
+       o => $outprefix);
+  }
 
   if ($giza_extra_options) {
       foreach (split(/[ ,]+/,$giza_extra_options)) {
@@ -827,12 +870,19 @@ sub run_giza {
 
   #doesn't work with mgiza
   #$GizaDefaultOptions{"use_gzip"} = 1 if $compress and defined $mgizadir;
-  $GizaDefaultOptions{"ncpu"} = $mgizacores if defined $mgizadir;
+
+  if (defined $mgizadir) {
+    $GizaDefaultOptions{"ncpu"} = defined $mgizamodel ? 1 : $mgizacores;
+  }
 
   my $GizaOptions;
   foreach my $option (sort keys %GizaDefaultOptions){
       my $value = $GizaDefaultOptions{$option} ;
       $GizaOptions .= " -$option $value" ;
+  }
+  
+  if (defined $mgizamodel) {
+    $GizaOptions = "$mgizamodel/$a-$b.gizacfg " . $GizaOptions;
   }
 
   safesystem("$GIZA $GizaOptions >&2");
@@ -840,7 +890,7 @@ sub run_giza {
   if (defined $mgizadir) {
     my $redirect = "";
     safesystem("$MERGE $dir/$a-$b.A3.final.part* $redirect > $outfile");
-    safesystem("rm $dir/$a-$b.A3.final.part*");
+    # safesystem("rm $dir/$a-$b.A3.final.part*");
   }
 
   confess "Giza did not produce the output file $outfile. Is your corpus clean (reasonably-sized sentences)?"
@@ -969,4 +1019,41 @@ sub make_symal_args {
   return [ $revneeded,
     "-alignment='$alitype' -diagonal='$alidiag'"
     ." -final='$alifinal' -both='$alifinaland'"];
+}
+
+sub update_vocab {
+  my ($txt_file, $oldvcb_file, $newvcb_file) = @_;
+  my $oldvcb_hdl = my_open($oldvcb_file);
+  my $newvcb_hdl = my_save($newvcb_file);
+  my %outvcb;
+  my @unk;
+  my $lastid = 0;
+
+  # read existing vcb
+  while (<$oldvcb_hdl>) {
+    chomp;
+    my ($id, $word, $count) = split;
+    $outvcb{$word} = $id;
+    $lastid = $id;
+    print $newvcb_hdl join("\t", $id, $word, $count), "\n";
+  }
+  close $oldvcb_hdl;
+
+  # get unknown words and update the new vcb
+  my $txt_hdl = my_open($txt_file);
+  while (<$txt_hdl>) {
+    chomp;
+    my @words = split;
+    for my $word (@words) {
+      if (! defined $outvcb{$word}) {
+        $outvcb{$word} = ++$lastid;
+        push @unk, $word;
+        print $newvcb_hdl "$lastid\t$word\t1\n";
+      }
+    }
+  }
+  close $txt_hdl;
+  close $newvcb_hdl;
+
+  return \%outvcb;
 }

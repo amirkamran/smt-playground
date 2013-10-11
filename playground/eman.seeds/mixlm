@@ -15,6 +15,8 @@ eman \
   defvar LMS help='colon-delimited list of lm steps' \
   defvar HELDOUT help='the shortname of corpus' \
   defvar PROMISEAUGMATCH default='no' help='yes to ignore difference in corpaugs' \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
 
 # Set local bash variables
@@ -132,7 +134,7 @@ zcat corpus.heldout.gz > corpus.heldout
 first=1
 for thisfile in ${LMFILES//:/ }; do
   [ -e \$thisfile ] || thisfile=\$thisfile.gz
-  [ -e \$thisfile ] || die "Not a valid lm: \$lmexp, corpus.lm(.gz) missing"
+  [ -e \$thisfile ] || die "Not found: \$thisfile"
   if [ \$first == 1 ] ; then
     FILELIST=\$thisfile
     first=0

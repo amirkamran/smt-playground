@@ -16,6 +16,8 @@ eman \
   defvar ORDER help='the lm order' \
   defvar PARTS default='1' help='build a huge lm in N parts' \
   defvar LMFLAGS default='' help='flags for ngram-count like -unk' \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
 
 # Set local bash variables
@@ -113,7 +115,7 @@ else
   echo Counting in $PARTS parts, tempdir=\$partstempdir
   zcat corpus.text.gz | split_even $PARTS \$partstempdir/part --gzip \
   || die "Splitting FAILED"
-  ls \$partstempdir/part*.gz > \$tempdir/filelist
+  ls \$partstempdir/part*.gz > \$partstempdir/filelist
 
   echo Making batch counts
   make-batch-counts \$partstempdir/filelist 1 zcat \$partstempdir \\

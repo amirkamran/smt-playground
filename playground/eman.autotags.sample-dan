@@ -9,6 +9,9 @@
 # The first regular expression in a rule is also a selector.
 # If it does not match anything, the given tag element is discarded.
 
+# The following rule example blocks inheriting any tags by evaluator steps from corpus and tag steps.
+#evaluator	corpus|tag	/.*//
+
 # Steptype	Source	/find/replace/	...and /find/replace/ in the result
 korpus	var	/CORPUS=(.*?)/C:$1/	/C:"(.*)"/C:$1/
 korpus	var	/PAIR=(.*?)/P:$1/	/P:"(.*)"/P:$1/
@@ -16,6 +19,7 @@ korpus	var	/LANGUAGE=(.*?)/L:$1/	/L:"(.*)"/L:$1/
 corpus	var	/OUTCORP=(.*?)/C:$1/	/C:"(.*)"/C:$1/
 corpus	var	/OUTLANG=(.*?)/L:$1/	/L:"(.*)"/L:$1/
 corpus	var	/OUTFACTS=(.*?)/F:$1/	/F:"(.*)"/F:$1/
+# Do not inherit any tags from preceding corpus steps.
 corpus	korpus|corpus|augment|morfcorpus	/.*//
 augment	var	/OUTCORP=(.*?)/C:$1/	/C:"(.*)"/C:$1/
 augment	var	/OUTLANG=(.*?)/L:$1/	/L:"(.*)"/L:$1/
@@ -27,17 +31,23 @@ morfcorpus	var	/FACT=(\S+)/F:$1/	/F:"(.*)"/F:$1/
 lm	var	/CORP=(.*?)/LM:$1/	/LM:"(.*)"/LM:$1/	/news\.2007\.([a-z]+)\+news\.2008\.\1\+news\.2009\.\1\+news\.2010\.\1\+news\.2011\.\1/news.ALL.$1/
 lm	var	/CORPAUG=(.*?)/LMA:$1/	/LMA:"(.*)"/LMA:$1/
 lm	var	/ORDER=(.*)/LMO:$1/
+# Lm steps should not inherit tags from corpus steps.
 lm	korpus|corpus|augment|morfcorpus	/.*//
 align	var	/ALILABEL=(.*)/A:$1/	/A:"(.*)"/A:$1/
+# Align steps should not inherit tags from corpus steps.
 align	korpus|corpus|augment|morfcorpus	/(C:\S+)/$1/
-tm	var	/SRCCORP=(.*?)/C:$1/	/C:"(.*)"/C:$1/
+tm	var	/SRCCORP=(.*?)/TM:$1/	/TM:"(.*)"/TM:$1/
 tm	var	/SRCAUG=(\S+)\+stc/S:$1/	/S:"(.*)"/S:$1/
 tm	var	/TGTAUG=(\S+)\+stc/T:$1/	/T:"(.*)"/T:$1/
+# Tm steps should not inherit tags from corpus steps.
 tm	korpus|corpus|augment|morfcorpus	/.*//
-tm	align	/((C|A):\S+)/$1/
+# Tm steps should inherit the A tag from align steps but nothing else.
+tm	align	/(A:\S+)/$1/
 mert	var	/.*pairwise-ranked.*/PRO/
 mert	var	/.*--sctype=([^" =]*).*/towards-$1/	/;/+/g
 mert	var	/DEVCORP=(.*)/DEV:$1/	/DEV:"(.*)"/DEV:$1/
+mert	korpus|corpus|augment|morfcorpus	/.*//
 translate	var	/TESTCORP=(.*)/TST:$1/	/TST:"(.*)"/TST:$1/
 translate	korpus|corpus|augment|morfcorpus	/.*//
+evaluator	korpus|corpus|augment|morfcorpus	/.*//
 lucscore	var	/CUT=(.*)/CUT:$1/	/CUT:"(.*)"/CUT:$1/

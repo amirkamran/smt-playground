@@ -1,1 +1,5 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/traceback
+#!/bin/bash
+
+eman traceback --read-only --jobid --status --tag --log --vars \
+  --ignore=corpus \
+  "$@" 2>&1 | less -S

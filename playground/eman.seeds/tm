@@ -25,6 +25,8 @@ eman \
   defvar THRESHOLD default='' help="a+e, a-e of a number (see moses/sigtest-filter)" \
   defvar NBESTOOV default='' help="output n-best lexical entries in reduce-oov.pl (0 = output all)" \
   defvar CUTOFF default=0 help="phrase-table cutoff" \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -168,9 +170,9 @@ if \\
         --force-factored-filenames \\
 	    --first-step 4 --last-step 6 \\
 	    --root-dir \$tempdir \\
-	    --alignment-file=alignment \\
+	    --alignment-file=\$tempdir/alignment \\
 	    --alignment=custom \\
-	    --corpus=corpus/corpus \\
+	    --corpus=\$tempdir/corpus/corpus \\
 	    --f src --e tgt \\
         $TRAININGFLAGS \\
 	    $DECRYPTEDSTEPS \\
@@ -196,6 +198,8 @@ if \\
 ; then
   success=1
   rm -f \$tempdir/model/extract* # delete temporary files of extracted phrases
+  # Workaround - train-model.perl for whatever reason doesn't delete temporary ungzipped corpus and alignment:
+  rm -f \$tempdir/alignment.*.src \$tempdir/alignment.*.tgt \$tempdir/alignment.*.custom
   echo "COPYING TEMPDIR \$tempdir BACK"
   rsync -uavz \$tempdir/* ./ || die "Assumed success but rsync back failed"
   echo "COPIED"
@@ -213,6 +217,9 @@ fi
 echo "Getting phrase counts..."
 ( $PLAYGROUND/tools/zwc -l model/*.gz | tee phrase-counts ) || die "Failed to count phrases"
 
+if [ 0 == \$(cut -f1 phrase-counts) ]; then
+  die "Empty ttable, perhaps full temp disk above?"
+fi
 
 # Standard command footer
 echo Done.

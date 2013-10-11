@@ -1,1 +1,749 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/README.wmt12
+2012-02-02
+
+Some semi-manual preparations:
+
+** Essential: the raw corpora:
+
+czengall=c-news+c-techdoc+c-fiction+c-subtitles+c-eu+c-paraweb+c-navajo
+monoall=monoeurop+mononcomm+mononews07+mononews08+mononews09+mononews10+mononews11
+
+for y in 08 09 10 11 11raw; do for l in cs en; do
+  echo OUTLANG=$l SECTION=wmt$y eman init wmt --start
+done; done
+
+for s in `echo $czengall | tr + ' ' | sed 's/c-//g' `; do
+  echo SECTION=$s eman init czeng --start
+done
+
+for l in en cs; do for c in `echo $monoall | tr + ' '`; do
+  echo OUTLANG=$l SECTION=$c eman init wmtmono --start
+done; done
+
+** Optional: pre-generate for mert etc.
+
+for l in en cs; do for c in wmt08 wmt09 wmt10 wmt11 wmt11raw; do
+  echo ./corpman $c/$l"NmT1"+stc --start
+done; done
+
+** Optional: pre-generate for align and mixlm
+
+corps=`echo $czengall | tr '+' ' '`
+corps=`echo $monoall | tr '+' ' '`
+for l in cs en; do
+  for c in $corps; do 
+    echo CORP=$c CORPAUG="$l"NmT1+stc ORDER=6 SRILMSTEP=s.srilm.117f0cfe.20120202-0037 eman init lm --mem=30g --start
+  done
+done
+
+
+
+** BUGs to examine:
+
+- why it failed only this late: s.translate.75547d7e.20120212-0052
+  ...well, sge starts jobs even if their prerequisites fail => the translate learns hard that the mert has failed
+
+- why s.lm.568a11d1.20120212-0027 got prepfailed for this mert: s.mert.13368143.20120212-0100
+  ... can't tell, perhaps corpman index locking?
+
+
+
+2012-02-20
+
+experiments underway:
+* selecting data based on translated wmt11 test
+s.lucscore.6018e5f7.20120220-2317
+
+* variants of lucscore on wmt08 tgtside
+s.lucscore.2af2eb77.20120213-2249       DONE    CUT300
+s.lucscore.4bf88452.20120213-2119       DONE    CUT10
+s.lucscore.7829a571.20120213-1805       DONE    CUT3
+s.lucscore.f8f8f15b.20120214-1456       DONE    CUT1000
+
+* s.mosesgiza.ad93f520.20120221-1717: check that mert+evaluation work well
+    cista evaluace asi ano s.evaluator.ae52bbc1.20120221-1755
+    mert prave testuju: s.evaluator.11802b16.20120221-1804 (jako kontrast s 52f3ebbf.20120208-2202)
+    ...asi funguje dobre, BLEU podobne, cas podobny (trochu horsi, ale cluster
+      pretizen)
+
+* Milos' suggestion to select sents from parallel corpus and tune towards them.
+  s.lucindex.93adf5eb.20120222-1912 indexes czeng based on english lemma
+    a z toho mam pak anglickou stranu: s.lucselect.2bbca1c5.20120223-1654
+    a ceskou stranu: s.lucselect.f2e293be.20120223-1656
+      korpus se jmenuje: wmt11-filt-s.lucscore.a34a212a.20120222-2339/enNmT1+form+lemma+tag
+    ...now evaluating on large data: s.evaluator.2006f524.20120223-2219
+    ... got a terrible 9.14±0.38 compared to the original 17.51±0.57
+    ... s.evaluator.05015f1f.20120224-1807 is a new attempt, tuning corpus only
+        from czeng-news; still worse, got 8.70±0.37
+
+* POSTEDITACE POSTPROC
+* postproc. tectomt narazil na konflikt AB:
+13:29 tauri4 playground$cat s.corpus.6ee3eee0.20120224-1151/corpman.info 
+corpus.txt.gz   -1      c-all-tmt       csNmtmt lemma   14833358        1
+13:29 tauri4 playground$cat s.corpus.f90c0e19.20120224-0949/corpman.info 
+corpus.txt.gz   -1      c-all-tmt       csNminput+csNmtmt       form+lemma+tag  14833358        0
+corpus.txt.gz   1       c-all-tmt       csNminput       form+lemma+tag  14833358        0
+corpus.txt.gz   2       c-all-tmt       csNmtmt form+lemma+tag  14833358        0
+ ... obesel jsem to nastavenim na derived
+ ... a ted spustim alignment: s.align.88f2b75f.20120226-0051
+ ... alignment chcipl, jsou tam prazdne vety.
+ ... pripravuju novy korpus: s.corpus.d4fd0278.20120226-2233
+ ... oprava alignmentu: s.align.8cef9e10.20120227-1043
+ ... druha oprava: s.align.ddeaf9de.20120227-1419 (rucne jsem procistil ten korpus)
+     zkusil jsem eman cont s.align.ddeaf9de.20120227-1419 -queue '*@hyperion6*' -mem=30g
+ ... treti oprava s.align.c05c559f.20120228-1119
+    ... hotovo
+ ... s.tm.7f6ad94e.20120302-1258
+     ... jenze jsem si zlikvidoval ten vstupni korpus :-//
+
+Greedy alignment:
+nyni snad konecne trenuju tm: s.tm.fe74d70c.20120302-0119
+oprava s.tm.90abd2c2.20120302-0710
+a z toho tm model: s.model.dab96d36.20120302-1258
+
+ Finalni testset po prelozeni vypada takto: s.corpus.f9ed6639.20120228-1810
+
+ Nove zkousim vysypat czeng i s alignmentem: s.corpus.74ea9138.20120301-1624
+
+
+* pro Petru Galuscakovou: preklady sady wmt09, aby udelala index pro wmt09+wmt11
+  s.evaluator.95057bdf.20120221-1507
+  s.evaluator.3980b577.20120221-1509
+
+* poscng LM na news: s.mixlm.0449dcd3.20120222-1605
+  ... vyzkouset na velkych datech
+  !!! novy moses s.mosesgiza.ad93f520.20120221-1717 potrebuje recompilovat, maximalni rad LM jsem zvedl na 8, podle LM rozhodnu, jestli jeste vic
+  (lm/max_order.hh)
+
+* plnou tabulku dev-vs-test corpusu
+
+for dev in wmt08 wmt09 wmt10 wmt11 wmt11raw; do for test in wmt08 wmt09 wmt10 wmt11 wmt11raw; do if [ $dev != $test ]; then echo eman add-tag devtesttable '$('eman tb 11ccf590.20120208-1554 -s /wmt11/$test/ -s /wmt10/$dev/ --ignore=corpus '|' eman clone --start --print ')'; fi; done; done > clip2.sh
+...tohle je spatne, protoze to druhym regexem ovlivni prvni :-(
+... rucne jsem to dodelat
+
+* preklad z anglickeho lematu
+
+* systemy ke kombinovani:
+TODO	t0-0Alemma-0 ... no, radsi 0a1-0A0-0(PRO)
+	s.evaluator.c0970c32.20120302-2113
+
+TODO	baseline 0a1-0A0-0 s.evaluator.39eddbe2.20120222-1927 (zatim jako varianta bez alternative decoding paths), ten buduju zde: s.evaluator.5887f60d.20120222-1940 (ale musel jsem rucne opravit moses.ini)
+TODO	rm:
+	baseline: s.evaluator.63481d21.20120224-1945 12.22±0.45 vs baseline 12.23±0.46
+	large 0a1-0a1: s.evaluator.d09a808c.20120225-2205  18.10±0.55, so yes, negligibly better
+	  ... zkusim jeste vypnout obyc dist.
+	      s.evaluator.b1090d1a.20120226-0035   ... fixed d_6   0.00±0.00
+	      s.evaluator.f3eb18e6.20120226-0037   ... fixed d_0   0.00±0.00
+TODO	2step
+	...I already started the second step:
+	    s.evaluator.952798f6.20120224-1804 
+	      ... no idali -> bad score, but actually better than idali:
+	          41.24±0.73
+            s.evaluator.3ef7883e.20120224-1927  with idali
+	      ... translate nededi MOSESFLAGS, takze rozhazel poradi...
+	      ... oprava: s.evaluator.c5976607.20120226-0106: 38.54±0.68
+	... a krok 1 zkousim tady: s.evaluator.6ecbfb19.20120224-1712 13.73±0.48
+	LARGE:
+	  step2: s.evaluator.a96300a0.20120227-1002  77.40±0.58
+	  step1: s.evaluator.a72e6171.20120227-0117
+	         oprava: s.evaluator.2d1bd34d.20120228-1724
+		 oprava2: s.evaluator.0209bd0f.20120228-1814
+		 oprava3: s.evaluator.ea9869e1.20120301-0900
+		 oprava4: s.evaluator.0ec2f004.20120301-1353 19.94±0.57
+	         na wmt12: s.evaluator.dcb856ac.20120301-2356 17.77±0.52
+	  combined wmt11: s.evaluator.ce73364b.20120302-0002 17.34±0.57
+	  combined wmt12: s.evaluator.696855f9.20120302-0045 15.37±0.54
+
+TODO Turkova metoda:
+  - jednak na t0a1-0a1:
+   prunelm, vc. luclm:
+18.43±0.59	s.evaluator.4dba862b.20120313-1534	s turkem
+18.07±0.56	850d81ae.20120223-1047            	baseline
+  - ale take na t0-0:
+17.61±0.57       s.evaluator.9d7d00ed.20120228-2228  s turkem
+17.51±0.57       s.evaluator.bd7643b0.20120222-1906  baseline
+
+
+To ENGLISH: (DO ANGLICTINY)
+t0-0 small s.evaluator.4c2791e7.20120227-1646
+  ... oprava: revertovany revali: s.evaluator.d692146c.20120228-1917
+  ... a jeste totez s alignmentem nereverznim: s.evaluator.0a1ba105.20120228-1205
+t0-0 large s.evaluator.e2885ab9.20120227-1654
+  ... zalozen na revgdfa, mizernych 17.23±0.49
+  ... oprava, ktera alignment otaci: s.evaluator.a1c0da6e.20120228-1924
+  ... oprava2: s.evaluator.a4c1d4e0.20120229-0722
+24.62±0.59  ... oprava3: s.evaluator.834ea9f7.20120301-0933
+t0-0A1-0 large s.evaluator.d9c6fc17.20120228-1154
+  ... zabil jsem ho, je vadny...
+  ... oprava s revali: s.evaluator.5e11db8b.20120228-1937
+  ... druha oprava: s.evaluator.55c9776a.20120228-2328
+  ... oprava podle pokusu WMT12: s.evaluator.1a7aec74.20120328-1611
+
+GIGA:
+ pak to takhle nastartuju
+ az dobehne stc: s.corpus.2ad0bbd6.20120229-1734
+ SRCCORP=giga SRCAUG=enNm+stc eman init lucindex
+
+
+POKUS S MIXLM:
+udelat jeden mixlm, ktery bude michat vsechny korpusy (vs. pripadne toho lucenoveho z 2eccfed5.20120301-1010) podle synteticke cs+stc.
+Musim tedy ziskat wmt09, wmt11 a wmt12 prelozene modelem bf1b8c6b.20120229-1017.
+Na zaver se to bude mertovat na wmt09.
+
+
+wmt12	s.translate.ca65d38d.20120229-1017
+wmt11	s.translate.eb83cb29.20120228-0026
+wmt10	s.translate.c66969b8.20120301-1926
+wmt09	s.translate.8294cb41.20120301-1932
+
+ty 2 posledni jeste bezi
+
+ten wmt09 bude bohuzel prilis dobry preklad, protoze pouzity mert byl vyladen na wmt09
+
+mert pak prosim spustte na
+DEVCORP=wmt09
+a evaluator na TESTCORP=wmt11 i TESTCORP=wmt12
+
+Cim se vyznacuji finalni merty podle devsetu:
+kdyz mert pobezi na wmt09, je nejpodobnejsi baseline, coz je dobre pro srovnani
+- ma to ale trochu nevyhodu, ze ty preklady na nem byly vyladeny
+
+kdyz mert pobezi na wmt10, muzeme vysledek vyhodnotit na 11 a 12, neoceni spravne luclm
+
+kdyz mert pobezi na wmt11, nema to zadnou vyhodu
+
+ten luclm, ktery tam mame, je pripraven z wmt09, wmt11 a wmt12
+
+celkovy prehled:
+
+15.93±0.57 baseline:               	bf1b8c6b.20120229-1017
+15.77±0.55 mixlm, ale bez luclm:   	s.evaluator.3c5b0c52.20120302-1223
+15.89±0.57 mixlm(zahrnujici luclm):	s.evaluator.29bab972.20120302-1248
+16.01±0.55 mixlm + luclm v mertu:  	s.evaluator.00a087dc.20120302-1228
+
+MIXLM ze vsecho mozneho *podle baseline prekladu*:
+s.mixlm.f7126076.20120302-1034  jen vsechny standardni korpusy
+s.mixlm.fd9f3120.20120302-1106	navic i lucinuv korpus s.lm.c218b17e.20120302-1103
+
+
+
+TODO luc:
+0. vyrob velky prekladovy model lemma->lemma
+   ... s.evaluator.a910fa2d.20120227-2111 jako varianta 8a1ad56b.20120222-1511
+1. preloz enlem->cslem wmt12 *a* wmt09  ... dostanes wmt09a12cslemhyp
+   ... mam s.evaluator.4481ce81.20120227-2326 wmt12
+         a s.evaluator.34d8f8ba.20120227-2328 wmt09
+	 a s.evaluator.03bcf975.20120229-1123 wmt11 (nove dodano)
+   ... a udelal jsem z toho korpus:
+       synth-large-wmt09a12/csNmT1+lemma (s.corpus.e8fd8e53.20120228-1230)
+       synth-large-wmt09a11a12 s.corpus.824576c2.20120229-1153
+2. profiltruj s.lucindex.cd643074.20120213-0903 podle wmt09a12cslemhyp, 500 vet
+   ... dostanes 500monofilteredwmt09a12
+   filtrovani:
+     s.lucscore.08f2fb7f.20120228-1233  CUT=500
+     s.lucscore.8e25a19d.20120228-1235  CUT=300
+     s.lucscore.5f968916.20120228-1235  CUT=800
+   priprava korpusu:
+     s.lucselect.db0ee344.20120228-1515
+     s.lucselect.dfde9c06.20120228-1515
+     s.lucselect.6abcf9ba.20120228-1516
+   priprava LM:
+     s.lm.28bf8978.20120228-1521
+     s.lm.5185a11c.20120228-1522
+     s.lm.cf042915.20120228-1522
+3. natrenuj mert na wmt09, ktery ma i LM nad 500monofilteredwmt09a12
+     ...tyto tri jsou testovany na wmt11, takze zadne valne zlepseni mit nebudou
+     s.evaluator.b2f1c967.20120228-1544
+     s.evaluator.099dd5b7.20120228-1546
+     s.evaluator.6fed50d5.20120301-0945 0.1594
+4. preloz tim wmt12 (pro ucely finalni evaluace) nebo wmt11 (pro ucely moji
+   evaluace)
+5. pouzij to v combinovani, ktere vyladis na wmt09 a nasledne spustis na wmt11
+   nebo wmt12
+
+Pro porovnani na DEV09, TEST12:
+15.94±0.56	CUT=800 	6fed50d5.20120301-0945
+15.77±0.55	CUT=500 	099dd5b7.20120228-1546
+15.90±0.55	CUT=300 	b2f1c967.20120228-1544
+15.93±0.57	baseline	bf1b8c6b.20120229-1017
+	CUT=100	s.evaluator.98f119cb.20120301-0937
+	  s.lm.f83fd3eb.20120229-1724  497000 radek
+	  s.lucselect.b88db060.20120229-1147 49700 radek
+	  s.lucscore.d4c90838.20120229-1147 taky tak, cili tohle je ok.
+15.91±0.57	CUT=300,ale i wmt11	2eccfed5.20120301-1010
+
+srovnani 15.93±0.57 vs 15.94±0.56 pomoci:
+./hilidiff 6fed50d5.20120301-0945 bf1b8c6b.20120229-1017 | pickre --pick --re='diff=([-0-9]+)' | mynl | labelledxychart --data=1,2,0,'' --ylabel='higher y = 1st hyp better' |gpsandbox
+...a na vic vetach je lepsi baseline, i kdyz jsou vety, kde je lepsi ta druha
+
+Protoze 0 jeste bezi zkousim aspon maly lematicky model. Pomoci nej jsem
+prelozil wmt09 (uz driv: s.evaluator.95057bdf.20120221-1507) a ted se pokusim
+prelozit wmt12 s.evaluator.bd7726e1.20120227-1528
+...z toho mam korpus s.corpus.54810283.20120227-1558:
+    synthwmt09a12/csNmT1+lemma
+ted podle toho filtruju data:
+  s.lucscore.9fa06e22.20120227-1602 (300)
+  s.lucscore.4c56d756.20120227-1603 (500)
+a pak podle toho pripravim korpus:
+  s.lucselect.a446a3ca.20120227-1707 a s.lucselect.31d6c207.20120227-1714
+uz zkousim i lm:
+  s.lm.1da66e9f.20120227-2351 DONE (CUT=300)
+
+A ted co budu porovnavat:
+a) s.evaluator.d09a808c.20120225-2205  t0a1-0a1 DEVwmt10 TESTwmt11 18.10±0.55
+b) s.evaluator.0d395a5d.20120228-0026  t0a1-0a1 DEVwmt09 TESTwmt11 18.23±0.60
+c) s.evaluator.66079f26.20120228-1027  t0a1-0a1 DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu) 18.06±0.57
+f) s.evaluator.c731ba44.20120228-1024  DEVwmt09, ale s synthlm09+12, TESTwmt12
+   ... to by mel byt (maly) finalni 15.89±0.54
+Tyhle jsou nejake zmatene:
+d) evaluator.f1cb2157.20120228-0039  DEVwmt09, ale s synthlm09+12, TESTwmt09
+e) evaluator.e2bb0ec6.20120228-0048  DEVwmt09, ale s synthlm09+12, TESTwmt11 (neukaze moc zmenu)
+a-b porovnej, aby bylo videt, ze wmt09 a wmt10 nema vliv pri vyhodnocovani na
+  wmt11 (a stejne tak doufejme wmt12)
+  
+
+
+s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
+s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
+s.evaluator.c30ec7fe.20120222-1847	small towards PER
+s.evaluator.d9f4e325.20120222-1849	small towards TER
+s.evaluator.850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+	zkusim taky na wmt12: s.evaluator.526e51e7.20120329-1129
+s.evaluator.d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+NOs.evaluator.2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+s.evaluator.21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+s.evaluator.1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+s.evaluator.bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0) (no RM)
+s.evaluator.d8a42d9b.20120329-1450	like s.evaluator.bd7643b0.20120222-1906 but with rm
+	na wmt12: s.evaluator.e1423867.20120329-1453
+s.evaluator.38c6acff.20120227-0125	large stc->stc+tag
+  a jeste jeho spravneji vyhodnocena varianta:
+    s.evaluator.c5cc09ae.20120227-0129
+    OPRAVA: s.evaluator.04fc22da.20120227-2319
+      a z toho PRO: s.evaluator.0e493551.20120227-1410
+  ...dopadne tragicky, uletla word penalty (protoze jsou spatne reference)
+  ten s.evaluator.c5cc09ae.20120227-0129 zkousim ted taky nad poscng:
+    s.evaluator.92f4f256.20120227-1001
+    oprava: s.evaluator.70824cf2.20120227-1507
+    oprava2: s.evaluator.5686b7cd.20120301-1422
+
+!!! pri vyrabeni musis reusnout mixlm, a musis prejit na novy mosesgiza, cili zhruba takto:
+MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 eman redo 18.09±0.59 --avoid=s.tm.c11f7cbf.20120211-0028 --start --add-tag=with-toa --disk=400g  --mem=40g --ign=mixlm
+
+A pri odvozovani dalsich variant ke kombinovani uz staci neco jako:
+DEVCORP=wmt08 eman redo s.evaluator.3243a7df.20120222-1809
+nebo
+MERTFLAGS="--mertargs=--sctype=TER" eman redo s.evaluator.c60859fe.20120222-1837
+
+
+OPTIMALIZACE NA NECO JINEHO:
+mohl bych udelat tstc-stc+pluslemma prostym pridanim gm
+
+
+
+KOMBINACE:
+
+
+s.evaluator.3243a7df.20120222-1809	small baseline 12.23±0.46
+s.evaluator.f3a19018.20120222-1854	small baseline DEVwmt08
+s.evaluator.c30ec7fe.20120222-1847	small towards PER
+s.evaluator.d9f4e325.20120222-1849	small towards TER
+
+... vyladeno na minilm: s.combmert.4e136804.20120301-1028	BEST0.11221
+... ladim na velelm: s.combmert.b0c7ea34.20120301-1122	BEST0.115077
+                     TESTCORPS READY
+
+cili konfig:
+CORP=wmt11 \
+HYPAUGS=csNmT1_s.translate.46d1f1b7.20120222-1847+stc:csNmT1_s.translate.83099967.20120222-1849+stc:csNmT1_s.translate.14029a14.20120222-1854+stc:csNmT1_s.translate.4bfd0002.20120222-1808+stc \
+SRCAUG=enNmT1+stc \
+REFAUG=csNmT1+stc \
+MOSESSTEP=s.mosesgiza.ad93f520.20120221-1717 \
+SRILMSTEP=s.srilm.117f0cfe.20120202-0037 \
+TARGMODELSTEP=s.model.e351bb6f.20120222-1905 \
+eman init combmert
+
+# TARGMODELSTEP=s.model.3e28def7.20120207-0013 \
+  ... minimodel
+
+# TARGMODELSTEP=s.model.e351bb6f.20120222-1905 \
+  ... prilis velky model
+
+Ted zkusim kombinovat varianty minimodelu trenovane na:
+wmt08 wmt09 wmt10
+csNmT1_s.translate.3d4333fb.20120221-1932+stc
+csNmT1_s.translate.70d9c878.20120221-1935+stc
+csNmT1_s.translate.38c62c9d.20120221-1927+stc
+
+-> s.combmert.cad43d5a.20120301-1802   3kombinace
+   ... TESTCORPS STARTED
+   -> testcombmert: s.combmert.f7d52ea8.20120302-1043
+   -> eval: s.evaluator.53b6961d.20120302-1126
+-> s.combmert.3d50d7c2.20120301-1751   3+4kombinace
+  ... to bude trvat docela dlouho, veta prumerne 5 vterin, kdyz se jede ve 3
+      vlaknech
+
+* Kombinace velkych modelu
+
+18.07±0.56	850d81ae.20120223-1047	fix of 18.09±0.59 (t0a1-0a1)
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.65±0.56	1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+17.85±0.58	04fc22da.20120227-2319	large stc->stc+tag
+???       	5686b7cd.20120301-1422	poscng
+
+kdyz si zkopirujes tu tabulku, tak takhle se dozvis, jake korpusy pouzit:
+eman vars $(cut -f2 ~/clip) | grep TRANSAU'\|'s.evalu | paste - -
+
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.65±0.56	1bc63d0b.20120223-1111	fix of 18.09±0.59 PRO
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+17.85±0.58	04fc22da.20120227-2319	large stc->stc+tag
+---> s.combmert.aac145a1.20120301-1803
+
+a navic jeste:
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+---> s.combmert.fa28bab6.20120301-1804
+
+
+jako jina varianta co nejrozdilnejsi co nejmensi kombinace:
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+17.51±0.57	bd7643b0.20120222-1906	fix of 17.73±0.59 (t0-0)
+---> s.combmert.7de731b7.20120301-1949
+   TESTCORPS STARTED
+
+
+a dalsi jina varianta: s 2step
+17.34±0.57	ce73364b.20120302-0002	2step
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+9.14±0.38 	2006f524.20120223-2219	towards lucselectedwmt11 9.14±0.38
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+---> s.combmert.1379f125.20120302-0026
+15.37±0.54	696855f9.20120302-0045 twostep wmt12
+
+a jeste jednodussi s 2step
+17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI (snad opraven rucne)
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+16.10±0.54	21fc690d.20120223-1111	fix of 18.09±0.59 towards TER
+---> s.combmert.a6aa501a.20120302-0031
+     TESTCORPS DONE
+     testcombmert: s.combmert.90aa7cf9.20120302-1204
+0.1356     eval: s.evaluator.3e3c9a01.20120302-1245
+... Zkousim btlow beam, prunelm-incl-luclm:
+  s.combmert.b22c384d.20120302-2220  dev: 0.172944
+  ---> tento otestuju na wmt12: s.combmert.aba8f92a.20120303-0125
+       evaluator: s.evaluator.c46b02cb.20120303-0145 0.1417  ---> cu-poor-comb
+  ...lepsi, ale i opticky je baseline porad nad tim
+  ...a z nej zkousim vybrat mene vah k ladeni: (voting, sentlevel, primarcs)
+    s.combmert.cad47de8.20120303-0042
+  ...a z nej zkousim vybrat mene vah k ladeni: (voting, sentlevel, primwords)
+    s.combmert.0dceadaf.20120303-0056 dev: 0.172302
+    
+... a take jen prunelm-incl-luclm, ale s opravou alignmentu:
+  s.combmert.5e1abf5c.20120302-2221
+  ... nestaci, dolezlo jen k 16.x
+... s totez, ale s rozsahem pro wp zapornym:
+  s.combmert.a49852c7.20120303-0018
+  ...evidentne to take nestaci
+
+ROZBOR KOMBINACE:
+
+- v 2stepu jsem musel opravit alignment, proste prevzit alignment kroku 1
+
+- Takto jsem kontroloval alignment:
+ziplines --item='\t' tuning.in.gz hyp.1.outali.gz | /net/tmp/bojar/wmt12-bojar/addicter/testchamber/alitextview.pl | less
+
+- viasource je nesikovny pro preklady 2-1 ap., protoze vsechno pak jde na prvni slovo... asi by tedy lepe dopadla giza
+
+- duvod zkracovani vet je v prohledavani: prilis kratka hypoteza ma prilis
+  dobre skore a ostatni z nbestlistu zmizi: napr. zde byl jediny kandidat.
+7||| „ opravdu nevím . “  ||| d: 0 lm: -15.9077 -16.3577 w: -5 I: -1.09861 -1.09861 0 0 -8.04719 4 4 5 5 5 tm: 0 ||| -604.282
+  ... to se tim -b 0.0003 vylepsilo, ale je to pomalejsi
+
+
+
+Zkusim ted udelat kombinaci jen 2 systemu, zahodim ten vadny TER:
+17.34±0.57	ce73364b.20120302-0002	2step ! VADNY ALI (snad opraven rucne)
+18.10±0.55	d09a808c.20120225-2205	18.10±0.55 like 18.07 but with rm
+...odvodim to z s.combmert.b22c384d.20120302-2220  dev: 0.172944
+---> s.combmert.a74e1a0a.20120530-1219 done
+... ale selhaly testcombmert: s.combmert.1a2510c5.20120530-1220
+    zkousim opravit: s.combmert.27e5f0d1.20120530-1812 ... failed due to corpman
+
+
+TODO:
+gm pro dve pouziti:
+  preklad stc-stc+lemma
+  combmert
+zkus sam, co mela delat PG
+apply combmert
+tm pro posteditaci s maxphrase 4
+
+
+
+
+SUBMISSIONS:
+
+to Czech
+submitted:
+16.07±0.55	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+          	-> cu-bojar-primary DEVwmt10
+15.90±0.57	...varianta: s.evaluator.d3540e35.20120229-1117 DEVwmt11+extrarefs
+          	-> cu-tamchyna (primary)
+16.01±0.56	...varianta: s.evaluator.a085efe7.20120229-2355 DEVwmt11
+          	-> cu-tamchyna (contrast)
+14.17±0.53	s.evaluator.c46b02cb.20120303-0145
+          	-> cu-poorcomb (jmenem Petry Galuscakove)
+
+too late:
+15.87±0.58	s.evaluator.ab47b940.20120313-2232
+          	(odvozeno od s.evaluator.4dba862b.20120313-1534)
+          	... prilis pozde: Turkova metoda
+
+todo:
+16.07±0.55*OB	5bf6c98f.20120227-1409 baseline t0a1-0a1+REORD
+             	-> cu-bojar
+15.94±0.54   	ZKOUSIM NOVY: s.evaluator.0a39eb06.20120303-0023
+16.10±0.56   	a jeste zkusim prihodit 2 velke LM: s.evaluator.fb1e6bf4.20120307-1904
+             	...ani SYN+webcoll nepomohly!
+
+15.48±0.56     	0352547d.20120227-1717 baseline t0-0
+15.90±0.55*PGAK	b2f1c967.20120228-1544 jako 16.07±0.55 s synth-small-LM
+               	...opticky pritom vypada trochu lepe nez 16.07
+               	...varianta s.evaluator.af330490.20120229-1134 s 6gr
+               	...pouzij ten baseline; nemas nejaky vetsi?
+               	...a jako kontrasty dnesni pokusy
+15.37±0.54*BJAK	696855f9.20120302-0045 twostep
+10.70±0.50     	53b6961d.20120302-1126 combination on small data
+               	...opravdu je to mizerie
+13.56±0.52     	3e3c9a01.20120302-1245 combination on large data
+               	...ano, mizerie
+		ZKOUSIM JINE
+               	
+to English
+
+23.09±0.59   	s.evaluator.499501ce.20120304-0208 t0-0At1-0
+             	-> cu-bojar (late primary, snad ho pouziji)
+22.90±0.56*OB	s.evaluator.33d443f4.20120301-1350 t0-0
+             	-> cu-bojar (first primary)
+
+
+Co musim opravit do priste:
+- vic vet v jedne
+- zapomen na stc, to je smejd; resp. udelej lattice vstup s lc jako variantou
+  ... hlavne res named entities
+- vetsi nbestlist!
+- zapomnel jsi pouzit paralelni news a europarl!!!
+- pouzij extrakci podstromu odpovidajicich frazim po vzoru
+  Tinsley,Hearne,Way,2009!
+- pouzij Turkovu metodu vcas
+- pouzij GLM vcas
+- zajisti, aby Paroubek's se neprekladalo jako Paroubek je!!!
+- vyzkousej automaticke generovani pozic pro pomocna slova, po vzoru:
+  Morphological analysis for statistical machine translation (Young-Suk Lee,
+  2004) http://dl.acm.org/citation.cfm?id=1613999
+- do cestiny vypni zdrojovy tagging a zapni reordering:
+   s.evaluator.04fc22da.20120227-2319 17.85±0.58 tF-FaT,distr
+   s.evaluator.107486b0.20120725-1924 18.17±0.59 tF-FaT,lexr
+      ... ehm, toto nebylo potvrzeno nejlepsim modelem na wmt12, viz 16.07 vs. 15.90
+      >                           wmt12        wmt11
+      > cu-bojar              16.07Â±0.55  18.10Â±0.55
+      > F-FaT distr           15.73Â±0.55  17.85Â±0.58
+      > F-FaT lexr (dal vam)  15.90Â±0.57  18.17Â±0.59
+- do anglictiny lexr nejak nepomohl:
+   s.evaluator.33d443f4.20120301-1350 22.90±0.56  distr
+   s.evaluator.37a38e88.20120725-1316 22.76±0.55  lexr
+
+
+
+2012-03-13
+Preklady pro TaraXU:
+
+for i in `seq 1 11`; do
+  echo eman tb s.evaluator.d09a808c.20120225-2205 -s /wmt11/taraXU-en-cz-$i/ --ign=corpus --ign=mert '|' MOSESFLAGS='"-th 3"' eman clone --start
+done
+
+for i in `seq 1 6`; do
+  echo eman tb s.evaluator.33d443f4.20120301-1350 -s /wmt12/taraXU-cz-en-$i/ --ign=corpus --ign=mert '|' MOSESFLAGS='"-th 3"' eman clone --start
+done
+
+
+2012-03-23
+
+Preklady pro EM+ interni:
+
+s.translate.cea0e4db.20120323-1442	pouzil do aj
+s.translate.f005c1ea.20120323-1440	pouzil do cj
+
+
+2012-03-27
+
+ex-post pro clanek zkousim jen 2comb jako zjednoduseni s.combmert.a6aa501a.20120302-0031:
+s.combmert.59abbb40.20120327-0115
+
+
+2012-04-02
+
+eman.seeds/mert bohuzel obsahoval zadratovane -dl 6, takze -dl 0 se v mertu pro
+2step neuplatnilo. Ve finalnim prekladu se ale uplatnovalo, takze pokusy nejsou
+zcela chybne.
+
+Nove tedy zkousim srovnat:
+s.evaluator.ce73364b.20120302-0002 (2step, kde 2step v mertu mel -dl6)
+s.evaluator.416c1e66.20120402-1605 oprava, kde i mert ma -dl0
+
+
+2012-05-30
+
+rozbor, proc dopadl spatne combmert:
+
+s.combmert.aba8f92a.20120303-0125
+
+ukazuje se, ze se velmi upredstnostnovala hypoteza 3:
+
+ziplines --delim hyp.?.out.gz evaluation.opt.out.gz --show | numerize_blocks | remove_blank_lines | grp --keys=1,3 --items=COLLECT2 | numsort 1 | split_at_colchange 1 | recut 3,2 | sed 's/.opt.out.gz//;s/.out.gz//g'  | cut -f1 | see
+
+3002    ... celkem vet
+2665    hyp.2
+2472    hyp.1
+1402    hyp.3
+1226    evaluation, hyp.3   ... stejny vystup, jako dala hyp3
+1221    evaluation          ... vystup opravdu zkombinovan, odlisny od vsech
+190     evaluation, hyp.1, hyp.3
+121     evaluation, hyp.1, hyp.2, hyp.3
+106     evaluation, hyp.1
+91      evaluation, hyp.2
+76      hyp.1, hyp.2
+36      evaluation, hyp.2, hyp.3
+26      hyp.1, hyp.3
+12      evaluation, hyp.1, hyp.2
+2       hyp.2, hyp.3
+
+Hypoteza 3 je totiz citelne nejkratsi:
+
+62538   hyp.1.out.gz
+62456   hyp.2.out.gz
+54497   hyp.3.out.gz
+
+... je to ta, ktera je optimalizovana na TER...
+... cili tim jsem si ublizil.
+
+Zde ukazkova veta + vahy. Je videt, ze mert se *snazil* systemu 3 vyhnout, ale
+nepovedlo se to dost.
+  	  	           	apriori          	voting           	sys1skel          	sys2skel          	sys3skel  	sys1made        	sys2made        	sys3made        	primmadearc     	primmadeword
+  	  	           	        0.0155014	       0.00217472	        0.00747898	        0.00272618	0.00386264	       0.0938297	       0.0305126	     -0.00884325	       0.0251508	       0.0229465
+ 0	 1	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+ 1	 2	verdikt    	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+ 2	 3	zatím      	                1	0.333333333333333	0.0384615384615385	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 3	 5	není       	                1	0.333333333333333	0.0384615384615385	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 2	 4	ještě      	                1	0.666666666666667	0.0384615384615385	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 4	 5	není       	                1	0.666666666666667	0.0384615384615385	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 5	 6	pravomocný 	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	2.71828182845905	               1	               1	               1
+ 5	 6	konečný    	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+ 6	 7	,          	                1	0.333333333333333	0.0769230769230769	                 1	         1	2.71828182845905	               1	               1	2.71828182845905	2.71828182845905
+ 6	 7	*EPS*      	                1	0.666666666666667	0.0769230769230769	                 1	         1	               1	2.71828182845905	2.71828182845905	               1	               1
+ 7	 8	a          	                1	0.333333333333333	0.0769230769230769	                 1	         1	2.71828182845905	               1	               1	2.71828182845905	2.71828182845905
+ 7	 8	,          	                1	0.666666666666667	0.0769230769230769	                 1	         1	               1	2.71828182845905	2.71828182845905	               1	               1
+ 8	 9	soud       	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+ 9	10	vyslechne  	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+ 9	10	bude       	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+10	11	*EPS*      	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+10	11	projednávat	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+11	12	odvolání   	                1	0.666666666666667	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+11	12	*EPS*      	                1	0.333333333333333	0.0769230769230769	                 1	         1	               1	               1	2.71828182845905	               1	               1
+12	13	Tymošenkové	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+13	14	v          	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+14	15	prosinci   	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+15	16	.          	                1	                1	0.0769230769230769	                 1	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+16	  	           	                 	                 	                  	                  	          	                	                	                	                	
+ 0	17	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+17	18	verdikt    	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+18	19	ještě      	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	               1	2.71828182845905	               1	               1
+18	19	zatím      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	2.71828182845905	               1	2.71828182845905	2.71828182845905
+19	20	není       	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+20	21	pravomocný 	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	2.71828182845905	               1	2.71828182845905	2.71828182845905
+20	21	konečný    	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	               1	2.71828182845905	               1	               1
+21	22	,          	                1	0.333333333333333	                 1	0.0384615384615385	         1	2.71828182845905	               1	               1	               1	               1
+22	23	a          	                1	0.333333333333333	                 1	0.0384615384615385	         1	2.71828182845905	               1	               1	               1	               1
+21	23	,          	                1	0.666666666666667	                 1	0.0769230769230769	         1	               1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+23	24	soud       	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+24	25	vyslechne  	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+24	25	bude       	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+25	26	*EPS*      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+25	26	projednávat	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+26	27	odvolání   	                1	0.666666666666667	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	               1	2.71828182845905	2.71828182845905
+26	27	*EPS*      	                1	0.333333333333333	                 1	0.0769230769230769	         1	               1	               1	2.71828182845905	               1	               1
+27	28	Tymošenkové	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+28	29	v          	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+29	30	prosinci   	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+30	31	.          	                1	                1	                 1	0.0769230769230769	         1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+31	  	           	                 	                 	                  	                  	          	                	                	                	                	
+ 0	32	*EPS*      	0.333333333333333	                1	                 1	                 1	         1	               1	               1	               1	               1	               1
+32	33	verdikt    	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+33	34	zatím      	                1	0.333333333333333	                 1	                 1	      0.05	               1	2.71828182845905	               1	               1	               1
+34	36	není       	                1	0.333333333333333	                 1	                 1	      0.05	               1	2.71828182845905	               1	               1	               1
+33	35	ještě      	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+35	36	není       	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+36	37	pravomocný 	                1	0.333333333333333	                 1	                 1	       0.1	               1	2.71828182845905	               1	               1	               1
+36	37	konečný    	                1	0.666666666666667	                 1	                 1	       0.1	2.71828182845905	               1	2.71828182845905	2.71828182845905	2.71828182845905
+37	38	,          	                1	0.333333333333333	                 1	                 1	      0.05	2.71828182845905	               1	               1	               1	               1
+38	39	a          	                1	0.333333333333333	                 1	                 1	      0.05	2.71828182845905	               1	               1	               1	               1
+37	39	,          	                1	0.666666666666667	                 1	                 1	       0.1	               1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+39	40	soud       	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+40	42	vyslechne  	                1	0.333333333333333	                 1	                 1	       0.1	               1	               1	2.71828182845905	2.71828182845905	2.71828182845905
+40	41	bude       	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+41	42	projednávat	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+42	44	Tymošenkové	                1	0.333333333333333	                 1	                 1	       0.1	               1	               1	2.71828182845905	2.71828182845905	2.71828182845905
+42	43	odvolání   	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+43	44	Tymošenkové	                1	0.666666666666667	                 1	                 1	      0.05	2.71828182845905	2.71828182845905	               1	               1	               1
+44	45	v          	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+45	46	prosinci   	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+46	47	.          	                1	                1	                 1	                 1	       0.1	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905	2.71828182845905
+47	  	           	                 	                 	                  	                  	          	                	                	                	                	
+
+
+
+2012-06-13
+zkousim spustit mert kroku 2, aby neladil phrase penalty:
+
+<F5
+16:38 tauri4 playground$eman tb s.evaluator.ce73364b.20120302-0002 -s '///' --ign=model --ign=corpus | MERTFLAGS="--activate-features=tm_0,tm_1,tm_2,tm_3,lm_0,lm_1,w_0,d_0" eman clone --mem=20g --disk=30g --start --reuse=s.mert.18a14277.20120301-0859 --redo=s.mosesgiza.ad93f520.20120221-1717
+Loading recipe from stdin.
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Initing new step mert (for s.mert.92078ae6.20120227-0957 in the recipe).
+Executing: INIT_ONLY=yes DEVCORP=wmt10 GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " JOBS=15 MERTFLAGS="--activate-features=tm_0,tm_1,tm_2,tm_3,lm_0,lm_1,w_0,d_0" MERTPRG=mert MODELSTEP=s.model.35a332d9.20120227-0941 MOSESFLAGS="-dl 0" MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 REFAUG=csNmT1+stc SEARCH=cube SRCAUG=csNmT1+pluslemma STACK= TAGPREF= TREEXSTEP= ZMERTFLAGS= ZMERTMETRIC= ZMERTSEMPOSBLEUWEIGHTS= ZMERTSEMPOSSOURCE= EMAN_READONLY=yes ./eman.seed >&2
+Inited: s.mert.b0645cfa.20120613-1638
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Forced to --reuse: s.mert.18a14277.20120301-0859
+Reusing existing step: s.mosesgiza.7359daed.20120207-1609
+Initing new step translate (for s.translate.c34ded0d.20120301-0900 in the recipe).
+Executing: INIT_ONLY=yes DETOKAUG=csNmT1_s.translate.77f981fe.20120613-1639+untok GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " ITER= JOBS=15 MERTSTEP=s.mert.18a14277.20120301-0859 MOSESFLAGS= MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 OUTALIAUG=csNmT1_s.translate.77f981fe.20120613-1639+ali REFAUG=csNmT1+pluslemma SEARCH=cube SRCAUG=enNmT1+stc TESTCORP=wmt11 TOKAUG=csNmT1_s.translate.77f981fe.20120613-1639+pluslemma EMAN_READONLY=yes ./eman.seed >&2
+Inited: s.translate.77f981fe.20120613-1639
+Initing new step translate (for s.translate.0776e2f0.20120302-0002 in the recipe).
+Executing: INIT_ONLY=yes DETOKAUG=csNmT1_s.translate.90168978.20120613-1639+untok GRIDFLAGS=" -hard -l mf=30g -l mnth_free=20g " ITER= JOBS=15 MERTSTEP=s.mert.b0645cfa.20120613-1638 MOSESFLAGS="-th 3 -dl 0" MOSESSTEP=s.mosesgiza.7359daed.20120207-1609 OUTALIAUG=csNmT1_s.translate.90168978.20120613-1639+ali REFAUG=csNmT1+stc SEARCH=cube SRCAUG=csNmT1_s.translate.77f981fe.20120613-1639+pluslemma TESTCORP=wmt11 TOKAUG=csNmT1_s.translate.90168978.20120613-1639+stc EMAN_READONLY=yes ./eman.seed >&2
+The corpus wmt11/csNmT1_s.translate.77f981fe.20120613-1639+pluslemma was registered by s.translate.77f981fe.20120613-1639, but it is not ready yet.
+Missing source corpus
+Exit code: 1
+Failed to init the step. Removing s.translate.90168978.20120613-1639
+
+
+Ten predposleni (tj. posl. uspesny) jeste zkusim spustit:
+s.translate.77f981fe.20120613-1639
+
+
+2012-07-25
+
+pro lingeu pridavam RM do s.evaluator.33d443f4.20120301-1350 22.90±0.56
+   --> s.evaluator.37a38e88.20120725-1316 22.76±0.55
+...musim ziskat moses.ini a ten rm, ktery jeste bude potreba binarizovat
+
+encs:  s.evaluator.d8a42d9b.20120329-1450 17.73±0.58 tF-F,lexr
+
+encs-taglm: s.evaluator.04fc22da.20120227-2319 17.85±0.58 tF-FaT,distr
+
+do kroku s.evaluator.04fc22da.20120227-2319 17.85±0.58 pridavam RM:
+  s.rm.0b38cbed.20120224-1942 ---> s.evaluator.107486b0.20120725-1924 18.17±0.59

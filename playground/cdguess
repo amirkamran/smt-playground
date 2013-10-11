@@ -1,1 +1,6 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/cdguess
+#!/bin/bash
+# usage: . cdguess SPEC
+# will guess the step directory and chdir there
+
+d=`eman path "$1"`
+[ -d "$d" ] && cd $d && echo $d

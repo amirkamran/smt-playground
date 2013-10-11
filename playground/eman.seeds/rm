@@ -20,6 +20,8 @@ eman \
   defvar REORDERING help="reordering models, eg. orientation-bidirectional-fe" \
   defvar REORDFACTORS help="factors to use, eg. 0,1-0+0-0" \
   defvar TRAININGFLAGS default='' help="flags for train-factored-phrase-model.perl" \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -75,8 +77,9 @@ function mkcorpus() {
   $PLAYGROUND/corpman --wait \$1 || die "Failed to prepare \$1"
   step_file_col=(\$($PLAYGROUND/corpman \$1))
   if [ "\${step_file_col[2]}" == "-1" ]; then
-    $PLAYGROUND/../scripts/wiseln $PLAYGROUND/\${step_file_col[0]}/\${step_file_col[1]} \\
-      \$2.gz \\
+    STEPPATH=\$(eman path \${step_file_col[0]})
+    $PLAYGROUND/../scripts/wiseln \$STEPPATH/\${step_file_col[1]} \\
+      \$2.gz \
     || die "Failed to clone \$2 corpus \$1"
   else
     echo "Selecting the column from \$step_file_col"

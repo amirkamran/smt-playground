@@ -3,5 +3,5 @@ BLEU	*/BLEU.opt	BLEU\s*=\s*([^\s,]+)
 BLEUstd	*/BLEU.std	BLEU\s*=\s*([^\s,]+)
 devSnts	*/tuning.in	CMD: wc -l
 tstSnts	*/evaluation.in	CMD: wc -l
-*	s.evaluator*/scores	CMD: perl -F'\t' -lane '$F[2] =~ s/[\[\]]//g; ($lo, $hi) = split /,/, $F[2]; printf "$F[0]\t%.2f±%.2f\n", $F[1]*100, ($hi-$lo)/2*100;'
+*	s.evaluator*/scores	CMD: perl -CSAD -F'\t' -lane 'use utf8; $F[2] =~ s/[\[\]]//g; ($lo, $hi) = split /,/, $F[2]; printf "$F[0]\t%.2f±%.2f\n", $F[1]*100, ($hi-$lo)/2*100;'
 Snts	s.evaluator*/corpus.translation	CMD: wc -l

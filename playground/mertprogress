@@ -1,1 +1,41 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/mertprogress
+#!/bin/bash
+# simple script to show mert progress
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+set -o pipefail
+
+[ ! -z "$1" ] || die "usage: $0 step-identifier"
+
+e=`eman path $1`
+[ -d $e ] || die "Not a step: $e"
+
+if [ ! -d $e/mert-tuning ]; then
+  # traceback to get the mert
+  m=`eman tb --notree $1 | grep '^s.mert\.' | head -n1`
+  e=`eman path "$m"`
+  [ -d $e ] || die "Failed to find even the mert prerequisite of $1"
+  echo "Using mert: $m"
+fi
+
+cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
+
+[ -e run1.out ] || die "Failed to find run1.out.gz"
+
+n=`cat run1.out | wc -l`
+
+grep BEST ../log* | cut -d'>' -f2 | cut -d ' ' -f2 > bleus
+
+runs=$(seq 1 $(wc -l < bleus) | sed 's/.*/run&.out/')
+
+(
+grep BEST ../log* ; \
+echo "" ; \
+paste <( for i in `seq 1 $n`; do echo "SRC"; echo "REF"; cat bleus; echo ""; done ) \
+      <( reduce_factors.pl 0 < ../tuning.in | ziplines --delim - ../tuning.ref.0 $runs ) \
+| sed 's/^\t*//' \
+| numerize_blocks | tt --rmtab \
+) \
+| less -S

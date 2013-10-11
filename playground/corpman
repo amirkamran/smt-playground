@@ -40,6 +40,7 @@ foreach my $val (values %expand_abbrev) {
 }
 
 
+my $dirprefix = "s";
 my $indexfile = "corpman.index";
 my $should_save_index = 0;
   # when corpman creates some corpora, it should save the index
@@ -50,6 +51,7 @@ my $start = 0;
 my $wait = 0;
 my $dumpcmd = 0;
 my $dump = 0;
+my $show_linecount = 0;
 my $factorindex = 0;
 my $register = 0;
 my $fakeno = 1; # the step number for dry-runs
@@ -64,6 +66,7 @@ GetOptions(
   "wait!" => \$wait,
   "cmd!" => \$dumpcmd,
   "dump!" => \$dump,
+  "linecount!" => \$show_linecount,
   "factorindex!" => \$factorindex,
   "verbose!" => \$verbose,
   "read-only|readonly!" => \$readonly,
@@ -89,6 +92,7 @@ Options:
   --cmd      ... emit a tiny shell script that dumps the corpus to stdout,
                  implies --wait
   --dump     ... dump the corpus to stdout, implies --wait
+  --linecount... print just the number of lines in the corpus
   --factorindex
              ... include the indices of factors (or -1 if all factors) in the
                  output; do not create new step just because of factor
@@ -129,11 +133,12 @@ if (! defined $cmd && ! $reindex) {
 $reindex = 1 if defined $cmd && $cmd eq "reindex";
 
 # switch implications
-$wait = 1 if $dumpcmd || $dump;
+$wait = 1 if $dumpcmd || $dump || $show_linecount;
 $start = 1 if $wait;
 $init = 1 if $start; # start implies to init
 
-die "Incompatible requests: --dump and --cmd" if $dumpcmd && $dump;
+die "Only one of the following is possible: --dump --cmd --linecout" 
+  if ($dumpcmd+$dump+$show_linecount) > 1;
 
 # constants:
 my $yes_derived = 1;
@@ -141,6 +146,7 @@ my $not_derived = 0;
 
 
 # first construct an index of corpora bits
+my $index_last_read = undef; # used to check if we should re-read before save
 my $index;
 # $index->{corpname}->{language}->{fact}
 #    = {   stepname=>the_directory_name,
@@ -148,7 +154,7 @@ my $index;
 #          column=>column_within_the_file; -1 could indicate the whole file,
 #          factind=>factor_index_within_the_file, -1 indicates the whole file
 #          linecount=>number_of_lines}
-# where 'fact' *can* be a specification of several factors:
+# where 'fact' *can* be a specification of several factors
 my $waserror = 0;
 
 # chdir to main dir
@@ -156,6 +162,7 @@ chdir($mydir) or die "Failed to chdir to $mydir";
 
 # get/create index of all corpman.info files on the current playground
 if ( ! -e $indexfile || $reindex ) {
+  print STDERR "Indexfile not found or --reindex ($reindex); reindexing.\n";
   create_index(0); # stored in $index
   saveidx($index);
 } else {
@@ -165,40 +172,47 @@ if ( ! -e $indexfile || $reindex ) {
 
 
 # read rules from corpman.rules
-my $rulestext = load_file("corpman.rules");
-my $rules;
-# $rules->{outlang}->{outfacts} = {
-#   inlang=>input language
-#   infacts=>input factors
-#   command=>the command to run
-# }
-foreach my $line (split /\n/, $rulestext) {
-  next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
-  my ($inlang, $infacts, $outlang, $outfacts, $command)
-    = split /\t/, trim($line);
-  if ($inlang eq "*" xor $outlang eq "*") {
-    print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
-    $waserror++;
-  }
-  $infacts =~ s/\|/+/g;
-  $outfacts =~ s/\|/+/g;
-  # for the construction of all factors at once
-  add_rule($outlang, $outfacts, {
-    'inlang'=>$inlang,
-    'infacts'=>$infacts,
-    'command'=>$command,
-  });
-  if ($outfacts =~ /[+\|]/) {
-    # add also rules for two-step construction
-    my $f = 0;
-    foreach my $outfact (split /[+\|]/, $outfacts) {
-      add_rule($outlang, $outfact, {
-        'inlang'=>$outlang,
-        'infacts'=>$outfacts,
-        # 'command'=>"reduce_factors.pl $f",
-            # no command, this will be lazy-extracted
-      });
-      $f++;
+my $rules = undef;
+
+sub ensure_rules_loaded {
+  # $rules will be undef until we actually need it
+  # remember to call ensure_rules_loaded() before using rules!
+  return $rules if defined $rules;
+
+  my $rulestext = load_file("corpman.rules");
+  # $rules->{outlang}->{outfacts} = {
+  #   inlang=>input language
+  #   infacts=>input factors
+  #   command=>the command to run
+  # }
+  foreach my $line (split /\n/, $rulestext) {
+    next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+    my ($inlang, $infacts, $outlang, $outfacts, $command)
+      = split /\t/, trim($line);
+    if ($inlang eq "*" xor $outlang eq "*") {
+      print STDERR "Bad rule: either none or both input and output languages have to be '*': $line\n";
+      $waserror++;
+    }
+    $infacts =~ s/\|/+/g;
+    $outfacts =~ s/\|/+/g;
+    # for the construction of all factors at once
+    add_rule($outlang, $outfacts, {
+      'inlang'=>$inlang,
+      'infacts'=>$infacts,
+      'command'=>$command,
+    });
+    if ($outfacts =~ /[+\|]/) {
+      # add also rules for two-step construction
+      my $f = 0;
+      foreach my $outfact (split /[+\|]/, $outfacts) {
+        add_rule($outlang, $outfact, {
+          'inlang'=>$outlang,
+          'infacts'=>$outfacts,
+          # 'command'=>"$mydir/../scripts/reduce_factors.pl $f",
+          # no command, this will be lazy-extracted
+        });
+        $f++;
+      }
     }
   }
 }
@@ -280,6 +294,8 @@ if ($cmd eq "reindex") {
     print "$maygunzip $steppath/$filename";
     print " | cut -f $column" if $column != -1;
     print "\n";
+  } elsif ($show_linecount) {
+    print $entry->{linecount}, "\n";
   } elsif ($dump) {
     ###!!! --factorindex will not yet work as expected with --dump
     my $h = my_open("$steppath/$filename");
@@ -311,6 +327,7 @@ if ($cmd eq "reindex") {
       print $stepname, "\t", $filename, "\t", $column;
       print "\t", $factind if($factorindex);
       print "\n";
+      exit 2 if $stepname =~ /s.fake/; # indicate that the corpus does not exist
     }
   }
 }
@@ -355,9 +372,10 @@ sub register {
     } else {
       if ($entry->{factind} == -1) {
         my $status = load_step_status($entry->{stepname});
-        if ($status =~ m/^FAILED|PREPFAILED$/) {
+        if ($status =~ m/^FAILED|PREPFAILED|OUTDATED$/) {
           print STDERR "Warning: corpus $entry->{stepname} is identical but has status $status!\n";
-          create_index(1); # reindex, some corpora failed and we don't know
+          # create_index(1); # reindex, some corpora failed and we don't know
+	  ## lazier: but let's see if it will cause some confusing duplicated entries in the index
           $do_register = 1; # register the new corpus
         } else {
           die "Corpus $corp/$lang+$facts already exists ($entry->{stepname})!\n";
@@ -503,7 +521,7 @@ sub lazy_build {
   my $entry = $index->{$corp}->{$lang}->{$facts};
   if (defined $entry) {
     if ($entry->{CONFLICT}) {
-      die "The corpus $corp/$lang+$facts is in conflict, see above or reindex.\n";
+      print STDERR "WARNING: The corpus $corp/$lang+$facts is in conflict, see above or reindex.\n";
     }
     if ($entry->{linecount} == -1) {
       die "The corpus $corp/$lang+$facts was registered by $entry->{stepname}, but it is not ready yet.\n";
@@ -528,7 +546,7 @@ sub lazy_build {
       my $subfactind = $subentry->{"factind"};
       my $cmd = "zcat $steppath";
       $cmd .= " | cut -f $subcolumn" if $subcolumn != -1;
-      $cmd .= " | reduce_factors.pl $subfactind" if $subfactind != -1;
+      $cmd .= " | $mydir/../scripts/reduce_factors.pl $subfactind" if $subfactind != -1;
       push @parts, $cmd;
       push @deps, $subentry->{"stepname"};
     }
@@ -550,6 +568,7 @@ sub lazy_build {
   # if we're asked for multiple factors, there *may* be a chance it's just a
   # different permutation of the existing ones...
   #   but we will simply lazy_build all necessary factors and combine them
+  ensure_rules_loaded();
 
   # need to construct corpus from parts
   if ($facts =~ /[\|+]/) {
@@ -638,13 +657,14 @@ sub run_or_fake_corpus_step {
   my $command = shift;
   my $deps = shift; # deps to wait for
   if (!$init) {
-    my $fakeoutstep = "s.fake.".($fakeno++);
+    my $fakeoutstep = "$dirprefix.fake.".($fakeno++);
     print STDERR $fakeoutstep, ": ", $command, "\n";
     return $fakeoutstep;
   }
   # we indeed issue the command to prepare the corpus
   # first invalidate our index, if it exists
-  unlink("$mydir/$indexfile");
+  # unlink("$mydir/$indexfile");  # leave the index there!!
+  # now with merge-on-save, it is not wise to remove the index
   $command = "cd $mydir && $command";
   $command .= " --start" if $start;
   print STDERR "EXECUTING: $command\n" if $verbose;
@@ -752,15 +772,26 @@ sub add_entry {
     # C: automatic corpora of "selected factor" (these have isderived==1 and factind!=-1)
     # Possible conflicts:
     # old entry, new entry, resolution
-    # AA  die
-    # AB  die
+    # AA  confirm-identity-or-die
+    # AB  confirm-identity-or-die
     # AC  use C iff factind of A != -1; selecting one factor from existing corpus, use A otherwise
-    # BA  die
-    # BB  die
+    # BA  confirm-identity-or-die
+    # BB  happens with remote playgrounds, prefer the older B
     # BC  prefer B (directly usable, C would require one more factor selection)
     # CA  as in AC above
     # CB  prefer B (directly usable, C would require one more factor selection)
     # CC  warn, use any
+    #
+    # confirm-identity-or-die is still implemented as a warning only, ideally,
+    # it would:
+    # 1. just emit a warning
+    # 2. later, at 'bigreindex' check (full diff!) the files and comment in all
+    # writable corpman.infos that the check was performed and was
+    # successful/failed
+    # -- if any of the corpman infos already knows they are equal, copy it
+    # wherever we can write to
+    # die only if they are not identical
+    # prefer the local one, if any
     my $oldtype = get_entry_source_type($oldentry);
     my $newtype = get_entry_source_type($newentry);
     $conflict_type = join("", sort { $a cmp $b } ($oldtype, $newtype));
@@ -778,32 +809,18 @@ sub add_entry {
         $useentry = $entry_c;      
       }
     } elsif ($oldtype eq "A" || $newtype eq "A") {
-      $should_die = 1;
+      $should_die = 0;
       $msg = "Conflict involving a manually created corpus.";
     } elsif ($conflict_type eq "BB") {
-      $should_die = 1;
-      $msg = "Conflicting derived corpora, you should never derive the same set of factors";
-      $useentry = $oldentry;
+      $should_die = 0;
+      # Don't report any conflict, just use the older one
+      $useentry = pick_older($oldentry, $newentry);
+      $msg = "Conflicting derivable corpora, picking $useentry->{stepname}"
+        if $verbose;
     } elsif ($conflict_type eq "CC") {
       $should_die = 0;
       # Don't report any conflict, just use the older one
-      my $olddate = (split /\./, $oldentry->{"stepname"})[3];
-      my $newdate = (split /\./, $newentry->{"stepname"})[3];
-      if (!defined $olddate || !defined $newdate) {
-        # fake entries in dry run
-        $useentry = $oldentry;
-      } elsif ($olddate lt $newdate) {
-        $useentry = $oldentry;
-      } else {
-        my $oldseed = $oldentry->{"stepname"}."/eman.seed";
-        my $newseed = $newentry->{"stepname"}."/eman.seed";
-        if ( -e $oldseed && -e $newseed
-          && -C $oldseed > -C $newseed) {
-          $useentry = $oldentry;
-        } else {
-          $useentry = $newentry;
-        }
-      }
+      $useentry = pick_older($oldentry, $newentry);
       $msg = "Conflicting derivable corpora, picking $useentry->{stepname}"
         if $verbose;
 
@@ -826,6 +843,30 @@ sub add_entry {
   } else {
     $index->{$corpname}->{$lang}->{$facts} = $useentry;
   }
+}
+
+sub pick_older {
+  my $oldentry = shift;
+  my $newentry = shift;
+  my $useentry;
+
+  my (undef, undef, $oldhash, $olddate) = split /\./, $oldentry->{"stepname"};
+  my (undef, undef, $newhash, $newdate) = split /\./, $newentry->{"stepname"};
+  if (!defined $olddate || !defined $newdate) {
+    # fake entries in dry run
+    $useentry = $oldentry;
+  } else {
+    my $cmp = $olddate cmp $newdate || $oldhash cmp $newhash;
+    if ($cmp <= 0) {
+      # pick the older one
+      # or the alphabetically earlier hash if the dates are same
+      $useentry = $oldentry;
+    } else {
+      $useentry = $newentry;
+    }
+  }
+  
+  return $useentry;
 }
 
 
@@ -855,6 +896,7 @@ sub get_entry_source_type {
 sub create_index {
   # if reindexing during 'register', some eman steps may not have eman.status
   my $soft_checks = shift;
+  #`(echo soft-checks $soft_checks, reindex $reindex, cmd $cmd @ARGV; hostname; date)  >> /net/tmp/bojar/wmt13-bojar/playground/corpman.when-reindexed`;
   print STDERR "Indexing...\n" if $verbose;
   undef $index; # discard old index
   my $subdirs_hdl = my_open("eman.subdirs");
@@ -866,11 +908,12 @@ sub create_index {
     }
     print STDERR "Searching directory $subdir\n" if $verbose;
     chdir $subdir or die "Cannot change directory to $subdir.";
-    open INDFILES, "find -follow -maxdepth 2 -name corpman.info |"
+    open INDFILES, "find $dirprefix.* -follow -maxdepth 1 -name corpman.info |"
       or die "Can't search for corpora";
     while (<INDFILES>) {
       chomp;
       my $fn = $_;
+      print STDERR "Checking $fn\n" if $verbose;
       my @dirs = split /\//, $fn, 2;
       my $stepname = undef;
       foreach my $dir (split /\//, $fn) {
@@ -1005,6 +1048,7 @@ sub trim {
 
 
 sub load_step_status {
+  print STDERR "load_step_status @_\n" if $verbose;
   my $stepname = shift;
   my $steppath = get_step_path($stepname);
   my $status = load_file($steppath."/eman.status");
@@ -1018,15 +1062,47 @@ sub loadidx {
   # load the index file and hash it there and back
   my $idx;
   if (-e $indexfile) {
+    $index_last_read = -C $indexfile;
     $idx = Load(load_file($indexfile)."\n"); # YAML to Load the string
   }
   return $idx;
 }
 
 
+# $index->{corpname}->{language}->{fact}
+sub merge_into_idx {
+  my $idx = shift;
+  my $to_insert = shift;
+  foreach my $corpname (keys %$to_insert) {
+    my $sub2 = $to_insert->{$corpname};
+    foreach my $lang (keys %$sub2) {
+      my $sub3 = $sub2->{$lang};
+      foreach my $fact (keys %$sub3) {
+        my $newdata = $sub3->{$fact};
+	my $known = $idx->{$corpname}->{$lang}->{$fact};
+	if (defined $known) {
+	  if (join("\n", %$known) ne join("\n", %$newdata)) {
+	    print STDERR "Warning: conflict when merging indices at $corpname/$lang+$fact\n";
+	  }
+	} else {
+	  $idx->{$corpname}->{$lang}->{$fact} = $newdata;
+	}
+      }
+    }
+  }
+  return $idx;
+}
 
 sub saveidx {
   my $idx = shift;
+  # merge on save
+  if (-e $indexfile && ! $reindex) {
+    while (-C $indexfile > $index_last_read) {
+      print STDERR "Loading index again to merge it with ours. ($index_last_read)\n";
+      my $newidx = loadidx();
+      $idx = merge_into_idx($idx, $newidx);
+    }
+  }
   my ($h, $tempname) = tempfile("eman.index.tmpXXXXXX", DIR=>cwd());
   binmode($h, ":utf8");
   print $h Dump($idx);
@@ -1038,8 +1114,10 @@ sub saveidx {
 }
 
 sub get_step_path {
+  print STDERR "get_step_path @_\n" if $verbose;
   my $stepname = shift;
   if (! File::Spec->file_name_is_absolute($stepname)) {
+    print STDERR "  ...not absolute: $stepname\n" if $verbose;
     if (-d "$mydir/$stepname") {
       return "$mydir/$stepname";
     } else {

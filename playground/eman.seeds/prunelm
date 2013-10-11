@@ -11,15 +11,19 @@ eman \
   defvar SRILMSTEP type=reqstep inherit=FULLLM \
     help="the step containing compiled tools" \
   defvar LMPRUNE \
-    help="Pruning limit" \
+    help="Pruning limit; smaller means smaller output file, good around 14" \
   defvar ORDER inherit=FULLLM \
+    help="n-gram order" \
   defvar CORP inherit=FULLLM \
-    help="Pruning limit" \
+    help="Source corpus" \
+  defvar EMAN_MEM default='6g' \
+    help="Memory limit at cluster" \
 || exit 1
 
 eval `eman bash-loadvars`
 
 PLAYGROUND=`eman path`
+FULLLMPATH=`eman path $FULLLM`
 
 PRUNESTRING="0."
 for i in `seq $(($LMPRUNE - 1))` ; do
@@ -57,15 +61,15 @@ export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 echo "Using this ngram:"
 which ngram || die "No ngram"
 
-if [ -e ../$FULLLM/corpus.lm.gz ]; then
-  inlmstream="zcat ../$FULLLM/corpus.lm.gz"
-elif [ -e ../$FULLLM/corpus.lm ]; then
-  inlmstream="cat ../$FULLLM/corpus.lm"
+if [ -e $FULLLMPATH/corpus.lm.gz ]; then
+  inlmstream="zcat $FULLLMPATH/corpus.lm.gz"
+elif [ -e $FULLLMPATH/corpus.lm ]; then
+  inlmstream="cat $FULLLMPATH/corpus.lm"
 else
-  die "Can't read input file: ../$FULLLM/corpus.lm"
+  die "Can't read input file: $FULLLMPATH/corpus.lm"
 fi
 
-echo "Pruning the language model..."
+echo "Pruning the language model $FULLLMPATH"
 eval \$inlmstream \\
 | ngram -lm - \\
   -prune $PRUNESTRING \\

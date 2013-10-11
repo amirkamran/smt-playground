@@ -26,14 +26,16 @@ eman \
 # Set local bash variables
 eval `eman bash-loadvars`
 
-MEVALPATH=$(eman path $MEVALBINSTEP)
+MEVALSTEPPATH=$(eman path $MEVALBINSTEP)
+MEVALPATH=$MEVALSTEPPATH/multeval
+
 ONEEVALSTEP=$(echo $BASELINE_EVALSTEPS | cut -d ',' -f1)
 ONEEVALSTEPPATH=$(echo $ONEEVALSTEP | xargs eman path)
 
 BASELINEARGS="$(echo $BASELINE_EVALSTEPS | tr ',' ' ' | xargs eman path | tr '\n' ' ' | sed 's/\s/\/corpus.translation /g')"
 IMPROVEDARGS="$(echo $IMPROVED_EVALSTEPS | tr ',' ' ' | xargs eman path | tr '\n' ' ' | sed 's/\s/\/corpus.translation /g')"
 
-[ -n "$TARGETLANG" ] || TARGETLANG="$(eman getvar $ONEEVALSTEP REFAUGS | cut -d'+' -f1)"
+[ -n "$TARGETLANG" ] || TARGETLANG="$(eman getvar $ONEEVALSTEP REFAUGS | cut -c1-2)"
 
 # Stop here if we are just initing ourselves
 [ -z "$INIT_ONLY" ] || exit 0
@@ -51,10 +53,13 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-( java -Dfile.encoding=UTF8 -XX:+UseCompressedOops -Xmx2g \\
-  -cp $MEVALPATH/lib/tercom-0.8.0.jar:$MEVALPATH/lib/meteor-1.3/meteor-1.3.jar:$MEVALPATH/multeval-0.4.2.jar \\
-  multeval.MultEval eval --meteor.language $TARGETLANG --refs $ONEEVALSTEPPATH/corpus.reference.? \\
-  --hyps-baseline $BASELINEARGS --hyps-sys1 $IMPROVEDARGS | tee scores ) \\
+cd $MEVALPATH || die "Chdir to $MEVALPATH failed"
+
+( ./multeval.sh eval \\
+  --meteor.language $TARGETLANG \\
+  --refs $ONEEVALSTEPPATH/corpus.reference.? \\
+  --hyps-baseline $BASELINEARGS \\
+  --hyps-sys1 $IMPROVEDARGS | tee \$mydir/scores ) \\
 || die "Multeval failed"
 
 # Standard command footer

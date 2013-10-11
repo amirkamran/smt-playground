@@ -1,1 +1,236 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/qj
+#!/usr/bin/perl
+# quickjudge quick wrapper, provide as many experiment tags, as wished
+
+use strict;
+use File::Path;
+use FileHandle;
+use IPC::Open2;
+use IPC::Open3;
+use File::Basename;
+use Getopt::Long;
+
+my $shuffle = 0;
+GetOptions(
+  "shuffle" => \$shuffle,
+) or exit 1;
+
+my $evalname = shift;
+my @tags = @ARGV;
+
+my $dir = "qj.data";
+my $quickjudge = "/home/bojar/bin//quickjudge";
+
+die "usage: $0 evaluation-name tag1 tag2/RUN-NR ..."
+  if !defined $evalname;
+
+if (-s "$dir/$evalname.info") {
+  print STDERR "The evaluation called $evalname already exists, interpreting:\n";
+  print "Mark\tCount\tTag\n";
+  my $infolines = load_file("$dir/$evalname.info");
+  chomp $infolines;
+  my @oldtags = map {
+    # print STDERR "LINE: $_\n";
+    my (undef, $tag, undef) = split /\t/, $_;
+    $tag }
+       split /\n/, $infolines;
+
+  my ($out, $err, $exitcode) = saferun3("$quickjudge --print $dir/$evalname 2>/dev/null | cut -f2,3 | see");
+  die "Failed to interpret: $err" if $exitcode;
+
+  chomp $out;
+  # print STDERR "GOT:\n$out\n-----\n";
+  foreach my $line (split /\n/, $out) {
+    my ($cnt, $sysname, $label) = split /\t/, $line;
+    $sysname =~ s/^$evalname\.//g;
+    $sysname =~ s/\.txt$//g;
+    my $tag = "";
+    if ($sysname =~ /sys([0-9]+)/) {
+      $tag = $oldtags[$1-1];
+    }
+    print "$label\t$cnt\t$sysname, $tag\n";
+  }
+  exit 0;
+}
+
+die "No experiments specified for comparison" if 0 == scalar @tags;
+
+my $reftxt = undef;
+my $srctxt = undef;
+my $lastdirname = undef;
+
+my $infohdl = my_save("$dir/$evalname.info");
+my $ns = 0;
+my @hypfiles = ();
+foreach my $tagrun (@tags) {
+  $ns++;
+  my $thisouttxt;
+  my $thisreftxt;
+  my $thissrctxt;
+  my $info;
+  if (-e "$dir/$tagrun.txt.gz") {
+    # special name, constant test set
+    $thisouttxt = load_file("$dir/$tagrun.txt.gz");
+  } else {
+    my ($tag, $run) = split /\//, $tagrun;
+    my ($dirname, $errmsg, $exitcode) = saferun3("eman path $tag");
+    chomp $dirname;
+    die "Failed to guess step from tag $tag: $errmsg"
+      if $exitcode;
+    ($info, undef, undef) = saferun3("eman path $tag");
+    chomp $info;
+    $info = $dirname if $info !~ /evaluator/; # get the short name of the step
+    $thisreftxt = load_file("$dirname/corpus.reference.0.gz");
+    my @thistranslstep = grep { /s.translate./ } split /\n/, load_file("$dirname/eman.deps");
+    die "Failed to guess translate step for $dirname"
+      if 1 != scalar(@thistranslstep);
+    my ($transldirname, $errmsg, $exitcode) = saferun3("eman path $thistranslstep[0]");
+    chomp $transldirname;
+    die "Failed to get path for transl step $thistranslstep[0]: $errmsg"
+      if $exitcode;
+    $thissrctxt = load_file("$transldirname/corpus.src.gz");
+      # the following would prefer detokenized text
+      #( -e "$transldirname/corpus.src.gz"
+      #  ? load_file("$transldirname/evaluation.in.txt")
+      #  : load_file("$transldirname/evaluation.in"));
+    #my $thisoutfncode = defined $run ? "run$run" : "opt";
+    #$thisouttxt = load_file("$dirname/evaluation.$thisoutfncode.txt");
+    $thisouttxt = load_file("$dirname/corpus.translation.gz");
+  }
+  print $infohdl "sys$ns\t$tagrun\t$info\n";
+  if (defined $reftxt && defined $thisreftxt) {
+    die "Incompatible references translations: $lastdirname vs. $info"
+      # if $thisreftxt ne $reftxt; # allow different texts
+      # require equal number of lines
+      if ($thisreftxt =~ tr/\n/\n/) != ($reftxt =~ tr/\n/\n/);
+  } else {
+    $reftxt = $thisreftxt;
+  }
+  $lastdirname = $info if defined $info;
+  $srctxt = $thissrctxt if !defined $srctxt && defined $thissrctxt;
+  push @hypfiles, "$evalname.sys$ns.txt";
+  my $hypfile = "$dir/$evalname.sys$ns.txt";
+  save_file($hypfile, $thisouttxt);
+}
+close $infohdl;
+save_file("$dir/$evalname.SRC.txt", $srctxt);
+save_file("$dir/SRC", $srctxt); # temporary, for quickjudge
+save_file("$dir/$evalname.REF.txt", $reftxt);
+save_file("$dir/REF", $reftxt); # temporary, for quickjudge
+
+safesystem("cd $dir; $quickjudge ".($shuffle?"--shuffle":"")
+  ." $evalname --refs=SRC,REF @hypfiles") or die;
+
+print "Now edit:\n";
+print "  vim $dir/$evalname.anot\n";
+
+
+sub saferun3 {
+  print STDERR "Executing: @_\n";
+  my($wtr, $rdr, $err);
+  my $pid = open3($wtr, $rdr, $err, @_);
+  close($wtr);
+  waitpid($pid, 0);
+  my $gotout = "";
+  $gotout .= $_ while (<$rdr>);
+  close $rdr;
+  my $goterr = "";
+  $goterr .= $_ while (<$err>);
+  close $err if defined $err;
+  if ($? == -1) {
+      print STDERR "Failed to execute: @_\n  $!\n";
+      exit(1);
+  }
+  elsif ($? & 127) {
+      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+          ($? & 127),  ($? & 128) ? 'with' : 'without';
+      exit(1);
+  }
+  else {
+    my $exitcode = $? >> 8;
+    print STDERR "Exit code: $exitcode\n" if $exitcode;
+    return ( $gotout, $goterr, $exitcode );
+  }
+}
+
+
+sub safesystem {
+  # print STDERR "Executing: @_\n";
+  system(@_);
+  if ($? == -1) {
+      print STDERR "Failed to execute: @_\n  $!\n";
+      exit(1);
+  }
+  elsif ($? & 127) {
+      printf STDERR "Execution of: @_\n  died with signal %d, %s coredump\n",
+          ($? & 127),  ($? & 128) ? 'with' : 'without';
+      exit(1);
+  }
+  else {
+    my $exitcode = $? >> 8;
+    print STDERR "Exit code: $exitcode\n" if $exitcode;
+    return ! $exitcode;
+  }
+}
+
+sub my_open {
+  my $f = shift;
+  if ($f eq "-") {
+    binmode(STDIN, ":utf8");
+    return *STDIN;
+  }
+
+  die "Not found: $f" if ! -e $f;
+
+  my $opn;
+  my $hdl;
+  my $ft = `file '$f'`;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/ || $ft =~ /gzip compressed data/) {
+    $opn = "zcat '$f' |";
+  } elsif ($f =~ /\.bz2$/ || $ft =~ /bzip2 compressed data/) {
+    $opn = "bzcat '$f' |";
+  } else {
+    $opn = "$f";
+  }
+  open $hdl, $opn or die "Can't open '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
+
+sub my_save {
+  my $f = shift;
+
+  my $opn;
+  my $hdl;
+  # file might not recognize some files!
+  if ($f =~ /\.gz$/) {
+    $opn = "| gzip -c > '$f'";
+  } elsif ($f =~ /\.bz2$/) {
+    $opn = "| bzip2 > '$f'";
+  } else {
+    $opn = ">$f";
+  }
+  mkpath( dirname($f) );
+  open $hdl, $opn or die "Can't write to '$opn': $!";
+  binmode $hdl, ":utf8";
+  return $hdl;
+}
+
+sub load_file {
+  my $fn = shift;
+  my $out = "";
+  my $h = my_open($fn);
+  $out .= $_ while <$h>;
+  close $h;
+  return $out;
+}
+
+sub save_file {
+  my $fn = shift;
+  my $text = shift;
+  my $h = my_save($fn);
+  print $h $text;
+  close $h;
+}
+
+

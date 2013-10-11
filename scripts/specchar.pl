@@ -1,15 +1,16 @@
 #!/usr/bin/perl
 # Analyzuje textový korpus s ohledem na různé zvláštní znaky, např. různé druhy uvozovek.
 # Předpokládá, že korpus je netokenizovaný. Případné mezery kolem interpunkce hrají roli.
-# Copyright © 2011 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# Copyright © 2011-2013 Dan Zeman <zeman@ufal.mff.cuni.cz>
 # Licence: GNU GPL
+# 2013-04-17: Přidávám ruštinu. Velmi zlehka, žádné ladění a zkoumání konkrétních chyb v korpusech.
 
 sub usage
 {
     print STDERR ("Usage: specchar.pl -l language < original-corpus > modified-corpus\n");
     print STDERR ("    Corpus is untokenized, one sentence (segment) per line.\n");
     print STDERR ("    Language is identified by ISO 639-1 code.\n");
-    print STDERR ("    Known languages: en, cs, de, es, fr.\n");
+    print STDERR ("    Known languages: en, cs, de, es, fr, ru.\n");
 }
 
 use utf8;
@@ -22,7 +23,7 @@ use HTML::Entities;
 
 # Úpravy uvozovek jsou jazykově závislé.
 GetOptions('language=s' => \$jazyk);
-unless($jazyk =~ m/^(en|cs|de|es|fr)$/)
+unless($jazyk =~ m/^(en|cs|de|es|fr|ru)$/)
 {
     usage();
     die("Unknown language '$jazyk'.\n");
@@ -150,8 +151,8 @@ sub zjistit_znaky_uvozovek_pro_jazyk
     my $jazyk = shift; # kód jazyka
     my $q0; # znak počáteční uvozovky
     my $q1; # znak koncové uvozovky
-    # Španělština a francouzština: dvojité menšítko nalevo, dvojité většítko napravo.
-    if($jazyk =~ m/^(es|fr)$/)
+    # Španělština, francouzština a ruština: dvojité menšítko nalevo, dvojité většítko napravo.
+    if($jazyk =~ m/^(es|fr|ru)$/)
     {
         $q0 = $llt;
         $q1 = $ggt;

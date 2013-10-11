@@ -1,0 +1,136 @@
+#!/bin/bash
+# eman seed for word alignment
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar FABINSTEP type=reqstep help='where fast_align is compiled' \
+  defvar FALIGNARGS help'any extra arguments to fast_align' default='' \
+  defvar CORPUS help='the corpus name' \
+  defvar SRCALIAUG help='lang+factors for the source side' \
+  defvar TGTALIAUG help='lang+factors for the target side' \
+  defvar ALILABEL default='' \
+    help='alignment "corpus" name, generated automatically if not given' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+if [ -z "$ALILABEL" ]; then
+  export ALILABEL=$(echo $SRCALIAUG-$TGTALIAUG | tr '+.' '--')
+  eman defvar ALILABEL
+fi
+
+# add source and target corpora to deps
+eval $($PLAYGROUND/corpman --factorindex --init $CORPUS/$SRCALIAUG --bashvars=srccorpstep=stepname,srccorplen=linecount)
+[ ! -z "$srccorpstep" ] || die "Missing source corpus"
+eval $($PLAYGROUND/corpman --factorindex --init $CORPUS/$TGTALIAUG --bashvars=tgtcorpstep=stepname,tgtcorplen=linecount)
+[ ! -z "$tgtcorpstep" ] || die "Missing target corpus"
+
+[ $tgtcorplen == $srccorplen ] || die "Mismatching corpora lengths: src $srccorplen lines, tgt $tgtcorplen"
+
+eman add-deps . $srccorpstep $tgtcorpstep
+
+$PLAYGROUND/corpman register -- alignment.gz -1 $CORPUS gdfa-$ALILABEL ali $srccorplen \
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# Run checks in the preparation phase
+
+# convert the dependencies to absolute paths
+FABINPATH=`eman path $FABINSTEP`
+$PLAYGROUND/../scripts/wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
+
+# Emit the main script to be used in the running phase
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
+echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
+
+function mkcorpus() {
+  # If local copy of corpus already exists (we are running 'eman continue') remove it first.
+  rm -f corpus.\$2.gz
+  $PLAYGROUND/corpman --factorindex --wait \$1 || die "Failed to prepare \$1"
+  step_file_col=(\$($PLAYGROUND/corpman --factorindex \$1))
+  step_file=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
+  scripts=$PLAYGROUND/../scripts
+  # Source corpus contains just one column.
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+    # Every token contains just the required factors.
+    if [ "\${step_file_col[3]}" == "-1" ]; then
+      \$scripts/wiseln \$step_file corpus.\$2.gz \\
+      || die "Failed to clone \$2 corpus \$1"
+    # There are additional factors that must be filtered out.
+    else
+      echo "Selecting the factors from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | \$scripts/reduce_factors.pl \${step_file_col[3]} | gzip -c > corpus.\$2.gz
+      ###!!! The following did not work because the corpus was gzipped. The above should be better.
+      #\$scripts/reduce_factors.pl \${step_file_col[3]} < \$step_file | gzip -c > corpus.\$2.gz
+    fi
+  # There are more than one column, the required column must be extracted.
+  else
+    # Every token contains just the required factors.
+    if [ "\${step_file_col[3]}" == "-1" ]; then
+      echo "Selecting the column from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | gzip -c > corpus.\$2.gz
+    # There are additional factors that must be filtered out.
+    else
+      echo "Selecting the column and factors from \$step_file_col"
+      eval \$($PLAYGROUND/corpman --factorindex --cmd \$1) | \$scripts/reduce_factors.pl \${step_file_col[3]} | gzip -c > corpus.\$2.gz
+    fi
+  fi
+}
+
+cd $PLAYGROUND/tools/symmetrize && make && cd \$mydir || die "Failed to compile alignment symmetrization"
+wiseln $PLAYGROUND/tools/symmetrize/symmetrize symmetrize
+
+mkcorpus $CORPUS/$SRCALIAUG src
+mkcorpus $CORPUS/$TGTALIAUG tgt
+
+zcat < corpus.src.gz > corpus.src
+zcat < corpus.tgt.gz | paste corpus.src - | sed 's/	/ ||| /' > falign.in
+
+# align
+echo "Started align at "\`date '+%Y%m%d-%H%M'\`
+./fast_align -v -d -o -i falign.in $FALIGNARGS \\
+  > align.left 2> align.left.log \\
+  || die "Failed to align there" &
+
+./fast_align -v -d -o -r -i falign.in $FALIGNARGS \\
+  > align.right 2> align.right.log \\
+  || die "Failed to align back" &
+
+echo "Waiting on alignment to finish..."
+wait
+
+# symmetrize, TODO other symmetrizations
+echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
+./symmetrize align.left align.right gd+fa \
+  | gzip -c > alignment.gz || die "Failed to symmetrize"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+

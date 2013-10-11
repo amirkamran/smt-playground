@@ -1,12 +1,14 @@
 #!/usr/bin/perl -w
 
-# Sample De-Tokenizer
+# De-Tokenizer
 # written by Josh Schroeder, based on code by Philipp Koehn
-# modified by Dan Zeman (v1.1: language-dependent directed quotation marks)
+# modified by Dan Zeman (v1.1 (2012): language-dependent directed quotation marks)
+# DZ v1.2 (2013-05-03): URLs, hyphens etc.
 
-binmode(STDIN, ":utf8");
-binmode(STDOUT, ":utf8");
 use strict;
+use utf8;
+binmode(STDIN, ':utf8');
+binmode(STDOUT, ':utf8');
 
 my $language = 'en';
 my $QUIET = 0;
@@ -24,7 +26,7 @@ if ($HELP) {
 	exit;
 }
 if (!$QUIET) {
-	print STDERR "Detokenizer Version 1.1\n";
+	print STDERR "Detokenizer Version 1.2\n";
 	print STDERR "Language: $language\n";
     die("Unknown language") unless($language);
 }
@@ -111,18 +113,52 @@ sub detokenize {
     }
     $text =~ s/([$ql$lrb$lsb$lcb$lexcl$lqest])\s+/$1/g;
     $text =~ s/\s+([$rcb$rsb$rrb$qr,;:$excl$qest])/$1/g;
-    s/$qr\s+\./$qr./g;
     # Unify three-dot ellipses.
-    s/\.\.\.+/$ell/g;
-    # Note that we may want to make this operation optional.
+    $text =~ s/\.\.\.+/$ell/g;
+    # The original code below does not handle properly space-dot(s)-quote. Let's solve it here.
+    $text =~ s/(\pL)\s+([\.$ell])\s*$qr/$1$2$qr/g;
+    $text =~ s/$qr\s+\./$qr./g;
+    ###!!! Note that we may want to make this operation optional.
     # If it is guaranteed that all quotation marks are directed and thus use the Unicode points,
-    # then it is guaranteed that all apostrophes are mere contractions as in English "don't" or French "l'ordre", "d'un", "n'est"...
+    # then it is almost guaranteed that all apostrophes are mere contractions as in English "don't" or French "l'ordre", "d'un", "n'est"...
     # However, if we detokenize text where apostrophe can also be used as a single quotation mark, this approach will not work!
+    if($language eq 'en')
+    {
+        # Known exception: English plural genitive, as in "boys' school".
+        $text =~ s/s\s+'\s+/s' /g;
+    }
     $text =~ s/\s+'\s+/'/g;
-    if($language eq 'fr')
+    # Hyphens are by default left untouched, as we cannot reliably distinguish them from parenthesizing dashes.
+    # However, in English they are just hyphens in compounds more often than not, and in French there are at least some frequent cases to check.
+    if($language eq 'en')
+    {
+        # Require on both sides something that is likely to be part of compound.
+        $text =~ s/([A-Za-z0-9\$%])\s+-\s+([A-Za-z0-9])/$1-$2/g;
+    }
+    elsif($language eq 'fr')
     {
         $text =~ s/\s*-\s*t\s*-\s*(il|on)/-t-$1/g;
         $text =~ s/\s*-\s*(il|vous|ce)/-$1/g;
+    }
+    # Further operations specific to English.
+    if($language eq 'en')
+    {
+        # Thousands-separating comma "$35, 000" -> "$35,000"
+        $text =~ s/([0-9])\s*,\s*000/$1,000/g;
+        # Initials: "J. P. Morgan", "U. S." -> "J.P. Morgan", "U.S."
+        $text =~ s/([A-Z])\s*\.\s*([A-Z])\s*\./$1.$2./g;
+    }
+    # URL addresses.
+    # It is easy to recognize where they begin. It is much more difficult to recognize where they end.
+    $text =~ s=(https?|ftp)\s*:\s*/\s*/\s*([a-zA-Z0-9]+)=$1://$2=g;
+    # While a suffix can be added starting with one of the expceted symbols (./-_), do it.
+    # But do not append just another word, without a punctuation symbol!
+    # We do not want to depend on knowing what spaces have already been erased above.
+    # However, this must be a while-loop (because the /g switch would not cover overlapping instances)
+    # and there must be one space mandatory (\s+ instead of \s*) so that the loop will stop eventually.
+    while($text =~ s=(https?|ftp)://([-\._/a-zA-Z0-9]+)\s*([-\._/])\s+([a-zA-Z0-9]+)=$1://$2$3$4=g)
+    {
+        #print STDERR ("$text\n");
     }
 
     # DZ: The original detokenizing code starts here.

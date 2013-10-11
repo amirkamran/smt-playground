@@ -1,1 +1,42 @@
-/a/merkur2/ufallabhome/bilek/CzeRusT/playground/ufal-smt-playground/old_playground/output
+#!/bin/bash
+
+function die() {
+  echo "$@" >&2
+  exit 1
+}
+set -o pipefail
+
+[ ! -z "$1" ] || die "usage: $0 exp-identifier"
+
+suffix="$2"
+[ ! -z "$suffix" ] || suffix=""
+
+e=`eman path $1`
+[ -d $e ] || die "Not an experiment: $e"
+
+case "$suffix" in
+in )
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
+  fn=corpus.src
+  out=$e/$fn
+  ;;
+detok )
+  e=$(eman path $(eman tb --notree $1 --ign=mert --ign=corpus | grep translate))
+  fn=translated.untok.gz
+  out=$e/$fn
+  ;;
+ref*)
+  fn=corpus.reference.$(echo $suffix | cut -d. -f2)
+  out=$e/$fn
+  ;;
+"" )
+  fn=corpus.translation
+  out=$e/$fn
+esac
+
+
+
+
+[ -e $out ] || die "No output available for $1 $2"
+
+echo $out
