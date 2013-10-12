@@ -43,6 +43,15 @@ role EmanSeed {
         }
     }
 
+    method is_on_cluster() {
+
+        my $r = $self->safeBacktick('which qsub', dodie=>0, mute=>1);
+        if (length $r > 1) {
+            return 1;
+        }
+        return 0;
+    }
+
     #superhackery
     #gets a bash command, returns a sh command that can be run
     #using backticks/system with the same results
@@ -54,7 +63,8 @@ role EmanSeed {
     }
 
     method default_bash_context() {
-        my $bc = new BashContext(prefixes=>[$self->localenfo, "set -o pipefail", 'renice 10 $$ 2>/dev/null >/dev/null', 'ulimit -c 1']);
+#        my $bc = new BashContext(prefixes=>[]);
+         my $bc = new BashContext(prefixes=>[$self->localenfo, "set -o pipefail", 'renice 10 $$ 2>/dev/null >/dev/null', 'ulimit -c 1']);
         return $bc;
     }
 
@@ -196,6 +206,11 @@ role EmanSeed {
     method reloadAndSaveVars() {
         my $vars = $self->emanDefvarList;
 
+        if (scalar @$vars==0) {
+            print "No vars!\n";
+            $self->safeSystem("touch eman.vars");
+            return;
+        }
         #$self->loadFromEnv($vars);
 
         my $meta = $self->meta;
@@ -276,6 +291,7 @@ role EmanSeed {
     requires 'help';
    
     method _do_init() {
+        $|=1;
         $self->__is_preparing(1);
         $self->reloadAndSaveVars;
         $self->init;
@@ -290,6 +306,7 @@ role EmanSeed {
     }
 
     sub _do_run {
+        $|=1;
         my $class = shift;
         my $that = $class->loadFromYaml;
         $that->__is_preparing(0);

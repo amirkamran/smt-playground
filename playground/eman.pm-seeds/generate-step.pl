@@ -28,6 +28,8 @@ KONEC
 }
 
 my $fn = $ARGV[0] or die "No input";
+$fn =~ s/\.pm$//;
+
 if (!-e $fn.".pm") {
     die "$fn.pm does not exist";
 }

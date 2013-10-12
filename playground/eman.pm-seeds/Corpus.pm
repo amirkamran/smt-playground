@@ -37,14 +37,6 @@ class Corpus with EmanSeed {
         "(3) TAKE_FROM_COMMAND - just runs the command";
     }
 
-    method check_qsub() {
-
-        my $r = $self->safeBacktick('which qsub', dodie=>0);
-        if (length $r > 1) {
-            return 1;
-        }
-        return 0;
-    }
    
     #jaký typ korpusu to je
     method type_of_corpus() {
@@ -141,7 +133,7 @@ class Corpus with EmanSeed {
     }
 
     method init(){
-        if (!$self->check_qsub()) {
+        if (!$self->is_on_cluster) {
             $self->JOBS(0);
         }
         $self->split_to_size(50000);
