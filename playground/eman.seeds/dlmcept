@@ -112,7 +112,8 @@ if [[ \$alilen -ne \$srclen ]] \\
   die "Dying for incompatible corpus lengths"
 fi
 
-\$SCRIPTS_ROOTDIR/training/extract_words_dlm.py \\
+export LC_ALL=en_US.UTF-8
+ \$SCRIPTS_ROOTDIR/training/extract_words_dlm.py \\
   <(zcat corpus.src.gz) \\
   <(zcat corpus.tgt.gz) \\
   <(zcat alignment.gz) \\

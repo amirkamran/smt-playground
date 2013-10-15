@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+# Converts factored input to vertical text useful for manatee
+# By default, each line is marked as <s>, if IDs file is provided,
+# each line is marked as <align id="SEGMENTPREFIX+X"> and <s id="THEID">
+# (because *several* sentences can be joined as one aligned segment)
+
+use strict;
+use Getopt::Long;
+
+my $idsfile = undef;
+my $idscol = undef;
+my $segmentprefix = "seg";
+my $dont_protect_amp = 0; # protect <>, but assume & has been protected already
+
+GetOptions(
+  "idsfile=s" => \$idsfile,
+  "idscol=i" => \$idscol,
+  "segment-prefix=s" => \$segmentprefix,
+  "dont-protect-amp" => \$dont_protect_amp,
+) or exit 1;
+
+$idscol-- if defined $idscol;
+
+if (defined $idsfile) {
+  my $opn = ($idsfile =~ /\.gz/ ? "zcat $idsfile |" : $idsfile);
+  open IDS, $opn or die "Can't read $idsfile";
+}
+
+my $outsegment = 0;
+while (<>) {
+  $outsegment++;
+  chomp;
+  my @toks = split / /, $_;
+
+  if (defined $idsfile) {
+    # need to emit possibly several sentences in one segment
+    print "<align id=\"$segmentprefix$outsegment\">\n";
+    my $ids = <IDS>;
+    chomp $ids;
+    if (defined $idscol) {
+      my @cols = split /\t/, $ids;
+      $ids = $cols[$idscol];
+    }
+    my @ids = split / /, $ids;
+    while (my $sid = shift @ids) {
+      my $stoks = shift @ids;
+      die "Bad ids line, no token count found: $ids" if !defined $stoks;
+
+      die "$outsegment:Too short, need $stoks more tokens but only "
+        .(scalar @toks)." remain."
+	if scalar @toks < $stoks;
+      my @thissent = splice @toks, 0, $stoks;
+      flushsent($sid, \@thissent);
+    }
+  } else {
+    flushsent("s$outsegment", \@toks);
+  }
+}
+
+close IDS if defined $idsfile;
+
+
+sub flushsent {
+  my $id = shift;
+  my $toks = shift;
+
+  print "<s id=\"$id\">\n";
+  foreach my $tok (@$toks) {
+    my @facts = split /\|/, $tok;
+    $tok =~ s/\|/\t/g;
+    $tok =~ s/&/&amp;/g unless $dont_protect_amp;
+    $tok =~ s/</&lt;/g;
+    $tok =~ s/>/&gt;/g;
+    print $tok ."\n";
+  }
+}
+
