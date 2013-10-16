@@ -1,12 +1,13 @@
 diff --git a/vowpalwabbit/parser.cc b/vowpalwabbit/parser.cc
-index 456db17..eb3bdeb 100644
+index 39bac08..1f8f0a8 100644
 --- a/vowpalwabbit/parser.cc
 +++ b/vowpalwabbit/parser.cc
-@@ -145,7 +145,7 @@ parser* new_parser()
-   ret->input = new io_buf;
+@@ -152,7 +152,7 @@ parser* new_parser()
    ret->output = new io_buf;
    ret->local_example_number = 0;
+   ret->in_pass_counter = 0;
 -  ret->ring_size = 1 << 8;
 +  ret->ring_size = 1 << 12;
    ret->done = false;
    ret->used_index = 0;
+ 

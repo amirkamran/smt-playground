@@ -57,7 +57,7 @@ EXTR=$MOSESDIR/moses/phrase-extract/extract-psd/extract_rich_context_factors.per
 [ -e \$EXTR ] || die "Can't find \$EXTR"
 
 $PLAYGROUND/corpman --dump $CORPSPEC \\
-| factors2vertical \\
+| $PLAYGROUND/tools/factors2vertical \\
 | sed 's/^<s .*>$//' \\
 | skip 1 \\
 | eval \$EXTR \\
