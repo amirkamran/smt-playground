@@ -142,6 +142,9 @@ zcat vw-input.gz \\
     $EXTRAVWARGS \\
 || die "Failed to train vw"
 
+echo "Removing .cache"
+rm .cache
+
 set +x
 echo Done.
 eman succeed \$mydir
