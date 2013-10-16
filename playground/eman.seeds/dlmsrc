@@ -31,7 +31,7 @@ eval `eman bash-loadvars`
 [ -n "`which qsub`" ] || export JOBS=0
 [ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
 
-CORPSPEC=$CORPAUG+ord+$FORMFACTNAME+lemma+tag+ord+gov+ord+ord
+CORPSPEC=$CORPAUG+ord+$FORMFACTNAME+lemma+tag+ord+gov+afun+ord
 echo "Checking if our input corpus exists with all the necessary factors."
 $PLAYGROUND/corpman --init $CORPSPEC \
 || die "Corpus not found"
