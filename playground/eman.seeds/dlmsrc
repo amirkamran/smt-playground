@@ -61,11 +61,11 @@ $PLAYGROUND/corpman --dump $CORPSPEC \\
 | sed 's/^<s .*>$//' \\
 | skip 1 \\
 | eval \$EXTR \\
-| gzip -c > context-factors-file.gz \\
+| gzip -c > corpus.txt.gz \\
 || die "Failed to prepare the context factors file"
 
 echo "Checking output number of lines of corpus.txt.gz"
-nl=\$(zcat context-factors-file.gz | wc -l)
+nl=\$(zcat corpus.txt.gz | wc -l)
 expnl=\$($PLAYGROUND/corpman --linecount $CORPSPEC)
 
 # just a check

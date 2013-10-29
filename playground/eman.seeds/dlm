@@ -95,7 +95,7 @@ echo SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 # Get local versions of the files
 $PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/cept-table.gz ./cept-table.gz
 $PLAYGROUND/../scripts/wiseln $CEPTSTEPDIR/extract-file.gz ./extract-file.gz
-$PLAYGROUND/../scripts/wiseln $SRCCTXSTEPDIR/context-factors-file.gz \
+$PLAYGROUND/../scripts/wiseln $SRCCTXSTEPDIR/corpus.txt.gz \
     ./context-factors-file.gz
 
 [ \$(zcat cept-table.gz | wc -l) -ne 0 ] || die "Empty cept-table.gz"
