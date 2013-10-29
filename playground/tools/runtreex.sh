@@ -41,7 +41,7 @@ source $TREEX.bashsource
 echo "runtreex: Using this particular treex step: $STEP" >&2
 if [ ! -e runtreex.treex-step-used ]; then
   # store for future, so that we're more consistent in treex choice
-  echo "$STEP" >> runtreex.treex-step-used
+  echo "$STEP" > runtreex.treex-step-used
 fi
 
 popd > /dev/null # go back to the original dir
