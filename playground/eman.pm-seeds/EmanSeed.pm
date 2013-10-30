@@ -246,45 +246,35 @@ role EmanSeed {
             $res .= $var;
             my $attribute = $meta->get_attribute($var);
             #TODO: nicer :-(
-            {
-                my $help = $attribute->help;
-                $help =~ s/'/'"'"'/g;
-                $res .= " help='$help' ";
+            my $help = $attribute->help;
+            $help =~ s/'/'"'"'/g;
+            $res .= " help='$help' ";
+
+
+            if ($attribute->has_inherit) {
+                my $inherit = $attribute->inherit;
+                $inherit =~ s/'/'"'"'/g;
+                $res .= " inherit='$inherit' ";
             }
-            {
-                if ($attribute->has_inherit) {
-                    my $inherit = $attribute->inherit;
-                    $inherit =~ s/'/'"'"'/g;
-                    $res .= " inherit='$inherit' ";
-                }
+            if ($attribute->has_firstinherit) {
+                my $firstinherit = $attribute->firstinherit;
+                $firstinherit =~ s/'/'"'"'/g;
+                $res .= " firstinherit='$firstinherit' ";
             }
-            {
-                if ($attribute->has_firstinherit) {
-                    my $firstinherit = $attribute->firstinherit;
-                    $firstinherit =~ s/'/'"'"'/g;
-                    $res .= " firstinherit='$firstinherit' ";
-                }
+            if ($attribute->has_same_as) {
+                my $same_as = $attribute->same_as;
+                $same_as =~ s/'/'"'"'/g;
+                $res .= " same_as='$same_as' ";
             }
-            {
-                if ($attribute->has_same_as) {
-                    my $same_as = $attribute->same_as;
-                    $same_as =~ s/'/'"'"'/g;
-                    $res .= " same_as='$same_as' ";
-                }
+            if ($attribute->has_type) {
+                my $t = $attribute->type;
+                $t =~ s/'/'"'"'/g;
+                $res .= " type='$t' ";
             }
-            {
-                if ($attribute->has_type) {
-                    my $t = $attribute->type;
-                    $t =~ s/'/'"'"'/g;
-                    $res .= " type='$t' ";
-                }
-            }
-            {
-                if ($attribute->has_eman_default) {
-                    my $default = $attribute->eman_default;
-                    $default =~ s/'/'"'"'/g;
-                    $res .= " default='$default' ";
-                }
+            if ($attribute->has_eman_default) {
+                my $default = $attribute->eman_default;
+                $default =~ s/'/'"'"'/g;
+                $res .= " default='$default' ";
             }
             #$res .= $meta->get_attribute($var)->attrs;
             #$res .= " ";
@@ -470,6 +460,41 @@ role EmanSeed {
     has_defvar 'EMAN_DISK'=>(default=>'6g', help=>'free space on the temp disk');
     has_defvar 'EMAN_CORES'=>(default=>'1', help=>'number of CPUs to use in Moses');
 
+    method write_help {
+        print ref $self;
+        print "\n";
+        print $self->help();
+        print "\n-------------------\n";
+        my $list = $self->emanDefvarList;
+        for my $defvar (sort {$a cmp $b} @$list) {
+            my $attribute = $self->meta->get_attribute($defvar);
+            print "$defvar";
+            
+            if ($attribute->has_eman_default) {
+                my $default = $attribute->eman_default;
+                print " [$default] ";
+            }
+            
+            print " --  ";
+            print $attribute->help."\n";
+            if ($attribute->has_inherit) {
+                my $inherit = $attribute->inherit;
+                print "  inherited from: $inherit \n";
+            }
+            if ($attribute->has_firstinherit) {
+                my $firstinherit = $attribute->firstinherit;
+                print "  inherited from first: $firstinherit \n";
+            }
+            if ($attribute->has_same_as) {
+                my $same_as = $attribute->same_as;
+                print "  same as: $same_as \n";
+            }
+            if ($attribute->has_type) {
+                my $t = $attribute->type;
+                print "  type: $t\n";
+            }
+        }
+    }
 
 }
 
