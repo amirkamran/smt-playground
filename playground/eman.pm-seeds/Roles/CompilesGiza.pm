@@ -3,8 +3,7 @@ use strict;
 use MooseX::Declare;
 use EmanSeed;
 
-role HasGiza with EmanSeed {
-
+role Roles::CompilesGiza with EmanSeed {
 
     method giza() {
         my $bc = $self->default_bash_context->copy;
@@ -27,23 +26,6 @@ role HasGiza with EmanSeed {
         }
     }
 
-}
-
-class Giza with HasGiza {
-    method help() {
-        " eman seed for compiling giza"
-    }
-    
-    method init(){
-    
-    }
-
-    method prepare() {
-    }
-
-    method run() {
-        $self->giza();
-    }
 }
 
 1;

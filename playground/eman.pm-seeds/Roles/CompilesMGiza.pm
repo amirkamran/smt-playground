@@ -3,7 +3,7 @@ use strict;
 use MooseX::Declare;
 use EmanSeed;
 
-role HasMGiza with EmanSeed {
+role Roles::CompilesMGiza with EmanSeed {
 
     method mgiza() {
         if ($self->is_on_cluster) {
@@ -32,23 +32,6 @@ role HasMGiza with EmanSeed {
         }
     }
 
-}
-
-class MGiza with HasMGiza {
-    method help() {
-        " eman seed for compiling multicore giza"
-    }
-    
-    method init(){
-    
-    }
-
-    method prepare() {
-    }
-
-    method run() {
-        $self->mgiza();
-    }
 }
 
 1;

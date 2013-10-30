@@ -1,16 +1,14 @@
 use warnings;
 use strict;
 use MooseX::Declare;
-use EmanSeed;
-use Moses;
-use Giza;
 
-
-class MosesGiza with (HasMoses, HasGiza) {
+class Seeds::Giza with Roles::CompilesGiza {
     method help() {
-        " eman seed for compiling moses and giza"
+        " eman seed for compiling giza"
     }
+    
     method init(){
+    
     }
 
     method prepare() {
@@ -18,7 +16,6 @@ class MosesGiza with (HasMoses, HasGiza) {
 
     method run() {
         $self->giza();
-        $self->moses();
     }
 }
 
