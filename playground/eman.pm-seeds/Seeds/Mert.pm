@@ -2,7 +2,8 @@ use warnings;
 use strict;
 use MooseX::Declare;
 
-class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
+                        #RunsDecoder inherits AccessesMosesBinaries and HasJobsOnCluster
+class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
     use HasDefvar;
     
     has_defvar 'MODELSTEP'=>(type=>'reqstep', help=>'where is the model (moses.ini) incl. all files');
@@ -10,11 +11,7 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
     has_defvar 'SRCAUG'=>(inherit=>'MODELSTEP',help=>'the source lang+factors');
     has_defvar 'REFAUG'=>(inherit=>'MODELSTEP:TGTAUG', help=>'the target (reference) lang+factors');
   
-    has_defvar 'SEARCH'=>(default=>'cube',help=>'the search type (beam or cube)');
-    has_defvar 'MOSESFLAGS'=>(default=>'', help=>'further flags for moses');
     has_defvar 'MERTFLAGS'=>(default=>'', help=>'further flags for mert.pl');
-    has_defvar 'GRIDFLAGS'=>(default=>'', help=>'further flags for qsub');
-    has_defvar 'STACK'=>(default=>'', help=>'stacksize for beam search');
     has_defvar 'TAGPREF'=>(default=>'', help=>'eman tag prefix');
     has_defvar 'MERTPRG'=>(default=>'mert', help=>'mert/zmert/pro (not quite tested)');
     has_defvar 'ZMERTMETRIC'=>(default=>'', help=>'for zmert: SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU');
@@ -22,10 +19,12 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
     has_defvar 'ZMERTSEMPOSBLEUWEIGHTS'=>(default=>'', help=>'for zmert --semposbleu-weights, e.g. 1:1');
     has_defvar 'ZMERTFLAGS'=>(default=>'', help=>'zmert flags');
     has_defvar 'TREEXSTEP'=>(default=>'', help=>'for zmert SemPOS tmt (used to be TMT_ROOT; untested)');
+    
+    #overloading
     has_defvar 'MOSESSTEP'=>(inherit=>'MODELSTEP', help=>'where are moses scripts and binaries');
-    has_defvar 'SSD'=>(default=>'', help=>'the path to some SSD scratch disk for filtered tables');
-    has_defvar 'DELETE_FILTERED_MODEL'=>(default=>'no', help=>'set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)');
+    
  
+    has_defvar 'DELETE_FILTERED_MODEL'=>(default=>'no', help=>'set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)');
 
    
     method help() {
@@ -42,26 +41,20 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
     }
 
     method run() {
-        $self->clone_moses();
+        $self->clone_moses_ini();
         $self->absolutize_moses();
 
-        my $filter_outdir = $self->filter_for_mert();
+        $self->filter_for_mert();
         $self->do_main_mert();
         $self->weights_sanity_check();
-        $self->cleanup_mert($filter_outdir);
+        $self->cleanup_mert();
     }
 
     method absolutize_moses() {
         $self->safeSystem($self->moses_scripts_dir."/training/absolutize_moses_model.pl `pwd`/moses.ini > moses.abs.ini", e=> "Absolutize failed");
     }
 
-    method base() {
-        return $self->safeBacktick("basename ".$self->mydir);
-    }
-    method clone_moses() {
-        if (!-e "moses") {
-            $self->wiseLn($self->moses_cmd, "./moses");
-        }
+    method clone_moses_ini() {
         if (!-e "moses.ini") {
             $self->safeSystem($self->moses_scripts_dir."/training/clone_moses_model.pl --symlink ".
                                     $self->emanPath($self->MODELSTEP)."/model/moses.ini");
@@ -69,21 +62,8 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
     }
 
     method filter_for_mert() {
-        my $filteroutdir;
-        if (!$self->SSD) {
-            $filteroutdir="filtered-for-mert";
-        } else {
-            $filteroutdir=$self->SSD."/".$self->base."/filtered-for-mert";
-            $self->safeSystem("ln -s $filteroutdir ./");
-        }
-        #I am not sure why the test is there
-        #we can probably skip it
-        #if (!-e $filteroutdir) {
-            $self->safeSystem($self->moses_scripts_dir."/training/filter-model-given-input.pl".
-                " --Binarizer=".$self->moses_binaries_dir."/processPhraseTable ".
-                $filteroutdir." `pwd`/moses.abs.ini tuning.in ");
-        #}
-        return $filteroutdir;
+        my $filteroutdir=$self->create_maybe_on_SSD("filtered-for-mert");
+        $self->filter_model_given_input($filteroutdir, "moses.abs.ini", "tuning.in");
     }
 
 
@@ -91,13 +71,10 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
         $self->safeSystem($self->mert_command,  e=>"Mert failed");
     }
 
-    method cleanup_mert(Str $filter_outdir) {
+    method cleanup_mert() {
          
         if ($self->DELETE_FILTERED_MODEL eq "yes" ) {
-            $self->safeSystem("rm -rf $filter_outdir");
-            if ($self->SSD) {
-                $self->safeSystem("rmdir ".$self->SSD."/".$self->base);
-            }
+            $self->delete_maybe_on_SSD("filtered-for-mert");
         }
 
     }
@@ -145,56 +122,8 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
     
     }
 
-    method mosesflags_additional() {
-        my $r="";
-        if ($self->MOSESFLAGS !~ /-dl/) {
-            $r.=" -dl 6 ";
-        }
-        if ($self->STACK) {
-            $r.=" -s ";
-            $r.=$self->STACK;
-        }
-        if ($self->EMAN_CORES) {
-            $r.=" -threads ";
-            $r .= $self->EMAN_CORES;
-        }
-        return $r;
-    }
-
-    method mertgridargs() {
-        if (!$self->real_jobs){
-            return ""            
-        } else {
-            return "--jobs=".$self->real_jobs." --queue-flags=' ".$self->pgridflags." ' ";             
-        }
-    }
     
-    method mosesgridargs(){
-        if (!$self->real_jobs){
-            return ""            
-        } else {
-            return "--jobs=".$self->real_jobs." --queue-flags=' ".$self->pgridflags." ' ";             
-        }
-    }
      
-    
-    method pgridflags(){
-        if ($self->GRIDFLAGS =~ /-p +-?[0-9]+/) {
-            return $self->GRIDFLAGS." -cwd -S /bin/bash";
-        } else {
-            return $self->GRIDFLAGS." -p -100 -cwd -S /bin/bash";
-        }
-    }
-    
-    method searchflags(){
-        if ($self->SEARCH eq "beam") {
-            return "-search-algorithm 0";
-        }
-        if ($self->SEARCH eq "cube") {
-            return "-search-algorithm 1";
-        }
-        self->myDie("Bad search algorithm: ".$self->SEARCH);
-    }
 
     method mertmoses() {
         return $self->moses_scripts_dir."/training/mert-moses.pl"
@@ -203,11 +132,11 @@ class Seeds::Mert with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
         return $self->moses_scripts_dir."/training/zmert-moses.pl"
     }
 
+
     
 
     method decoder_flags_string() {
-         return '--decoder-flags="'.$self->MOSESFLAGS.$self->mosesflags_additional." ".
-                $self->searchflags.'"'; 
+         return '--decoder-flags="'.decoder_flags().'"'; 
     }
 
     method weights_sanity_check() {

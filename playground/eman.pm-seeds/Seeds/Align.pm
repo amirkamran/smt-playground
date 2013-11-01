@@ -1,5 +1,3 @@
-use warnings;
-use strict;
 use MooseX::Declare;
 
 class Seeds::Align with (Roles::KnowsMkcorpus, Roles::AccessesGiza) {

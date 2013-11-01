@@ -9,9 +9,6 @@ role Roles::AccessesMosesBinaries with EmanSeed {
     has_defvar 'MOSESSTEP'=>(type=>"reqstep",
             help=>"the step containing compiled moses");    
 
-    #I have to have it like a property
-    #in order to stop having infinite recursion
-    #in run phase
     has 'mstep_dir' =>(isa=>'Str', is=>'rw', lazy=>1, default=>sub{
         my $self=shift;
         return $self->emanPath($self->MOSESSTEP)
@@ -33,7 +30,13 @@ role Roles::AccessesMosesBinaries with EmanSeed {
         }
         return $r;
     }
-    
+    method filter_model_given_input(Str $dirname, Str $ininame, Str $input) {
+   
+        $self->safeSystem($self->moses_scripts_dir."/training/filter-model-given-input.pl".
+                " --Binarizer=".$self->moses_binaries_dir."/processPhraseTable ".
+                "$dirname ".$self->mydir."/$ininame $input ");
+    }
+
     method _export_moses_rootdir() {
         return "export SCRIPTS_ROOTDIR=".$self->moses_scripts_dir;
     }

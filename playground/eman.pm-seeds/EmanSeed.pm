@@ -3,7 +3,6 @@ use strict;
 
 use MooseX::Declare;
 
-
 class BashContext {
     has 'prefixes' => (isa=>'ArrayRef[Str]', is=>'rw', default=>sub{[]});
     method add_prefix(Str $what) {
@@ -28,6 +27,8 @@ class BashContext {
 }
 
 role EmanSeed {
+
+    
 
     use MooseX::Storage;
 
@@ -459,7 +460,13 @@ role EmanSeed {
     has_defvar 'EMAN_MEM'=>(default=>'6g', help=>'memory limit for the job itself');
     has_defvar 'EMAN_DISK'=>(default=>'6g', help=>'free space on the temp disk');
     has_defvar 'EMAN_CORES'=>(default=>'1', help=>'number of CPUs to use in Moses');
+    
+    use Moose::Exporter;
+    Moose::Exporter->setup_import_methods(
+      with_meta => [ 'has_defvar'],
+      also=>'MooseX::Declare');
 
+   
     method write_help {
         print ref $self;
         print "\n";
