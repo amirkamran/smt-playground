@@ -4,7 +4,8 @@ use MooseX::Declare;
 use EmanSeed;
 
 #both Translate and Mert use this...
-role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster) {
+role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnCluster, Roles::SSD) {
+    use HasDefvar;
 
     has_defvar 'SEARCH'=>(default=>'cube',help=>'the search type (beam or cube)');
     has_defvar 'MOSESFLAGS'=>(default=>'', help=>'further flags for moses, NOT including thread number');
@@ -41,13 +42,12 @@ role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnClus
         return " -pe smp ".$self->MOSESTHREADS." ";
     }
 
-    method real_gridflags(Int :$cores=-1){
-        if ($cores==-1) {
-            $cores=$self->MOSESTHREADS;
-        }
+    method real_gridflags(){
+        my  $cores=$self->MOSESTHREADS;
+        
         my $res = $self->GRIDFLAGS;
         if ($self->GRIDFLAGS =~ /-p +-?[0-9]+/) {
-            $res .= ." -cwd -S /bin/bash";
+            $res .= " -cwd -S /bin/bash";
         } else {
             $res .= " -p -100 -cwd -S /bin/bash";
         }
@@ -91,7 +91,7 @@ role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnClus
     }
 
     method _moses_parallel() {
-        return $self->moses_scripts_dir."/generic/moses_parallel.pl";
+        return $self->moses_scripts_dir."/generic/moses-parallel.pl";
     }
 
     method decoder_flags() {
@@ -105,7 +105,7 @@ role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnClus
             return ""            
         } else {
             #mert takes only one core
-            return "--jobs=".$self->real_jobs." --queue-flags=' ".$self->real_gridflags(cores=>1)." ' ";             
+            return "--jobs=".$self->real_jobs." --queue-flags=' ".$self->real_gridflags." ' ";             
         }
     }
     
@@ -113,8 +113,17 @@ role Roles::RunsDecoder with (Roles::AccessesMosesBinaries, Roles::HasJobsOnClus
         if (!$self->real_jobs){
             return ""            
         } else {
-            return "--jobs=".$self->real_jobs." --queue-flags=' ".$self->real_gridflags." ' ";             
+            return "--jobs=".$self->real_jobs." --queue-parameters=' ".$self->real_gridflags." ' ";             
         }
+    }
+    
+
+    method create_dir_and_filter(Str $dirname, Str $ininame, Str $input) {
+        my $filteroutdir=$self->create_maybe_on_SSD($dirname);
+        $self->safeSystem("rmdir $filteroutdir");
+        $self->filter_model_given_input($filteroutdir, $ininame, $input);
     }
 
 }
+
+1;

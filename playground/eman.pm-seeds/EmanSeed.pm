@@ -71,7 +71,10 @@ role EmanSeed {
     }
 
     method default_bash_context() {
-#        my $bc = new BashContext(prefixes=>[]);
+#stopping infinite recursion
+         if (!defined $self->__is_preparing) {
+             die "Infiniti recursion detected. Probably some Moose default as non-lazy that uses safeSystem somehow.";
+         }
          my $bc = new BashContext(prefixes=>[$self->localenfo, "set -o pipefail", 'renice 10 $$ 2>/dev/null >/dev/null', 'ulimit -c 1']);
         if ($self->__is_preparing == 0) {
             $bc->add_prefix(". /net/projects/SGE/user/sge_profile 2>/dev/null");
@@ -460,13 +463,7 @@ role EmanSeed {
     has_defvar 'EMAN_MEM'=>(default=>'6g', help=>'memory limit for the job itself');
     has_defvar 'EMAN_DISK'=>(default=>'6g', help=>'free space on the temp disk');
     has_defvar 'EMAN_CORES'=>(default=>'1', help=>'number of CPUs to use in Moses');
-    
-    use Moose::Exporter;
-    Moose::Exporter->setup_import_methods(
-      with_meta => [ 'has_defvar'],
-      also=>'MooseX::Declare');
-
-   
+       
     method write_help {
         print ref $self;
         print "\n";

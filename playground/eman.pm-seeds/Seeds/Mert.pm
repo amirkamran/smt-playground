@@ -62,8 +62,7 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
     }
 
     method filter_for_mert() {
-        my $filteroutdir=$self->create_maybe_on_SSD("filtered-for-mert");
-        $self->filter_model_given_input($filteroutdir, "moses.abs.ini", "tuning.in");
+        $self->create_dir_and_filter($filteroutdir, "moses.abs.ini", "tuning.in");
     }
 
 
@@ -136,11 +135,11 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
     
 
     method decoder_flags_string() {
-         return '--decoder-flags="'.decoder_flags().'"'; 
+         return '--decoder-flags="'.$self->decoder_flags().'"'; 
     }
 
     method weights_sanity_check() {
-        my $all_weights = $self->safeSystem("cat mert-tuning/weights.txt");
+        my $all_weights = $self->safeBacktick("cat mert-tuning/weights.txt");
         my @nums = split (/\s+/, $all_weights);
         my @non_zeroes = grep {$_!=0} @nums;
         if (scalar @non_zeroes == 0) {

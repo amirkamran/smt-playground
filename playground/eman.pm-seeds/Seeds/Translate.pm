@@ -9,6 +9,8 @@ use MooseX::Declare;
 
                       #RunsDecoder inherits AccessesMosesBinaries
 class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpus) {
+  use HasDefvar;
+
   has_defvar 'MERTSTEP'=>(type=>'reqstep', help=>"step containing configuration file for Moses");
   
   #overloading the one in AccessesMosesBinaries
@@ -16,7 +18,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
         help=>"the step containing compiled tools; inherited from MERTSTEP");
         
   has_defvar 'TESTCORP'=> (help=>'the corpus to translate');
-  has_defvar 'SRCAUG'=> (inherit=>'MERTSTEP', help=>"language+factors to translate")
+  has_defvar 'SRCAUG'=> (inherit=>'MERTSTEP', help=>"language+factors to translate");
   has_defvar 'REFAUG'=> (inherit=>'MERTSTEP',
     help=>"language that will be created by translating; factor is 'untok'");
   has_defvar 'ITER'=>(default=>'',
@@ -34,7 +36,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
         inherit=>'MERTSTEP');
   
   #overloads Roles::SSD
-  has_defvar 'SSD'=>(default=>'', help='the path to some SSD scratch disk for filtered tables',inherit=>'MERTSTEP');
+  has_defvar 'SSD'=>(default=>'', help=>'the path to some SSD scratch disk for filtered tables',inherit=>'MERTSTEP');
   has_defvar 'DELETE_FILTERED_MODEL'=>( default=>'no', help=>'set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)', inherit=>'MERTSTEP');
 
   has_defvar 'TOKAUG'=>(help=>'translation language+factors. is created automatically.', default=>'');
@@ -101,21 +103,23 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
                 " -alignment-output-file ./alignment ".
                 " -translation-details ./details ".
                 " -config ./filtered-for-eval/moses.ini ".
-                " | sed 's/^ *//;s/ *\\\$//' "
+                " | sed 's/^ *//;s/ *\\\$//' ".
                 " | gzip -c ".
                 " > translated.gz ";
     }
 
     method filter_for_eval() {
-        my $filteroutdir = $self->create_maybe_on_SSD("filtered-for-eval");
-        $self->filter_model_given_input($filteroutdir, "moses.abs.ini", "corpus.src");
+        $self->create_dir_and_filter("filtered-for-eval", "moses.abs.ini", "corpus.src");
     }
 
-    has 'mertstepdir'=>(isa=>'Str', is=>'rw',default=>{my $self=shift; return $self->emanPath($self->MERTSTEP)});
+    has 'mertstepdir'=>(isa=>'Str', is=>'rw',default=>sub {
+        my $self=shift; 
+        return $self->emanPath($self->MERTSTEP);
+    }, lazy=>1);
     
     method prepare_moses_ini() {
         if (!-e "moses.ini") {
-            $self->safeSystem($self->moses_scripts_dir."/training/clone_moses_model.pl ".
+            $self->safeSystem($self->moses_scripts_dir."/training/clone_moses_model.pl "
                                         ." --symlink "
                                         .$self->mertstepdir."/moses.ini", e=>"Failed to clone the full model");
             $self->safeSystem($self->moses_scripts_dir."/ems/support/reuse-weights.perl ".
@@ -128,10 +132,10 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
 
     method targetlan_for_detoken() {
         my $res = substr($self->REFAUG,0,2);
-        my $bezelo = $safe->safeSystem("echo test | ".$self->moses_scripts_dir."/tokenizer/detokenizer.perl ".
+        my $bezelo = $self->safeSystem("echo test | ".$self->moses_scripts_dir."/tokenizer/detokenizer.perl ".
                                         "-u -l $res >/dev/null 2>&1", dodie=>0);
         if (!$bezelo) {
-            print "Defaulting to 'en' as the targetlang for detokenizer."
+            print "Defaulting to 'en' as the targetlang for detokenizer.";
             $res="en";
         }
         return $res
@@ -160,7 +164,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
         for my $k (keys %what) {
             $self->safeSystem(
                 $self->corpmanCommand(["register", "--", $k.".gz", 
-                                        -1, $self->TESTCORP, $self->outlang, $what{$k}, $lines, 0]);
+                                        -1, $self->TESTCORP, $self->outlang, $what{$k}, $lines, 0])
             );
         }
     }
@@ -180,7 +184,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
     method outlang(){
           my @refaug = split (/\+/, $self->REFAUG);
           my $res = shift @refaug;
-            $res .= "_".$self->STEPNAME."+";
+           $res .= "_".$self->base."+";
           return $res;
      }
 
@@ -191,10 +195,10 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
     }
 
     method iterprefix() {
-        return "run".($self->ITER+1);
-    }
-    method itertag() {
-        return "ITER".($self->ITER+1);
+        if ($self->ITER ne "") {
+            return "run".($self->ITER+1).".";
+        }
+        return "";
     }
 
 }

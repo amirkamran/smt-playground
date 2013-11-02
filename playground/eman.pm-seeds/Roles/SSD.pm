@@ -4,15 +4,18 @@ use MooseX::Declare;
 use EmanSeed;
 
 role Roles::SSD with EmanSeed {
+    use HasDefvar;
 
     has_defvar 'SSD'=>(default=>'', help=>'the path to some SSD scratch disk for filtered tables');
    
     before run() {
-        if (!-d $self->SSD) {
-            $self->myDie($self->SSD." is not a directory.");
-        }
-        if (!-w $self->SSD) {
-            $self->myDie($self->SSD." is not writable.");
+        if ($self->SSD) {
+            if (!-d $self->SSD) {
+                $self->myDie($self->SSD." is not a directory.");
+            }
+            if (!-w $self->SSD) {
+                $self->myDie($self->SSD." is not writable.");
+            }
         }
     }
 
@@ -40,10 +43,13 @@ role Roles::SSD with EmanSeed {
         } else {
             my $new = $self->SSD."/".$self->base."/$name";
             $self->safeSystem("mkdir -p $new");
-            $self->safeSystem("ln -s $filteroutdir ./");
+            $self->safeSystem("ln -s $new ./");
             return $new;
         }
         
     }
 
 }
+
+
+1;
