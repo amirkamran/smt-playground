@@ -8,8 +8,10 @@ use MooseX::Declare;
 #OUTALIAUG="$OUTLANG+$ALIFACT" eman defvar OUTALIAUG
 
                       #RunsDecoder inherits AccessesMosesBinaries
-class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpus) {
+class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpus, Roles::KnowsCorpman) {
   use HasDefvar;
+
+   
 
   has_defvar 'MERTSTEP'=>(type=>'reqstep', help=>"step containing configuration file for Moses");
   
@@ -48,7 +50,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
     method init() {
         $self->load_src_corp();  
         $self->create_tokaug();
-        $self->promise_corp();
+        $self->promise_res_corp();
     }
 
 
@@ -67,9 +69,10 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
         $self->cleanup_filter();
     } 
 
+    
 
     method prepare_src_corpus() {
-        $self->safeSystem($self->mkcorpus_command($self->TESTCORP, $self->SRCAUG, "src"));
+        $self->mkcorpus_do($self->TESTCORP, $self->SRCAUG, "src");
         $self->safeSystem("gunzip -c corpus.src.gz > corpus.src");
      }
     
@@ -143,9 +146,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
 
 
     method load_src_corp() {
-        my $res=$self->safeBacktick($self->corpmanCommand(["--init", 
-                                                           $self->TESTCORP."/".$self->SRCAUG]));
-        $res = (split (/\s+/, $res))[0];
+        my $res = $self->read_corp_info(corpname=>$self->TESTCORP, aug=>$self->SRCAUG, var=>"stepname");
         $self->emanAddDeps([$res]);
     }
 
@@ -155,17 +156,22 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
         $self->register_all_corpora($self->safeBacktick('zcat translated.untok.gz | wc -l'));
     }
     
-    method promise_corp() {
+    method promise_res_corp() {
         $self->register_all_corpora(-1);
     }
 
     method register_all_corpora(Int $lines) {
         my %what=(translated=>$self->tokfact(), 'translated.untok'=>'untok', alignment=>'ali');
         for my $k (keys %what) {
-            $self->safeSystem(
-                $self->corpmanCommand(["register", "--", $k.".gz", 
-                                        -1, $self->TESTCORP, $self->outlang, $what{$k}, $lines, 0])
-            );
+                $self->promise_corp(
+                    filename=>"$k.gz",
+                    column=>-1,
+                    corpname=>$self->TESTCORP,
+                    lang=>$self->outlang,
+                    factors=>$what{$k},
+                    count=>$lines,
+                    #puvodne byla v translate seedu jakasi 0 na konci... asi nesmysl
+                );
         }
     }
 
@@ -184,7 +190,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
     method outlang(){
           my @refaug = split (/\+/, $self->REFAUG);
           my $res = shift @refaug;
-           $res .= "_".$self->base."+";
+          $res .= "_".$self->base;
           return $res;
      }
 

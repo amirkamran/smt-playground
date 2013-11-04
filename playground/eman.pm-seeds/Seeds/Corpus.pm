@@ -5,7 +5,7 @@ use MooseX::Declare;
 
 #corpus has disadvantage that it is never run
 #since corpman automatically uses the step "corpus" :)
-class Seeds::Corpus with (Roles::HasJobsOnCluster) {
+class Seeds::Corpus with (Roles::HasJobsOnCluster, Roles::KnowsCorpman) {
     use HasDefvar;
     
     has_defvar 'RUN_COMMAND'=>( help=>'apply the given pipe to the given input corpus. '.
@@ -46,7 +46,7 @@ class Seeds::Corpus with (Roles::HasJobsOnCluster) {
     method run() {
         $self->run_cmd_and_gzip;
         $self->check_result_corpus;
-        $self->force_reindexing;
+        $self->restart_corpman;
     }
 
 
@@ -146,21 +146,17 @@ class Seeds::Corpus with (Roles::HasJobsOnCluster) {
     }
 
     method register_corpman(Int $linecount) {
-        $self->safeSystem($self->corpmanCommand(["register",
-                                                 "--", 
-                                                 "corpus.txt.gz",
-                                                 -1,
-                                                 $self->OUTCORP, 
-                                                 $self->OUTLANG, 
-                                                 $self->OUTFACTS, 
-                                                 $linecount, 
-                                                 $self->DERIVED, 
-                                                 $self->FACTOR]), e=>"Can't register corpus");
+    
+        $self->promise_corp(filename=>"corpus.txt.gz",
+                            column=>-1,
+                            corpname=>$self->OUTCORP,
+                            lang=>$self->OUTLANG,
+                            factors=>$self->OUTFACTS,
+                            count=>$linecount,
+                            derived=>$self->DERIVED,
+                            derived_facts=>$self->FACTOR);
     }
 
-    method force_reindexing() {
-        $self->safeSystem("rm -f ".$self->mydir."/../corpman.index", e=>"Failed to force reindexing");
-    }
 
 }
 1;

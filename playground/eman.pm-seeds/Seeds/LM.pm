@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use MooseX::Declare;
 
-class Seeds::LM with (Roles::KnowsMkcorpus, Roles::AccessesSrilm) {
+class Seeds::LM with (Roles::KnowsMkcorpus, Roles::AccessesSrilm, Roles::KnowsCorpman) {
     use HasDefvar;
     
     has_defvar 'CORP'=> (help=>'the shortname of corpus');
@@ -20,9 +20,12 @@ class Seeds::LM with (Roles::KnowsMkcorpus, Roles::AccessesSrilm) {
         if ($self->PARTS != 1 ) {
             print "!!!!!!!!\n\nLM with PARTS>1 is currently not working\n\n!!!!!!\n";
         }
-        my $corpstep_r=$self->safeBacktick($self->corpmanCommand(["--init", $self->CORP."/".$self->CORPAUG]),
-                            e=>"missing source corpus");
-        my $corpstep = (split (/\s+/, $corpstep_r))[0];
+
+        my $corpstep=$self->read_corp_info(
+                               corpname=>$self->CORP ,
+                               aug=>$self->CORPAUG,
+                               var=>"stepname"
+                            );
         
         $self->emanAddDeps([$corpstep]);
     
@@ -34,7 +37,7 @@ class Seeds::LM with (Roles::KnowsMkcorpus, Roles::AccessesSrilm) {
 
     method run() {
        
-        $self->safeSystem($self->mkcorpus_command($self->CORP, $self->CORPAUG, "text"));
+        $self->mkcorpus_do($self->CORP, $self->CORPAUG, "text");
         $self->generate_model();
         if (!-e "corpus.lm") {
             $self->myDie("No resulting corpus.lm");

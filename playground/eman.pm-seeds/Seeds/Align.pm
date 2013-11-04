@@ -1,6 +1,6 @@
 use MooseX::Declare;
 
-class Seeds::Align with (Roles::KnowsMkcorpus, Roles::AccessesGiza) {
+class Seeds::Align with (Roles::KnowsMkcorpus, Roles::AccessesGiza, Roles::KnowsCorpman) {
     use HasDefvar;
     has_defvar 'CORPUS'=> (help=>'the corpus name');
     has_defvar 'SRCALIAUG'=>(help=>'lang+factors for the source side');
@@ -39,26 +39,21 @@ class Seeds::Align with (Roles::KnowsMkcorpus, Roles::AccessesGiza) {
 
         $self->register_corpora($self->check_lengths());
 
-        $self->safeSystem("rm ".$self->playground."/corpman.index");
+        $self->restart_corpman();
     }
 
     method make_align_corpus(){
-         $self->safeSystem($self->mkcorpus_command($self->CORPUS, $self->SRCALIAUG, "src"),e=>"Failed to clone ".$self->CORPUS."/".$self->SRCALIAUG." src");
-        $self->safeSystem($self->mkcorpus_command($self->CORPUS, $self->TGTALIAUG, "tgt"),e=>"Failed to clone ".$self->CORPUS."/".$self->TGTALIAUG." tgt");
+        $self->mkcorpus_do($self->CORPUS, $self->SRCALIAUG, "src");
+        $self->mkcorpus_do($self->CORPUS, $self->TGTALIAUG, "tgt");
     }
 
-    #hack
-    #could be done better I guess
-    method read_bashvar_from_corpman(Str $varname, Str $aliaug) {
-        my $res = $self->safeBacktick($self->corpmanCommand([
-            '--factorindex', 
-            '--init', 
-            $self->CORPUS.'/'.$aliaug, 
-            '--bashvars=hack='.$varname]), e=>'cannot corpman');
+   
 
-        $res =~ /hack=(.*)/ or die "Not defined $varname in $res";
-        my $s = $1;
-        return $s;
+    method read_bashvar_from_corpman(Str $varname, Str $aliaug) {
+        return  $self->read_corp_info( 
+                                corpname=>$self->CORPUS,
+                                aug=>"aliaug",
+                                var=>$varname);        
     }
 
     method read_stuff_from_corpman(Str $aliaug) {
@@ -71,16 +66,13 @@ class Seeds::Align with (Roles::KnowsMkcorpus, Roles::AccessesGiza) {
     method register_corpora(Int $srccorplen) {
         my $i=1;
         for my $s (split(/,/, $self->ALISYMS)) {
-            $self->safeSystem($self->corpmanCommand([
-                        "register",
-                        "--",
-                        "alignment.gz",
-                        $i,
-                        $self->CORPUS,
-                        $s."-".$self->ALILABEL,
-                        "ali",
-                        $srccorplen]), e=>"Failed to register corpus");
-
+            $self->promise_corp(filename=>"alignment.gz", 
+                                column=>$i, 
+                                corpname=>$self->CORPUS,
+                                lang=>$s."-".$self->ALILABEL,
+                                factors=>"ali",
+                                count=>$srccorplen);
+            #die "BBBB";
             $i++;
         }
     }

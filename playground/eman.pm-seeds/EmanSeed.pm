@@ -155,9 +155,6 @@ role EmanSeed {
     has 'playground'=> (isa=>'Str', is=>'ro', default=>sub{my $r= `eman path`;chomp($r);return $r});
     has 'localenfo'=> (isa=>'Str', is=>'ro', default=>sub{return `locale | sed 's/^/export /'`});
 
-    method corpmanCommand(ArrayRef[Str] $what) {
-        return $self->playground."/corpman ".join(" ", @$what);
-    }
 
     method emanPath(Str $what) {
         my $path= $self->safeBacktick('eman path '.$what, mute=>1) ;

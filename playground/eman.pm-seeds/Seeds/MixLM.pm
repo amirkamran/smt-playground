@@ -55,7 +55,7 @@ class Seeds::MixLM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Rol
     }
 
     method clone_heldout() {
-        $self->safeSystem($self->mkcorpus_command($self->HELDOUT, $self->CORPAUG, "heldout"));
+        $self->mkcorpus_do($self->HELDOUT, $self->CORPAUG, "heldout");
 
         $self->safeSystem("zcat corpus.heldout.gz > corpus.heldout");
     }

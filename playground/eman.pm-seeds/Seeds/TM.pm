@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use MooseX::Declare;
 
-class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles::HasDecodingSteps) {
+class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles::HasDecodingSteps, Roles::KnowsCorpman) {
     use HasDefvar;
   
     has_defvar 'ALISTEP'=>(default=>'', type=>'optstep',
@@ -59,16 +59,17 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
 
     method redefine_alistep() {
        if (!$self->ALISTEP) {
-            my $res = $self->safeBacktick($self->corpmanCommand([
-                '--init', 
-                $self->ALICORP.'/'.$self->ALISYM."-".$self->ALILABEL."+ali", 
-                '--bashvars=step=stepname']), e=>'cannot corpman');
-
-            $res =~ /step=(.*)/ or die "Not defined corpstep in $res";
-            $self->ALISTEP = $1;
+            
+            $self->ALISTEP(
+                $self->read_corp_info(
+                    corpname=>$self->ALICORP, 
+                    lang=>$self->ALISYM."+".$self->ALILABEL, 
+                    factors=>"ali", 
+                    var=>"stepname")
+            ); 
             $self->emanAddDeps([$self->ALISTEP]);
-            $self->check_decoding_steps_for_comma( );
        } 
+       $self->check_decoding_steps_for_comma( );
     }
 
     method check_decoding_steps_for_comma() {
@@ -125,10 +126,10 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
     
 
     method mkcorpora(){
-        $self->safeSystem($self->mkcorpus_command($self->SRCCORP, $self->SRCAUG, "src", dir=>"corpus"));
-        $self->safeSystem($self->mkcorpus_command($self->TGTCORP, $self->TGTAUG, "tgt", dir=>"corpus"));
-        $self->safeSystem($self->mkcorpus_command($self->ALICORP, 
-                                        $self->ALISYM."-".$self->ALILABEL."+ali", "orig", dir=>".", type=>"alignment"));
+        $self->mkcorpus_do($self->SRCCORP, $self->SRCAUG, "src", dir=>"corpus");
+        $self->mkcorpus_do($self->TGTCORP, $self->TGTAUG, "tgt", dir=>"corpus");
+        $self->mkcorpus_do($self->ALICORP, 
+                                        $self->ALISYM."-".$self->ALILABEL."+ali", "orig", dir=>".", type=>"alignment");
         $self->maybe_reverse_alignment();
         $self->check_lengths();
                 

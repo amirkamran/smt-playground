@@ -3,7 +3,7 @@ use strict;
 use MooseX::Declare;
 
                         #RunsDecoder inherits AccessesMosesBinaries and HasJobsOnCluster
-class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
+class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD, Roles::KnowsCorpman) {
     use HasDefvar;
     
     has_defvar 'MODELSTEP'=>(type=>'reqstep', help=>'where is the model (moses.ini) incl. all files');
@@ -62,7 +62,7 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
     }
 
     method filter_for_mert() {
-        $self->create_dir_and_filter($filteroutdir, "moses.abs.ini", "tuning.in");
+        $self->create_dir_and_filter("filtered-for-mert", "moses.abs.ini", "tuning.in");
     }
 
 
@@ -80,12 +80,11 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
 
 
     method stepFromCorp(Str $corp, Str $aug) {
-        my $name = $corp."/".$aug;
-        my $corpstep=$self->safeBacktick($self->playground."/corpman --init $name | cut -f1");
-        if (!$corpstep) {
-             $self->myDie ("Corpus not found: $name");
-        }
-        return $corpstep;
+        return $self->read_corp_info(
+                               corpname=>$corp,
+                               aug=>$aug,
+                               var=>"stepname"
+                            );
     }
 
     method addCorpDeps () {
@@ -103,7 +102,8 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
     # create local copies of the corpora
     method createTuningCorps() {
         my @corpora = split (/:/, $self->DEVCORP);
-        $self->safeSystem($self->playground."/corpman --dump ".$corpora[0]."/".$self->SRCAUG." > tuning.in");
+        $self->dump_corp(corpname=>$corpora[0], aug=>$self->SRCAUG, where=>"tuning.in");
+        
         my $size = $self->safeBacktick("wc -l tuning.in | cut -f 1 -d ' '");
         if (!$size) {
            $self->myDie("empty tuning.in"); 
@@ -111,7 +111,7 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD) {
         
         my $i=0;
         for my $devcorp (@corpora){
-            $self->safeSystem($self->playground."/corpman --dump ".$devcorp."/".$self->REFAUG." > tuning.ref.$i");
+            $self->dump_corp(corpname=>$devcorp, aug=>$self->REFAUG, where=>"tuning.ref.$i");
             
             if ($size != $self->safeBacktick("wc -l tuning.ref.$i| cut -f 1 -d ' '")) {
                 $self->myDie("Mismatching number of lines in tuning.ref.$i taken from $devcorp/".$self->REFAUG)
