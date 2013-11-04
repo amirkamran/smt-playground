@@ -30,6 +30,10 @@ role Roles::AccessesMosesBinaries with EmanSeed {
         }
         return $r;
     }
+
+    method evaluator() {
+        return $self->mstep_dir."/moses/bin/evaluator";
+    }
     method filter_model_given_input(Str $dirname, Str $ininame, Str $input) {
    
         $self->safeSystem($self->moses_scripts_dir."/training/filter-model-given-input.pl".
