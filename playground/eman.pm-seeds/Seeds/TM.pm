@@ -59,15 +59,9 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
 
     method redefine_alistep() {
        if (!$self->ALISTEP) {
-            
             $self->ALISTEP(
-                $self->read_corp_info(
-                    corpname=>$self->ALICORP, 
-                    lang=>$self->ALISYM."+".$self->ALILABEL, 
-                    factors=>"ali", 
-                    var=>"stepname")
+                $self->init_corp_and_add_dep($self->ALICORP,$self->ALISYM."+".$self->ALILABEL."/ali");
             ); 
-            $self->emanAddDeps([$self->ALISTEP]);
        } 
        $self->check_decoding_steps_for_comma( );
     }

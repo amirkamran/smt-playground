@@ -79,24 +79,15 @@ class Seeds::Mert with (Roles::RunsDecoder, Roles::SSD, Roles::KnowsCorpman) {
     }
 
 
-    method stepFromCorp(Str $corp, Str $aug) {
-        return $self->read_corp_info(
-                               corpname=>$corp,
-                               aug=>$aug,
-                               var=>"stepname"
-                            );
-    }
 
     method addCorpDeps () {
         my @corpora = split (/:/, $self->DEVCORP);
-        my @steps;
 
         my $first=$corpora[0];
-        push @steps, $self->stepFromCorp($first, $self->SRCAUG);
+        $self->init_corp_and_add_dep($first, $self->SRCAUG);
         for (@corpora){
-            push @steps, $self->stepFromCorp($_, $self->REFAUG);
+            $self->init_corp_and_add_dep($_, $self->REFAUG);
         }
-        $self->emanAddDeps(\@steps);
     }
 
     # create local copies of the corpora

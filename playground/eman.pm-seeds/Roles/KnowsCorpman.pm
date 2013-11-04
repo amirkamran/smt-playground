@@ -24,6 +24,12 @@ role Roles::KnowsCorpman with EmanSeed {
             
     }
 
+    method init_corp_and_add_dep(Str $corpname, Str $aug) {
+        my $stepname = $self->read_corp_info(corpname=>$corpname, aug=>$aug, var=>"stepname");
+        $self->emanAddDeps([$stepname]);
+        return $stepname;
+    }
+
     method read_corp_info(Str :$corpname, Str :$lang="", Str :$factors="", Str :$var,Bool :$do_init=1, Str :$aug="") {
              if ($aug eq "") {
                 if ($lang eq "" or $factors eq "") {

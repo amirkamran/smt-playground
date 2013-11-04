@@ -20,14 +20,8 @@ class Seeds::LM with (Roles::KnowsMkcorpus, Roles::AccessesSrilm, Roles::KnowsCo
         if ($self->PARTS != 1 ) {
             print "!!!!!!!!\n\nLM with PARTS>1 is currently not working\n\n!!!!!!\n";
         }
-
-        my $corpstep=$self->read_corp_info(
-                               corpname=>$self->CORP ,
-                               aug=>$self->CORPAUG,
-                               var=>"stepname"
-                            );
-        
-        $self->emanAddDeps([$corpstep]);
+    
+        $self->init_corp_and_add_dep($self->CORP, $self->CORPAUG);
     
     }
 

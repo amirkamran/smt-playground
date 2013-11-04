@@ -146,8 +146,7 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
 
 
     method load_src_corp() {
-        my $res = $self->read_corp_info(corpname=>$self->TESTCORP, aug=>$self->SRCAUG, var=>"stepname");
-        $self->emanAddDeps([$res]);
+        $self->init_corp_and_add_dep($self->TESTCORP, $self->SRCAUG);
     }
 
 
