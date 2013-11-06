@@ -4,12 +4,13 @@ use MooseX::Declare;
 #general alignment
 #doesn't actually run the alignment
 #Seeds::Align runs giza alignment, Seeds::IdentAlign runs differen alignment
-role Roles::GeneralAlign with (Roles::KnowsCorpman){
+role Roles::GeneralAlign with (Roles::KnowsCorpman, Roles::KnowsMkcorpus){
     use HasDefvar;
     has_defvar 'CORPUS'=> (help=>'the corpus name');
     has_defvar 'SRCALIAUG'=>(help=>'lang+factors for the source side');
     has_defvar 'TGTALIAUG'=>(help=>'lang+factors for the target side');
     has_defvar 'ALILABEL'=>(default=>'', help=>'alignment "corpus" name, generated automatically if not given');
+    has_defvar 'ALISYMS'=>(default=>'gdf,revgdf,gdfa,revgdfa,left,right,int,union', help=>'symmetrization methods, several allowed if delimited by comma');
 
     method prepare(){
     }
@@ -26,7 +27,10 @@ role Roles::GeneralAlign with (Roles::KnowsCorpman){
 
     method init() {
         if (!$self->ALILABEL) {
-            $self->ALILABEL($self->safeBacktick('echo '.$self->SRCALIAUG.'-'.$self->TGTALIAUG.q( | tr '+.' '--'")));
+            my $t = $self->TGTALIAUG;
+            $t=~s/\+/\-/g;
+            $t=~s/\./\-/g;
+            $self->ALILABEL($t) ;
         }
       
         my ($srccorpstep, $srccorplen) = $self->read_basics_from_corpman($self->SRCALIAUG);
@@ -49,7 +53,7 @@ role Roles::GeneralAlign with (Roles::KnowsCorpman){
     method read_bashvar_from_corpman(Str $varname, Str $aliaug) {
         return  $self->read_corp_info( 
                                 corpname=>$self->CORPUS,
-                                aug=>"aliaug",
+                                aug=>$aliaug,
                                 var=>$varname);        
     }
 

@@ -4,7 +4,6 @@ use MooseX::Declare;
 class Seeds::Align with (Roles::AccessesGiza,  Roles::GeneralAlign){
     use HasDefvar;
 
-    has_defvar 'ALISYMS'=>(default=>'gdf,revgdf,gdfa,revgdfa,left,right,int,union', help=>'symmetrization methods, several allowed if delimited by comma');
 
     method help() {
         "eman seed for word alignment"
