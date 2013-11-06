@@ -177,12 +177,16 @@ role EmanSeed {
     method emanDefvarList() {
         my @list;
         my $meta = $self->meta;
-        for my $attribute ( map { $meta->get_attribute($_) }
-                   sort $meta->get_attribute_list ) {
+        for my $attribute ($meta->get_all_attributes) {
+#        for my $attribute ( map { $meta->get_attribute($_) }
+#                   sort $meta->get_attribute_list ) {
                 if ($attribute->does('Defvar')) {
-                    push(@list, $attribute->name);
+                    push(@list, $attribute);
                 }
         }
+#        use Data::Dumper;
+#        print Dumper [map {$_->name} $meta->get_all_attributes];
+#        die "AAA";
         return \@list;        
     }
 
@@ -211,9 +215,14 @@ role EmanSeed {
     #see HasDefvar
     #not from modules themselves
     method _emanSaveDefvar(Str $var) {
-        my $what = $self->meta->get_attribute($var)->get_value($self);
-        $what =~ s/'/'"'"'/g;
-        $self->safeSystem("export $var='".$what."'\n\neman defvar $var", mute=>1);
+        my $meta = $self->meta;
+        for my $attribute ($meta->get_all_attributes) {
+            if ($attribute->name eq $var) {
+                my $what = $attribute->get_value($self);
+                $what =~ s/'/'"'"'/g;
+                $self->safeSystem("export $var='".$what."'\n\neman defvar $var", mute=>1);
+            }
+        }
     }
 
     method scriptsDir() {
@@ -231,21 +240,21 @@ role EmanSeed {
     #this returns "eman defvar", which defines the eman command
     #that tries to load the vars and, maybe, redefine it and 
     #finally save it to eman.vars file
-    method emanDefvarsCommand(ArrayRef[Str] $vars) {
+    method emanDefvarsCommand(ArrayRef $vars) {
         my $res="eman ";
         my $meta = $self->meta;
         my @allvars = @$vars;
         #primitive sorting: first those without inheritance
         #so the "inherited" can depend on them
         #TODO: something smarter?
-        my @not_inherited = grep {!$meta->get_attribute($_)->is_inherited} @allvars;
-        my @inherited = grep {$meta->get_attribute($_)->is_inherited} @allvars;
+        my @not_inherited = grep {!$_->is_inherited} @allvars;
+        my @inherited = grep {$_->is_inherited} @allvars;
         
-        for my $var (@not_inherited, @inherited) {
-
+        for my $attribute (@not_inherited, @inherited) {
+            my $var = $attribute->name;
             $res .= "defvar ";
             $res .= $var;
-            my $attribute = $meta->get_attribute($var);
+            #my $attribute = $meta->get_attribute($var);
             #TODO: nicer :-(
             my $help = $attribute->help;
             $help =~ s/'/'"'"'/g;
@@ -354,20 +363,24 @@ role EmanSeed {
 
         my $changed_vars = $self->superhack__findChangedDefvars;
         
-        for my $var (keys %$changed_vars) {
-            my $attr = $meta->get_attribute($var);
-            if (!defined $attr) {
-                $self->myDie ("not a valid attribute $attr");
+        for my $attr (@$vars) {
+        #for my $var (keys %$changed_vars) {
+            if (exists $changed_vars->{$attr->name}) {
+                #my $attr = $meta->get_attribute($var);
+                my $var=$attr->name;
+                #if (!defined $attr) {
+                #    $self->myDie ("not a valid attribute $var");
+                #}
+                if (!$attr->does('Defvar')) {
+                    $self->myDie( "Cannot change attribute $attr - not a defvar");
+                }
+                print "eman defvar changed ".$var." to ".($changed_vars->{$var})."\n";
+                
+                $attr->set_value($self, $changed_vars->{$var});
             }
-            if (!$attr->does('Defvar')) {
-                $self->myDie( "Cannot change attribute $attr - not a defvar");
-            }
-            print "eman defvar changed ".$var." to ".($changed_vars->{$var})."\n";
-            
-            $attr->set_value($self, $changed_vars->{$var});
         }
         $self->ensureDefined($vars);
-
+    
     }
     
     #method loadFromEnv(ArrayRef[Str] $vars) {
@@ -376,11 +389,11 @@ role EmanSeed {
     #    }
     #}
 
-    method ensureDefined(ArrayRef[Str] $vars) {
-        for my $var (@$vars) {
-            my $res = $self->meta->get_attribute($var)->get_value($self);
+    method ensureDefined(ArrayRef $vars) {
+        for my $attr (@$vars) {
+            my $res = $attr->get_value($self);
             if (!defined $res) {
-                $self->myDie( "Undefined var $var");
+                $self->myDie( "Undefined var ".$attr->name);
             }
         }
     }
@@ -467,8 +480,9 @@ role EmanSeed {
         print $self->help();
         print "\n-------------------\n";
         my $list = $self->emanDefvarList;
-        for my $defvar (sort {$a cmp $b} @$list) {
-            my $attribute = $self->meta->get_attribute($defvar);
+        for my $attribute (sort {$a->name cmp $b->name} @$list) {
+            #my $attribute = $self->meta->get_attribute($defvar);
+            my $defvar = $attribute->name;
             print "$defvar";
             
             if ($attribute->has_eman_default) {
