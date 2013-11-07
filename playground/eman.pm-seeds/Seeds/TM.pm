@@ -57,10 +57,11 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
         $self->check_phrase_count();
     }
 
+    #I cannot do this by default_sub, because then the inherit wouldn't work
     method redefine_alistep() {
        if (!$self->ALISTEP) {
             $self->ALISTEP(
-                $self->init_corp_and_add_dep($self->ALICORP,$self->ALISYM."+".$self->ALILABEL."/ali");
+                $self->init_corp_and_add_dep($self->ALICORP,$self->ALISYM."+".$self->ALILABEL."/ali")
             ); 
        } 
        $self->check_decoding_steps_for_comma( );

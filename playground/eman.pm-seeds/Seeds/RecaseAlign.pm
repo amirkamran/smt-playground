@@ -3,24 +3,22 @@ use MooseX::Declare;
 class Seeds::RecaseAlign extends Seeds::IdentAlign{
     use HasDefvar;
 
-    
-    has 'CHECK_WORD_LENGTHS' => (is=>'ro', isa=>'Str', default=>'yes');
     has_defvar 'LANGUAGE'=>(help=>'Language to use');
     
-    #overloading the defvars
-    has 'SRCALIAUG'=> (is=>'ro', isa=>'Str', lazy=>1, 
-                            default=>sub{
+    has_defvar 'SRCALIAUG'=>(help=>'lang+factors for the source side, automatically generated',
+                             default_sub=>sub{
                                 my $self=shift;
                                 return $self->LANGUAGE."+lc";
                             });
-    has 'TGTALIAUG'=> (is=>'ro', isa=>'Str', lazy=>1, 
-                            default=>sub{
+    #overloading the defvars
+    has_defvar 'TGTALIAUG'=>(help=>'lang+factors for the source side, automatically generated',
+                             default_sub=>sub{
                                 my $self=shift;
                                 return $self->LANGUAGE."+form";
                             });
-
+   
     method help() {
-        "eman seed for recasing"
+        "eman seed for alignment before recasing"
     }
 
 }

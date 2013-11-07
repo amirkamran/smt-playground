@@ -31,6 +31,12 @@ has inherit => (
     predicate=>'has_inherit'
 );
 
+has default_sub => (
+    is => 'rw',
+    isa => 'CodeRef',
+    predicate=>'has_default_sub'
+);
+
 has same_as => (
     is => 'rw',
     isa => 'Str',

@@ -9,7 +9,14 @@ role Roles::GeneralAlign with (Roles::KnowsCorpman, Roles::KnowsMkcorpus){
     has_defvar 'CORPUS'=> (help=>'the corpus name');
     has_defvar 'SRCALIAUG'=>(help=>'lang+factors for the source side');
     has_defvar 'TGTALIAUG'=>(help=>'lang+factors for the target side');
-    has_defvar 'ALILABEL'=>(default=>'', help=>'alignment "corpus" name, generated automatically if not given');
+    has_defvar 'ALILABEL'=>(help=>'alignment "corpus" name, generated automatically if not given',
+                            default_sub=>sub{
+                                my $self=shift;
+                                my $t = $self->TGTALIAUG;
+                                $t=~s/\+/\-/g;
+                                $t=~s/\./\-/g;
+                                return $t;
+                            } );
     has_defvar 'ALISYMS'=>(default=>'gdf,revgdf,gdfa,revgdfa,left,right,int,union', help=>'symmetrization methods, several allowed if delimited by comma');
 
     method prepare(){
@@ -26,13 +33,6 @@ role Roles::GeneralAlign with (Roles::KnowsCorpman, Roles::KnowsMkcorpus){
     }
 
     method init() {
-        if (!$self->ALILABEL) {
-            my $t = $self->TGTALIAUG;
-            $t=~s/\+/\-/g;
-            $t=~s/\./\-/g;
-            $self->ALILABEL($t) ;
-        }
-      
         my ($srccorpstep, $srccorplen) = $self->read_basics_from_corpman($self->SRCALIAUG);
         my ($tgtcorpstep, $tgtcorplen) = $self->read_basics_from_corpman($self->TGTALIAUG);
         if ($srccorplen != $tgtcorplen) {

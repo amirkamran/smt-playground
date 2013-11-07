@@ -240,51 +240,80 @@ role EmanSeed {
     #this returns "eman defvar", which defines the eman command
     #that tries to load the vars and, maybe, redefine it and 
     #finally save it to eman.vars file
-    method emanDefvarsCommand(ArrayRef $vars) {
+    method emanDefvarsCommand(ArrayRef $vars, Bool $withSub) {
         my $res="eman ";
         my $meta = $self->meta;
         my @allvars = @$vars;
-        #primitive sorting: first those without inheritance
-        #so the "inherited" can depend on them
-        #TODO: something smarter?
-        my @not_inherited = grep {!$_->is_inherited} @allvars;
-        my @inherited = grep {$_->is_inherited} @allvars;
-        
-        for my $attribute (@not_inherited, @inherited) {
+
+        my @filtered;
+        my $is_sub = sub {
+            my $attr = shift;
+            if ($attr->has_default_sub) {
+                if (!exists $ENV{$attr->name} or $ENV{$attr->name}eq "") {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        };
+        if ($withSub) {
+            @filtered = grep {$is_sub->($_)} @allvars;
+            for my $attr(@filtered) {
+                my $name = $attr->name;
+                my $dsub = $attr->default_sub;
+                my $res = $dsub->($self);
+                $ENV{$name}=$res;
+                $attr->set_value($self, $res);
+            }
+        } else {
+            @filtered = grep {!$is_sub->($_)} @allvars;
+            my @not_inherited = grep {!$_->is_inherited} @filtered;
+            my @inherited = grep {$_->is_inherited} @filtered;
+            @filtered = (@not_inherited, @inherited);
+        }
+        if (scalar @filtered==0) {
+            return undef;
+        }
+        for my $attribute (@filtered) {
             my $var = $attribute->name;
-            $res .= "defvar ";
+            $res .= " defvar ";
             $res .= $var;
-            #my $attribute = $meta->get_attribute($var);
-            #TODO: nicer :-(
-            my $help = $attribute->help;
-            $help =~ s/'/'"'"'/g;
-            $res .= " help='$help' ";
+            #withsub - help and other stuff not needed
+            #because all is 100% created with default_sub
+            if (!$withSub) {
+                #TODO: nicer :-(
+                my $help = $attribute->help;
+                $help =~ s/'/'"'"'/g;
+                $res .= " help='$help' ";
 
 
-            if ($attribute->has_inherit) {
-                my $inherit = $attribute->inherit;
-                $inherit =~ s/'/'"'"'/g;
-                $res .= " inherit='$inherit' ";
-            }
-            if ($attribute->has_firstinherit) {
-                my $firstinherit = $attribute->firstinherit;
-                $firstinherit =~ s/'/'"'"'/g;
-                $res .= " firstinherit='$firstinherit' ";
-            }
-            if ($attribute->has_same_as) {
-                my $same_as = $attribute->same_as;
-                $same_as =~ s/'/'"'"'/g;
-                $res .= " same_as='$same_as' ";
-            }
-            if ($attribute->has_type) {
-                my $t = $attribute->type;
-                $t =~ s/'/'"'"'/g;
-                $res .= " type='$t' ";
-            }
-            if ($attribute->has_eman_default) {
-                my $default = $attribute->eman_default;
-                $default =~ s/'/'"'"'/g;
-                $res .= " default='$default' ";
+                if ($attribute->has_inherit) {
+                    my $inherit = $attribute->inherit;
+                    $inherit =~ s/'/'"'"'/g;
+                    $res .= " inherit='$inherit' ";
+                }
+                if ($attribute->has_firstinherit) {
+                    my $firstinherit = $attribute->firstinherit;
+                    $firstinherit =~ s/'/'"'"'/g;
+                    $res .= " firstinherit='$firstinherit' ";
+                }
+                if ($attribute->has_same_as) {
+                    my $same_as = $attribute->same_as;
+                    $same_as =~ s/'/'"'"'/g;
+                    $res .= " same_as='$same_as' ";
+                }
+                if ($attribute->has_type) {
+                    my $t = $attribute->type;
+                    $t =~ s/'/'"'"'/g;
+                    $res .= " type='$t' ";
+                }
+                if ($attribute->has_eman_default) {
+                    my $default = $attribute->eman_default;
+                    $default =~ s/'/'"'"'/g;
+                    $res .= " default='$default' ";
+                }
             }
             #$res .= $meta->get_attribute($var)->attrs;
             #$res .= " ";
@@ -359,24 +388,30 @@ role EmanSeed {
 
         my $meta = $self->meta;
 
-        $self->safeSystem($self->emanDefvarsCommand($vars), e=>"Couldn't register vars", mute=>1);
+        #first do all those without default subs, then those with default subs
+        for my $has_default_subs (0,1) {
+            my $command=$self->emanDefvarsCommand($vars, $has_default_subs);
+            if (defined $command) {
+                $self->safeSystem($command, e=>"Couldn't register vars", mute=>1);
 
-        my $changed_vars = $self->superhack__findChangedDefvars;
-        
-        for my $attr (@$vars) {
-        #for my $var (keys %$changed_vars) {
-            if (exists $changed_vars->{$attr->name}) {
-                #my $attr = $meta->get_attribute($var);
-                my $var=$attr->name;
-                #if (!defined $attr) {
-                #    $self->myDie ("not a valid attribute $var");
-                #}
-                if (!$attr->does('Defvar')) {
-                    $self->myDie( "Cannot change attribute $attr - not a defvar");
-                }
-                print "eman defvar changed ".$var." to ".($changed_vars->{$var})."\n";
+                my $changed_vars = $self->superhack__findChangedDefvars;
                 
-                $attr->set_value($self, $changed_vars->{$var});
+                for my $attr (@$vars) {
+                #for my $var (keys %$changed_vars) {
+                    if (exists $changed_vars->{$attr->name}) {
+                        #my $attr = $meta->get_attribute($var);
+                        my $var=$attr->name;
+                        #if (!defined $attr) {
+                        #    $self->myDie ("not a valid attribute $var");
+                        #}
+                        if (!$attr->does('Defvar')) {
+                            $self->myDie( "Cannot change attribute $attr - not a defvar");
+                        }
+                        print "eman defvar changed ".$var." to ".($changed_vars->{$var})."\n";
+                        
+                        $attr->set_value($self, $changed_vars->{$var});
+                    }
+                }
             }
         }
         $self->ensureDefined($vars);
@@ -492,6 +527,10 @@ role EmanSeed {
             
             print " --  ";
             print $attribute->help."\n";
+            if ($attribute->has_default_sub) {
+                my $inherit = $attribute->inherit;
+                print "  is automatically created \n";
+            }
             if ($attribute->has_inherit) {
                 my $inherit = $attribute->inherit;
                 print "  inherited from: $inherit \n";
