@@ -1695,3 +1695,14 @@ takto newstest 2013 spojuju:
 TAKE_FROM_COMMAND="../rejoin_subcorps.pl newstest2013 pecTriFix stc ~pecina/work/dyn/test13.en.w1fl in:csNmT1_s.translate.e28f0634.20130504-0838 med:csNmT1_s.translate.1cb12ce6.20130504-0039 out:csNmT1_s.translate.1ab31f77.20130504-0038" OUTLINECOUNT=3000 OUTCORP=newstest2013 OUTLANG=csNmT1_pecTriRejoinFix OUTFACTS=stc eman init corpus --start
 
 A vysledna evaluace: s.evaluator.cb095efc.20130504-2310   0.1943
+
+
+2013-11-07
+
+Pro AMALACH jsou dve moznosti, co odevzdat:
+
+cu-bojar = s.evaluator.435dc5b5.20130504-0011 0.2017
+a totez, ale *bez* te tectomt tabulky:
+plain moses = s.evaluator.50e069fe.20130503-0028 0.1922
+
+A Ales do zpravy dava plain Moses.
