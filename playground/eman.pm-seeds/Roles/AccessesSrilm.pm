@@ -30,7 +30,7 @@ role Roles::AccessesSrilm with EmanSeed {
     }
 
     method srilm_dir_bin() {
-          return $self->srilm_dir."/srilm/bin/i686";
+          return $self->srilm_dir."/srilm/bin/";
     }
     
     method srilm_dir_686() {
