@@ -184,9 +184,9 @@ if [ ! -e moses.ini ]; then
         echo "Detected Moses with substitute-weights - using that"
 
         \$SCRIPTS_ROOTDIR/ems/support/substitute-weights.perl \\
-        moses.ini \\ 
+        ./moses.ini \\
         $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini \\
-        moses.mertweights.ini \\
+        ./moses.mertweights.ini \\
         || die "Failed to apply weights from mert"
   else
         echo "Undetected Moses with substitute-weights - using reuse-weights.perl"
