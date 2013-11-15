@@ -638,7 +638,9 @@ sub build_using_rules {
 
   # apply the rule
   my $linecount = $subentry->{"linecount"};
-  my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS='$subentry->{stepname}' RUN_COMMAND='$rule->{command}' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", [$subentry->{"stepname"}]);
+  my $escape_command = $rule->{command};
+  $escape_command =~ s/'/'"'"'/g;
+  my $stepname = run_or_fake_corpus_step("DERIVED=1 DEPS='$subentry->{stepname}' RUN_COMMAND='$escape_command' STEPNAME=$subentry->{stepname} FILENAME=$subentry->{filename} COLUMN=$subentry->{column} FACTOR=$subentry->{factind} OUTCORP=$corp OUTLANG=$lang OUTFACTS='$facts' OUTLINECOUNT=$linecount eman init corpus", [$subentry->{"stepname"}]);
   my $filename = "corpus.txt.gz";
   my $column = -1;
 
