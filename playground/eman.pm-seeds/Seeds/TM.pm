@@ -164,7 +164,7 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
                             "--srccorp=".$self->SRCCORP." --srcaug=".$self->SRCAUG." ".
                             "--tgtcorp=".$self->TGTCORP." --tgtaug=".$self->TGTAUG." ".
                             "--cutoff=".$self->CUTOFF." --threshold=".$self->THRESHOLD." ".
-                            "--workspace=".$self->binaries_dir." ".
+                            "--workspace=".$self->moses_binaries_dir." ".
                             $self->step_tempdir."/model/phrase-table.*", dodie=>0);
 
     }
@@ -196,7 +196,7 @@ class Seeds::TM with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Roles:
     method check_phrase_count() {
          print "Getting phrase counts...\n";
          $self->safeSystem($self->playground."/tools/zwc -l model/*.gz | tee phrase-counts", e=> "Failed to count phrases");
-         if ($self->safeBacktick("cut -f1 phrase-counts")==0) {
+         if ($self->safeBacktick("cut -f1 phrase-counts")=~/^0(\n0)*$/) {
              $self->myDie("Empty ttable, perhaps full temp disk above?");
          }
     }

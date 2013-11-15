@@ -19,12 +19,12 @@ class Seeds::BinarizeLM with (Roles::AccessesMosesBinaries) {
     }
 
     method prepare() {
-        $self->check_corpus_file();
-        $self->copy_lm();
     }
 
 
     method run() {
+        $self->check_corpus_file();
+        $self->copy_lm();
         $self->binarize();    
     }
 

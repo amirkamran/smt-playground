@@ -270,8 +270,11 @@ role EmanSeed {
         } else {
             @filtered = grep {!$is_sub->($_)} @allvars;
             my @not_inherited = grep {!$_->is_inherited} @filtered;
+            my @not_same_as = grep {!$_->has_same_as} @not_inherited;
+            my @same_as = grep {$_->has_same_as} @not_inherited;
+
             my @inherited = grep {$_->is_inherited} @filtered;
-            @filtered = (@not_inherited, @inherited);
+            @filtered = (@not_same_as, @same_as, @inherited);
         }
         if (scalar @filtered==0) {
             return undef;
@@ -499,6 +502,7 @@ role EmanSeed {
         my $that = $class->loadFromYaml;
         $that->__is_preparing(0);
         $that->__has_fully_loaded_defvars(2);
+        $that->safeSystem("echo RUNNING>eman.status");
         $that->print_start;
         $that->run;
         $that->do_end;
@@ -507,7 +511,7 @@ role EmanSeed {
     use HasDefvar;
     has_defvar 'EMAN_MEM'=>(default=>'6g', help=>'memory limit for the job itself');
     has_defvar 'EMAN_DISK'=>(default=>'6g', help=>'free space on the temp disk');
-    has_defvar 'EMAN_CORES'=>(default=>'1', help=>'number of CPUs to use in Moses');
+    has_defvar 'EMAN_CORES'=>(default=>'1', help=>'number of CPUs to use for the job itself (not for submitted sub-jobs)');
        
     method write_help {
         print ref $self;

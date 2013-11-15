@@ -7,7 +7,19 @@ role Roles::AccessesGiza with EmanSeed {
     use HasDefvar;
 
     has_defvar 'GIZASTEP'=> (type=>'reqstep', help=>'where is GIZA/mGIZA and symal compiled'); 
+    has_defvar 'GIZA_CORES'=>(default=>'4', help=>'number of CPUs to use for giza, if mgiza is used.');
+    #has_defvar 'EMAN_CORES'=>(same_as=>'GIZA_CORES', help=>'number of CPUs to use for the job itself (not for submitted sub-jobs)');
+    #for some reason I cannot overload this
 
+    before init() {
+        #if ($self->GIZA_CORES != $self->EMAN_CORES) {
+        #    print "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+        #    print "!! EMAN_CORES and GIZA_CORES should be the same!  !!";
+        #    print "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+        #    #do not die though
+        #}
+        $self->EMAN_CORES($self->GIZA_CORES);
+    }
 
     has 'giza_dir' =>(isa=>'Str', is=>'rw', lazy=>1, default=>sub{
         my $self=shift;

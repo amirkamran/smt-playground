@@ -186,7 +186,7 @@ class Seeds::Model with (Roles::KnowsMkcorpus, Roles::AccessesMosesBinaries, Rol
             for (2..$lm_size) {
                 $backofftag.='20\n';
             }
-            $self->safeSystem('sed -i \'s/\[ttable-limit\]/'.$backofftag.'\n[ttable-limit]/\' ./model/moses.ini');
+            $self->safeSystem('sed -i \'s/\[feature\]/'.$backofftag.'\n[feature]/\' ./model/moses.ini');
         }
     }
 

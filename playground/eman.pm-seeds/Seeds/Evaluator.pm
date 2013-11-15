@@ -31,7 +31,7 @@ class Seeds::Evaluator with (Roles::KnowsCorpman, Roles::KnowsMkcorpus, Roles::A
 
     method prepare() {
        if (!-x $self->evaluator) {
-           $self->myDie("evaluator not present");
+           $self->myDie("evaluator not present at ".$self->evaluator."!");
        }
     }
     

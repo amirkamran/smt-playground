@@ -3,6 +3,7 @@ use MooseX::Declare;
 #align that uses giza
 class Seeds::Align with (Roles::AccessesGiza,  Roles::GeneralAlign){
     use HasDefvar;
+    
 
 
     method help() {

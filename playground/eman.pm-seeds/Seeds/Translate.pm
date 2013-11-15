@@ -125,12 +125,24 @@ class Seeds::Translate with (Roles::SSD, Roles::RunsDecoder, Roles::KnowsMkcorpu
             $self->safeSystem($self->moses_scripts_dir."/training/clone_moses_model.pl "
                                         ." --symlink "
                                         .$self->mertstepdir."/moses.ini", e=>"Failed to clone the full model");
-            $self->safeSystem($self->moses_scripts_dir."/ems/support/reuse-weights.perl ".
-                                $self->mertstepdir."/mert-tuning/".$self->iterprefix."moses.ini ".
-                                "< ./moses.ini > moses.mertweights.ini", e=>"Failed to apply weights from mert");
+            $self->reuse_weights();
             $self->safeSystem($self->moses_scripts_dir."/training/absolutize_moses_model.pl ".
                                 $self->mydir."/moses.mertweights.ini > moses.abs.ini", e=>"Failed to absolutize");
         }
+    }
+
+    method reuse_weights() {
+        my $dir = $self->moses_scripts_dir."/ems/support";
+        my $weightfile = $self->mertstepdir."/mert-tuning/".$self->iterprefix."moses.ini ";
+        my $original = "./moses.ini";
+        my $new = "./moses.mertweights.ini";
+        my $run;
+        if (-x "$dir/substitute-weights.perl") {
+            $run = "$dir/substitute-weights.perl $original $weightfile $new";
+        } else {
+            $run = "$dir/reuse-weights.perl $weightfile < $original > $new";
+        }
+        $self->safeSystem($run, e=>"Failed to apply weights from mert");
     }
 
     method targetlan_for_detoken() {
