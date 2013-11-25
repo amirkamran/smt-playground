@@ -4,6 +4,7 @@
 
 use strict;
 use Cwd('abs_path');
+use List::Util qw(max);
 use Getopt::Long;
 
 my ($verbose, $append_unknown, $no_concat_lms);
@@ -56,6 +57,8 @@ my %mergers = (
   "weight-generation" => \&merge_concat,
   "weight-w"          => \&merge_output_once,
   "distortion-limit"  => \&merge_output_once,
+  "feature"           => \&merge_new_format,
+  "weight"            => sub { }, # this section is handled along with [feature]
 );
 
 for my $section (@section_names) {
@@ -84,20 +87,67 @@ sub warn_missing_section
   }
 }
 
+# merges sections [feature] and [weight], called when the new moses.ini format is used
+sub merge_new_format
+{
+  print STDERR "Detected new format of moses.ini\n";
+  my %named_features;
+  my %weights;
+  my %features;
+
+  for my $filename (@filenames) {
+    print "# ", abs_path($filename), "\n" if $verbose;
+    my %named_features_file;
+
+    for my $line (@{ $sections{feature}{$filename} }) {
+      if ($line =~ m/ name=([^\d]+)([\d]+) /) {
+        my ($name, $num) =  ($1, $2);
+        if ($name ne "LM" || ! $no_concat_lms) {
+          $named_features_file{$name}++;
+          $num += $named_features{$name} // 0;
+          $line =~ s/ name=$name\d+ / name=$name$num /;
+        }
+        $features{$line} = 1;
+      } else {
+        $features{$line} = 1;
+      }
+    }
+
+    for my $line (@{ $sections{weight}{$filename} }) {
+      $line =~ m/([^\d]+)([\d]+) *= *(.*)/;
+      my ($name, $num, $rest) = ($1, $2, $3);
+      $num += $named_features{$name} // 0;
+      if (defined $weights{"$name$num"}) {
+        if ($weights{"$name$num"} ne $rest) {
+          print STDERR "Feature weight differs: $name$num= $rest in file $filename\n";
+        }
+      } else {
+        $weights{"$name$num"} = $rest;
+      }
+    }
+
+    map { $named_features{$_} += $named_features_file{$_} } keys %named_features_file;
+  }
+
+  print "[feature]\n", join("\n", sort keys %features), "\n\n";
+  print "[weight]\n", join("\n", map { "$_= $weights{$_}" } sort keys %weights), "\n\n";
+}
+
 sub merge_mapping
 {
   my $section = shift;
   print "[$section]\n";
-  my $start_with = 0;
+  my ($paths, $t, $g) = qw(0 0 0);
   for my $filename (@filenames) {
+    my $paths_in_file = 0;
     print "# ", abs_path($filename), "\n" if $verbose;
     warn_missing_section($section, $filename);
-    my $lines = scalar @{ $sections{$section}{$filename} };
     for my $line (@{ $sections{$section}{$filename} }) {
       my @tokens = split " ", $line;
-      print(($start_with + $tokens[0]) . " " . $tokens[1] . " " . ($start_with + $tokens[2]) . "\n");
+      print $paths + $tokens[0], " ", $tokens[1], " ", ($tokens[1] eq "T" ? $t++ : $g++), "\n";
+      $paths_in_file = max($paths_in_file, $tokens[0] + 1);
     }
-    $start_with += $lines;
+    $paths += $paths_in_file;
   }
   print "\n";
 }
