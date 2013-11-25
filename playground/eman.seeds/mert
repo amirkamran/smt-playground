@@ -99,7 +99,7 @@ fi
 # XXX This is actually wrong! EMAN_CORES should be set only if JOBS==0
 # For parallel merts, EMAN_CORES of the main job is 1 and only the subjobs
 # should book more cores...
-if [ ! -z "$EMAN_CORES" ]; then
+if [ ! -z "$EMAN_CORES" -a "$EMAN_CORES" -ne 1 ]; then
   MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
 fi
 

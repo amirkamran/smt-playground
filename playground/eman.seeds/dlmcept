@@ -18,6 +18,9 @@ eman \
   defvar TGTCORP same_as=SRCCORP help="target corpus name, can be omitted if equal to SRCCORP" \
   defvar SRCAUG help="the string describing lang+factors of src corpus" \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
+  defvar TESTCORP help="corpus against which to filter training instances" default='' \
+  defvar TESTAUG help="the string describing lang+factors of test corpus" same_as=SRCAUG \
+  defvar KEEPEMPTY help="keep training instances with empty source side" default='yes' \
   defvar ALICORP same_as=SRCCORP help="alignment corpus name, can be omitted if equal to SRCCORP" \
   defvar ALISYM default='gdfa' help='which alignment to use for the translation model' \
   defvar ALILABEL inherit=ALISTEP \
@@ -32,6 +35,7 @@ eman \
 eval `eman bash-loadvars`
 
 PLAYGROUND=`eman path`
+[ "$KEEPEMPTY" = yes ] || FILTERCMD='| grep -v __EMPTY__ '
 
 # check for qsub
 [ -n "`which qsub`" ] || export JOBS=0
@@ -88,6 +92,8 @@ function mkcorpus() {
 mkcorpus $SRCCORP/$SRCAUG corpus.src
 mkcorpus $TGTCORP/$TGTAUG corpus.tgt
 mkcorpus $ALICORP/$ALISYM-$ALILABEL+ali alignment.orig
+[ -z "$TESTCORP" ] || mkcorpus $TESTCORP/$TESTAUG corpus.test
+
 # we can't rely on the factor revali because concatenated corpora like
 # c-news+c-fiction/foo+revali would be attempted per parts
 if [ "$ALIORREVALI" == revali ]; then
@@ -112,15 +118,22 @@ if [[ \$alilen -ne \$srclen ]] \\
   die "Dying for incompatible corpus lengths"
 fi
 
+if [ -f corpus.test.gz ] ; then
+  zcat corpus.test.gz | tr ' ' '\\n' | sort -u > wordtypes.list
+  WORDTYPES="wordtypes.list"
+fi
+
 export LC_ALL=en_US.UTF-8
  \$SCRIPTS_ROOTDIR/training/extract_words_dlm.py \\
   <(zcat corpus.src.gz) \\
   <(zcat corpus.tgt.gz) \\
   <(zcat alignment.gz) \\
+  \$WORDTYPES \\
+  $FILTERCMD \\
 | tee >(gzip -c > extract-file.gz) \\
 | \$SCRIPTS_ROOTDIR/training/make_index_dlm.py \\
 | gzip -c > cept-table.gz \\
-|| die "Failed to prepare the context factors file"
+|| die "Failed to prepare the cept table"
 
 echo Done.
 eman succeed \$mydir
