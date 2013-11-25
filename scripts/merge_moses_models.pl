@@ -107,10 +107,8 @@ sub merge_new_format
           $num += $named_features{$name} // 0;
           $line =~ s/ name=$name\d+ / name=$name$num /;
         }
-        $features{$line} = 1;
-      } else {
-        $features{$line} = 1;
       }
+      $features{$line} = 1;
     }
 
     for my $line (@{ $sections{weight}{$filename} }) {
