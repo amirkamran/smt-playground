@@ -108,7 +108,7 @@ SPLITLINES=\$(( \`zcat extract-file.gz | wc -l\` / $JOBS ))
 zcat extract-file.gz | split --suffix-length=3 -l \$SPLITLINES - extract.split.
 LD_LIBRARY_PATH=$BOOSTPATH/lib/ $VWSTEPDIR/vowpal_wabbit/bin/spanning_tree || die "Failed to run VW master process"
 
-OUTMODEL="-$modelusage \$mydir/vw-model"
+OUTMODEL="-$modelusage \$mydir/vw-model --save_per_pass "
 NODE=0
 TOTAL=\`ls extract.split.* | wc -l\`
 for part in extract.split.* ; do
@@ -121,10 +121,11 @@ for part in extract.split.* ; do
     $TEMPDIR/\$part.index \\
     && LD_LIBRARY_PATH=$BOOSTPATH/lib/ $VWSTEPDIR/vowpal_wabbit/bin/vw \\
     $VWARGS --initial_t 1 \\
+    $VWFLAGS \\
     \$OUTMODEL \\
     $EXTRAVWARGS \\
-    --span_server \`hostname\` --unique_id $$ --node \$NODE \\--total \$TOTAL \\
-    --cache_file $TEMPDIR/\$part.cache < $TEMPDIR/\$part.vwinput ; \\
+    --span_server \`hostname\` --unique_id $$ --node \$NODE --total \$TOTAL \\
+    --cache_file $TEMPDIR/\$part.cache -d $TEMPDIR/\$part.vwinput ; \\
     rm -f $TEMPDIR/\$part.index $TEMPDIR/\$part.vwinput $TEMPDIR/\$part.cache"
 
   HOLD="\$HOLD -hold_jid "\$(qsubmit -mem 20g -disk 100g "\$JOBCMD" 2>&1 | grep -o 'job [^ ]*' | cut -d' ' -f2)
