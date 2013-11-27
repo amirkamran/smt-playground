@@ -55,7 +55,7 @@ fi
 VWARGS=$(grep "train *= *" $DLMINIPATH | cut -d= -f2-)
 [ -z "$VWARGS" ] \
   && die "Failed to get vw args for $trainortest from $DLMINIPATH"
-
+VWARGS="$VWARGS --passes $VWPASSES "
 # Don't continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
 
@@ -105,7 +105,6 @@ for part in extract.split.* ; do
     $VWARGS --initial_t 1 \\
     $VWFLAGS \\
     \$OUTMODEL \\
-    $EXTRAVWARGS \\
     --span_server \`hostname\` --unique_id $$ --node \$NODE --total \$TOTAL \\
     --cache_file $TEMPDIR/\$part.cache -d $TEMPDIR/\$part.vwinput ; \\
     rm -f $TEMPDIR/\$part.index $TEMPDIR/\$part.vwinput $TEMPDIR/\$part.cache"
