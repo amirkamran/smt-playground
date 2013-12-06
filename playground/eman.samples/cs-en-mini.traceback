@@ -7,7 +7,7 @@
 |  | ITER=
 |  | JOBS=0
 |  | MERTSTEP=s.mert.3bf80208.20131129-0945
-|  | MOSESFLAGS=" --threads 3 "
+|  | MOSESFLAGS=" -threads 3 "
 |  | MOSESSTEP=s.mosesgiza.a3e3adbe.20131129-0912
 |  | OUTALIAUG=en_s.translate.0e1a3f04.20131129-0945+ali
 |  | REFAUG=en+form
@@ -42,7 +42,7 @@
 |  |  | MERTFLAGS=
 |  |  | MERTPRG=mert
 |  |  | MODELSTEP=s.model.a8ca16a1.20131129-0945
-|  |  | MOSESFLAGS=" --threads 3 "
+|  |  | MOSESFLAGS=" -threads 3 "
 |  |  | MOSESSTEP=s.mosesgiza.a3e3adbe.20131129-0912
 |  |  | REFAUG=en+form
 |  |  | SEARCH=cube
