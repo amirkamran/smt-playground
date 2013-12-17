@@ -1703,6 +1703,8 @@ Pro AMALACH jsou dve moznosti, co odevzdat:
 
 cu-bojar = s.evaluator.435dc5b5.20130504-0011 0.2017
 a totez, ale *bez* te tectomt tabulky:
-plain moses = s.evaluator.50e069fe.20130503-0028 0.1922
+plain moses = s.evaluator.50e069fe.20130503-0028 0.1922  ... CHYBA!
+  tohle je totiz nad pecinovym devsetem
+spravny plain je s.evaluator.7eb64b56.20130501-1359 0.1953
 
-A Ales do zpravy dava plain Moses.
+A Ales do zpravy dava plain Moses. (mozna tam ale omylem dal s.evaluator.50e069fe.20130503-0028, nikoli s.evaluator.7eb64b56.20130501-1359
