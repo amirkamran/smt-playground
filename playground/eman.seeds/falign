@@ -104,7 +104,12 @@ mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
 zcat < corpus.src.gz > corpus.src
-zcat < corpus.tgt.gz | paste corpus.src - | sed 's/	/ ||| /' > falign.in
+zcat < corpus.tgt.gz \
+  | paste corpus.src - \
+  | sed 's/	/ ||| /' \
+  | sed 's/^ |||/. |||/' \
+  | sed 's/||| $/||| ./' \
+  > falign.in
 
 # align
 echo "Started align at "\`date '+%Y%m%d-%H%M'\`
