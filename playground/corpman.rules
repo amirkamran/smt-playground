@@ -28,6 +28,7 @@ en_txt 	untoken       	enNmTok  	form	../tools/runtreex.sh ../treex_scenarios/en
 fr_txt 	untoken       	frNmTok  	form	../tools/runtreex.sh ../treex_scenarios/frNmTok.scen
 enNm   	form|lemma|tag	enNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
+skNm   	form|lemma|tag	skNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 deNm   	form|lemma|tag	deNmT1	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNminput   	form|lemma|tag	csNmT1input	form|lemma|tag	../../scripts/further-tokenize-factored.pl
 csNm   	form|lemma|tag	csNm	pluslemma	../../scripts/construct_improved_czech_lemma.pl
@@ -96,3 +97,12 @@ de_txt	untoken	deTok	form	../../scripts/tokenizer.pl -l de
 en_txt	untoken	enTok	form	../../scripts/tokenizer.pl -l en
 es_txt	untoken	esTok	form	../../scripts/tokenizer.pl -l es
 fr_txt	untoken	frTok	form	../../scripts/tokenizer.pl -l fr
+sk_txt	untoken	skTok	form	../../scripts/tokenizer.pl -l sk
+
+# trivial tokenizer
+cs_txt	untoken	csTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+de_txt	untoken	deTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+en_txt	untoken	enTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+es_txt	untoken	esTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+fr_txt	untoken	frTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+sk_txt	untoken	skTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break

@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+# Trivialni tokenizator, pouzity i intercorpem
+use strict;
+use Getopt::Long;
+
+binmode(STDIN, ":utf8");
+binmode(STDOUT, ":utf8");
+binmode(STDERR, ":utf8");
+
+my $vertical = 1;
+my $mark_no_space = 1;
+my $print_linebreak = 1;
+GetOptions(
+  "vertical!" => \$vertical,
+  "mark-no-space!" => \$mark_no_space,
+  "break-mark!" => \$print_linebreak,
+) or exit 1;
+
+my $tokdelim = $vertical ? "\n" : " ";
+my $beg = 1;
+while (<>) {
+  my $veta = $_;
+  while ($veta =~
+    /(\s*)((\&[[:alnum:]]+\;)|([\p{IsWord}]+)|[,.!?;:%&()#$-+*=\/"`'\p{Punctuation}])/g)
+  {
+    print $tokdelim if !$beg;
+    $beg = 0;
+    print "<g/>", $tokdelim if $mark_no_space && $1 eq "";
+    print $2;
+  }
+  print $tokdelim."<br/>" if $print_linebreak;
+  if (!$vertical) {
+    print "\n";
+    $beg = 1;
+  }
+}
+
