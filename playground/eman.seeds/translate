@@ -22,9 +22,18 @@ eman \
   defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
   defvar MOSESFLAGS default='' inherit=MERTSTEP help='further flags for moses' \
+  defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
+  defvar _DELETE_FILTERED_MODEL default='no' help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
+  defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
+  defvar EMAN_DISK default='6g' help='free space on the temp disk' \
+  defvar EMAN_CORES default='1' help='number of CPUs to use in Moses' \
 || exit 1
 
 eval `eman bash-loadvars`
+
+# check for qsub
+[ -n "`which qsub`" ] || export JOBS=0
+[ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
 
 STEPNAME=$(basename $(pwd))
 MOSESSTEPDIR=$(eman path $MOSESSTEP)
@@ -81,6 +90,15 @@ $PLAYGROUND/corpman register -- alignment.gz \
 
 MOSESPARALLEL="$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 
+
+# XXX This is actually wrong! EMAN_CORES should be set only if JOBS==0
+# For parallel merts, EMAN_CORES of the main job is 1 and only the subjobs
+# should book more cores...
+if [ ! -z "$EMAN_CORES" ]; then
+  MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
+fi
+
+
 if [ $JOBS == 0 ]; then
   GRIDARGS=""
   MOSESMAYPARALLEL="./moses $SEARCHFLAG $MOSESFLAGS"
@@ -96,6 +114,11 @@ else
   MOSESMAYPARALLEL="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSESFLAGS' -feed-decoder-via-stdin -decoder ./moses"
 fi
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
 cat << KONEC > eman.command
 #!/bin/bash
 # This is the command to be run here
@@ -105,6 +128,7 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
+mybase=\$(basename \$mydir)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
@@ -153,9 +177,42 @@ if [ ! -e moses.ini ]; then
   ## Clone the moses.ini and source files
   \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
     --symlink \\
-    $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini || die "Failed to clone"
-  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Failed to absolutize"
-  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-eval \`pwd\`/moses.abs.ini corpus.src || die "Failed to filter"
+    $MERTSTEPDIR/moses.ini \\
+  || die "Failed to clone the full model"
+  
+  if [ -x \$SCRIPTS_ROOTDIR/ems/support/substitute-weights.perl ]; then
+        echo "Detected Moses with substitute-weights - using that"
+
+        \$SCRIPTS_ROOTDIR/ems/support/substitute-weights.perl \\
+        ./moses.ini \\
+        $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini \\
+        ./moses.mertweights.ini \\
+        || die "Failed to apply weights from mert"
+  else
+        echo "Undetected Moses with substitute-weights - using reuse-weights.perl"
+
+        \$SCRIPTS_ROOTDIR/ems/support/reuse-weights.perl \\
+        $MERTSTEPDIR/mert-tuning/"$iterprefix"moses.ini \\
+        < ./moses.ini > moses.mertweights.ini \\
+        || die "Failed to apply weights from mert"
+  fi
+  \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \\
+    \`pwd\`/moses.mertweights.ini > moses.abs.ini \\
+  || die "Failed to absolutize"
+fi
+
+if [ ! -e filtered-for-eval ]; then
+  if [ x$SSD == x ]; then
+    filteroutdir=filtered-for-eval
+  else
+    filteroutdir=$SSD/\$mybase/filtered-for-eval
+    ln -s \$filteroutdir ./ \\
+      || die "Failed to prepare symlink for filtered tables"
+  fi
+  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
+    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    \$filteroutdir \`pwd\`/moses.abs.ini corpus.src \\
+  || die "Failed to filter"
 fi
 
 $MOSESMAYPARALLEL \\
@@ -196,10 +253,16 @@ $PLAYGROUND/corpman register -- alignment.gz \
   -1 $TESTCORP $OUTLANG $ALIFACT \$linecount 0 \
 || die "Can't register linecount of the output alignment"
 
-echo "You could prepare detailed output for manual inpection:"
-echo ./moses -input-file ./corpus.src -config ./filtered-for-eval-opt/moses.ini \\
-  -verbose 3 \\
-  2>&1
+if [ x$_DELETE_FILTERED_MODEL == xyes ]; then
+  echo "Removing \$filteroutdir and $SSD/\$mybase"
+  rm -rf \$filteroutdir
+  rmdir $SSD/\$mybase
+else
+  echo "You could prepare detailed output for manual inpection:"
+  echo ./moses -input-file ./corpus.src -config ./filtered-for-eval-opt/moses.ini \\
+    -verbose 3 \\
+    2>&1
+fi
 #  | skipbetween '^Translation Option Collection' '^total hypotheses generated' \\
 #  | head -c 300k \\
 #  > translated.verbose

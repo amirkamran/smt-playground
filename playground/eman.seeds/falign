@@ -96,11 +96,20 @@ function mkcorpus() {
     fi
   fi
 }
+
+cd $PLAYGROUND/tools/symmetrize && make && cd \$mydir || die "Failed to compile alignment symmetrization"
+wiseln $PLAYGROUND/tools/symmetrize/symmetrize symmetrize
+
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
 zcat < corpus.src.gz > corpus.src
-zcat < corpus.tgt.gz | paste corpus.src - | sed 's/	/ ||| /' > falign.in
+zcat < corpus.tgt.gz \
+  | paste corpus.src - \
+  | sed 's/	/ ||| /' \
+  | sed 's/^ |||/. |||/' \
+  | sed 's/||| $/||| ./' \
+  > falign.in
 
 # align
 echo "Started align at "\`date '+%Y%m%d-%H%M'\`
@@ -117,7 +126,7 @@ wait
 
 # symmetrize, TODO other symmetrizations
 echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
-paste align.left align.right | $PLAYGROUND/tools/symmetrize.py gd fa \
+./symmetrize align.left align.right gd+fa \
   | gzip -c > alignment.gz || die "Failed to symmetrize"
 
 # Standard command footer

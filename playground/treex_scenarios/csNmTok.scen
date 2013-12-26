@@ -1,0 +1,8 @@
+## English to m-layer
+Util::SetGlobal language=cs
+Read::Sentences from=-
+
+W2W::NormalizeCzechSentence
+W2A::CS::Tokenize
+
+Write::Factored outcols=csw flags=escape_space:join_spaced_numbers

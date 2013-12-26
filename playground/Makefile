@@ -32,11 +32,28 @@ mertdetails:
 	    print:START pick '^== Ended:\s*([-0-9]+)' \
 	> $@
 
+dlmloss:
+	eman retag || echo "Ignoring errors"
+	eman collect || echo "Ignoring errors"
+	cat eman.results \
+	| colgrep 3 --inv --re='^TAG' \
+	| list2tab 1,2,5 3 4 - \
+	| dett | sed 's/		/	-	/g' \
+	| dett | sed 's/		/	-	/g' \
+	| dett | sed 's/	$$/	-/g' \
+	| tee clip.recut \
+	| recut 1,5-,2,4,3 \
+	| numsort testLOSS \
+	| solve_first --skip=1 '^[\S]+\t[0-9.]' \
+	| tt --utf8 \
+	> $@
+
+	
+
 bleu:
 	eman retag || echo "Ignoring errors"
 	eman collect || echo "Ignoring errors"
-	cp eman.results $@.`./sitename`
-	cat $@.* \
+	cat eman.results \
 	| colgrep 3 --inv --re='^TAG' \
 	| numsort a3 \
 	| list2tab 1,2,5 3 4 \
@@ -107,12 +124,13 @@ clean:
 	find -maxdepth 3 -ctime +$(AGE) -name 'run*.features.dat.gz' -exec rm {} \;
 	find -maxdepth 3 -ctime +$(AGE) -name 'run*.scores.dat' -exec rm {} \;
 	find -maxdepth 3 -ctime +$(AGE) -name 'run*.scores.dat.gz' -exec rm {} \;
-	find -maxdepth 3 -ctime +$(AGE) -name 'run*.best*.out.gz' -exec rm {} \;
-	rm -rf s.mert.*/mert-tuning/filtered
-	find -ctime +$(AGE) -name filtered-for-eval-std -exec rm -rf {} \; || true
-	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.src' -exec rm {} \;
-	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.?.tgt' -exec rm {} \;
+	#find -maxdepth 3 -ctime +$(AGE) -name 'run*.best*.out.gz' -exec rm {} \;
+	#rm -rf s.mert.*/mert-tuning/filtered
+	#find -ctime +$(AGE) -name filtered-for-eval-std -exec rm -rf {} \; || true
+	sleep 1800
 	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.custom' -exec rm {} \;
+	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.*.src' -exec rm {} \;
+	find -maxdepth 2 -ctime +$(AGE) -name 'alignment.*.tgt' -exec rm {} \;
 	# Other hot candidates to remove:
 	# s.tm.*/model/phrase-table*unfiltered*
 

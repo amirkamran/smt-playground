@@ -4,7 +4,12 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
-touch eman.vars 
+eman defvar BOOSTPATH default='' help='compile against a non-system-wide boost'
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+[ -z "$BOOSTPATH" ] || BOOSTARG="--with-boost=$BOOSTPATH"
 
 cat > eman.command << END
 #!/bin/bash
@@ -21,8 +26,11 @@ ulimit -c 1 # core files limited to 1 byte
 
 git clone git://github.com/hal3/vowpal_wabbit.git || die "Failed to clone VW"
 cd vowpal_wabbit || die "Failed to chdir to vowpal_wabbit"
-./autogen.sh --prefix=\$(pwd) || die "Configure failed"
+patch -p 1 < ../../../src/vw-patch-for-ring-size.patch \\
+|| die "Failed to patch for larger ring size"
+./autogen.sh --prefix=\$(pwd) $BOOSTARG || die "Configure failed"
 make -j 8 || die "Compilation failed"
+make test || die "Internal test failed"
 make install || die "Installation failed"
 
 cd \$mydir || die "Failed to chdir back"
