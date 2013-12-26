@@ -29,6 +29,18 @@ GetOptions
 
 die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|proposeremoval|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
 # Zvláštní jednorázové úkoly.
+my %special_actions =
+(
+    # Find steps depending on a step being removed and propose command to remove them all.
+    'proposeremoval' => \&propose_removal_of_dependencies,
+    ###!!! Časem budu chtít, aby tenhle typ akce byl obecnější, ale teď mi stačí kombinace newseuro a un (až po krok tm, za ním už by to mohlo běžet standardně).
+    #combine_newseuro_un();
+    'combine'    => \&combine_newseuro_czeng,
+    'korpus'     => \&start_korpus,
+    'tag'        => \&start_tag,
+    'stc'        => \&start_stc_corpus,
+    'morfcorpus' => \&start_morfcorpus
+);
 if($steptype eq 'special')
 {
     if(1)
@@ -63,32 +75,9 @@ elsif($steptype eq 'complete')
     start_all_missing_translates();
     start_all_missing_evaluators();
 }
-# Find steps depending on a step being removed and propose command to remove them all.
-elsif($steptype eq 'proposeremoval')
+elsif(exists($special_actions{$steptype}))
 {
-    propose_removal_of_dependencies($ARGV[0]);
-    exit(0);
-}
-elsif($steptype eq 'combine')
-{
-    ###!!! Časem budu chtít, aby tenhle typ akce byl obecnější, ale teď mi stačí kombinace newseuro a un (až po krok tm, za ním už by to mohlo běžet standardně).
-    #combine_newseuro_un();
-    combine_newseuro_czeng();
-    exit(0);
-}
-elsif($steptype eq 'korpus')
-{
-    start_korpus();
-    exit(0);
-}
-elsif($steptype eq 'tag')
-{
-    start_tag();
-    exit(0);
-}
-elsif($steptype eq 'stc')
-{
-    start_stc_corpus();
+    &{$special_actions{$steptype}}(@ARGV);
     exit(0);
 }
 # Kroky lm pracují pouze s jednojazyčnými korpusy.
@@ -470,6 +459,35 @@ sub start_stc_corpus
         else
         {
             dzsys::saferun($command);
+        }
+    }
+}
+
+
+
+#------------------------------------------------------------------------------
+# Initializes and starts creating of the corpora segmented to morphemes.
+#------------------------------------------------------------------------------
+sub start_morfcorpus
+{
+    my @corpora = get_corpora();
+    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
+    ###!!! Segmentovat jen korpusy, které nás momentálně zajímají.
+    @corpora = grep {$_->{corpus} =~ m/^(news8euro|news8all|wmt2012|wmt2013)$/ && $_->{language} =~ m/^(cs|de|en|es|fr)$/} (@corpora);
+    print STDERR ("Segmenting ", scalar(@corpora), " corpora to morphemes...\n");
+    my $morfessorstep = find_step('morfessor', 'd');
+    foreach my $c (@corpora)
+    {
+        my $corpname = $c->{corpus};
+        $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
+        my $command = "MORFESSORSTEP=$morfessorstep CORP=$corpname LANGUAGE=$c->{language} FACT=stc eman init morfcorpus --start";
+        if($dryrun)
+        {
+            print("$command\n");
+        }
+        else
+        {
+            dzsys::saferun($command) or confess();
         }
     }
 }
