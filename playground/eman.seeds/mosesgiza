@@ -7,17 +7,29 @@ set -o pipefail  # safer pipes
 # Ensure all the required variables are set (or provide the default)
 eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
      defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
+     defvar VWSTEP default='' type=optstep help='where is Vowpal Wabbit compiled, or empty (implies to use the damt_phrase branch of Moses' \
+     defvar BOOSTPATH inherit=VWSTEP:BOOSTPATH default='' help='compile against a non-system-wide boost' \
      defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
      defvar BJAMARGS default=' --kenlm-max-order=6 -a ' help='any extra arguments for the compilation of Moses' \
 || exit 1
 
-# XXX we don't have any IRSTLM steps
-
 # Set local bash variables
 eval `eman bash-loadvars`
 
+if [ ! -z "$VWSTEP" ]; then
+  [ -z "$MOSESBRANCH" ] || [ "$MOSESBRANCH" == damt_phrase ] \
+    || die "Using VWSTEP implies MOSESBRANCH=damt_phrase, you ask for $MOSESBRANCH"
+
+  MOSESBRANCH=damt_phrase
+  VWBOOSTPATH=$(eman get-var $VWSTEP BOOSTPATH)
+
+  # ensure that moses and vw have the same boost
+  [ "$BOOSTPATH" == "$VWBOOSTPATH" ] \
+    || die "Boost paths of mosesgiza and vw are incompatible: $BOOSTPATH vs. $VWBOOSTPATH"
+fi
+
 cat > eman.command << KONEC
-#!/bin/bash
+#!/bin/bash -x
 echo "=============================="
 echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
 echo "== Hostname:  "\`hostname\`
@@ -25,6 +37,7 @@ echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
 set -o pipefail
+set -x # detailed logging of eman.command
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
@@ -57,10 +70,12 @@ cd moses || die "Chdir failed"
 
 [ -z "$SRILMSTEP" ] || SRILMARG=" --with-srilm=\`eman path $SRILMSTEP\`/srilm "
 [ -z "$IRSTLMSTEP" ] || IRSTLMARG=" --with-irstlm=\`eman path $IRSTLMSTEP\`/install "
+[ -z "$VWSTEP" ] || VWARG=" --with-vw=\`eman path $VWSTEP\`/vowpal_wabbit "
+[ -z "$BOOSTPATH" ] || BOOSTARGS=" --with-boost=$BOOSTPATH "
 BJAMARGS="$BJAMARGS "
 
 ./bjam -j4 --with-giza=\$mydir/bin \\
-  \$SRILMARG \$IRSTLMARG \$BJAMARGS || die "Build failed"
+  \$SRILMARG \$IRSTLMARG \$BJAMARGS \$BOOSTARGS \$VWARG || die "Build failed"
 chmod -R a+rx .
 
 cd ../ || die "chdir back failed"
@@ -74,6 +89,7 @@ ln -s ../moses/bin/moses \\
 
 
 # Standard command footer
+set +x # no more detailed logging of eman.command
 echo Done.
 eman succeed \$mydir
 echo "=============================="

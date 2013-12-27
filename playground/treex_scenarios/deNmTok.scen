@@ -1,0 +1,7 @@
+# German morphology
+
+Util::SetGlobal language=de
+Read::Sentences from=-
+W2A::DE::Tokenize
+
+Write::AttributeSentences layer=a attributes=form

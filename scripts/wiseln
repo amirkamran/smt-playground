@@ -6,7 +6,7 @@
 src="$1"
 dst="$2"
 
-if [ -z "`which lnresolve`" ]; then # make sure we have lnresolve
+if [ -z "`which lnresolve 2>/dev/null`" ]; then # make sure we have lnresolve
   export PATH="$PATH:$(cd `dirname $0` && pwd)"
 fi
 

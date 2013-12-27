@@ -400,6 +400,8 @@ Ceslav:
 
 Zajimave, takze zde naopak kratsi fraze v BLEU pomohly.
 
+DO CLANKU uvadet i prumerne delky frazi
+
 2013-04-03
 
 zkusim taky pridat tectopreklad roku 2012 od Petry:
@@ -414,7 +416,7 @@ zkusim take maximalne zvetsit paralelni data, pridat europarl
 cili po vzoru 23167e07.20130320-2358 15.97±0.57 udelat i f9a1252f.20130322-1622 16.28±0.58
 => s.evaluator.5e3ba7d8.20130404-0902 => 0.1638
 
-
+DO CLANKU overit, ze jsme nezapomneli europarl
 
 2013-04-04
 
@@ -594,7 +596,26 @@ HLOUPE CHYBY:
 - was asked by a customer -> byl požádán , aby zákazník
 - the ADB ' s forecast of 7.5 per cent economic
   => the Bad prognóza 7 , 5 procent
+- s.evaluator.635a8808.20130430-1403 (preklad do pluslemmat)
+  - councillors will => Form-bude , cili to chtelo otagovat anglicke will cislem.
 
+
+Pozorovani od Silvie:
+- naprosto notorická chyba je nerozeznání vztažné věty.  Přitom jestli je v
+pořádku parsování, tak by to mělo být dobře rozpoznatelné ze struktury stromu,
+ne, jestli se říká "auto, které ukradli včera", nebo "auto ukradli včera"!
+- Další podobná chyba je převracení příčinné souvislosti (proto, protože)
+- interpretace takových těch předložkových příslovcí jako instead a except, kdy
+se to má přeložit jako "místo X", a kdy "místo toho, X", nebo "místo toho, aby
+X".
+
+Chyby starsiho mosese s gerundii:
+- feel like listening to something: google vynecha, moses udela spatny tvar
+- mp3 player lies at home, forgotten: zapomenut asi neni dost casty tvar, ani Google ho nezna
+Source   	Whenever you feel like listening to something , you can reach for your cell phone in your pocket , while the MP3 player lies at home , forgotten .
+Reference	Kdykoliv dostanete chuť si něco poslechnout , mobil v kapse nahmatáte , zatímco MP3 přehrávač leží zapomenutý doma .
+Google   	Kdykoliv budete mít chuť na něco , co můžete dostat na svůj mobilní telefon v kapse , zatímco MP3 přehrávač leží doma , zapomněl .
+Moses    	Jak se ti zlíbí , naslouchající , můžete zavolat na mobil v kapse , zatímco MP3 přehrávač leží doma , zapomněl .
 
 
 2013-04-17
@@ -700,6 +721,7 @@ s.prunelm.ce6fb5e4.20130422-1046 (RUNNING)	cnk-news	10 tag
   ... pruning se porad nedari, zkousim binarizovat klm
       ... s.klm.db846172.20130421-2236 (DONE) bez binarizace je velky 19GB, s
       binarizaci trie q8b8a22 jen 5.8 GB (trvalo to 4 hodiny a zabralo 13GB)
+      ..odsouvam; POUZIJ!
 
 tak klesam, jen 8gr, presouvam, binarizuju:
 s.prunelm.081e22be.20130423-2337 (DONE)	cwc-articles	8gr tag
@@ -1004,10 +1026,48 @@ ignore: maly heldout                  	s.prunelm.ac2e42c9.20130324-2213
 ignore maly heldout                   	s.mixlm.5946c8e8.20130313-1010
 
 
-Az na s.prunelm.e273924a.20130425-0113 (dosud se chysta) jsem existujici zkusil spustit zde: s.evaluator.444184fe.20130425-0126
+Az na s.prunelm.e273924a.20130425-0113 (DONE) jsem existujici zkusil spustit zde:
+s.evaluator.95e0effd.20130425-0952 (DONE) => 0.1657
+... cili se to unese, ale uz zadne valne zlepseni...
+    ... stalo by za to to porovnat rucne s 16.66, abychom videli, jestli to prece jen neni lepsi, kdyz je to biglm.
+    ... a to by pak byl nejlepsi kandidat
+
+Pro zajimavost srovnani statistik:
+                                 	  16.57	  16.66
+Sentences translated             	   3003	   3003
+Source words                     	  75102	  75102
+Target words                     	  62588	  64508
+Average source phrase length     	 1.8261	 1.8430
+Average target phrase length     	 1.5219	 1.5831
+Average phrases per sentence     	13.6950	13.5694
+Average source words per sentence	25.0090	25.0090
+Average target words per sentence	20.8418	21.4812
+
+
+Zkoumam vahy 16.57:
+[weight-d]
+0.236558
+[weight-l]
+0.0416735	7gr mono-cwc-articles
+0.0610355	7gr mononews2007+mononews2008+mononews2009+mononews2010+mononews2011+mononews2012
+0.00379446	TAG 8gr mono-cwc-articles
+0.0252057	TAG 8gr mono-cnk-news
+0.0314482	TAG 10gr c-eu++c-fiction++c-navajo++c-news++c-paraweb++c-subtitles++c-techdoc
+[weight-t]
+0.0650534
+0.0236893
+0.0643908
+0.0647003
+0.0758372
+[weight-w]
+-0.306614
 
 A minimalisticky, jen ten nejvetsi LM na stc a jen ten nejvetsi na tagy:
-s.evaluator.b15bd161.20130425-0133 16.13
+s.evaluator.b15bd161.20130425-0133 => 16.13
+
+A ted tedy maximalisticky, i ten s.prunelm.e273924a.20130425-0113 dodavam:
+-> s.evaluator.36a3d88a.20130425-1943 => 0.1640
+
 
 Co nejak udelat source-side-valency? Anglickym predlozkam hadat ceske podle anglickeho kontextu?
 
@@ -1040,8 +1100,68 @@ A eppexem bych mel zkusit t0a1-0a1 s reorderingem 0-0, 0-1 i 1-1.
 (proc vlastne eppexem: protoze nemam takovyhle tm na czeng10+europarl)
 Spoustim: s.tm-e.aab99890.20130423-1451 (FAILED)
 ...selhalo, protoze tm-e nedela corpman-init a korpus nebyl pripraven
-... oprava: s.tm-e.c0657c5a.20130423-2326 (RUNNING)
+... oprava: s.tm-e.c0657c5a.20130423-2326 (DONE)
 ... no a kdyz je to tak rychle, tak jeste t0a1-0a1Bt0-0a1 ...
+
+veliky t0a1-0a1: s.evaluator.a0fe1157.20130426-1355  -> 16.27
+...k nemu je baseline s.evaluator.24a67cc4.20130425-1513 (tm-e, 16.60)
+Zkusim ty dva spojit jako alternativni: s.evaluator.5824584d.20130427-1513
+ ... je otazka, co s tim model natropi, ...jo, decoding steps jsou blbe...
+ ... ale moses.ini vypada dobre
+ ... takze ty decoding steps rucne (kvuli autotagum) opravuju
+ ... blbe ale byly cesty k ttablum...
+ -> oprava: s.evaluator.cf502efb.20130427-1522  -> 0.1621
+ delal jsem si hilidiff 16.27 a 16.21 a jen jedinkrat bych souhlasil, ze 16.27 je lepsi, jinak je to spis jedno
+
+KANDIDATI NA ODESLANI:
+16.21	s.evaluator.cf502efb.20130427-1522 (t0a1-0a1At0-0a1)
+	...a jak by dopadl tenhle, kdyby tam mel full-tm?
+	   -> s.evaluator.ace28c39.20130428-0031 -> 16.27
+	... a jeste navic, kdyby eppex nebyl prorezan?
+*16.42	   -> s.evaluator.a8677d5f.20130430-0851;  WMT13: s.evaluator.6ef2b582.20130430-1443 -> 0.1897
+0.1687	... totez na velkych datech: s.evaluator.568eac23.20130502-1526
+*16.27	s.evaluator.a0fe1157.20130426-1355 (t0a1-0a1)  ... jako zdroj pro decodingsteps s nejakou zdrojovou anotaci
+	WMT13: s.evaluator.87705569.20130430-2129 -> 0.1894
+0.1626	pridavam r1-1 => s.evaluator.9d0a8f9f.20130502-0120 (mert s.mert.aeb00428.20130501-1143)
+*16.55	a stejne r1-1 ovsem filtrace na lokalni disk: s.evaluator.757d4ad4.20130502-0115 -> 16.55
+0.1682	... 5gr biglm r1-1: s.evaluator.7f3fad2f.20130503-1051 je horsi, protoze
+                           tm-e a protoze 0a1 na zdrojove strane
+0.1934	WMT13: s.evaluator.b7f257ef.20130503-1054
+	... 5gr biglm 2gr biglm r1-1: s.evaluator.52554d8d.20130502-0221 ... zahadna chyba v s.mert.bfa134f7.20130502-0220
++16.46	67079e37.20130423-1604 (t0-0a1), full TM, not tm-ei;  WMT13: s.evaluator.b10a4852.20130430-1440 -> 0.1878
+16.46	s.evaluator.7902974f.20130428-2308
+	... jeste jednou presne stejny vysledek
+	...jak by dopadl tenhle s eppexem??
+0.1694	s.evaluator.f1321ae1.20130501-0910  3grIN
+**0.1707	s.evaluator.545c79e8.20130501-1226  4grIN (base: 67079e37.20130423-1604)
+DEPFIX	WMT13: s.evaluator.7eb64b56.20130501-1359 -> 0.1953
+0.1711	s.evaluator.5f0d2b11.20130502-0159 je presne stejne jako 0.1707, jen lepsi mert
+	WMT13: s.evaluator.3f1b5645.20130502-1732 -> 0.1953
+*16.58	... a zkousim taky 16.46 s GLM: s.evaluator.696b9e33.20130430-0855; WMT13: s.evaluator.1019c6e0.20130430-1451 -> 0.1874
+0.1698	... zkousim taky 17.07 s GLM: s.evaluator.9de400c3.20130502-1535
+	WMT13: s.evaluator.edf47c6f.20130502-1734 -> 0.1947
+16.41	s.evaluator.b5e0b0c7.20130419-2342 (jako 16.46, ale neprorezany)
+16.66	jako 16.41, ale ne na bigrefu
+?	s.evaluator.ee75bb2c.20130429-2128 (prvni obri falign)
+	-> oprava: s.evaluator.148ad8df.20130430-1458 ... zalozen na vadnem alignmetu, zabit
+0.1632	-> oprava: s.evaluator.bbb4546d.20130502-1538 ... porad nejak jede, spoustim konkurenta:
+	-> s.evaluator.957d78d5.20130503-0935
+0.1689	 s.evaluator.ebbbd9f2.20130503-1648 varianta k 16.32 s velkymi LM podle 17.11 
+16.11	s.evaluator.b1f2d01a.20130427-0827 (t0a1a2-0a1)
+	... nebo jeho varianta, kde eppex neprorezava:
+16.34	    -> s.evaluator.912f6e50.20130427-2239 ... hilidiff ukazuje, ze je to skoro vzdy horsi nez 16.46 s.evaluator.7902974f.20130428-2308
+17.12	s.evaluator.37cdd856.20130503-1232 5grIN!
+	WMT2013: s.evaluator.f2649408.20130503-2211 -> 19.50
+
+co odeslat:
+./qj wmt13sub s.evaluator.545c79e8.20130501-1226 s.evaluator.37cdd856.20130503-1232
+
+
+
+
+a zkousim to zkombinovat i s toclass01:
+-> s.evaluator.b1f2d01a.20130427-0827   16.11
+...cili podle BLEU horsi
 
 A taky bych mel do corpman.rules pridat pravidlo na toclass01exact, udelat tim
 czeng10+europarl
@@ -1086,20 +1206,27 @@ equally-fine 	    1	sys1, b484cb7a.20130424-1902
 
 Spravedlivejsi baseline:
 - bude pouzitvat tuto tm: s.tm-e.6f04c0af.20130425-1410 havaroval -> s.tm-e.f9baba82.20130425-1419
-- bude celkove tato: s.evaluator.18a68cac.20130425-1415
+- bude celkove tato: s.evaluator.24a67cc4.20130425-1513 -> 0.1660
+
+...cili podle BLEU to tedy nepomaha...
 
 
 Jedine muzu zkusit ty dva dohromady spojit jako dve varianty...
 
-
+BINARIZACE:
 
 Takto se spousti binarizace hotoveho lm:
 cd s.lm...
-qsubmit "../s.mosesgiza.807b847c.20130319-2330/moses/bin/build_binary trie -q 8 -b 8 -a 22 corpus.lm.gz corpus.trie.q8b8a22 && mv corpus.lm.gz corpus.lm.gz.orig && ln -s corpus.trie.q8b8a22 corpus.lm.gz" -mem=30g
+qsubmit "/net/tmp/bojar/wmt13-bojar/playground/s.mosesgiza.807b847c.20130319-2330/moses/bin/build_binary trie -q 8 -b 8 -a 22 corpus.lm.gz corpus.trie.q8b8a22 && mv corpus.lm.gz corpus.lm.gz.orig && ln -s corpus.trie.q8b8a22 corpus.lm.gz" -mem=30g
 
 Takto se dela odsun na SSD:
 e=s.prunelm.3082e413.20130422-2148
 cp -r $e /net/cluster/SSD/bojar/wmt13-ssd/ && mv $e blocked-$e && ln -s /net/cluster/SSD/bojar/wmt13-ssd/$e ./
+
+
+BINARIZACE TTABLU (mozno i za letu):
+qsubmit "zcat phrase-table.0-0,1.1.1.gz | /a/merkur3/TMP/bojar/wmt13-bojar/playground/s.mosesgiza.807b847c.20130319-2330/moses/bin/processPhraseTable -ttable 0 0 - -nscores 5 -out bintable"
+# a nesmis zapomenout zmenit typ ttablu na 1
 
 A odsun jedineho souboru:
 e=s.translate.4bc4816e.20130422-0043
@@ -1117,13 +1244,30 @@ ALICORP=czeng10+europarl ALILABEL=enNmT1-lemma-csNmT1-lemma ALIORREVALI=ali ALIS
 => s.tm-e.d33ed8fc.20130424-0702
 
 K tomu se vari klm: s.klm.4dcd050a.20130424-1417 (DONE)  ... kandidat na smazani
+    ... no, radsi nez mazat, zkusim ho odsunout a rovnou binarizovat
 ... takze spoustim pruning: s.prunelm.94339869.20130424-1940
 ... ani 100 GB ram pro prozerani 7gr pluslemat nestacilo...
-... spoustim nyni 150 GB ram, prorezat s limitem 8: s.prunelm.be0001d4.20130425-1449
-...cpoustim tedy pripravu jen 5gr: s.prunelm.1cdd0af2.20130425-0121 ... binarizuju ... odsouvam
+... spoustim nyni 150 GB ram, prorezat:
+     s limitem 8: s.prunelm.be0001d4.20130425-1449 (DONE) -> jen 290 MB ... skoro moc maly
+     s limitem 9: s.prunelm.3bf504f0.20130426-1252 (DONE) -> 1.5 G ... binarizuju
+     s limitem 10: s.prunelm.91bdf34e.20130425-2142 (ABOLISHED) .. chipl, vyrobil 15 GB rozbaleneho a pak doslo misto
+...spoustim tedy pripravu jen 5gr: s.prunelm.1cdd0af2.20130425-0121 (DONE) ... binarizuju ... odsouvam (orig 12 GB)
 
 Pak tedy muzu spustit mert:
+s.evaluator.06240687.20130426-1333 -> 0.1632
+...tohle je velmi divne. Proc je preklad do pluslemmat nizsi nez aktualni benchmark??
+Mozna mizerny korpus? Ne, prilis drsne prorezani LM
 
+Spoustim mert s lepsim LM: s.prunelm.1cdd0af2.20130425-0121 (jen 12 GB)
+s.evaluator.9b736e81.20130427-2227 -> 0.1694
+... porad asi zbytecne drsne prorezani (nebo divny korpus...)
+... Zkousim tedy PRUNE 16: s.prunelm.301c9b7b.20130429-1325  ... odsouvam
+    -> s.evaluator.5d400664.20130430-0028  -> 16.96
+... Zkusim tedy pouzit radsi mononews misto mono-cnk-news:
+    -> s.evaluator.2a113a13.20130428-2351 (nevesel se, binarizuju s.prunelm.6b141831.20130428-2350 ... odsunuto
+    -> oprava: s.evaluator.635a8808.20130430-1403 -> 0.1778
+
+A mel bych taky mixovat monolm, protoze obecne nepomahaji...
 
 
 2013-04-24
@@ -1242,9 +1386,291 @@ DEL	newstest2007/csNmT1+form+lemma+stc+tag	2007
 DEL	wmt11-hpe1/csNmT1+form+lemma+stc+tag	1997
 DEL	jobsTest/csNmT1+form+lemma+stc+tag	370
 
-IN: c-news++mono-cnk-news++mono-ctk-all++mono-cwc-articles++mononews2007++mononews2008++mononews2009++mononews2010++mononews2011++mononews2012++mono-tisk-1998++mono-tisk-1999++mono-tisk-2000++mono-tisk-2001++mono-tisk-2002
+Spoustim pripravu vsech potrebnych stc, vic clip-run-stc.sh.out
+
+IN: c-news++mono-cnk-news++mono-ctk-1998++mono-ctk-1999++mono-ctk-2000++mono-ctk-2001++mono-ctk-2002++mono-ctk-2003++mono-ctk-2004++mono-ctk-2005++mono-ctk-2006++mono-ctk-2007++mono-ctk-2008++mono-ctk-2009++mono-ctk-2010++mono-ctk-2011++mono-ctk-2012++mono-cwc-articles++mononews2007++mononews2008++mononews2009++mononews2010++mononews2011++mononews2012++mono-tisk-1998++mono-tisk-1999++mono-tisk-2000++mono-tisk-2001++mono-tisk-2002
+...celkem 3430929930 tokenu
+
+-> s.klm.33a330d3.20130430-1424 3gr  .. OK .. 11 GB .. odsouvam, binarizuju na ssd, pripraveno, trie 4,4 GB
+-> s.klm.c97c3c6c.20130428-2253 4gr  .. OK .. 27 GB .. odsouvam, binarizuju na ssd, pripraveno, trie 11 GB
+-> s.klm.9d6ab46a.20130425-2003 5gr  .. OK .. 49 GB .. odsouvam, binarizuju na ssd, pripraveno (trie 20GB)
+   ... zkusim, jestli se to zavari, kdyz ten 5gr pouziju: s.evaluator.37cdd856.20130503-1232 -> 17.12!!
+   WMT2013: s.evaluator.f2649408.20130503-2211
+    odsunut, zkousim ho prorezat:
+      limit 12: s.prunelm.01fe0691.20130428-2256  ... vydrzel! 39 GB, uz odsunut, binarizuju
+      limit 8: s.prunelm.50ebdc9c.20130426-1252 (OUTDATED)  ... selhal, nestacilo 150GB
+        opravuju: s.prunelm.1b2b2fa1.20130427-1408 (OUTDATED)
+	opravuju: s.prunelm.8da3e9da.20130427-2210  300 GB RAM!!!
+	  ... jen 358 MB, to bude mizerne ... binarizuju
+      limit 6: s.prunelm.be5490ee.20130426-2353 .. 33 M!!! to je moc malo !!
+        ... z hecu ho vyzkousim na 16.46 (s.evaluator.67079e37.20130423-1604)
+	  -> s.evaluator.02370b63.20130427-1414 -> 0.1364 :-)
+	    ... a to to prosim *obsahovalo* velky taglm
+	    ... ovsem hilidiff ukazuje, ze to zas takova bida neni...
+-> s.klm.3afa0e3a.20130425-1900 6gr, ale nejak se zakuckal pri inicializaci; a pocita uz 5 dni...
 
 OUT: ccrawl++c-eu++c-fiction++c-navajo++c-paraweb++c-subtitles++c-techdoc++dbpedia-en-cs++europarl++mono-cnk-other++mono-cwc-blogs++mono-cwc-discussions
+...celkem 2962475375 tokenu
+
+-> s.klm.2b4393e9.20130430-1425 3gr  .. OK .. 12 GB .. odsouvam, binarizuju na ssd, pripraveno, trie 5,3 GB
+-> s.klm.3b8c83f8.20130428-2259 4gr  .. OK .. 29 GB .. odsouvam, binarizuju na ssd, pripraveno
+-> s.klm.867639d4.20130425-2004 5gr  .. OK .. 54 GB .. odsouvam, binarizuju na ssd (60 GB ram na binarizaci nestaci, zkousim 100gb), pripraveno, trie 25 GB => nepouzitelne
+     odsunut, zkousim prorezat:
+       limit 8: s.prunelm.5cba7c94.20130426-1330 ... nestacilo 150 GB RAM
+-> s.klm.a815b4a5.20130425-1859 6gr zabil rucne
+
+INSMALL: c-news++mono-ctk-2008++mono-ctk-2009++mono-ctk-2010++mono-ctk-2011++mono-ctk-2012++mononews2007++mononews2008++mononews2009++mononews2010++mononews2011++mononews2012
+-> s.klm.4fa37ff4.20130430-2248 (DONE) 4gr, 7.5 GB nebinarizovano, 3.1 GB trie
+-> s.klm.f29b7a1b.20130430-2247 (DONE) 5gr 13 GB nebinarizovano, 5.3 GB trie
 
 
-Spoustim pripravu vsech stc, vic clip-run-stc.sh.out
+Pokusy s neprorezanymi obrimy daty:
+s.evaluator.1cd281b0.20130430-1409 (RUNNING)	4gr IN + 4gr OUT + 10gr TAG
+s.evaluator.a71332aa.20130430-1411 (RUNNING)	5gr IN + 10gr TAG
+s.evaluator.79d9d29f.20130430-1404 (RUNNING)	4gr IN + 10gr TAG
+s.evaluator.5075c7de.20130430-1414 (RUNNING)	5gr IN + 4gr OUT + 10gr TAG
+...tady je evidentne potreba dat **malo** jobu
+s.evaluator.f1321ae1.20130501-0910 (DONE)	3gr IN + 7gr mononews + 10gr TAG, 5 jobu, za ziva jsem zbinarizoval -> 0.1694
+s.evaluator.545c79e8.20130501-1226 (DONE)	4gr IN + 7gr mononews + 10gr TAG ! jen 5 jobu  , stejne jsem to zabil a ted zkousim binarizovat ttable -> 0.1707
+s.evaluator.8c420784.20130501-1338 (OUTDATED)	5gr IN + 7gr mononews + 10gr TAG, 5 jobu
+
+A jeste zkusim pridat aspon bigramy obrovske, INdomain+ fiction:
+-> s.klm.616cf110.20130501-2347 2gr, odsouvam, binarizuju
+
+s.evaluator.3e867b57.20130502-0148	5grIN, 2grEXTRA, 7gr mononews + 10gr TAG,
+s.evaluator.c352c4b8.20130502-0150	4grIN, 2grEXTRA, 7gr mononews + 10gr TAG,
+
+omyl: s.evaluator.5f0d2b11.20130502-0159 -> 0.1711, to bude duplicitni vysledek
+
+
+...tyhle modely jsou v radu 10GB (prorezane trie), kdezto ty uspesne pouzite jsou v radu 1 GB!!!
+... to se pak nemuzu divit, ze to nezvlada...
+
+
+IN tag:
+  6gr: 13:43
+
+
+Jeste to tedy zkusim po tematickych castech:
+IN:
+mono-cnk-news
+7gr s.klm.829bfc1b.20130429-1556  ... 24GB
+
+mono-ctk-1998++mono-ctk-1999++mono-ctk-2000++mono-ctk-2001++mono-ctk-2002++mono-ctk-2003++mono-ctk-2004++mono-ctk-2005++mono-ctk-2006++mono-ctk-2007++mono-ctk-2008++mono-ctk-2009++mono-ctk-2010++mono-ctk-2011++mono-ctk-2012
+s.prunelm.f415080d.20130429-1548
+
+mono-cwc-articles
+s.prunelm.8af0abad.20130429-0120
+
+c-news++mononews2007++mononews2008++mononews2009++mononews2010++mononews2011++mononews2012
+
+mono-tisk-1998++mono-tisk-1999++mono-tisk-2000++mono-tisk-2001++mono-tisk-2002
+s.prunelm.861ebe64.20130429-0118
+
+
+2013-04-30
+
+add-to-training:
+zakladni model by byl 
+c0d6f7af.20130402-1547 13.73±0.49
+... prekvapive tunila na wmt11 a pridavala separatni tabulku z wmt12 a stejne to pomohlo
+v souboru clip-13.73-retry jsem to upatlal
+-> s.evaluator.ebcc5930.20130430-1548
+-> opr s.evaluator.af367b18.20130430-1621 (DONE) -> 0.1636
+
+
+postavim spravnou tectotm:
+
+1. rucne spojim plaintexty:
+   anglicka strana je zdrojova
+   cilova je vystup tectomt v roce 2010, 2011, 2012, 2013
+2. zarovnam + extrahuju tabulku
+     ... dve varianty: mgiza cista a mgiza se starym modelem
+   - mgiza cista: s.tm.b10ffef4.20130503-0102 (DONE)
+      ---> s.evaluator.5c9956f6.20130503-0103 (DONE) 0.1459
+   - mgiza se starym modelem: s.tm.d4bc92cf.20130503-0956
+      ---> s.evaluator.98adc709.20130503-0957 -> 0.1475
+   ... tu tabulku pouziju jako alternativni, vyladim na bigref
+   (cista) --> s.evaluator.e302f92f.20130503-0952 -> 17.44
+   WMT13: s.evaluator.435dc5b5.20130504-0011 -> 20.17
+   (stara) --> s.evaluator.e02f0bc2.20130503-1013
+
+na WMT13:
+orig tecto: 0.1471 (s.evaluator.1bb1d390.20130503-1021)
+
+
+
+1. Rucne spojil vystupy tectomt a ziskal s.corpus.c57ccfac.20130502-1840:
+/net/cluster/TMP/wmt/tectomt/newstest2008/plain_output.txt
+/net/cluster/TMP/wmt/tectomt/newstest2010/plain_output.txt
+/net/cluster/TMP/wmt/tectomt/newstest2011/plain_output.txt
+/net/cluster/TMP/wmt/tectomt/newstest2012/plain_output.txt
+/net/cluster/TMP/wmt/tectomt/newstest2013/plain_output.txt
+
+
+
+
+Zoufalstvi: case+number+gender:
+0.1194 base s.evaluator.4ae63906.20130314-1532
+0.0901	cng s.evaluator.226eab43.20130430-2346
+
+2013-05-01
+
+Mereni rychlosti: s.mert.3819ad90.20130430-1458
+iterace 1: filtrovana, z merkura, rychle useky bezely cca:
+== Duration: 00:08:58 (538 s)
+== Duration: 00:08:08 (488 s)
+== Duration: 00:09:25 (565 s)
+== Duration: 00:04:44 (284 s)
+== Duration: 00:08:51 (531 s)
+== Duration: 00:09:27 (567 s)
+== Duration: 00:05:15 (315 s)
+== Duration: 00:05:44 (344 s)
+== Duration: 00:08:55 (535 s)
+== Duration: 00:08:56 (536 s)
+== Duration: 00:06:45 (405 s)
+== Duration: 00:04:04 (244 s)
+== Duration: 00:03:51 (231 s)
+
+
+iterace 2: filtrovana z SSD
+...to jedine by melo smysl
+== Duration: 00:06:16 (376 s)
+== Duration: 00:05:12 (312 s)
+== Duration: 00:05:55 (355 s)
+== Duration: 00:05:58 (358 s)
+== Duration: 00:05:26 (326 s)
+== Duration: 00:06:04 (364 s)
+== Duration: 00:06:00 (360 s)
+== Duration: 00:06:21 (381 s)
+== Duration: 00:06:23 (383 s)
+== Duration: 00:05:37 (337 s)
+== Duration: 00:05:37 (337 s)
+== Duration: 00:02:49 (169 s)
+== Duration: 00:02:47 (167 s)
+... a zda ze, ze to skutecne dost pomaha
+
+iterace 3: no, uz tak super to nevypada:
+== Duration: 00:05:50 (350 s)
+== Duration: 00:05:25 (325 s)
+== Duration: 00:05:44 (344 s)
+== Duration: 00:06:54 (414 s)
+== Duration: 00:06:35 (395 s)
+== Duration: 00:06:21 (381 s)
+== Duration: 00:06:52 (412 s)
+== Duration: 00:04:49 (289 s)
+== Duration: 00:06:07 (367 s)
+== Duration: 00:06:27 (387 s)
+== Duration: 00:02:59 (179 s)
+== Duration: 00:02:00 (120 s)
+== Duration: 00:03:51 (231 s)
+
+iterace 4:
+== Duration: 00:05:30 (330 s)
+== Duration: 00:07:18 (438 s)
+== Duration: 00:07:39 (459 s)
+== Duration: 00:06:30 (390 s)
+== Duration: 00:05:44 (344 s)
+== Duration: 00:05:03 (303 s)
+== Duration: 00:06:12 (372 s)
+== Duration: 00:05:19 (319 s)
+== Duration: 00:06:06 (366 s)
+== Duration: 00:06:36 (396 s)
+== Duration: 00:06:11 (371 s)
+== Duration: 00:08:43 (523 s)
+== Duration: 00:03:52 (232 s)
+== Duration: 00:02:27 (147 s)
+== Duration: 00:03:57 (237 s)
+
+
+2013-05-02
+
+spoustim merty pro dilky podle Pavla Peciny
+Zahaji mertem s.mert.da39b63b.20130502-2006 a evaluatorem s.evaluator.87ad44cf.20130502-2019
+
+Zde jsou ty evaluatory:
+
+s.evaluator.09834ca0.20130502-2021 (DONE)
+s.evaluator.0f40b6de.20130502-2020 (DONE)
+s.evaluator.5ad19946.20130502-2023 (DONE)
+s.evaluator.87ad44cf.20130502-2019 (DONE)
+s.evaluator.ef78eab0.20130502-2315 (DONE)
+s.evaluator.a32196e3.20130502-2310 (DONE)
+s.mert.1cdfbc48.20130502-2021 (DONE)
+s.mert.20b321ec.20130502-2020 (DONE)
+s.mert.97be853e.20130502-2023 (DONE)
+s.mert.a8a2298b.20130502-2022 (DONE)
+s.mert.b27502dc.20130502-2024 (DONE)
+s.mert.da39b63b.20130502-2006 (DONE)
+s.translate.c98e6b7c.20130502-2315 (DONE)
+s.translate.37b3ba52.20130502-2022 (DONE)
+s.translate.7987e6c6.20130502-2021 (DONE)
+s.translate.86ae202d.20130502-2019 (DONE)
+s.translate.5139e12c.20130502-2310 (DONE)
+s.translate.ca48c471.20130502-2020 (DONE)
+
+
+A zde je druha sada, ta nepotrebuje vystupy zkombinovat:
+s.evaluator.50e069fe.20130503-0028 (DONE)
+s.evaluator.5f3c1b24.20130503-0026 (DONE)
+s.evaluator.ba859ef7.20130503-0027 (DONE)
+s.evaluator.e466fdd2.20130503-0027 (DONE)
+s.mert.5bae1788.20130503-0026 (DONE)
+s.mert.b196e065.20130503-0026 (DONE)
+s.mert.ca4c37cb.20130503-0028 (DONE)
+s.mert.d961ff36.20130503-0027 (DONE)
+s.translate.2f758363.20130503-0027 (DONE)
+s.translate.66c42833.20130503-0026 (DONE)
+s.translate.a207ec27.20130503-0026 (DONE)
+s.translate.f37beea8.20130503-0028 (DONE)
+
+
+Pro zajimavost BLEU jednotlivych dilku (out/med/in)
+For12   09834ca0.20130502-2021  14.31±1.11
+For12   0f40b6de.20130502-2020  16.05±0.81
+For12   87ad44cf.20130502-2019  18.40±1.07
+For13   ef78eab0.20130502-2315  14.74±0.86
+For13   a32196e3.20130502-2310  18.67±0.91
+For13   5ad19946.20130502-2023  20.61±1.11
+
+Takto jsem si pak pripravil spojeny korpus:
+for e in ef78eab0.20130502-2315 a32196e3.20130502-2310 5ad19946.20130502-2023; do cat s.evaluator.$e/eman.vars | grep TRANSAUG | cut -d+ -f1; done
+# a ziskane transaugy spojil:
+TAKE_FROM_COMMAND="../rejoin_subcorps.pl newstest2012 pecTri stc ~pecina/work/dyn/test12.w1fl out:csNmT1_s.translate.7987e6c6.20130502-2021 med:csNmT1_s.translate.ca48c471.20130502-2020 in:csNmT1_s.translate.86ae202d.20130502-2019" OUTLINECOUNT=3003 OUTCORP=newstest2012 OUTLANG=csNmT1_pecTriRejoin OUTFACTS=stc eman init corpus --start
+
+A vysledek spojeni: s.evaluator.d935904b.20130503-1027 0.1606, tj. mnohem horsi
+nez baseline 17.11
+
+
+
+2013-05-03
+
+oprava ladeni od Pavla Peciny:
+takto chystam korpusy:
+for lang in csNmT1 enNmT1; do for c in bigref11a bigref11b bigref11c bigref11d; do for size in s l; do for y in 12 13; do ./subcorp.sh $c/$lang+stc pecCoarseFix-$size-For$y ~pecina/work/dyn/tuning$y.en.w1c$size dev; done; done; done; done
+for lang in csNmT1 enNmT1; do for y in 12 13; do for tok in med out; do ./subcorp.sh newstest20$y/$lang+stc pecTriFix ~pecina/work/dyn/test$y.en.w1fl $tok; done; done; done
+for lang in csNmT1 enNmT1; do for c in bigref11a bigref11b bigref11c bigref11d; do for tok in in med out; do for y in 12 13; do ./subcorp.sh $c/$lang+stc pecTriFor$y ~pecina/work/dyn/tuning$y.w1fl $tok; done; done; done; done
+./subcorp.sh newstest2012/csNmT1+stc pecTriFix ~pecina/work/dyn/test12.en.w1fl in
+./subcorp.sh newstest2012/enNmT1+stc pecTriFix ~pecina/work/dyn/test12.en.w1fl in
+./subcorp.sh newstest2013/csNmT1+stc pecTriFix ~pecina/work/dyn/test13.en.w1fl in
+./subcorp.sh newstest2013/enNmT1+stc pecTriFix ~pecina/work/dyn/test13.en.w1fl in
+
+
+s.evaluator.1846cbf1.20130504-0029 (DONE) -> 19.25
+s.evaluator.3db163af.20130504-0030 (DONE) -> 17.08
+s.evaluator.571d3120.20130504-0032 (DONE) -> 17.02
+s.evaluator.3163d85a.20130504-0033 (DONE) -> 19.32
+
+
+4d9171fc.20130504-0838	21.22±1.01	pecTriFixFor13-in
+cb03920a.20130504-0039	20.44±1.28	pecTriFixFor13-med
+39c40e08.20130504-0038	17.62±0.84	pecTriFixFor13-out
+
+558322f8.20130504-1406	18.09±0.92	pecTriFixFor12-in
+70927239.20130504-0839	16.99±1.07	pecTriFixFor12-med
+b2529baa.20130504-0025	15.94±0.96	pecTriFixFor12-out
+
+takto newstest 2013 spojuju:
+TAKE_FROM_COMMAND="../rejoin_subcorps.pl newstest2013 pecTriFix stc ~pecina/work/dyn/test13.en.w1fl in:csNmT1_s.translate.e28f0634.20130504-0838 med:csNmT1_s.translate.1cb12ce6.20130504-0039 out:csNmT1_s.translate.1ab31f77.20130504-0038" OUTLINECOUNT=3000 OUTCORP=newstest2013 OUTLANG=csNmT1_pecTriRejoinFix OUTFACTS=stc eman init corpus --start
+
+A vysledna evaluace: s.evaluator.cb095efc.20130504-2310   0.1943

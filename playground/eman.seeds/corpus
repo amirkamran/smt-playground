@@ -37,8 +37,9 @@ eval `eman bash-loadvars`
 # add our prerequisites
 eman add-deps . $DEPS
 
-# FIXME dirty check for qsub
+# check for qsub
 [ -n "`which qsub`" ] || export JOBS=0
+[ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
 
 # other vars, not influencing exact output
 SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
@@ -122,7 +123,8 @@ else
   || die "Mismatched number of lines, expected $OUTLINECOUNT, got \$nl"
 fi
 
-rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
+# Avoid forced reindex for speedup; let's see what breaks...
+# rm -f \$mydir/../corpman.index || echo "Failed to force reindexing"
 
 echo Done.
 eman succeed \$mydir

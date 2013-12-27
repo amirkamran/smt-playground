@@ -18,6 +18,8 @@ eman \
   defvar MERTFLAGS default='' help='further flags for mert.pl' \
   defvar GRIDFLAGS default='' help='further flags for qsub' \
   defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
+  defvar EMAN_DISK default='6g' help='free space on the temp disk' \
+  defvar EMAN_CORES default='1' help='number of CPUs to use in Moses' \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
@@ -28,10 +30,16 @@ eman \
   defvar TREEXSTEP default='' help='for zmert SemPOS tmt (used to be TMT_ROOT; untested)' \
   defvar JOBS default='15' help='decoder jobs to run, set 0 for disabling SGE altogether' \
   defvar MOSESSTEP inherit='MODELSTEP' help='where are moses scripts and binaries' \
+  defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
+  defvar _DELETE_FILTERED_MODEL default='no' help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
+
+# check for qsub
+[ -n "`which qsub`" ] || export JOBS=0
+[ -n "`qsub -help nonexistent-file 2>&1 | grep GE 2>/dev/null`" ] || export JOBS=0
 
 MOSESDIR="$(eman path $MOSESSTEP)"
 SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
@@ -88,6 +96,13 @@ if [ ! -z "$STACK" ]; then
   MOSESFLAGS="$MOSESFLAGS -s $STACK"
 fi
 
+# XXX This is actually wrong! EMAN_CORES should be set only if JOBS==0
+# For parallel merts, EMAN_CORES of the main job is 1 and only the subjobs
+# should book more cores...
+if [ ! -z "$EMAN_CORES" -a "$EMAN_CORES" -ne 1 ]; then
+  MOSESFLAGS="$MOSESFLAGS -threads $EMAN_CORES"
+fi
+
 if [ $JOBS -eq 0 ]; then
   GRIDARGS=""
   MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSESFLAGS"
@@ -114,6 +129,11 @@ cube)
   ;;
 esac
 
+tempdir=/mnt/h/tmp
+  # best choice for ufal
+[ -d $tempdir ] || tempdir=/tmp
+  # the default
+
 case "$MERTPRG" in
 zmert)
   cat << KONEC > command.mert
@@ -136,10 +156,11 @@ mert)
   cat << KONEC > command.mert
 $MERTMOSES \
   --working-dir=\`pwd\`/mert-tuning \\
+  --no-filter-phrase-table \\
   \`pwd\`/tuning.in \\
   \`pwd\`/tuning.ref. \\
   \`pwd\`/moses \\
-  \`pwd\`/moses.abs.ini \\
+  \`pwd\`/filtered-for-mert/moses.ini \\
   $MERTGRIDARGS \\
   $MERTFLAGS \\
   --decoder-flags="$MOSESFLAGS $SEARCHFLAG" \\
@@ -160,6 +181,7 @@ echo "== Hostname:  "\`hostname\`
 echo "== Directory: "\`pwd\`
 echo "=============================="
 mydir=\$(pwd)
+mybase=\$(basename \$mydir)
 set -o pipefail
 function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
@@ -196,8 +218,28 @@ echo These were our MERTFLAGS="$MERTFLAGS"
 
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl \`pwd\`/moses.ini > moses.abs.ini || die "Absolutize failed"
 
+if [ ! -e filtered-for-mert ]; then
+  if [ x$SSD == x ]; then
+    filteroutdir=filtered-for-mert
+  else
+    filteroutdir=$SSD/\$mybase/filtered-for-mert
+    ln -s \$filteroutdir ./ \\
+      || die "Failed to prepare symlink for filtered tables"
+  fi
+  \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
+    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    \$filteroutdir \`pwd\`/moses.abs.ini tuning.in \\
+  || die "Failed to filter"
+fi
+
 # This is the actual mert to run
 `cat command.mert`
+
+if [ x$_DELETE_FILTERED_MODEL == xyes ]; then
+  echo "Removing \$filteroutdir and $SSD/\$mybase"
+  rm -rf \$filteroutdir
+  rmdir $SSD/\$mybase
+fi
 
 # Standard command footer
 echo Done.

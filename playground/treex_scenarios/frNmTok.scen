@@ -1,0 +1,7 @@
+# French morphology
+
+Util::SetGlobal language=fr
+Read::Sentences from=-
+W2A::FR::Tokenize
+
+Write::AttributeSentences layer=a attributes=form

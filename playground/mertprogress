@@ -17,6 +17,7 @@ if [ ! -d $e/mert-tuning ]; then
   m=`eman tb --notree $1 | grep '^s.mert\.' | head -n1`
   e=`eman path "$m"`
   [ -d $e ] || die "Failed to find even the mert prerequisite of $1"
+  echo "Using mert: $m"
 fi
 
 cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
