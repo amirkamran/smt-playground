@@ -1,6 +1,6 @@
 #!/bin/bash
 # eman step to segment a corpus into morphemes
-# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# Copyright © 2012-2013 Dan Zeman <zeman@ufal.mff.cuni.cz>
 # License: GNU GPL
 
 function die() { echo "$@" >&2; exit 1; }
@@ -20,7 +20,7 @@ fi
 SCRIPTS=$STATMT/scripts
 eman defvar MORFESSORSTEP type=reqstep help='where is Morfessor' \
      defvar CORP help='name of input corpus, e.g. newstest2008' \
-     defvar LANG help='language of input corpus, e.g. en' \
+     defvar LANGUAGE help='language of input corpus, e.g. en' \
      defvar FACT help='factor(s) of input corpus, e.g. lemma' \
 || exit 1
 
@@ -30,7 +30,7 @@ eval `eman bash-loadvars`
 # Create corpman.info so that this step can be located by corpman when searching for a specific corpus.
 # Fifth parameter after corpus.txt.gz: -1 ... we do not know the number of lines at the moment.
 # Sixth parameter after corpus.txt.gz: 1 ... this corpus is automatically derived from another corpus.
-$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANG~morf $FACT -1 1 \
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANGUAGE~morf $FACT -1 1 \
 || die "Cannot register corpus"
 
 # Don't continue if we are not preparing the step yet.
@@ -52,7 +52,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 
 # Get the input corpus.
-corpspec=$CORP/$LANG+$FACT
+corpspec=$CORP/$LANGUAGE+$FACT
 ###!!! If we already have the stc factor but don't have the form factor, corpman goes wild.
 ###!!! Without the --wait option, it returns the stc factor. With the option, it insists on having the form factor available first.
 ###!!! So I am removing the --wait option from the following line, although it would be useful otherwise.
@@ -71,13 +71,13 @@ fi
 # Segment tokens into morphemes.
 ###!!! DZ: I am currently using my old segmentation models, fixed. Later I will refer to morfmodel steps instead.
 gunzip -c input.txt.gz \
-| $MORFESSOR/morfseg.pl -m /net/work/people/zeman/morfessor.zaloha/$LANG/segmented.txt \
+| $MORFESSOR/morfseg.pl -m /net/work/people/zeman/morfessor.zaloha/$LANGUAGE/segmented.txt \
 | gzip -c > corpus.txt.gz
 # Get the number of lines and re-register the corpus.
 echo "Checking output number of lines of corpus.txt.gz"
 nl=\$(zcat corpus.txt.gz | wc -l)
 echo "Re-registering the corpus with \$nl lines."
-$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANG~morf $FACT \$nl 1 \\
+$STATMT/playground/corpman register -- corpus.txt.gz -1 $CORP $LANGUAGE~morf $FACT \$nl 1 \\
 || die "Cannot register corpus"
 # Remove corpman.index, force reindexing.
 ###!!! To je sice hezký, ale když poběží 50 takových kroků najednou a budou si pod rukama mazat index, tak si zaručeně někdo z nich dá na hubu.
