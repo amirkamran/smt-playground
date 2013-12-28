@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Vytvoří Danovy kroky pro Emana.
-# Copyright © 2012 Dan Zeman <zeman@ufal.mff.cuni.cz>
+# Copyright © 2012-2013 Dan Zeman <zeman@ufal.mff.cuni.cz>
 # Licence: GNU GPL
 
 use utf8;
@@ -27,14 +27,14 @@ GetOptions
     'dryrun' => \$dryrun, # just list models and exit
 );
 
-die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|proposeremoval|korpus|tag|stc|combine|morfcorpus|data|align|morfalign|binarize|extract|tm|combinetm|lm|model|mert|zmert|translate|evaluator|test|all)$/);
+die("Unknown step type $steptype") unless($steptype =~ m/^(special|restart|complete|proposeremoval|korpus|tag|stc|combine|morfcorpus|data|align|tm|lm|model|mert|translate|evaluator|all)$/);
 # Zvláštní jednorázové úkoly.
 my %special_actions =
 (
     # Find steps depending on a step being removed and propose command to remove them all.
     'proposeremoval' => \&propose_removal_of_dependencies,
     ###!!! Časem budu chtít, aby tenhle typ akce byl obecnější, ale teď mi stačí kombinace newseuro a un (až po krok tm, za ním už by to mohlo běžet standardně).
-    #combine_newseuro_un();
+    #'combine'   => \&combine_newseuro_un;
     'combine'    => \&combine_newseuro_czeng,
     'korpus'     => \&start_korpus,
     'tag'        => \&start_tag,
@@ -176,11 +176,7 @@ foreach my $m (@models)
 }
 # Make sure eman knows about new tags etc.
 dzsys::saferun("eman reindex ; eman qstat");
-# Stop here. The remainder of the code is outdated.
 exit(0);
-spustit_stare_dosud_nekonvertovane_kroky();
-# Make sure eman knows about new tags etc.
-dzsys::saferun("eman reindex ; eman qstat");
 
 
 
@@ -297,6 +293,7 @@ sub get_monolingual_corpora
         {
             foreach my $l (@{$c->{languages}})
             {
+                $l .= '~morf' if($use_morphemes);
                 push(@mcorpora, {'corpus' => $c->{corpus}, 'language' => $l});
             }
         }
@@ -309,6 +306,11 @@ sub get_monolingual_corpora
                 {
                     $l1 = $1;
                     $l2 = $2;
+                    if($use_morphemes)
+                    {
+                        $l1 .= '~morf';
+                        $l2 .= '~morf';
+                    }
                 }
                 else
                 {
@@ -345,6 +347,11 @@ sub get_parallel_corpora
                 {
                     $l1 = $1;
                     $l2 = $2;
+                    if($use_morphemes)
+                    {
+                        $l1 .= '~morf';
+                        $l2 .= '~morf';
+                    }
                 }
                 else
                 {
@@ -360,7 +367,14 @@ sub get_parallel_corpora
                 for(my $j = $i+1; $j<=$#{$c->{languages}}; $j++)
                 {
                     my $pair = $c->{languages}[$i].'-'.$c->{languages}[$j];
-                    push(@pcorpora, {'corpus' => $c->{corpus}, 'pair' => $pair, 'languages' => [$c->{languages}[$i], $c->{languages}[$j]]});
+                    my $l1 = $c->{languages}[$i];
+                    my $l2 = $c->{languages}[$j];
+                    if($use_morphemes)
+                    {
+                        $l1 .= '~morf';
+                        $l2 .= '~morf';
+                    }
+                    push(@pcorpora, {'corpus' => $c->{corpus}, 'pair' => $pair, 'languages' => [$l1, $l2]});
                 }
             }
         }
@@ -556,9 +570,12 @@ sub start_align
     dzsys::saferun('rm -f corpman.index') or die;
     # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h. Měli bychom požadovat alespoň 15 GB volného místa,
     # i když už jsem viděl korpus, na který nestačilo ani 50 GB.
-    my $n_lines = get_corpus_size($m->{pc}, $m->{s}, 'lemma');
+    my $alignfactor = $use_morphemes ? 'stc' : 'lemma';
+    my $n_lines = get_corpus_size($m->{pc}, $m->{s}, $alignfactor);
     my $disk = $n_lines>=3000000 ? '100g' : '15g';
-    dzsys::saferun("GIZASTEP=$gizastep CORPUS=$m->{pc} SRCALIAUG=$m->{s}+lemma TGTALIAUG=$m->{t}+lemma eman init align --start --disk $disk") or die;
+    my $memory = $n_lines>=3000000 ? '20g' : '6g';
+    my $resources = "--mem $memory --disk $disk";
+    dzsys::saferun("GIZASTEP=$gizastep CORPUS=$m->{pc} SRCALIAUG=$m->{s}+$alignfactor TGTALIAUG=$m->{t}+$alignfactor eman init align --start $resources") or die;
     # Eman cannot find newly created steps until their tags have been added to the index.
     dzsys::saferun('eman retag');
     start_tm($m);
@@ -1196,58 +1213,6 @@ sub filter_models
 
 
 #------------------------------------------------------------------------------
-# Figures out language codes from the name of parallel corpus. Assumes that all
-# names of parallel corpora end in ".xx-yy" (language codes).
-#------------------------------------------------------------------------------
-sub get_language_codes
-{
-    my $corpus = shift;
-    my ($language1, $language2);
-    if($corpus =~ m/\.(\w+)-(\w+)$/)
-    {
-        $language1 = $1;
-        $language2 = $2;
-        if($use_morphemes)
-        {
-            $language1 .= '~morf';
-            $language2 .= '~morf';
-        }
-    }
-    else
-    {
-        croak("Unknown languages of parallel corpus $corpus");
-    }
-    return ($language1, $language2);
-}
-
-
-
-#------------------------------------------------------------------------------
-# Figures out language code from the name of monolingual corpus. Assumes that
-# all names of monolingual corpora end in ".xx" (language code).
-#------------------------------------------------------------------------------
-sub get_language_code
-{
-    my $corpus = shift;
-    my $language;
-    if($corpus =~ m/\.(\w+)$/)
-    {
-        $language = $1;
-        if($use_morphemes)
-        {
-            $language .= '~morf';
-        }
-    }
-    else
-    {
-        croak("Unknown language of monolingual corpus $corpus");
-    }
-    return $language;
-}
-
-
-
-#------------------------------------------------------------------------------
 # Returns number of lines of corpus. The corpus must be registered with corpman
 # and we must be in the main playground folder. If the corpus is not registered
 # but it is possible to derive it from existing corpora (by simple
@@ -1832,119 +1797,4 @@ sub eman
     my $eman_arguments = join(' ', @_); # without the 'eman' command
     my @lines = map {s/^\s+//; s/\s+$//; $_} split(/\n/, dzsys::safeticks("eman $eman_arguments"));
     return @lines;
-}
-
-
-
-#------------------------------------------------------------------------------
-# Archív kroků, které jsem generoval dnes už zastaralým způsobem, zatím nebyl
-# čas je předělat a ani jsem je ještě k ničemu nepotřeboval.
-#------------------------------------------------------------------------------
-sub spustit_stare_dosud_nekonvertovane_kroky
-{
-    # Výroba kombinovaných paralelních korpusů.
-    if($steptype eq 'combine')
-    {
-        foreach my $language ('es', 'fr')
-        {
-            # Bohužel máme nestejně připravené zdroje. Textová data se musí kombinovat ze tří korpusů,
-            # zatímco zarovnání máme už nachystané pro kombinaci prvních dvou dohromady.
-            # Nejdříve tedy zkombinovat první dva, počkat, až budou hotové, řádek zakomentovat a odkomentovat ty dva pod ním.
-            #combine_corpora("news-europarl-v7.$language-en", "news-commentary-v7.$language-en", "europarl-v7.$language-en", $language, 'en');
-            combine_corpora("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
-            combine_alignments("news-euro-un.$language-en", "news-europarl-v7.$language-en", "un.$language-en", $language, 'en');
-        }
-    }
-    # Pro každou kombinaci korpusu a jazyka a faktoru, vytvořit krok, který segmentuje faktor stc na morfémy.
-    if($steptype =~ m/^(morfcorpus|all)$/)
-    {
-        my $morfessorstep = find_step('morfessor', 'd');
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language1 FACT=stc eman init morfcorpus --start") or die;
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language2 FACT=stc eman init morfcorpus --start") or die;
-        }
-        # A teď ještě jednojazyčná data na trénování jazykových modelů.
-        foreach my $corpus (@mono_training_corpora)
-        {
-            my $language = get_language_code($corpus);
-            dzsys::saferun("MORFESSORSTEP=$morfessorstep CORP=$corpus LANG=$language FACT=stc eman init morfcorpus --start") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok align, který vyrobí obousměrný alignment morfémů.
-    if($steptype =~ m/^(morfalign|all)$/)
-    {
-        my ($gizastep) = eman('select t mosesgiza d');
-        # Odstranit corpman.index a vynutit tak přeindexování.
-        # Jinak hrozí, že corpman odmítne zaregistrovat korpus, který jsme už vytvářeli dříve, i když se jeho vytvoření nepovedlo.
-        dzsys::saferun("rm -f corpman.index") or die;
-        foreach my $corpus (@parallel_training_corpora)
-        {
-            my ($language1, $language2) = get_language_codes($corpus);
-            # Gizawrapper vytváří nemalou pomocnou složku v /mnt/h, takže musíme požadovat i místo na disku (50 GB je někdy málo).
-            # Velké korpusy potřebují více paměti i více místa na disku.
-            my $n_lines = get_corpus_size($corpus, $language1, 'stc');
-            my $resources = $n_lines>=3000000 ? '--mem 20g --disk 100g' : '--mem 6g --disk 15g';
-            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language1~morf+stc TGTALIAUG=$language2~morf+stc eman init align --start $resources") or die;
-            dzsys::saferun("GIZASTEP=$gizastep CORPUS=$corpus SRCALIAUG=$language2~morf+stc TGTALIAUG=$language1~morf+stc eman init align --start $resources") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok binarize, který převede po slovech zarovnaný trénovací korpus do binárního formátu.
-    if($steptype =~ m/^(binarize|all)$/)
-    {
-        my ($joshuastep) = eman('ls joshua');
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $alignstep = find_step('danalign', "v SRC=$src v TGT=$tgt");
-            dzsys::saferun("JOSHUASTEP=$joshuastep ALIGNSTEP=$alignstep eman init binarize --start --mem 31g") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit dev i test krok extract, který vytáhne ze zarovnaného korpusu gramatiku (překladový model) pro daný zdrojový text.
-    if($steptype =~ m/^(extract|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $binarizestep = find_step('binarize', "v SRC=$src v TGT=$tgt");
-            foreach my $for ('dev', 'test')
-            {
-                dzsys::saferun("BINARIZESTEP=$binarizestep FOR=$for eman init extract --start") or die;
-            }
-        }
-    }
-    # Výroba překladových modelů z kombinovaných paralelních korpusů.
-    if($steptype eq 'combinetm')
-    {
-        foreach my $language ('es', 'fr')
-        {
-            create_tm_for_combined_corpus("news-euro-un.$language-en", $language, 'en');
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok zmert, který vyladí váhy modelu.
-    if($steptype =~ m/^(zmert|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $lmstep = find_step('danlm', "v SRC=$src v TGT=$tgt");
-            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=dev");
-            dzsys::saferun("LMSTEP=$lmstep EXTRACTSTEP=$tmstep eman init zmert --start") or die;
-        }
-    }
-    # Pro každý pár vytvořit a spustit krok daneval, který přeloží testovací data a spočítá BLEU skóre.
-    if($steptype =~ m/^(test|all)$/)
-    {
-        foreach my $pair (@pairs)
-        {
-            my ($src, $tgt) = @{$pair};
-            my $mertstep = find_step('zmert', "v SRC=$src v TGT=$tgt");
-            my $tmstep = find_step('extract', "v SRC=$src v TGT=$tgt v FOR=test");
-            dzsys::saferun("MERTSTEP=$mertstep EXTRACTSTEP=$tmstep eman init daneval --start") or die;
-        }
-    }
 }
