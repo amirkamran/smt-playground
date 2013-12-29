@@ -137,7 +137,7 @@ $wait = 1 if $dumpcmd || $dump || $show_linecount;
 $start = 1 if $wait;
 $init = 1 if $start; # start implies to init
 
-die "Only one of the following is possible: --dump --cmd --linecout" 
+die "Only one of the following is possible: --dump --cmd --linecout"
   if ($dumpcmd+$dump+$show_linecount) > 1;
 
 # constants:
@@ -255,6 +255,9 @@ if ($cmd eq "reindex") {
 } else {
   # user wants a corpus
   my $descr = $cmd;
+
+  # Sometimes a corpus description passed via environment variables is enclosed in quotation marks.
+  $descr =~ s/"(.*?)"/$1/g;
 
   my $corp;
   my $lang;
@@ -808,7 +811,7 @@ sub add_entry {
       } else {
         # A has more factors than we need, C stands for the factor we can extract from it
         # => use C
-        $useentry = $entry_c;      
+        $useentry = $entry_c;
       }
     } elsif ($oldtype eq "A" || $newtype eq "A") {
       $should_die = 0;
@@ -867,7 +870,7 @@ sub pick_older {
       $useentry = $newentry;
     }
   }
-  
+
   return $useentry;
 }
 
@@ -903,7 +906,7 @@ sub create_index {
   undef $index; # discard old index
   my $subdirs_hdl = my_open("eman.subdirs");
   chomp(my @subdirs = <$subdirs_hdl>);
-  for my $subdir (@subdirs) { 
+  for my $subdir (@subdirs) {
     if (! -d $subdir) {
       print STDERR "Warning: skipping non-existent directory $subdir\n";
       next;
@@ -925,7 +928,7 @@ sub create_index {
         }
       }
       die "Failed to guess step name from $fn" if !defined $stepname;
-      next if $soft_checks && ! -f "$subdir/$stepname";     
+      next if $soft_checks && ! -f "$subdir/$stepname";
       my $status = load_step_status("$subdir/$stepname");
       next if $status !~ /INITED|PREPARED|RUNNING|WAITING|DONE/;
       # skip all bad steps
