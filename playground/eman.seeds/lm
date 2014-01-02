@@ -113,7 +113,7 @@ if [ $PARTS == 1 ]; then
 else
   partstempdir=\$(mktemp -d $tempdir/exp.lm.XXXXXX)
   echo Counting in $PARTS parts, tempdir=\$partstempdir
-  zcat corpus.text.gz | split_even $PARTS \$partstempdir/part --gzip \
+  zcat corpus.text.gz | $PLAYGROUND/../scripts/split_even $PARTS \$partstempdir/part --gzip \
   || die "Splitting FAILED"
   ls \$partstempdir/part*.gz > \$partstempdir/filelist
 

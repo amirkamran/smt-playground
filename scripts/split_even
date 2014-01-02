@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+# The Missing Textutils, Ondrej Bojar, obo@cuni.cz
+# http://www.cuni.cz/~obo/textutils
+#
+# 'split_even' reads stdin saving the lines to N output files so that each of
+# the files will contain about the same number of lines.
+#
+# $Id: split_even,v 1.6 2008/10/29 14:58:35 bojar Exp $
+#
+
+use Getopt::Long;
+use strict;
+
+my $usage = 0;
+my $numwidth = undef;
+my $gzip = 0;
+my $internal_gzip = 0;
+my $subdirs = 0;
+my $suffix = "";
+GetOptions(
+  "usage" => \$usage,
+  "numwidth=i" => \$numwidth,
+  "gzip" => \$gzip,
+  "internal-gzip" => \$internal_gzip,
+  "subdirs=i" => \$subdirs,
+  "suffix=s" => \$suffix,
+) or exit 1;
+my $parts = shift;
+my $prefix = shift;
+
+if ($usage || !defined $parts || !defined $prefix) {
+  print STDERR "split_even NUM PREFIX < lines
+Options:
+  --numwidth=2 ... override how many zeros to use in filename
+  --gzip ... gzip output files using separate gzipping processes
+  --internal-gzip ... gzip output files within main perl executable
+                      (much slower on multiprocessor machines,
+		      maybe always much slower)
+  --subdirs=N  ... generate the files not into the current directory but
+                   in N subdirs called PREFIX000 .. PREFIX(N-1)
+  --suffix=STRING ... append this suffix to all created files
+";
+  exit 1;
+}
+
+if ($internal_gzip) {
+  require IO::Compress::Gzip;
+}
+
+$numwidth = int(log($parts)/log(10)) + 1
+  if !defined $numwidth;
+
+my $dirnumwidth;
+$dirnumwidth = int(log($subdirs)/log(10)) + 1 if $subdirs;
+
+my @outfiles = ();
+for (my $i=1; $i<=$parts; $i++) {
+  my $outfn = $prefix.sprintf("%0${numwidth}i", $i).$suffix;
+  if ($subdirs) {
+    my $dirname = $prefix.sprintf("%0${dirnumwidth}i", $i % $subdirs).$suffix;
+    if (! -d $dirname) {
+      mkdir $dirname or die "Can't create subdir $dirname";
+    }
+    $outfn = $dirname."/".$outfn;
+  }
+  if ($internal_gzip) {
+    $outfn .= ".gz";
+    $outfiles[$i-1] = new IO::Compress::Gzip $outfn
+            or die "IO::Compress::Gzip failed to gzip to $outfn: $IO::Compress::Gzip::GzipError\n";
+  } elsif ($gzip) {
+    $outfn .= ".gz";
+    open $outfiles[$i-1], "| gzip -c >$outfn"
+      or die "Failed to gzip to $outfn";
+  } else{
+    open $outfiles[$i-1], ">$outfn" or die "Failed to write to $outfn";
+  }
+  print STDERR "Output to $outfn\n";
+}
+
+my $i = 0;
+while (<>) {
+  my $fh = $outfiles[$i];
+  print $fh $_;
+  $i++;
+  $i %= $parts;
+}
+
+grep { close $_ } @outfiles;
