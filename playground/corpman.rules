@@ -106,3 +106,6 @@ en_txt	untoken	enTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-
 es_txt	untoken	esTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
 fr_txt	untoken	frTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
 sk_txt	untoken	skTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break
+
+# ceskoslovenstina
+cssk_txt	untoken	csskTTok	form	../../scripts/trivtokenizer --no-vert --no-mark --no-break

@@ -9,10 +9,13 @@ PLAYGROUND=`eman path` # eman playground directory
 # Ensure all the required variables are set (or provide the default)
 eman \
   defvar FABINSTEP type=reqstep help='where fast_align is compiled' \
+  defvar GIZASTEP type=reqstep help='where symal and Moses is compiled' \
   defvar FALIGNARGS help'any extra arguments to fast_align' default='' \
   defvar CORPUS help='the corpus name' \
   defvar SRCALIAUG help='lang+factors for the source side' \
   defvar TGTALIAUG help='lang+factors for the target side' \
+  defvar ALISYM help'alignment symmetrization; only a single method can be specified' \
+    default='grow-diag-final-and' \
   defvar ALILABEL default='' \
     help='alignment "corpus" name, generated automatically if not given' \
 || exit 1
@@ -44,6 +47,7 @@ $PLAYGROUND/corpman register -- alignment.gz -1 $CORPUS gdfa-$ALILABEL ali $srcc
 
 # convert the dependencies to absolute paths
 FABINPATH=`eman path $FABINSTEP`
+GIZAPATH=`eman path $GIZASTEP`
 $PLAYGROUND/../scripts/wiseln $FABINPATH/fast_align/fast_align fast_align || die "Failed to clone the fast_align binary."
 
 # Emit the main script to be used in the running phase
@@ -60,7 +64,7 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-export SCRIPTS_ROOTDIR=$GIZASTEP/moses/scripts
+export SCRIPTS_ROOTDIR=$GIZAPATH/moses/scripts
 echo SCRIPTS_ROOTDIR=\$SCRIPTS_ROOTDIR
 
 function mkcorpus() {
@@ -97,15 +101,12 @@ function mkcorpus() {
   fi
 }
 
-cd $PLAYGROUND/tools/symmetrize && make && cd \$mydir || die "Failed to compile alignment symmetrization"
-wiseln $PLAYGROUND/tools/symmetrize/symmetrize symmetrize
-
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-zcat < corpus.src.gz > corpus.src
-zcat < corpus.tgt.gz \
-  | paste corpus.src - \
+gunzip corpus.src
+gunzip corpus.tgt
+paste corpus.src corpus.tgt \
   | sed 's/	/ ||| /' \
   | sed 's/^ |||/. |||/' \
   | sed 's/||| $/||| ./' \
@@ -121,13 +122,18 @@ echo "Started align at "\`date '+%Y%m%d-%H%M'\`
   > align.right 2> align.right.log \\
   || die "Failed to align back" &
 
-echo "Waiting on alignment to finish..."
+echo "Waiting for alignment to finish..."
 wait
 
 # symmetrize, TODO other symmetrizations
 echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
-./symmetrize align.left align.right gd+fa \
-  | gzip -c > alignment.gz || die "Failed to symmetrize"
+$GIZAPATH/moses/scripts/ems/support/symmetrize-fast-align.perl \\
+  align.right align.left corpus.src corpus.tgt alignment \\
+  $ALISYM \\
+  $GIZAPATH/bin/symal || die "Failed to symmetrize"
+
+gzip -c < alignment.$ALISYM > alignment.gz \\
+  && rm alignment.$ALISYM
 
 # Standard command footer
 echo Done.
