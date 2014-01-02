@@ -104,8 +104,10 @@ function mkcorpus() {
 mkcorpus $CORPUS/$SRCALIAUG src
 mkcorpus $CORPUS/$TGTALIAUG tgt
 
-gunzip corpus.src
-gunzip corpus.tgt
+# gunzip would complain about symlinks
+zcat corpus.src.gz > corpus.src
+zcat corpus.tgt.gz > corpus.tgt
+
 paste corpus.src corpus.tgt \
   | sed 's/	/ ||| /' \
   | sed 's/^ |||/. |||/' \
