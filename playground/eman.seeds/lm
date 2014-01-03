@@ -143,6 +143,9 @@ fi
 echo Gzipping corpus.lm
 gzip corpus.lm || die "Failed to gzip"
 
+echo 8 > lmtype
+echo corpus.lm.gz > lmfilename
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
