@@ -130,7 +130,7 @@ wait
 # symmetrize, TODO other symmetrizations
 echo "Started symmetrization at "\`date '+%Y%m%d-%H%M'\`
 $GIZAPATH/moses/scripts/ems/support/symmetrize-fast-align.perl \\
-  align.right align.left corpus.src corpus.tgt alignment \\
+  align.left align.right corpus.src corpus.tgt alignment \\
   $ALISYM \\
   $GIZAPATH/bin/symal || die "Failed to symmetrize"
 
