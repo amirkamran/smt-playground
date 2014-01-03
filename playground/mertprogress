@@ -26,12 +26,12 @@ cd $e/mert-tuning || die "Failed to chdir to $e/mert-tuning"
 
 n=`cat run1.out | wc -l`
 
-grep BEST ../log* | cut -d'>' -f2 | cut -d ' ' -f2 > bleus
+grep 'BEST at' ../log* | cut -d'>' -f2 | cut -d ' ' -f2 > bleus
 
 runs=$(seq 1 $(wc -l < bleus) | sed 's/.*/run&.out/')
 
 (
-grep BEST ../log* ; \
+grep 'BEST at' ../log* ; \
 echo "" ; \
 paste <( for i in `seq 1 $n`; do echo "SRC"; echo "REF"; cat bleus; echo ""; done ) \
       <( reduce_factors.pl 0 < ../tuning.in | ziplines --delim - ../tuning.ref.0 $runs ) \
