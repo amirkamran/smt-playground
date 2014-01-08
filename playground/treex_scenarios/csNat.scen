@@ -1,0 +1,49 @@
+## English to m-layer
+Util::SetGlobal language=cs
+Read::Sentences from=-
+
+W2W::NormalizeCzechSentence
+W2A::CS::Tokenize
+W2A::CS::TagMorce
+W2A::CS::FixMorphoErrors
+
+
+W2A::CS::ParseMSTAdapted
+W2A::CS::FixAtreeAfterMcD
+W2A::CS::FixIsMember
+
+# od O. Duska:
+W2A::CS::FixPrepositionalCase
+W2A::CS::FixReflexiveTantum
+W2A::CS::FixReflexivePronouns 
+
+# to t-layer
+A2T::CS::MarkEdgesToCollapse
+A2T::BuildTtree
+#A2T::CS::RehangUnaryCoordConj
+A2T::SetIsMember
+A2T::CS::SetCoapFunctors
+A2T::FixIsMember
+A2T::MarkParentheses
+A2T::CS::DistribCoordAux
+A2T::CS::MarkClauseHeads
+A2T::CS::MarkRelClauseHeads
+  ## should not this be after SetFormeme???
+A2T::CS::FixTlemmas
+
+# Nove od O. Duska
+A2T::DeleteChildlessPunctuation
+A2T::CS::FixNumerals # pøehození èíslovek pod závislé ( pìt <- knedlíkù )
+A2T::SetNodetype # nahodí nodetype (oddìlení 'coap' )
+A2T::CS::SetFormeme use_version=2 # pou¾ití nových formémù
+A2T::CS::SetDiathesis # diateze
+A2T::CS::SetFunctors memory=2g # a¾ teï mù¾ou být volány funktory
+A2T::EN::SetMissingFunctors # mask unrecognized functors
+A2T::SetNodetype # teï se podle funktorù nodetype zpøesní
+A2T::FixAtomicNodes
+A2T::CS::MarkRelClauseCoref # this must precede SetGrammatemes
+A2T::CS::SetGrammatemes
+A2T::CS::AddPersPron 
+T2T::SetClauseNumber
+
+Write::Factored outcols=csat flags=escape_space:join_spaced_numbers default_value=???
