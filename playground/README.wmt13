@@ -1708,3 +1708,28 @@ plain moses = s.evaluator.50e069fe.20130503-0028 0.1922  ... CHYBA!
 spravny plain je s.evaluator.7eb64b56.20130501-1359 0.1953
 
 A Ales do zpravy dava plain Moses. (mozna tam ale omylem dal s.evaluator.50e069fe.20130503-0028, nikoli s.evaluator.7eb64b56.20130501-1359
+
+
+
+2014-01-02
+
+Prozkoumam jeste soucastky Chimery, hlavne vypinani LM v ramci cu-bojar:
+
+base: s.evaluator.435dc5b5.20130504-0011 (cu-bojar) --> 0.2017
+s.evaluator.7161725b.20140102-0913  --> 0.1943
+  ... bez s.klm.c97c3c6c.20130428-2253, tj. bez gigaLM
+s.evaluator.f64188d7.20140102-0919  --> 0.1986
+  ... bez s.prunelm.66ef5c8f.20130415-0003, tj. *jen* gigaLM
+s.evaluator.26af2b22.20140102-0925  --> 0.2000
+  ... bez s.prunelm.3082e413.20130422-2148, kde ovsem musim predelat na t0-0
+
+2014-01-04
+
+Mel bych pridat stejne varianty i pro plain, tj. bez tectomt
+base: s.evaluator.7eb64b56.20130501-1359
+s.evaluator.900fddd4.20140108-1216  --> 
+  ... bez s.klm.c97c3c6c.20130428-2253, tj. bez gigaLM
+s.evaluator.8461e3cb.20140108-1226 --->
+  ... bez s.prunelm.66ef5c8f.20130415-0003, tj. *jen* gigaLM
+s.evaluator.1d0934bb.20140108-1229 --->
+  ... bez s.prunelm.3082e413.20130422-2148, kde ovsem musim predelat na t0-0
