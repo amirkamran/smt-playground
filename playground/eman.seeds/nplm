@@ -1,0 +1,121 @@
+#!/bin/bash
+# Download and compile N
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+eman defvar BOOSTPATH default='' help='compile against a non-system-wide boost'
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+[ -z "$BOOSTPATH" ] || BOOSTARG="--with-boost=$BOOSTPATH"
+
+cat > eman.command << END
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+wget http://nlg.isi.edu/software/nplm/nplm-0.1.tgz || die "Failed to download NPLM Toolkit"
+tar -zxvf nplm-0.1.tgz || die "Failed to extract NPLM Toolkit"
+cd nplm-0.1/3rdparty
+wget http://bitbucket.org/eigen/eigen/get/3.2.0.tar.gz || die "Failed to download Eigen"
+tar -zxvf 3.2.0.tar.gz || die "Failed to extract Eigen"
+mv eigen* eigen
+
+cd ../src
+
+ed Makefile << KONEC
+165c
+libneuralLM.so: \\\$(addprefix shared/,neuralLM.o \\\$(OBJS))
+.
+160c
+libneuralLM.a: neuralLM.o \\\$(OBJS)
+.
+125c
+LIBS=libneuralLM.a libneuralLM.so
+.
+37c
+#MKL=/usr/usc/intel/12.1.1/mkl
+MKL=/opt/intel/mkl
+.
+22c
+#BOOST=/usr/usc/boost/1.51.0
+BOOST=/usr/include
+.
+w
+q
+KONEC
+
+make install || die "Failed to install NPLM Toolkit."
+
+cd ../
+
+cat << KONEC > train_ngram.sh
+#!/bin/bash
+
+ROOT=\\\$(cd \\\$(dirname \\\$0) && pwd)
+
+TMPDIR=/tmp/train_ngram.\\\$\\\$
+
+WORKDIR=\\\$3
+
+#if [ \\\$# -eq 4 ]; then
+#    echo "usage: \\\$0 <infile> <outfile> <tmpdir> <order>"
+#    exit 1
+#fi
+
+INFILE=\\\$1
+OUTFILE=\\\$2
+PREFIX=\\\$(basename \\\$OUTFILE)
+
+EPOCHS=10
+NGRAM_SIZE=\\\$4
+VOCAB_SIZE=\\\$5
+MBATCH=\\\$6
+LRATE=\\\$7
+EMBEDDING=\\\$8
+HIDDEN=\\\$9
+
+mkdir -p \\\$WORKDIR
+
+\\\$ROOT/src/prepareNeuralLM --train_text \\\$INFILE --ngram_size \\\$NGRAM_SIZE --vocab_size \\\$VOCAB_SIZE --validation_size 500 --write_words_file \\\$WORKDIR/words --train_file \\\$WORKDIR/train.ngrams --validation_file \\\$WORKDIR/validation.ngrams || exit 1
+
+\\\$ROOT/src/trainNeuralNetwork \\\\
+	--train_file \\\$WORKDIR/train.ngrams \\\\
+       	--validation_file \\\$WORKDIR/validation.ngrams \\\\
+       	--num_epochs \\\$EPOCHS \\\\
+       	--words_file \\\$WORKDIR/words \\\\
+       	--model_prefix \\\$WORKDIR/\\\$PREFIX \\\\
+       	--learning_rate \\\$LRATE \\\\
+       	--minibatch_size \\\$MBATCH \\\\
+       	--embedding_dimension \\\$EMBEDDING \\\\
+       	--num_hidden \\\$HIDDEN \\\\
+       	|| exit 1
+
+cp \\\$WORKDIR/\\\$PREFIX.\\\$((\\\$EPOCHS)) \\\$OUTFILE || exit 1
+
+rm -rf \\\$TMPDIR
+KONEC
+
+chmod a+x train_ngram.sh
+
+cd \$mydir || die "Failed to chdir back"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+END

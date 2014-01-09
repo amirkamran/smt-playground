@@ -14,6 +14,11 @@ eman \
   defvar CORP help='the shortname of corpus, use ++ to concatenate on the fly' \
   defvar CORPAUG help='the language+factors for the lm' \
   defvar ORDER help='the lm order' \
+  defvar VOCAB default='50000' help='the lm vocabulary size' \
+  defvar BATCH default='64' help='the lm training batch size' \
+  defvar LRATE default='0.1' help='the lm training learning rate' \
+  defvar EMBEDDING default='50' help='word-embedding layer size' \
+  defvar HIDDEN_SIZE default='50' help='hidden layer size' \
   defvar LMFLAGS default='' help='flags for lmplz like --vocab_estimate' \
   defvar EMAN_MEM default='30g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
@@ -90,6 +95,11 @@ $NPLMDIR/nplm-0.1/train_ngram.sh \
    np.lm \
    $tempdir \
    $ORDER \
+   $VOCAB \
+   $BATCH \
+   $LRATE \
+   $EMBEDDING \
+   $HIDDEN_SIZE \
 || die "Failed to construct the LM"
 
 echo NeuralLM > lmtype
