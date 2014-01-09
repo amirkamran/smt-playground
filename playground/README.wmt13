@@ -1726,10 +1726,10 @@ s.evaluator.26af2b22.20140102-0925  --> 0.2000
 2014-01-04
 
 Mel bych pridat stejne varianty i pro plain, tj. bez tectomt
-base: s.evaluator.7eb64b56.20130501-1359
-s.evaluator.900fddd4.20140108-1216  --> 
+base: s.evaluator.7eb64b56.20130501-1359  ---> 0.1953
+s.evaluator.900fddd4.20140108-1216  --> 0.1847
   ... bez s.klm.c97c3c6c.20130428-2253, tj. bez gigaLM
-s.evaluator.8461e3cb.20140108-1226 --->
+s.evaluator.8461e3cb.20140108-1226 ---> 0.1867
   ... bez s.prunelm.66ef5c8f.20130415-0003, tj. *jen* gigaLM
-s.evaluator.1d0934bb.20140108-1229 --->
+s.evaluator.1d0934bb.20140108-1229 ---> 0.1915
   ... bez s.prunelm.3082e413.20130422-2148, kde ovsem musim predelat na t0-0
