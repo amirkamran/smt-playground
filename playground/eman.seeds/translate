@@ -22,6 +22,7 @@ eman \
   defvar JOBS default=15 help='how many jobs to spawn (0 to disable SGE)' \
   defvar GRIDFLAGS default='' inherit=MERTSTEP help='further flags for qsub' \
   defvar MOSESFLAGS default='' inherit=MERTSTEP help='further flags for moses' \
+  defvar BINARIZE default='yes' help='binarize phrase tables' \
   defvar SSD default='' help='the path to some SSD scratch disk for filtered tables' \
   defvar _DELETE_FILTERED_MODEL default='no' help='set to yes to cleanup after success, very much suggested local disks (SSD points to a local disk)' \
   defvar EMAN_MEM default='6g' help='memory limit for the job itself (spawn obeys GRIDFLAGS)' \
@@ -119,6 +120,8 @@ tempdir=/mnt/h/tmp
 [ -d $tempdir ] || tempdir=/tmp
   # the default
 
+[ "$BINARIZE" = yes ] && BINARIZER=" --Binarizer=$SCRIPTS_ROOTDIR/../bin/processPhraseTable "
+
 cat << KONEC > eman.command
 #!/bin/bash
 # This is the command to be run here
@@ -210,7 +213,7 @@ if [ ! -e filtered-for-eval ]; then
       || die "Failed to prepare symlink for filtered tables"
   fi
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
-    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    $BINARIZER \\
     \$filteroutdir \`pwd\`/moses.abs.ini corpus.src \\
   || die "Failed to filter"
 fi

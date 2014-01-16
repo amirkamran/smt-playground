@@ -23,6 +23,7 @@ eman \
   defvar STACK default='' help='stacksize for beam search' \
   defvar TAGPREF default='' help='eman tag prefix' \
   defvar MERTPRG default='mert' help='mert/zmert/pro (not quite tested)' \
+  defvar BINARIZE default='yes' help='binarize phrase tables' \
   defvar ZMERTMETRIC default='' help='for zmert: SemPOS, SemPOS_BLEU, BLEU, TER, TER-BLEU' \
   defvar ZMERTSEMPOSSOURCE default='' help='for zmert: factors:1,2 (factors:1,2,3 for SemPOS_BLEU) or tmt' \
   defvar ZMERTSEMPOSBLEUWEIGHTS default='' help='for zmert --semposbleu-weights, e.g. 1:1' \
@@ -134,6 +135,8 @@ tempdir=/mnt/h/tmp
 [ -d $tempdir ] || tempdir=/tmp
   # the default
 
+[ "$BINARIZE" = yes ] && BINARIZER=" --Binarizer=$SCRIPTS_ROOTDIR/../bin/processPhraseTable "
+
 case "$MERTPRG" in
 zmert)
   cat << KONEC > command.mert
@@ -227,7 +230,7 @@ if [ ! -e filtered-for-mert ]; then
       || die "Failed to prepare symlink for filtered tables"
   fi
   \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl \\
-    --Binarizer=\$SCRIPTS_ROOTDIR/../bin/processPhraseTable \\
+    $BINARIZER \\
     \$filteroutdir \`pwd\`/moses.abs.ini tuning.in \\
   || die "Failed to filter"
 fi
