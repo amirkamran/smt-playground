@@ -8,6 +8,7 @@ set -o pipefail  # safer pipes
 eman defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
      defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
      defvar VWSTEP default='' type=optstep help='where is Vowpal Wabbit compiled, or empty (implies to use the damt_phrase branch of Moses' \
+     defvar NPLMSTEP default='' type=optstep help='where is NPLM compiled, or empty' \
      defvar BOOSTPATH inherit=VWSTEP:BOOSTPATH default='' help='compile against a non-system-wide boost' \
      defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
      defvar BJAMARGS default=' --kenlm-max-order=6 -a ' help='any extra arguments for the compilation of Moses' \
@@ -27,6 +28,16 @@ if [ ! -z "$VWSTEP" ]; then
   [ "$BOOSTPATH" == "$VWBOOSTPATH" ] \
     || die "Boost paths of mosesgiza and vw are incompatible: $BOOSTPATH vs. $VWBOOSTPATH"
 fi
+
+# TODO
+#if [ ! -z "$NPLMSTEP" ]; then
+#
+#  NPLMBOOSTPATH=$(eman get-var $NPLMSTEP BOOSTPATH)
+#
+#  # ensure that moses and vw have the same boost
+#  [ "$BOOSTPATH" == "$NPLMBOOSTPATH" ] \
+#    || die "Boost paths of mosesgiza and nplm are incompatible: $BOOSTPATH vs. $NPLMBOOSTPATH"
+#fi
 
 cat > eman.command << KONEC
 #!/bin/bash -x
@@ -71,11 +82,12 @@ cd moses || die "Chdir failed"
 [ -z "$SRILMSTEP" ] || SRILMARG=" --with-srilm=\`eman path $SRILMSTEP\`/srilm "
 [ -z "$IRSTLMSTEP" ] || IRSTLMARG=" --with-irstlm=\`eman path $IRSTLMSTEP\`/install "
 [ -z "$VWSTEP" ] || VWARG=" --with-vw=\`eman path $VWSTEP\`/vowpal_wabbit "
+[ -z "$NPLMSTEP" ] || NPLMARG=" --with-nplm=\`eman path $NPLMSTEP\`/nplm-0.1 "
 [ -z "$BOOSTPATH" ] || BOOSTARGS=" --with-boost=$BOOSTPATH "
 BJAMARGS="$BJAMARGS "
 
 ./bjam -j4 --with-giza=\$mydir/bin \\
-  \$SRILMARG \$IRSTLMARG \$BJAMARGS \$BOOSTARGS \$VWARG || die "Build failed"
+  \$SRILMARG \$IRSTLMARG \$BJAMARGS \$BOOSTARGS \$VWARG \$NPLMARG || die "Build failed"
 chmod -R a+rx .
 
 cd ../ || die "chdir back failed"

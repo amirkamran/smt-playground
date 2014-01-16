@@ -79,6 +79,9 @@ eval \$inlmstream \\
 
 gzip corpus.lm || die "Gzip failed"
 
+echo 8 > lmtype
+echo corpus.lm.gz > lmfilename
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir

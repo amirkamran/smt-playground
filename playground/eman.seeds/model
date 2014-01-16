@@ -81,11 +81,11 @@ fi
 ## Create the tag based on LMs
 i=1
 for lm in `echo $LMS | sed 's/:::/ /g'`; do
-  eval `$PLAYGROUND/../scripts/makearg --delim=: $lm factor lmstep lmtype`
+  eval `$PLAYGROUND/../scripts/makearg --delim=: $lm factor lmstep`
   [ ! -z "$lmstep" ] || die "Bad LM specifier: $lm, expected <factor>:<lmstep>"
   eman add-deps . $lmstep
   # default to kenlm
-  lmtypetag=${lmtype:-ken}
+  lmtypetag=$(cat $(eman path $lmstep)/lmtype)
   order=`eman get-var $lmstep ORDER` || die "Missing variable $lmstep:ORDER"
   i=$(($i+1))
   factor=`echo $factor | sed 'y/\,/+/'`
@@ -151,35 +151,18 @@ fi
 echo "Cloning LMs"
 i=1
 for lm in \`echo $LMS | sed 's/:::/ /g'\`; do
-  eval \`$PLAYGROUND/../scripts/makearg --delim=: \$lm factor lmstep lmtype\`
+  eval \`$PLAYGROUND/../scripts/makearg --delim=: \$lm factor lmstep\`
   lmstepdir=\$(eman path \$lmstep)
+  lmtype=\$(cat \$lmstepdir/lmtype)
+  [ -z "\$lmtype" ] && die "No lmtype specified in \$lmstep"
+  lmfilename=\$(cat \$lmstepdir/lmfilename)
   echo "Cloning lm from \$lmstep (\$lmstepdir), using lmtype \$lmtype"
-  if [ x\$lmtype == xblm ]; then
-    numericlmtype=1
-    lmsuffix=blm
-  elif [ x\$lmtype == xflm ]; then
-    numericlmtype=7
-    lmsuffix=flm
-  else
-    numericlmtype=8
-    lmsuffix=lm
-  fi
-
-  if [ \$lmsuffix == flm ]; then
-    $PLAYGROUND/../scripts/wiseln \$lmstepdir/config.prepared.flm ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link flm: \$lmstepdir/config.prepared.flm"
-  else
-    if [ -e \$lmstepdir/corpus.\$lmsuffix.gz ] ; then
-      # prefer gzipped, kenlm (8) supports this
-      lmsuffix=\$lmsuffix.gz
-    fi
-    $PLAYGROUND/../scripts/wiseln \$lmstepdir/corpus.\$lmsuffix ./lm.\$i.\$lmsuffix \\
-      || die "Failed to link lm: \$lmstepdir/corpus.\$lmsuffix"
-  fi
+  $PLAYGROUND/../scripts/wiseln \$lmstepdir/\$lmfilename ./lm.\$i.\$lmfilename \\
+      || die "Failed to clone lm: \$lmstepdir/\$lmfilename"
 
   order=\`eman get-var \$lmstep ORDER\` || die "Missing variable \$lmstep:ORDER"
 
-  lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmsuffix:\$numericlmtype"
+  lmopts="\$lmopts --lm \$factor:\$order:\$mydir/lm.\$i.\$lmfilename:\$lmtype"
   i=\$((\$i+1))
 done
 i=\$((\$i-1))
