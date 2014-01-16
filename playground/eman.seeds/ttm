@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# transliteration model, creates a phrase table 
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+eman \
+  defvar COSTSFILE help='path to edit distance costs' \
+  defvar CLOSEST default='1' help='how many candidates for each word' \
+  defvar LENGTHDIFF default='2' \
+    help='word pairs with higher length difference will be pruned, use 0 to disable pruning' \
+  defvar TMSTEP type='reqstep' help='translation model between source and bridge, used for getting candidates' \
+  defvar THRESHOLD default='0.1' help='minimum P(e|f) and P(f|e) for a candidate pair to be considered' \
+  defvar WDISTSTEP type='reqstep' help='where weighteddist is compiled' \
+  defvar SRCAUG inherit='TMSTEP' help="the string describing lang+factors of src corpus" \
+  defvar TGTCORP help='monolingual corpus in the target language, will be mined for transliterations' \
+  defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
+  defvar JOBS default=100 help='how many jobs for transliteration mining' \
+  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
+  defvar EMAN_DISK default='20g' help="required free space at temp" \
+|| exit 1
+
+eval `eman bash-loadvars`
+
+DECODINGSTEPS="t0-0" eman defvar DECODINGSTEPS
+
+PLAYGROUND=`eman path`
+TMPATH=`eman path $TMSTEP`
+WDISTPATH=`eman path $WDISTSTEP`
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+# create list of candidates
+join -1 2 -2 1 $TMPATH/model/lex.0-0.e2f $TMPATH/model/lex.0-0.f2e \
+  | awk -F' ' '{ if (\$3 > $THRESHOLD && \$5 > $THRESHOLD) print \$1 "\\t" \$2 }' \
+  > candidates
+
+# clone costs file
+$PLAYGROUND/../scripts/wiseln $COSTSFILE costs || die "Failed to clone file $COSTSFILE"
+
+# get the monolingual corpus
+$PLAYGROUND/corpman --dump $TGTCORP/$TGTAUG \\
+  | tr ' ' '\n' | sort -u \\
+  > targetmono
+
+# get the closest_word binary
+$PLAYGROUND/../scripts/wiseln $WDISTPATH/weighteddist/bin/closest_word closest_word \\
+  || die "Failed to clone closest_word from $WDISTPATH"
+
+cut -f1 < candidates | qruncmd --jobs $JOBS --attempts 3 \\
+  "./closest_word -c 1 -n $CLOSEST -l $LENGTHDIFF costs targetmono" \\
+  > closest.out \\
+  || die "Failed to find closest candidates"
+
+mkdir -p model
+cut -f2 < candidates | paste - closest.out | perl -ne '
+chomp;
+my (\$src, \$tgtstr) = split "\\t";
+my @tgt = split / /, \$tgtstr;
+map { m/(.*):([^:]*)/; print "\$src ||| \$1 ||| \$2\\n"; } @tgt;' \\
+  | gzip -c > model/phrase-table.0-0.gz || die "Failed to create phrase table"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
