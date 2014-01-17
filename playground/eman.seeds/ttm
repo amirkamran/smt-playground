@@ -47,8 +47,8 @@ ulimit -c 1 # core files limited to 1 byte
 
 # create list of candidates
 join -1 2 -2 1 $TMPATH/model/lex.0-0.e2f $TMPATH/model/lex.0-0.f2e \
-  | awk -F' ' '{ if (\$3 > $THRESHOLD && \$5 > $THRESHOLD) print \$1 "\\t" \$2 }' \
-  > candidates
+  | awk -F' ' '{ if (\$3 > $THRESHOLD && \$5 > $THRESHOLD) print \$1, \$2, \$3, \$5 }' \
+  | tr ' ' '\\t' > candidates
 
 # clone costs file
 $PLAYGROUND/../scripts/wiseln $COSTSFILE costs || die "Failed to clone file $COSTSFILE"
@@ -68,11 +68,17 @@ cut -f1 < candidates | qruncmd --jobs $JOBS --attempts 3 \\
   || die "Failed to find closest candidates"
 
 mkdir -p model
-cut -f2 < candidates | paste - closest.out | perl -ne '
+cut -f2,3,4 < candidates | paste - closest.out | perl -ne '
 chomp;
-my (\$src, \$tgtstr) = split "\\t";
+my (\$src, \$lexe2f, \$lexf2e, \$tgtstr) = split "\\t";
 my @tgt = split / /, \$tgtstr;
-map { m/(.*):([^:]*)/; print "\$src ||| \$1 ||| \$2\\n"; } @tgt;' \\
+map { 
+  m/(.*):([^:]*)/;
+  my (\$closest, \$dist) = (\$1, \$2);
+  print "\$src ||| \$closest ||| ",
+    join(" ", \$lexe2f, \$lexf2e, \$dist, \$dist * \$lexe2f),
+    "\\n";
+} @tgt;' \\
   | gzip -c > model/phrase-table.0-0.gz || die "Failed to create phrase table"
 
 # Standard command footer
