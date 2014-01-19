@@ -202,7 +202,8 @@ sub get_corpora_seed
     my @corpora0 =
     (
       { 'corpus' => 'news9euro',      'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en', 'ru-en'] },
-      { 'corpus' => 'news9euro',      'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'ru'] },
+      { 'corpus' => 'news9euro',      'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', 'ru'] },
+      { 'corpus' => 'commoncrawl',    'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en'] },
       { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
 #      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
       { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
@@ -213,7 +214,7 @@ sub get_corpora_seed
 #      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
 #      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'news9all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', 'hi', 'ru'] },
-      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
+      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'fr'] },
       { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2010',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
@@ -391,11 +392,16 @@ sub start_korpus
     # Remove Corpman index if any to force reindexing.
     # If there were steps for the corpora, we must have removed them first (rm -rf s.korpus.*).
     # However, the index could still refer to them.
-    unlink('corpman.index') if(-e 'corpman.index');
+    ###!!! Tohle je moc brutální, co když to smažu pod rukama jiné úloze?
+    ###!!!unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
     print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
+    my $jeste_ne = 1; ###!!!
     foreach my $c (@corpora)
     {
+        next unless($c->{corpus} eq 'commoncrawl'); ###!!!
+        #$jeste_ne = 0 if($jeste_ne && $c->{corpus} eq 'wmt2009' && $c->{language} eq 'en'); ###!!!
+        #next if($jeste_ne); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
