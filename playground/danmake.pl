@@ -201,13 +201,18 @@ sub get_corpora_seed
 {
     my @corpora0 =
     (
+      { 'corpus' => 'news9euro',      'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en', 'ru-en'] },
+      { 'corpus' => 'news9euro',      'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'ru'] },
       { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
-      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
+#      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
       { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
-      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+#      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
       { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
-      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+###!!! Yandex
+###!!! Hindencorp
+#      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+#      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+      { 'corpus' => 'news9all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', 'hi', 'ru'] },
       { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
       { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
@@ -215,20 +220,8 @@ sub get_corpora_seed
       { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
     );
-    # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
-    # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
-    my $v8 = 1;
-    if($v8)
-    {
-        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
-        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] });
-    }
-    else
-    {
-        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] });
-        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] });
-    }
     return @corpora0;
 }
 
@@ -400,9 +393,6 @@ sub start_korpus
     # However, the index could still refer to them.
     unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
-    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
