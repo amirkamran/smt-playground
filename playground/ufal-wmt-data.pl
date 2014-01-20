@@ -327,11 +327,256 @@ elsif($corpus eq 'muchmore')
 # PatTR (MAREC patent collection)
 # wget http://www.cl.uni-heidelberg.de/statnlpgroup/pattr/de-en.tar.gz
 # wget http://www.cl.uni-heidelberg.de/statnlpgroup/pattr/en-fr.tar.gz
-# mkdir pattr-parallel ; cd pattr-parallel
+# mkdir pattr ; cd pattr
 # tar xzf ../pattr.de-en.tar.gz ; mv pattr de-en
 # tar xzf ../pattr.en-fr.tar.gz # already named en-fr
 # ../data-extraction-scripts/pattr-parallel.sh de-en de en
 # ../data-extraction-scripts/pattr-parallel.sh en-fr en fr
+# ../data-extraction-scripts/pattr-monolingual.sh de-en de en
+# ../data-extraction-scripts/pattr-monolingual.sh en-fr en fr
+# gzip *.tsv
+elsif($corpus =~ m/^pattr-(medical|other)$/)
+{
+    if($pair eq 'de-en')
+    {
+        if($language eq 'de')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.*.$pair.tsv.gz | cut -f1";
+        }
+        elsif($language eq 'en')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.*.$pair.tsv.gz | cut -f2";
+        }
+        else
+        {
+            die("Language '$language' does not match pair '$pair'");
+        }
+    }
+    elsif($pair eq 'en-fr')
+    {
+        if($language eq 'en')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.*.$pair.tsv.gz | cut -f1";
+        }
+        elsif($language eq 'fr')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.*.$pair.tsv.gz | cut -f2";
+        }
+        else
+        {
+            die("Language '$language' does not match pair '$pair'");
+        }
+    }
+    elsif(!defined($pair)) # monolingual part of the corpus
+    {
+        if($language eq 'en')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.description.*.en.gz";
+        }
+        elsif($language eq 'de')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.description.de-en.de.gz";
+        }
+        elsif($language eq 'fr')
+        {
+            $command = "zcat $path/medical/pattr/$corpus.description.en-fr.fr.gz";
+        }
+        else
+        {
+            die("Unknown language '$language' for corpus '$corpus'");
+        }
+    }
+    else
+    {
+        die("Unknown language pair '$pair' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# UMLS (Unified Medical Language System) term-to-term translation dictionary
+# Provided upon registration (download the 2013AB Full Release). We already have it at ÚFAL.
+# /net/data/khresmoi/UMLS
+# data-extraction-scripts/umls-monolingual.pl /net/data/khresmoi/UMLS/2013AB/META/MRDEF.RRF.gz
+elsif($corpus eq 'umls')
+{
+    if(defined($pair)) # parallel part of the corpus
+    {
+        # They use different language codes:
+        # cs ... CZE
+        # de ... GER
+        # en ... ENG
+        # fr ... FRE
+        my $src;
+        my $tgt;
+        my $cut;
+        die("Language '$language' does not match pair '$pair'") if(!lmatchp($language, $pair));
+        if($pair eq 'cs-en')
+        {
+            $src = 'CZE';
+            $tgt = 'ENG';
+            $cut = $language eq 'cs' ? 'f1' : 'f2';
+        }
+        elsif($pair eq 'de-en')
+        {
+            $src = 'GER';
+            $tgt = 'ENG';
+            $cut = $language eq 'de' ? 'f1' : 'f2';
+        }
+        elsif($pair eq 'fr-en')
+        {
+            $src = 'FRE';
+            $tgt = 'ENG';
+            $cut = $language eq 'fr' ? 'f1' : 'f2';
+        }
+        else
+        {
+            die("Unknown language pair '$pair' for corpus '$corpus'");
+        }
+        $command = "$path/medical/data-extraction-scripts/umls-parallel.pl -s $src -t $tgt /net/data/khresmoi/UMLS/2013AB/META/MRCONSO.RRF.*.gz | cut -$cut";
+    }
+    else # monolingual part of the corpus
+    {
+        if($language =~ m/^(cs|de|en|fr)$/)
+        {
+            $command = "zcat $path/medical/umls.$language.gz";
+        }
+        else
+        {
+            die("Unknown language '$language' for corpus '$corpus'");
+        }
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# Wikipedia Titles from health-related categories
+elsif($corpus eq 'wiki-medical-titles')
+{
+    if($pair =~ m/^(cs|de|fr)-en$/)
+    {
+        die("Language '$language' does not match pair '$pair'") if(!lmatchp($language, $pair));
+        my $cut = $language eq 'en' ? 'f1' : 'f2';
+        $command = "zcat $path/medical/wp-medical-titles.$pair.gz | cut -$cut";
+    }
+    else
+    {
+        die("Unknown language pair '$pair' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# Wikipedia Articles from health-related categories
+elsif($corpus eq 'wiki-medical-articles')
+{
+    if($language =~ m/^(cs|de|en|fr)$/)
+    {
+        $command = "zcat $path/medical/wp-medical-articles.$language.gz";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# AACT (ClinicalTrials.gov)
+# Monolingual English
+# wget http://library.dcri.duke.edu/dtmi/ctti/2012%20AACT/2012%20Pipe%20delimited%20text%20output.zip
+# mv 2012\ Pipe\ delimited\ text\ output.zip aact-pipe-delimited-text-output.zip
+# mkdir aact ; cd aact
+# unzip ../aact-pipe-delimited-text-output.zip
+elsif($corpus eq 'aact')
+{
+    if($language eq 'en')
+    {
+        $command = "$path/medical/data-extraction-scripts/aact.pl $path/medical/aact/clinical_study.txt";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# DrugBank
+# Monolingual English
+# wget http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip
+# unzip drugbank.xml.zip ; rm drugbank.xml.zip
+# data-extraction-scripts/drugbank.pl < drugbank.xml > drugbank.txt
+elsif($corpus eq 'drugbank')
+{
+    if($language eq 'en')
+    {
+        $command = "$path/medical/data-extraction-scripts/drugbank.pl < $path/medical/drugbank.xml";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# GENIA (Biomedical Literature)
+# Monolingual English
+# wget http://www.nactem.ac.uk/GENIA/current/GENIA-corpus/Part-of-speech/GENIAcorpus3.02p.tgz
+# mkdir genia ; cd genia
+# unzip.pl ../GENIAcorpus3.02p.tgz
+elsif($corpus eq 'genia')
+{
+    if($language eq 'en')
+    {
+        $command = "$path/medical/data-extraction-scripts/genia.sh < $path/medical/genia/GENIAcorpus3.02.merged.xml";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# GREC (Gene Regulation Event Corpus)
+# Monolingual English
+# wget http://www.nactem.ac.uk/download.php?target=GREC/GREC_Standoff.zip
+# mv download.php\?target\=GREC%2FGREC_Standoff.zip grec.zip
+# mkdir grec ; cd grec
+# unzip ../grec.zip
+elsif($corpus eq 'grec')
+{
+    if($language eq 'en')
+    {
+        $command = "cat $path/medical/grec/GREC_Standoff/{Ecoli,Human}/*.txt";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# FMA (Foundational Model of Anatomy Ontology)
+# Monolingual English
+# wget http://sig.biostr.washington.edu/share/downloads/fma/FMA_Release/alt/v3.2.1/owl_file/fma_3.2.1_owl_file.zip
+# mkdir fma ; cd fma
+# unzip ../fma_3.2.1_owl_file.zip
+###!!! Ten skript, který k tomu dodali, nefunguje, protože nemáme nástroj "uconv".
+elsif(0 && $corpus eq 'fma')
+{
+    if($language eq 'en')
+    {
+        $command = "cat $path/medical/fma/fma3.2.owl | $path/medical/data-extraction-scripts/fma.sh";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# PIL (Patient Information Leaflet Corpus)
+# Monolingual English
+# wget http://mcs.open.ac.uk/nlg/old_projects/pills/corpus/PIL-corpus-2.0.tar.gz
+# unzip.pl PIL-corpus-2.0.tar.gz
+elsif($corpus eq 'pil')
+{
+    if($language eq 'en')
+    {
+        $command = "$path/medical/data-extraction-scripts/pil.sh $path/medical/PIL-corpus-2.0/PIL/html";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 else
 {

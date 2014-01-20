@@ -225,7 +225,27 @@ sub get_corpora_seed
       { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
 ###!!!      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
     );
-    return @corpora0;
+    my @medical_corpora0 =
+    (
+      { 'corpus' => 'emea',           'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'en-fr'] },
+      { 'corpus' => 'coppa-medical',  'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'coppa-other',    'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'muchmore',       'parallel' => 1, 'languages' => ['de', 'en'] },
+      { 'corpus' => 'pattr',          'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
+      { 'corpus' => 'pattr',          'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
+      { 'corpus' => 'umls',           'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
+      { 'corpus' => 'umls',           'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr'] },
+      { 'corpus' => 'wiki-medical-titles', 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
+      { 'corpus' => 'wiki-medical-articles', 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr'] },
+      { 'corpus' => 'aact',           'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'drugbank',       'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'genia',          'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'grec',           'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'pil',            'parallel' => 0, 'languages' => ['en'] },
+###!!!      { 'corpus' => 'fma',      'parallel' => 0, 'languages' => ['en'] },
+    );
+    #return @corpora0;
+    return @medical_corpora0;
 }
 
 
