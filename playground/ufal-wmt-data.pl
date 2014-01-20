@@ -99,7 +99,7 @@ elsif($corpus eq 'czeng')
     print COLUMN ("$perl_filter\n");
     close(COLUMN);
     chmod(0755, 'column.pl') or die("Cannot change mode of column.pl: $!");
-    $command = "zcat /net/data/czeng10-public-release/data.plaintext-format/*.train.gz | ./column.pl";
+    $command = "zcat /net/data/czeng10-public-release/data.plaintext-format/*train.gz | ./column.pl";
 }
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # United Nations corpus: large parallel data for French, Spanish and English.

@@ -7,13 +7,10 @@ function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
-# Note that we also require STATMT, which is constant w.r.t. individual experiments.
-# However, we do not define it as one of the variables defining the step (because its value will be the same in all our experiments).
-# It points to the current user's working copy of the StatMT repository. You should set it in your login config file.
-[ -z "$STATMT" ] && die "\$STATMT must contain the full path to the root of your working copy of the StatMT repository (one level above playground)"
+PLAYGROUND=$(cd .. ; pwd -P)
+echo PLAYGROUND=$PLAYGROUND
+STATMT=$PLAYGROUND/..
 SCRIPTS=$STATMT/scripts
-PLAYGROUND=$STATMT/playground
-WMT=/net/data/wmt
 eman \
      defvar CORPUS help='newseuro|news8euro|news9euro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2013|dev2014' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
@@ -79,7 +76,7 @@ else
     || die "Mismatched number of lines, expected \$expected_nl, got \$nl"
 fi
 
-rm -f $PLAYGROUND/corpman.index \\
+$PLAYGROUND/corpman reindex \\
   || echo "Failed to force reindexing"
 
 echo Done.
