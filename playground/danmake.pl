@@ -231,8 +231,10 @@ sub get_corpora_seed
       { 'corpus' => 'coppa-medical',  'parallel' => 1, 'languages' => ['fr', 'en'] },
       { 'corpus' => 'coppa-other',    'parallel' => 1, 'languages' => ['fr', 'en'] },
       { 'corpus' => 'muchmore',       'parallel' => 1, 'languages' => ['de', 'en'] },
-      { 'corpus' => 'pattr',          'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
-      { 'corpus' => 'pattr',          'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
+      { 'corpus' => 'pattr-medical',  'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
+      { 'corpus' => 'pattr-medical',  'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
+      { 'corpus' => 'pattr-other',    'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
+      { 'corpus' => 'pattr-other',    'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
       { 'corpus' => 'umls',           'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
       { 'corpus' => 'umls',           'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr'] },
       { 'corpus' => 'wiki-medical-titles', 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
@@ -418,8 +420,11 @@ sub start_korpus
     ###!!!unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
     print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
+    my $go = 0; ###!!!
     foreach my $c (@corpora)
     {
+        $go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
+        next unless($go); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
