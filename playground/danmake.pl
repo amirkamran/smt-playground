@@ -209,11 +209,13 @@ sub get_corpora_seed
       { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
 #      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
       { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
-###!!! Yandex
-###!!! Hindencorp
+      { 'corpus' => 'yandex',         'parallel' => 1, 'languages' => ['ru', 'en'] },
+###!!! Hindencorp zatím vynechávám, protože nemám rozchozený hindský tagger a lematizátor.
 #      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
 #      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
-      { 'corpus' => 'news9all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', 'hi', 'ru'] },
+      { 'corpus' => 'news9all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', ###!!!'hi',
+       'ru'] },
+###!!! Z WMT 2014 vypadla španělština, takže některé korpusy známé z dřívějška teď chybí. Prozatím vynechávám španělský Gigaword.
       { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'fr'] },
       { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
@@ -221,7 +223,7 @@ sub get_corpora_seed
       { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
-      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
+###!!!      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
     );
     return @corpora0;
 }
@@ -399,7 +401,7 @@ sub start_korpus
     my $jeste_ne = 1; ###!!!
     foreach my $c (@corpora)
     {
-        next unless($c->{corpus} eq 'commoncrawl'); ###!!!
+        next unless($c->{corpus} eq 'yandex'); ###!!!
         #$jeste_ne = 0 if($jeste_ne && $c->{corpus} eq 'wmt2009' && $c->{language} eq 'en'); ###!!!
         #next if($jeste_ne); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";

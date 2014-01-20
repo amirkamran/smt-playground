@@ -134,6 +134,22 @@ elsif($corpus eq 'gigafren')
     }
 }
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# Yandex: parallel Russian-English corpus.
+# First register on-line at https://translate.yandex.ru/corpus?lang=en.
+# The owners of the corpus will send a temporary link to the data within a week from the registration, e.g.:
+# wget http://clck.ru/936Hh
+elsif($corpus eq 'yandex')
+{
+    if($language =~ m/^(ru|en)$/)
+    {
+        $command = "zcat $path/yandex/corpus.en_ru.1m.$language.gz";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # Hindencorp: parallel English-Hindi corpus from ÚFAL.
 # Username will be sent after registration, password is common.
 # wget --user=XXX --password=hindencorp http://ufallab.ms.mff.cuni.cz/~bojar/hindencorp/data/hindencorp0.1.gz

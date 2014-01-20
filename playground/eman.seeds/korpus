@@ -12,7 +12,7 @@ echo PLAYGROUND=$PLAYGROUND
 STATMT=$PLAYGROUND/..
 SCRIPTS=$STATMT/scripts
 eman \
-     defvar CORPUS help='newseuro|news8euro|news9euro|czeng|un|gigafren|newsall|gigaword|wmt2008|...|wmt2013|dev2014' \
+     defvar CORPUS help='news9euro|czeng|un|gigafren|yandex|news9all|gigaword|wmt2008|...|wmt2013|dev2014' \
      defvar PAIR default='' help='select language pair of newseuro and un; empty for other corpora' \
      defvar LANGUAGE help='language code (create separate step for each language)' \
 || exit 1
