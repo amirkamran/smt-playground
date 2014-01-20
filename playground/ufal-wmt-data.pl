@@ -238,11 +238,105 @@ elsif($corpus eq 'dev2014')
         die("Unknown language '$language' for corpus '$corpus'");
     }
 }
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# The corpora below this line are additional corpora from the medical domain, for the medical MT
+# track of WMT 2014. Some of them are parallel only, some monolingual, some are both.
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# EMEA (European Medicines Agency)
+# wget http://opus.lingfil.uu.se/download.php?f=EMEA/cs-en.txt.zip
+# wget http://opus.lingfil.uu.se/download.php?f=EMEA/de-en.txt.zip
+# wget http://opus.lingfil.uu.se/download.php?f=EMEA/en-fr.txt.zip
+elsif($corpus eq 'emea')
+{
+    if($pair =~ m/^(cs-en|de-en|en-fr)$/)
+    {
+        die("Language '$language' does not match pair '$pair'") if(!lmatchp($language, $pair));
+        $command = "zcat $path/medical/EMEA.$pair.$language.gz";
+    }
+    else
+    {
+        die("Unknown language pair '$pair' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# COPPA (Corpus of Parallel Patent Applications)
+# Provided on DVD, data sent on request. We already have it at ÚFAL.
+# /net/data/khresmoi/wipo/original
+# cd $path/medical
+# data-extraction-scripts/coppa.pl /net/data/khresmoi/wipo/original
+# Outputs:
+# coppa-medical.fr-en.tsv -- in-domain sections of the corpus
+# coppa-other.fr-en.tsv -- out-of-domain sections of the corpus
+# gzip coppa-*.tsv
+elsif($corpus eq 'coppa-medical')
+{
+    if($language eq 'en')
+    {
+        $command = "zcat $path/medical/$corpus.fr-en.tsv.gz | cut -f2";
+    }
+    elsif($language eq 'fr')
+    {
+        $command = "zcat $path/medical/$corpus.fr-en.tsv.gz | cut -f1";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+elsif($corpus eq 'coppa-other')
+{
+    if($language eq 'en')
+    {
+        $command = "zcat $path/medical/$corpus.fr-en.tsv.gz | cut -f2";
+    }
+    elsif($language eq 'fr')
+    {
+        $command = "zcat $path/medical/$corpus.fr-en.tsv.gz | cut -f1";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# MuchMore (Springer abstracts from medical journals)
+# wget http://muchmore.dfki.de/pubs/springer_german_train_V4.2.tar.gz
+# wget http://muchmore.dfki.de/pubs/springer_english_train_V4.2.tar.gz
+# mkdir muchmore ; cd muchmore
+# tar xzf ../springer_english_train_V4.2.tar.gz
+# tar xzf ../springer_german_train_V4.2.tar.gz
+# cd ..
+# data-extraction-scripts/muchmore.pl muchmore | iconv -f iso8859-1 -t utf8 | gzip -c > muchmore.tsv.gz
+###!!! Bacha, v tomto korpusu jsou německé přehlásky zakódovány jako "ae", "oe", "ue"!
+elsif($corpus eq 'muchmore')
+{
+    if($language eq 'de')
+    {
+        $command = "zcat $path/medical/muchmore.tsv.gz | cut -f1";
+    }
+    elsif($language eq 'en')
+    {
+        $command = "zcat $path/medical/muchmore.tsv.gz | cut -f2";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# PatTR (MAREC patent collection)
+# wget http://www.cl.uni-heidelberg.de/statnlpgroup/pattr/de-en.tar.gz
+# wget http://www.cl.uni-heidelberg.de/statnlpgroup/pattr/en-fr.tar.gz
+# mkdir pattr-parallel ; cd pattr-parallel
+# tar xzf ../pattr.de-en.tar.gz ; mv pattr de-en
+# tar xzf ../pattr.en-fr.tar.gz # already named en-fr
+# ../data-extraction-scripts/pattr-parallel.sh de-en de en
+# ../data-extraction-scripts/pattr-parallel.sh en-fr en fr
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 else
 {
     die("Unknown corpus '$corpus'");
 }
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # Print the command to the standard output so that the caller can use it.
 print("$command\n");
 
