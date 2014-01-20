@@ -418,12 +418,8 @@ sub start_korpus
     ###!!!unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
     print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
-    my $jeste_ne = 1; ###!!!
     foreach my $c (@corpora)
     {
-        next unless($c->{corpus} eq 'yandex'); ###!!!
-        #$jeste_ne = 0 if($jeste_ne && $c->{corpus} eq 'wmt2009' && $c->{language} eq 'en'); ###!!!
-        #next if($jeste_ne); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
