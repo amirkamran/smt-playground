@@ -134,6 +134,10 @@ elsif($corpus eq 'gigafren')
     }
 }
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# Hindencorp: parallel English-Hindi corpus from ÚFAL.
+# Username will be sent after registration, password is common.
+# wget --user=XXX --password=hindencorp http://ufallab.ms.mff.cuni.cz/~bojar/hindencorp/data/hindencorp0.1.gz
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # Monolingual crawled news corpus. Downloaded in separate packages for publication years. We just
 # put it all together in one corpus.
 # wget http://www.statmt.org/wmt13/training-monolingual-news-2007.tgz
