@@ -12,9 +12,9 @@ binmode(STDERR, ':utf8');
 while(<>)
 {
     chomp();
-    s-/STM\s+\+\s+--g;
+    s-\s+\+\s+--g;
     s-/STM--g;
-    s-/PRE\+\s+--g;
-    s-\s+\+(\S+?)/SUF-$1-g;
+    s-/PRE\+\s*--g;
+    s-\s*\+(\S+?)/SUF-$1-g;
     print("$_\n");
 }
