@@ -247,7 +247,7 @@ sub get_corpora_seed
 ###!!!      { 'corpus' => 'fma',      'parallel' => 0, 'languages' => ['en'] },
     );
     #return @corpora0;
-    return @medical_corpora0;
+    return (@corpora0, @medical_corpora0);
 }
 
 
@@ -423,8 +423,8 @@ sub start_korpus
     my $go = 0; ###!!!
     foreach my $c (@corpora)
     {
-        $go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
-        next unless($go); ###!!!
+        #$go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
+        #next unless($go); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
@@ -445,9 +445,6 @@ sub start_korpus
 sub start_tag
 {
     my @corpora = get_corpora();
-    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
