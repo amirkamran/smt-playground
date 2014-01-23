@@ -201,35 +201,53 @@ sub get_corpora_seed
 {
     my @corpora0 =
     (
+      { 'corpus' => 'news9euro',      'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en', 'ru-en'] },
+      { 'corpus' => 'news9euro',      'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', 'ru'] },
+      { 'corpus' => 'commoncrawl',    'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en'] },
       { 'corpus' => 'czeng',          'parallel' => 1, 'languages' => ['cs', 'en'] },
-      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
+#      { 'corpus' => 'newseuro-czeng', 'parallel' => 1, 'languages' => ['cs', 'en'] },
       { 'corpus' => 'un',             'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
-      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
+#      { 'corpus' => 'newseuro-un',    'parallel' => 1, 'pairs' => ['es-en', 'fr-en'] },
       { 'corpus' => 'gigafren',       'parallel' => 1, 'languages' => ['fr', 'en'] },
-      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
-      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
-      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'es', 'fr'] },
+      { 'corpus' => 'yandex',         'parallel' => 1, 'languages' => ['ru', 'en'] },
+###!!! Hindencorp zatím vynechávám, protože nemám rozchozený hindský tagger a lematizátor.
+#      { 'corpus' => 'newsall',        'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
+#      { 'corpus' => 'news8all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+      { 'corpus' => 'news9all',       'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr', ###!!!'hi',
+       'ru'] },
+###!!! Z WMT 2014 vypadla španělština, takže některé korpusy známé z dřívějška teď chybí. Prozatím vynechávám španělský Gigaword.
+      { 'corpus' => 'gigaword',       'parallel' => 0, 'languages' => ['en', 'fr'] },
       { 'corpus' => 'wmt2008',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2009',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2010',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
+###!!!      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
     );
-    # Po přechodnou dobu potřebujeme umět rozhodnout, která verze News Commentary se má použít.
-    # Pokud se použije stará verze, tak navíc nemáme k dispozici ruštinu.
-    my $v8 = 1;
-    if($v8)
-    {
-        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'ru-en', 'de-cs', 'es-cs', 'fr-cs', 'ru-cs'] });
-        push(@corpora0, { 'corpus' => "news8euro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] });
-    }
-    else
-    {
-        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'es-en', 'fr-en', 'de-cs', 'es-cs', 'fr-cs'] });
-        push(@corpora0, { 'corpus' => "newseuro", 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] });
-    }
-    return @corpora0;
+    my @medical_corpora0 =
+    (
+      { 'corpus' => 'emea',           'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'en-fr'] },
+      { 'corpus' => 'coppa-medical',  'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'coppa-other',    'parallel' => 1, 'languages' => ['fr', 'en'] },
+      { 'corpus' => 'muchmore',       'parallel' => 1, 'languages' => ['de', 'en'] },
+      { 'corpus' => 'pattr-medical',  'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
+      { 'corpus' => 'pattr-medical',  'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
+      { 'corpus' => 'pattr-other',    'parallel' => 1, 'pairs' => ['de-en', 'en-fr'] },
+      { 'corpus' => 'pattr-other',    'parallel' => 0, 'languages' => ['de', 'en', 'fr'] },
+      { 'corpus' => 'umls',           'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
+      { 'corpus' => 'umls',           'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr'] },
+      { 'corpus' => 'wiki-medical-titles', 'parallel' => 1, 'pairs' => ['cs-en', 'de-en', 'fr-en'] },
+      { 'corpus' => 'wiki-medical-articles', 'parallel' => 0, 'languages' => ['cs', 'de', 'en', 'fr'] },
+      { 'corpus' => 'aact',           'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'drugbank',       'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'genia',          'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'grec',           'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'pil',            'parallel' => 0, 'languages' => ['en'] },
+###!!!      { 'corpus' => 'fma',      'parallel' => 0, 'languages' => ['en'] },
+    );
+    #return @corpora0;
+    return (@corpora0, @medical_corpora0);
 }
 
 
@@ -398,14 +416,15 @@ sub start_korpus
     # Remove Corpman index if any to force reindexing.
     # If there were steps for the corpora, we must have removed them first (rm -rf s.korpus.*).
     # However, the index could still refer to them.
-    unlink('corpman.index') if(-e 'corpman.index');
+    ###!!! Tohle je moc brutální, co když to smažu pod rukama jiné úloze?
+    ###!!!unlink('corpman.index') if(-e 'corpman.index');
     my @corpora = get_corpora();
-    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Preparing ", scalar(@corpora), " corpora...\n");
+    my $go = 0; ###!!!
     foreach my $c (@corpora)
     {
+        #$go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
+        #next unless($go); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
         if($dryrun)
         {
@@ -426,9 +445,6 @@ sub start_korpus
 sub start_tag
 {
     my @corpora = get_corpora();
-    ###!!! Tohle bychom asi chtěli spíš ovládat z příkazového řádku.
-    ###!!! Většinu korpusů už máme připravenou, inicializovat jen ty nové.
-    @corpora = grep {$_->{corpus} eq 'wmt2013' || $_->{corpus} eq 'wmt2012' && $_->{language} eq 'ru'} (@corpora);
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
