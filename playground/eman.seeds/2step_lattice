@@ -17,8 +17,7 @@ eman \
   defvar SRCAUG inherit=PHASE1MERT \
   defvar REFAUG inherit=PHASE2MERT:REFAUG \
   defvar MIDAUG inherit=PHASE2MERT:SRCAUG \
-  defvar SEARCH1 help="beam or cube or hier" \ #default=cube \
-  defvar SEARCH2 help="beam or cube or hier" \ #default=cube \
+  defvar SEARCH help="beam or cube" default=cube \
   defvar MOSESFLAGS help="any further flags for both steps" default='' \
   defvar PHASE1MOSESFLAGS help="any further flags for step1 steps" default='' \
   defvar PHASE2MOSESFLAGS help="any further flags for step2 steps" default='' \
@@ -26,6 +25,7 @@ eman \
   defvar SERIAL help="yes to disable qsub" default='' \
   defvar STACK1 help="stacksize" default='' \
   defvar STACK2 help="stacksize" default='' \
+  defvar ARCWEIGHT help="feature weight for lattice arcs" default='' \
   defvar TAGPREF help="tag prefix" default='' \
   defvar POSTPROC help="pipe of commands, e.g. ../tools/remove_pluslemma_prefixes.pl" \
     default='' \
@@ -40,20 +40,7 @@ eval `eman bash-loadvars`
 
 MOSESDIR="$(eman path $BINARIES)"
 SCRIPTS_ROOTDIR="$MOSESDIR/moses/scripts"
-if [ $SEARCH1 == "hier" ]; then
-  MOSESCMD1="$MOSESDIR/bin/moses_chart"
-  HIERARCHICALFLAG1="-Hierarchical"
-else
-  MOSESCMD1="$MOSESDIR/bin/moses"
-fi
-
-
-if [ $SEARCH2 == "hier" ]; then
-  MOSESCMD2="$MOSESDIR/bin/moses_chart"
-  HIERARCHICALFLAG2="-Hierarchical"
-else
-  MOSESCMD2="$MOSESDIR/bin/moses"
-fi
+MOSESCMD="$MOSESDIR/bin/moses"
 
 #eman add-tag "$TAGPREF"SRC"$SRCAUG".MID"$MIDAUG".TGT"$REFAUG".$SEARCH$STACK.FIRST.`cat $PHASE1MERT/eman.tag`.SECOND.`cat $PHASE2MERT/eman.tag` .
 
@@ -82,54 +69,38 @@ fi
 MOSESPARALLEL="\$SCRIPTS_ROOTDIR/generic/moses-parallel.pl"
 
 if [ ! -z "$STACK1" ]; then
-  MOSESFLAGS="$MOSESFLAGS -s $STACK1"
+  MOSES1FLAGS="$MOSES1FLAGS -s $STACK1"
 fi
 
 if [ ! -z "$STACK2" ]; then
-  MOSESFLAGS="$MOSESFLAGS -s $STACK2"
+  MOSES2FLAGS="$MOSES1FLAGS -s $STACK2"
 fi
+
 [ ! -z "$JOBS" ] || JOBS=15
 
-case "$SEARCH1" in
-beam)
-  SEARCH1FLAG="-search-algorithm 0"
-  ;;
-cube)
-  SEARCH1FLAG="-search-algorithm 1"
-  ;;
-hier)
-  SEARCH1FLAG="-search-algorithm 3"
-  ;;
-*)
-  die "Bad search algorithm: $SEARCH"
-  ;;
-esac
-
-case "$SEARCH2" in
-beam)
-  SEARCH2FLAG="-search-algorithm 0"
-  ;;
-cube)
-  SEARCH2FLAG="-search-algorithm 1"
-  ;;
-hier)
-  SEARCH2FLAG="-search-algorithm 3"
-  ;;
-*)
-  die "Bad search algorithm: $SEARCH"
-  ;;
-esac
+[ ! -z "$ARCWEIGHT" ] || ARCWEIGHT=0.1
 
 if [ "$SERIAL" = yes ]; then
   GRIDARGS=""
-  STEP1MOSESPARALLELIZER="./moses $SEARCH1FLAG $MOSESFLAGS $PHASE1MOSESFLAGS"
-  STEP2MOSESPARALLELIZER="./moses $SEARCH2FLAG $MOSESFLAGS $PHASE2MOSESFLAGS"
+  STEP1MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSES1FLAGS $PHASE1MOSESFLAGS "
+  STEP2MOSESPARALLELIZER="./moses $SEARCHFLAG $MOSES2FLAGS $PHASE2MOSESFLAGS "
 else
   MOSESGRIDARGS="--jobs=$JOBS --queue-parameters=' $GRIDFLAGS -p -200 -cwd -S /bin/bash ' "
-  STEP1MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCH1FLAG $MOSESFLAGS $PHASE1MOSESFLAGS' -decoder ./moses"
-  STEP2MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCH2FLAG $MOSESFLAGS $PHASE2MOSESFLAGS' -decoder ./moses"
+  STEP1MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSES1FLAGS $PHASE1MOSESFLAGS ' -decoder ./moses"
+  STEP2MOSESPARALLELIZER="$MOSESPARALLEL $MOSESGRIDARGS -decoder-parameters '$SEARCHFLAG $MOSES2FLAGS $PHASE2MOSESFLAGS ' -decoder ./moses"
 fi
 
+case "$SEARCH" in
+beam)
+  SEARCHFLAG="-search-algorithm 0"
+  ;;
+cube)
+  SEARCHFLAG="-search-algorithm 1"
+  ;;
+*)
+  die "Bad search algorithm: $SEARCH"
+  ;;
+esac
 
 PHASE1MERT=`eman path $PHASE1MERT`
 PHASE2MERT=`eman path $PHASE2MERT`
@@ -167,13 +138,19 @@ function mkcorpus() {
 mkcorpus $TESTCORP/$SRCAUG evaluation.in
 mkcorpus $TESTCORP/$REFAUG evaluation.ref.0
 
+echo "created corpus"
+
 gunzip evaluation.in.gz
 gunzip evaluation.ref.0.gz
+
+echo "zipped corpus"
 
 echo Checking tune and eval corp sizes
 [ `wc -l < evaluation.in` -gt 0 ] || die "Empty evaluation.in"
 [ `wc -l < evaluation.in` == `wc -l < evaluation.ref.0` ] || die "Mismatching evaluation.ref.0"
 renice 10 \$\$
+
+echo "checked corp size"
 
 # core files limited to 1 byte
 ulimit -c 1
@@ -185,7 +162,7 @@ export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=${SCRIPTS_ROOTDIR}
 
 # clone some important executables
-$PLAYGROUND/../scripts/wiseln $MOSESCMD1 ./moses || die "Failed to clone moses"
+$PLAYGROUND/../scripts/wiseln $MOSESCMD ./moses || die "Failed to clone moses"
 #$PLAYGROUND/../scripts/wiseln $TESTBLEU ./testbleu || die "Failed to clone testbleu"
 
 gunzip $PLAYGROUND/../src/testbleu.gz -c > ./testbleu \
@@ -215,28 +192,39 @@ cd ..
 # Filter for our input
 \$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-phase1 \\
   ./phase1model/moses.opt.ini evaluation.in \\
-  $HIERARCHICALFLAG1 \\
   || die "Filter for phase 1 failed"
+
+outputgraph=searchgraph.mid
+osginplf=lattice.plf
 
 $STEP1MOSESPARALLELIZER \\
   -input-file ./evaluation.in \\
   -alignment-output-file ./evaluation.mid.ali \\
   -config ./filtered-for-phase1/moses.ini \\
+  -output-search-graph \$outputgraph \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
   > evaluation.mid \\
   || die "Translation of phase 1 failed"
-#fi
 
-# clone some important executables
-rm moses*
-$PLAYGROUND/../scripts/wiseln $MOSESCMD2 ./moses || die "Failed to clone moses"
+echo "converting search graph into PLF format"
+TOTAL_SENTENCE=\$(tail -n1 \$outputgraph | cut -d " " -f1)
+
+for ((sentence=0; sentence<=\$TOTAL_SENTENCE; sentence++ ))
+do
+    cat \$outputgraph | grep "^\$sentence " | python $PLAYGROUND/tools/osg2fsa.py | sort -n >> fsa
+done
+
+sed '1d' fsa > lattice.fsa
+perl $PLAYGROUND/tools/fsa2plf.pl --ignore-final-state-cost < lattice.fsa > \$osginplf
+rm fsa lattice.fsa
 
 ## Clone the moses.ini and source files
 mkdir phase2model || die "mkdir failed"
 cd phase2model || die "mkdir failed"
 \$SCRIPTS_ROOTDIR/training/clone_moses_model.pl \\
   \$phase2dir/moses.abs.ini || die "clone failed"
+
 # Absolutize
 \$SCRIPTS_ROOTDIR/training/absolutize_moses_model.pl ./moses.ini \\
   > moses.abs.ini || die "Absolutize failed"
@@ -245,20 +233,32 @@ $PLAYGROUND/tools/apply_weights_from_moses_ini.pl \\
   \$phase2dir/mert-tuning/moses.ini < moses.abs.ini > moses.opt.ini \\
   || die "Apply failed"
 cd ..
+
 # Filter for our input
-\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-phase2 \\
-  ./phase2model/moses.opt.ini evaluation.mid \\
-  $HIERARCHICALFLAG2 \\
-  || die "Filter for phase 2 failed"
+#\$SCRIPTS_ROOTDIR/training/filter-model-given-input.pl filtered-for-phase2 \\
+#  ./phase2model/moses.opt.ini $osginplf \\
+#  --Binarizer="\$SCRIPTS_ROOTDIR/../bin/processPhraseTable" \\
+#  || die "Filter for phase 2 failed"
+
+# clone moses.ini for binarize ttable
+$PLAYGROUND/tools/clone_ini_for_binary_table.pl filtered-for-phase2 phase2model/moses.opt.ini
+
+# binarizing phrase table
+echo "binarizing phrase table"
+$MOSESDIR/moses/bin/processPhraseTable -ttable 0 0 phase2model/ttable-file.1.gz -nscores 5 -out filtered-for-phase2/ttable-file -alignment-info
 
 $STEP2MOSESPARALLELIZER \\
-  -input-file ./evaluation.mid \\
+  -input-file $osginplf \\
+  -inputtype 2 \\
+  -weight-i $ARCWEIGHT \\
   -alignment-output-file ./evaluation.2nd.ali \\
   -config ./filtered-for-phase2/moses.ini \\
+  -max-phrase-length 100000 \\
   | sed 's/^ *//' \\
   | sed 's/ *$//' \\
   > evaluation.opt.before-postproc \\
    || die "Translation of phase 2 failed"
+
 
 if [ -z "$POSTPROC" ]; then
   cp evaluation.opt.before-postproc evaluation.opt.out
