@@ -244,7 +244,7 @@ sub get_corpora_seed
       { 'corpus' => 'genia',          'parallel' => 0, 'languages' => ['en'] },
       { 'corpus' => 'grec',           'parallel' => 0, 'languages' => ['en'] },
       { 'corpus' => 'pil',            'parallel' => 0, 'languages' => ['en'] },
-###!!!      { 'corpus' => 'fma',      'parallel' => 0, 'languages' => ['en'] },
+      { 'corpus' => 'fma',            'parallel' => 0, 'languages' => ['en'] },
     );
     #return @corpora0;
     return (@corpora0, @medical_corpora0);
@@ -423,6 +423,7 @@ sub start_korpus
     my $go = 0; ###!!!
     foreach my $c (@corpora)
     {
+        #next unless($c->{corpus} eq 'fma'); ###!!!
         #$go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
         #next unless($go); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
@@ -448,6 +449,7 @@ sub start_tag
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
+        next unless($c->{corpus} eq 'fma'); ###!!!
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";

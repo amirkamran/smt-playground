@@ -549,8 +549,7 @@ elsif($corpus eq 'grec')
 # wget http://sig.biostr.washington.edu/share/downloads/fma/FMA_Release/alt/v3.2.1/owl_file/fma_3.2.1_owl_file.zip
 # mkdir fma ; cd fma
 # unzip ../fma_3.2.1_owl_file.zip
-###!!! Ten skript, který k tomu dodali, nefunguje, protože nemáme nástroj "uconv".
-elsif(0 && $corpus eq 'fma')
+elsif($corpus eq 'fma')
 {
     if($language eq 'en')
     {
