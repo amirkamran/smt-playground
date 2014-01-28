@@ -580,7 +580,7 @@ elsif($corpus eq 'pil')
 # Medical task development data
 # wget http://www.statmt.org/wmt14/medical-task/khresmoi-query-test-set.tgz
 # wget http://www.statmt.org/wmt14/medical-task/khresmoi-summary-test-set.tgz
-elsif($corpus eq 'khresmoi-(query|summary)-dev')
+elsif($corpus =~ m/^khresmoi-(query|summary)-dev$/)
 {
     my $set = $1;
     if($language =~ m/^(en|cs|de|fr)$/)
