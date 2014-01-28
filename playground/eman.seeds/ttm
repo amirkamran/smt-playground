@@ -16,6 +16,7 @@ eman \
   defvar SRCAUG inherit='TMSTEP' help="the string describing lang+factors of src corpus" \
   defvar TGTCORP help='monolingual corpus in the target language, will be mined for transliterations' \
   defvar TGTAUG help="the string describing lang+factors of tgt corpus" \
+  defvar TGTMINCOUNT default='1' help="how many times must a word occur in the target corpus to be considered" \
   defvar JOBS default=100 help='how many jobs for transliteration mining' \
   defvar EMAN_MEM default='6g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
@@ -55,7 +56,7 @@ $PLAYGROUND/../scripts/wiseln $COSTSFILE costs || die "Failed to clone file $COS
 
 # get the monolingual corpus
 $PLAYGROUND/corpman --dump $TGTCORP/$TGTAUG \\
-  | tr ' ' '\n' | sort -u \\
+  | tr ' ' '\\n' | sort | uniq -c | sed 's/^ *//' | awk -F' ' '{ if (\$1 >= $TGTMINCOUNT) print \$2 }' \\
   > targetmono
 
 # get the closest_word binary
@@ -76,7 +77,7 @@ map {
   m/(.*):([^:]*)/;
   my (\$closest, \$dist) = (\$1, \$2);
   print "\$src ||| \$closest ||| ",
-    join(" ", \$lexe2f, \$lexf2e, \$dist, \$dist * \$lexe2f),
+    join(" ", \$lexe2f, \$lexf2e, \$dist, \$dist * (1 - \$lexe2f)),
     "\\n";
 } @tgt;' \\
   | gzip -c > model/phrase-table.0-0.gz || die "Failed to create phrase table"
