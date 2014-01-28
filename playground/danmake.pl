@@ -451,7 +451,7 @@ sub start_tag
     print STDERR ("Tagging ", scalar(@corpora), " corpora...\n");
     foreach my $c (@corpora)
     {
-        next unless($c->{corpus} eq 'fma'); ###!!!
+        next unless($c->{corpus} =~ m/^khresmoi/); ###!!!
         my $corpname = $c->{corpus};
         $corpname .= ".$c->{pair}" if($c->{pair} !~ m/^\s*$/);
         my $command = "CORPUS=$corpname LANGUAGE=$c->{language} eman init tag --start";
