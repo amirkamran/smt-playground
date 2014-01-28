@@ -577,6 +577,22 @@ elsif($corpus eq 'pil')
     }
 }
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# Medical task development data
+# wget http://www.statmt.org/wmt14/medical-task/khresmoi-query-test-set.tgz
+# wget http://www.statmt.org/wmt14/medical-task/khresmoi-summary-test-set.tgz
+elsif($corpus eq 'khresmoi-(query|summary)-dev')
+{
+    my $set = $1;
+    if($language =~ m/^(en|cs|de|fr)$/)
+    {
+        $command = "cat $path/medical/khresmoi-$set-test-set/khresmoi-$set-dev.$language";
+    }
+    else
+    {
+        die("Unknown language '$language' for corpus '$corpus'");
+    }
+}
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 else
 {
     die("Unknown corpus '$corpus'");

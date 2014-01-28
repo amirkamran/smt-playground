@@ -223,7 +223,9 @@ sub get_corpora_seed
       { 'corpus' => 'wmt2011',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr'] },
       { 'corpus' => 'wmt2012',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
       { 'corpus' => 'wmt2013',        'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'es', 'fr', 'ru'] },
-###!!!      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] }
+###!!!      { 'corpus' => 'dev2014',        'parallel' => 1, 'langauges' => ['en', 'hi'] },
+      { 'corpus' => 'khresmoi-query-dev', 'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'fr'] },
+      { 'corpus' => 'khresmoi-summary-dev', 'parallel' => 1, 'languages' => ['cs', 'de', 'en', 'fr'] }
     );
     my @medical_corpora0 =
     (
@@ -423,7 +425,7 @@ sub start_korpus
     my $go = 0; ###!!!
     foreach my $c (@corpora)
     {
-        #next unless($c->{corpus} eq 'fma'); ###!!!
+        next unless($c->{corpus} =~ m/^khresmoi/); ###!!!
         #$go = 1 if($go==0 && $c->{corpus} =~ m/^pattr/); ###!!!
         #next unless($go); ###!!!
         my $corpusinit = "CORPUS=$c->{corpus} PAIR=$c->{pair} LANGUAGE=$c->{language} eman init korpus --start";
