@@ -157,6 +157,11 @@ echo Mixing LMS...
 
 gzip corpus.lm || die "Gzip failed"
 
+# this LM type can be safely assumed since SRILM will
+# produce ARPA files compatible with KenLM
+echo 8 > lmtype
+echo corpus.lm.gz > lmfilename
+
 # Standard command footer
 echo Done.
 eman succeed \$mydir
