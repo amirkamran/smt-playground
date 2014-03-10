@@ -1,0 +1,11 @@
+LINK='<TMPL_VAR LINK>'
+
+echoerr "downloading berkeley aligner"
+wget $LINK
+
+echoerr "unzipping berkeley aligner"
+tar xfz *.tar.gz
+rm *.tar.gz
+cd berkeley*
+chmod +x align
+

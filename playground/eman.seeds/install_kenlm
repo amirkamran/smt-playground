@@ -1,0 +1,25 @@
+#!/bin/bash
+function die() { echo "$@" >&2; exit 1; }
+echoerr() { echo "$@" 1>&2; }
+warn() { echoerr "$@"; }
+set -o pipefail  # safer pipes
+EMAN_SCRIPTS="../../scripts"
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar LINK default='http://kheafield.com/code/kenlm.tar.gz' help='link to the tar gz of kenlm' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+
+
+
+$EMAN_SCRIPTS/command_template_filler.pl install_kenlm.tmpl \
+        LINK="$LINK" \
+> eman.command
+
+

@@ -1,0 +1,11 @@
+LINK='<TMPL_VAR LINK>'
+
+echoerr "downloading berkeleylm"
+wget $LINK
+
+echoerr "unzipping berkeleylm"
+tar xfz *.tar.gz
+rm *.tar.gz
+
+mv berkeley* berkeleylm
+

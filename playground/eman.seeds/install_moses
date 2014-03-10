@@ -1,0 +1,42 @@
+#!/bin/bash
+function die() { echo "$@" >&2; exit 1; }
+echoerr() { echo "$@" 1>&2; }
+warn() { echoerr "$@"; }
+set -o pipefail  # safer pipes
+EMAN_SCRIPTS="../../scripts"
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar BOOSTPATH default='' help='compile against a non-system-wide boost' \
+  defvar SRILMSTEP default='' help='where is SRILM compiled, or empty' \
+  defvar IRSTLMSTEP default='' help='where is IRSTLM compiled, or empty' \
+  defvar MOSESBRANCH default='' help='check out a custom branch of Moses' \
+  defvar BJAMARGS default=' --kenlm-max-order=6 -a ' help='any extra arguments for the compilation of Moses' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+if [[ ! -z "$SRILMSTEP" ]]; then
+  eman add-deps . $SRILMSTEP
+  SRILM=`eman path $SRILMSTEP`
+else
+  SRILM=""
+fi
+
+if [[ ! -z "$IRSTLMSTEP" ]]; then
+  eman add-deps . $IRSTLMSTEP
+  IRSTLM=`eman path $IRSTLMSTEP`
+else
+  IRSTLM=""
+fi
+
+
+$EMAN_SCRIPTS/command_template_filler.pl install_moses.tmpl \
+	SRILM="$SRILM" \
+	IRSTLM="$IRSTLM" \
+	BOOST="$BOOSTPATH" \
+	BJAMARGS="$BJAMARGS" \
+> eman.command 

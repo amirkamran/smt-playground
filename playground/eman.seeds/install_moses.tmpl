@@ -1,0 +1,22 @@
+NAME="moses"
+LINK='git://github.com/moses-smt/mosesdecoder.git'
+BRANCH='<TMPL_VAR BRANCH>'
+
+INSTALL_DIR="./$NAME"
+
+echoerr "downloading $NAME"
+git clone $LINK $NAME
+
+<TMPL_IF BRANCH>
+git checkout $BRANCH 
+</TMPL_IF>
+
+cd "./$NAME"
+
+echoerr "compiling $NAME"
+./bjam -j8 \
+<TMPL_IF SRILM> 	--with-srilm='<TMPL_VAR SRILM>' 	</TMPL_IF> \
+<TMPL_IF IRSTLM> 	--with-irstlm='<TMPL_VAR IRSTLM>' 	</TMPL_IF> \
+<TMPL_IF BOOST> 	--with-boost='<TMPL_VAR BOOST>' 	</TMPL_IF> \
+<TMPL_VAR BJAMARGS>
+
