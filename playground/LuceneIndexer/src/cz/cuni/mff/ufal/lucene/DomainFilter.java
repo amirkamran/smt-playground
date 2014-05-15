@@ -556,7 +556,7 @@ class SearchTask implements Callable<Boolean> {
 			for (ScoreDoc scoreDoc : matches.scoreDocs) {
 				Document document = searcher.doc(scoreDoc.doc);
 				String documentID = document.get(IndexedFields.ID.toString());
-				float score = scoreDoc.score;
+				float score = scoreDoc.score / matches.getMaxScore();
 				synchronized (results) {
 					if (results.containsKey(documentID)) {
 						Result prevScore = results.get(documentID);
