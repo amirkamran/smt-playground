@@ -16,7 +16,7 @@ eman \
   defvar CORPUS help='the corpus name' \
   defvar SRCALIAUG help='lang+factors for the source side' \
   defvar TGTALIAUG help='lang+factors for the target side' \
-  defvar TMPDIR help='temporary directory for Gizawrapper' default='/mnt/h/tmp/' \
+  defvar TMPDIR help='temporary directory for Gizawrapper' default='/datastore/$USER/tmp' \
   defvar ALISYMS default=gdf,revgdf,gdfa,revgdfa,left,right,int,union \
     help='symmetrization methods, several allowed if delimited by comma' \
   defvar ALILABEL default='' \

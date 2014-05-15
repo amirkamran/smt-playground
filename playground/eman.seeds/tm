@@ -27,6 +27,7 @@ eman \
   defvar CUTOFF default=0 help="phrase-table cutoff" \
   defvar EMAN_MEM default='6g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
+  defvar TMPDIR help='temporary directory' default='/datastore/$USER/tmp' \
 || exit 1
 
 eval `eman bash-loadvars`
@@ -140,7 +141,7 @@ fi
 
 mkdir model
 
-maintempdir=/mnt/h/tmp
+maintempdir=$TMPDIR
 [ -d \$maintempdir ] || maintempdir=/tmp
 
 tempdir=\`mktemp -d \$maintempdir/exp.model.XXXXXX\`

@@ -12,50 +12,68 @@ STEPNAME=$(basename $(pwd))
 # Ensure all the required variables are set (or provide the default)
 eman \
    defvar INDEXDIR type=reqstep help='directory with lucene index' \
-   defvar SRCCORP help='the "query corpus" according which should be searched' \
-   defvar SRCAUG inherit=INDEXDIR help='lang+factor of SRCCORP' \
+   defvar CORPUS help='the "query corpus" according which should be searched' \
+   defvar SRCAUG default='' help='lang+factor of source' \
+   defvar TRGAUG default='' help='lang+factor of target' \
    defvar CUT default='3' help='cut-off limit for lucene' \
    defvar OPTIONS default='' help='options for lucene filtering' \
    defvar OUTCORP default='' help='corpus of the output, constructed from INDEXDIR-corpus and this step name' \
-   defvar OUTLANG default='' help='language of output, taken from SRCAUG by default' \
+   defvar OUTSRCLANG default='' help='language of output, taken from SRCAUG by default' \
+   defvar OUTTRGLANG default='' help='language of output, taken from TRGAUG by default' \
+   defvar TEMPDIR default='/datastore/$USER/tmp' help='temporary directory' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
+options=0
+
+if [ -n "$SRCAUG" ]
+then
+	echo "Checking if $CORPUS/$SRCAUG is registered." >&2
+	options=$((options+1))
+	$PLAYGROUND/corpman $CORPUS/$SRCAUG || die "$CORPUS/$SRCAUG not found"
+fi
+  
+if [ -n "$TRGAUG" ]
+then
+	echo "Checking if $CORPUS/$TRGAUG is registered." >&2
+	options=$((options+1))
+	$PLAYGROUND/corpman $CORPUS/$TRGAUG || die "$CORPUS/$TRGAUG not found"
+fi
+
+[ "$options" -ne 0 ] || die "Bad usage: Needed at least one of the two SRCAUG and TRGAUG"
+
 # construct OUTCORP and friends (honor user's predefined values)
-export OUTCORP=${OUTCORP:-$(eman get-var $INDEXDIR SRCCORP)-$STEPNAME}
-export OUTLANG=${OUTLANG:-$(echo $SRCAUG | cut -d+ -f1)}
-export OUTFACTORS=${OUTFACTORS:-$(echo $SRCAUG | cut -d+ -f2-)}
+export OUTCORP=${OUTCORP:-$(eman get-var $INDEXDIR CORPUS)-$STEPNAME}
+export OUTSRCLANG=${OUTSRCLANG:-$(echo $SRCAUG | cut -d+ -f1)}
+export OUTSRCFACTORS=${OUTSRCFACTORS:-$(echo $SRCAUG | cut -d+ -f2)}
+export OUTTRGLANG=${OUTTRGLANG:-$(echo $TRGAUG | cut -d+ -f1)}
+export OUTTRGFACTORS=${OUTTRGFACTORS:-$(echo $TRGAUG | cut -d+ -f2)}
 
 # Store the calculated values
 eman defvar OUTCORP \
-     defvar OUTLANG \
-     defvar OUTFACTORS
+     defvar OUTSRCLANG \
+     defvar OUTSRCFACTORS \
+     defvar OUTTRGLANG \
+     defvar OUTTRGFACTORS      
 
-# Check our input
-# Can't check for this: at init phase, the indexes are not there yet
-#[ -e $PLAYGROUND/$INDEXDIR/indexes ] \
-#|| die "\$INDEXDIR not found"
-
-# should run --init and add thecorpus to our deps XXX
-# $PLAYGROUND/corpman $SRCCORP/$SRCAUG \
-#  || die "$SRCCORP/$SRCAUG not found"
 
 # Preregister corpora
-$PLAYGROUND/corpman register -- output.txt.gz \
-  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	-1	0 \
-|| die "Can't register corpus"
+[ -z "$SRCAUG" ] \
+	|| $PLAYGROUND/corpman register -- output.src.gz	-1	$OUTCORP	$OUTSRCLANG	$OUTSRCFACTORS	-1	0 \
+	|| die "Can't register corpus"
 
-$PLAYGROUND/corpman register -- output.lineids.gz \
-  -1	$OUTCORP	lineids	id	-1	0 \
+[ -z "$TRGAUG" ] \
+	||  $PLAYGROUND/corpman register -- output.trg.gz	-1	$OUTCORP	$OUTTRGLANG	$OUTTRGFACTORS	-1	0 \
+	|| die "Can't register corpus"
+
+$PLAYGROUND/corpman register -- output.lineids.gz	-1	$OUTCORP	lineids	id	-1	0 \
 || die "Can't register corpus"
 
 # Don`t continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
 
-# UFAL custom or default temp dir
-TEMPDIR=/mnt/h/tmp
 [ -d $TEMPDIR ] || TEMPDIR=/tmp
 
 cat > eman.command << KONEC
@@ -84,38 +102,86 @@ function mkcorpus() {
   fi
 }
 
-mkcorpus $SRCCORP/$SRCAUG query
+[ -z "$SRCAUG" ] || mkcorpus $CORPUS/$SRCAUG src
 
-cd $PLAYGROUND/LuceneIndexer \\
-  || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
+[ -z "$TRGAUG" ] || mkcorpus $CORPUS/$TRGAUG trg
 
-echo "Finding lines in $INDEXDIR that best match $SRCCORP"
-./scoreBySentence inputfile=$LUCSCOREDIR/corpus.query.gz \\
-    lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
-    score.nbest=$CUT \\
-    $OPTIONS \\
-| gzip -c > $LUCSCOREDIR/output.gz \\
-|| die "Failed to filter index"
+cd $PLAYGROUND/LuceneIndexer || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
 
-cd $LUCSCOREDIR \\
-  || die "Failed to chdir to $LUCSCOREDIR"
+echo "Finding lines in $INDEXDIR that best match $CORPUS"
+if [ "$options" -eq 2 ]
+then
+	./score \\
+		sourcefile=$LUCSCOREDIR/corpus.src.gz \\
+		targetfile=$LUCSCOREDIR/corpus.trg.gz \\
+    	lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
+    	score.nbest=$CUT \\
+    	output.format="ID|SCORE|SOURCE|TARGET" \\
+    	$OPTIONS \\
+	| gzip -c > $LUCSCOREDIR/output.gz \\
+	|| die "Failed to filter index"
+	
+	cd $LUCSCOREDIR \\
+  	|| die "Failed to chdir to $LUCSCOREDIR"
+		
+	zcat output.gz | cut -f 3 | gzip -c > output.src.gz \\
+	|| die "Failed to filter text"
+	
+	zcat output.gz | cut -f 4 | gzip -c > output.trg.gz \\
+	|| "Failed to filter text"
+	
+elif [ -n "$SRCAUG" ]
+then
+	./score \\
+		sourcefile=$LUCSCOREDIR/corpus.src.gz \\
+    	lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
+    	score.nbest=$CUT \\
+    	output.format="ID|SCORE|SOURCE" \\
+    	$OPTIONS \\
+	| gzip -c > $LUCSCOREDIR/output.gz \\
+	|| die "Failed to filter index"
+	
+	cd $LUCSCOREDIR \\
+  	|| die "Failed to chdir to $LUCSCOREDIR"	
+	
+	zcat output.gz | cut -f 3 | gzip -c > output.src.gz \\
+	|| die "Failed to filter text"
+		
+elif [ -n "$TRGAUG" ]
+then
+	./score \\
+		targetfile=$LUCSCOREDIR/corpus.trg.gz \\
+    	lucene.index.directory=$PLAYGROUND/$INDEXDIR/indexes \\
+    	score.nbest=$CUT \\
+    	output.format="ID|SCORE|TARGET" \\
+    	$OPTIONS \\
+	| gzip -c > $LUCSCOREDIR/output.gz \\
+	|| die "Failed to filter index"
+	
+	cd $LUCSCOREDIR \\
+  	|| die "Failed to chdir to $LUCSCOREDIR"	
+  		
+	zcat output.gz | cut -f 3 | gzip -c > output.trg.gz \\
+	|| "Failed to filter text"
+	
+fi
 
-zcat output.gz | cut -f 3 | grep -v '^$' \\
-| sort -u --compress-program=gzip -T $TEMPDIR \\
-| gzip -c > output.txt.gz \\
-  || die "Failed to filter text"
+zcat output.gz | cut -f 1 | gzip -c > output.lineids.gz || die "Failed to filter linenums"
+    
 
-zcat output.gz | cut -f 1 | grep -v '^$' \\
-| sort -u \\
-| gzip -c > output.lineids.gz \\
-  || die "Failed to filter linenums"
+if [ -n "$SRCAUG" ]
+then
+	$PLAYGROUND/corpman register -- output.src.gz	-1	$OUTCORP	$OUTSRCLANG	$OUTSRCFACTORS	\$(zcat output.src.gz | wc -l)	0 \\
+	|| die "Can't register linecount of the filtered corpus"
+fi
 
-$PLAYGROUND/corpman register -- output.txt.gz \\
-  -1	$OUTCORP	$OUTLANG	$OUTFACTORS	\$(zcat output.txt.gz | wc -l)	0 \\
-|| die "Can't register linecount of the filtered corpus"
+if [ -n "$TRGAUG" ]
+then
+	$PLAYGROUND/corpman register -- output.trg.gz	-1	$OUTCORP	$OUTTRGLANG	$OUTTRGFACTORS	\$(zcat output.trg.gz | wc -l)	0 \\
+	|| "Can't register linecount of the filtered corpus"
+fi
 
-$PLAYGROUND/corpman register -- output.lineids.gz \\
-  -1	$OUTCORP	lineids	id	\$(zcat output.lineids.gz | wc -l)	0 \
+$PLAYGROUND/corpman register -- output.lineids.gz	-1	$OUTCORP	lineids	id	\$(zcat output.lineids.gz | wc -l)	0 \\
 || die "Can't register linecount of the filtered corpus"
 
 echo Done.
@@ -127,4 +193,5 @@ echo "== Directory: "\`pwd\`
 echo "============================"
 
 KONEC
+
 

@@ -4,12 +4,9 @@
 function die() { echo "$@" >&2; exit 1; }
 set -o pipefail  # safer pipes
 
-# Ensure all the required variables are set (or provide the default)
-eman defvar JOSHUA default='/net/work/people/zeman/joshua-1.3' help='where is compiled Joshua' \
-|| exit 1
+# no vars
+touch eman.vars
 
-# Set local bash variables
-eval `eman bash-loadvars`
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -24,12 +21,19 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-# Obtain Joshua
-###!!! At the moment we only link to Dan's installation of Joshua 1.3.
-###!!! We will take care for the full installation procedure later.
 echo "Obtaining Joshua"
-ln -s $JOSHUA/bin bin \\
-|| die "Failed to link to Joshua"
+wget http://cs.jhu.edu/~post/files/joshua-v5.0.tgz || die "Failed to download joshua" 
+tar xvzf joshua-v5.0.tgz || die "failed to extract joshua-v5.0.tgz"
+cd joshua-v5.0 || die "failed to chdir joshua"
+joshua=\$(pwd)
+export JOSHUA=\$joshua
+ant || die "ant failed"
+
+wget https://github.com/joshua-decoder/moore_and_lewis_data_selection/archive/master.zip
+unzip master.zip
+
+cd ..
+ln -s joshua-v5.0 joshua
 
 # Standard command footer
 echo Done.

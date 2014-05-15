@@ -1,0 +1,107 @@
+#!/bin/bash
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+PLAYGROUND=`eman path` # eman playground directory
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar CMIX_CORPUS help='the shortname of corpus' \
+  defvar CIN_CORPUS help='the shortname of corpus' \
+  defvar SOURCE_LANG help='the language for the source language' \
+  defvar TARGET_LANG help='the language for the target language' \
+  defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
+  defvar JOSHUASTEP type=reqstep help='where is the moore lewis script' \
+  defvar RANK_BY_SOURCE_LANG help='Whether to calculate the specific domain's language model's perplexity for each source-language sentence in the general-domain' \
+  defvar RANK_BY_TARGET_LANG help='Whether to calculate the specific domain's language model's perplexity for each target-language sentence in the general-domain' \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+# add source corpus to deps
+cmix_source_corpus=$($PLAYGROUND/corpman --init $CMIX_CORPUS/$SOURCE_LANG+form | cut -f1)
+[ ! -z "$cmix_source_corpus" ] || die "Missing source cmix corpus"
+
+cmix_target_corpus=$($PLAYGROUND/corpman --init $CMIX_CORPUS/$TARGET_LANG+form | cut -f1)
+[ ! -z "$cmix_target_corpus" ] || die "Missing target cmix corpus"
+
+cin_source_corpus=$($PLAYGROUND/corpman --init $CIN_CORPUS/$SOURCE_LANG+form | cut -f1)
+[ ! -z "$cin_source_corpus" ] || die "Missing source cin corpus"
+
+cin_target_corpus=$($PLAYGROUND/corpman --init $CIN_CORPUS/$TARGET_LANG+form | cut -f1)
+[ ! -z "$cin_target_corpus" ] || die "Missing target cin corpus"
+
+
+eman add-deps . $cmix_source_corpus
+eman add-deps . $cmix_target_corpus
+eman add-deps . $cin_source_corpus
+eman add-deps . $cmix_target_corpus
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+# convert the dependencies to absolute paths
+SRILMDIR=`eman path $SRILMSTEP`
+JOSHUADIR=`eman path $JOSHUASTEP`
+
+cat << KONEC > eman.command
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+
+SRILMBIN="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
+
+function mkcorpus() {
+  # If local copy of corpus already exists (we are running 'eman continue') remove it first.
+  rm -f \$1
+  corpspec=\$($PLAYGROUND/corpman --wait \$2)
+  echo "corpman for \$2 returned: \$corpspec" # for the logfile
+  step_file_col=(\$corpspec)
+  corpfile=\$(eman path \${step_file_col[0]})/\${step_file_col[1]}
+  [ -e \$corpfile ] \\
+    || die "Failed to prepare \$1, corpus file not found: \$corpfile"
+  if [ "\${step_file_col[2]}" == "-1" ]; then
+  	zcat \$corpfile > \$1 \
+    || die "Failed to clone \$2 corpus \$1"
+  else
+    echo "Selecting the column \${step_file_col[2]} from \$corpfile"
+    zcat \$corpfile | cut -f "\${step_file_col[2]}" > \$1
+  fi
+}
+
+mkcorpus cmix.$SOURCE_LANG $CMIX_CORPUS/$SOURCE_LANG+form
+mkcorpus cmix.$TARGET_LANG $CMIX_CORPUS/$TARGET_LANG+form
+mkcorpus cin.$SOURCE_LANG $CIN_CORPUS/$SOURCE_LANG+form
+mkcorpus cin.$TARGET_LANG $CIN_CORPUS/$TARGET_LANG+form
+
+$JOSHUADIR/moore_and_lewis_data_selection-master/ml_select.sh \
+	cmix \
+	cin \
+	\$mydir \
+	$SOURCE_LANG \
+	$TARGET_LANG \
+	$RANK_BY_SOURCE_LANG \
+	$RANK_BY_TARGET_LANG \
+	\$SRILMBIN
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC
+

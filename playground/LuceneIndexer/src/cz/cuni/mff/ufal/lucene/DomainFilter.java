@@ -14,7 +14,13 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -65,26 +71,28 @@ public class DomainFilter {
 		} catch (Exception e) {
 			help();
 		}
-		
-		String filename = "";
-		
-		try{
-			filename = System.getProperty("inputfile");
-		} catch(Exception e) {			
+
+		String sourceFilename = "";
+		String targetFilename = "";
+
+		try {
+			sourceFilename = System.getProperty("sourcefile");
+			targetFilename = System.getProperty("targetfile");
+		} catch (Exception e) {
 		}
-		
+
 		switch (option) {
 		case INDEX:
-			DomainFilter indexer = new DomainFilter();
-			indexer.index(filename);
+			{
+				DomainFilter indexer = new DomainFilter();
+				indexer.index(sourceFilename, targetFilename);
+			}
 			break;
 		case SCORE:
-			DomainFilter sc1 = new DomainFilter();
-			sc1.score(filename, false);
-			break;
-		case SCORE_SENTENCE:
-			DomainFilter sc2 = new DomainFilter();
-			sc2.score(filename, true);
+			{
+				DomainFilter sc = new DomainFilter();
+				sc.score(sourceFilename, targetFilename);
+			}
 			break;
 		case HELP:
 		default:
@@ -92,199 +100,219 @@ public class DomainFilter {
 		}
 	}
 
-	private void index(String filename) throws FileNotFoundException,
-			IOException {
-		BufferedReader input = null;
-		boolean consoleInput = false;
+	private void index(String sourceFilename, String targetFilename) throws FileNotFoundException, IOException {
+
+		BufferedReader source = null;
+		BufferedReader target = null;
 		
-		if(filename!=null && !filename.equals("")) {		
-			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
-				input = new BufferedReader(new InputStreamReader(
-						new GZIPInputStream(new FileInputStream(filename)), Charset.forName(encoding)));
+		boolean sourceAvailabe = false;
+		boolean targetAvailabe = false;
+
+		if (sourceFilename != null && !sourceFilename.equals("")) {
+			if (sourceFilename.endsWith(".gz") || sourceFilename.endsWith(".GZ")) {
+				source = new BufferedReader(
+							new InputStreamReader(new GZIPInputStream(
+								new FileInputStream(sourceFilename)), Charset.forName(encoding)));
 			} else {
-				input = new BufferedReader(new InputStreamReader(
-						new FileInputStream(filename), Charset.forName(encoding)));
+				source = new BufferedReader(new InputStreamReader(
+							new FileInputStream(sourceFilename), Charset.forName(encoding)));
 			}
-		} else {
-			input = new BufferedReader(new InputStreamReader(System.in, Charset.forName(encoding)));
-			consoleInput = true;
+			sourceAvailabe = true;
 		}
-		deleteDir(new File(config.getProperty("lucene.index.directory")));
+
+		if (targetFilename != null && !targetFilename.equals("")) {
+			if (targetFilename.endsWith(".gz") || targetFilename.endsWith(".GZ")) {
+				target = new BufferedReader(
+							new InputStreamReader(new GZIPInputStream(
+								new FileInputStream(targetFilename)), Charset.forName(encoding)));
+			} else {
+				target = new BufferedReader(new InputStreamReader(
+							new FileInputStream(targetFilename), Charset.forName(encoding)));
+			}
+			targetAvailabe = true;
+		}
 		
+		if(!sourceAvailabe && !targetAvailabe) {
+			System.err.println("Please provide at least a source or a target corpus");
+			System.exit(1);
+		}
+
+		deleteDir(new File(config.getProperty("lucene.index.directory")));
+
 		IndexWriter writer = getWriter();
 
-		String line = "";
 		int sentenceID = 0;
-		while ((line = input.readLine()) != null && !(consoleInput && line.equals(""))) {
+		while (true) {
+
 			sentenceID++;
 			Document doc = new Document();
-			doc.add(new Field(IndexedFields.ID.toString(),
-					String.valueOf(sentenceID), Field.Store.YES,
-					Field.Index.NO));
-			doc.add(new Field(IndexedFields.TEXT.toString(), line,
-					Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field(IndexedFields.ID.toString(), String.valueOf(sentenceID), Field.Store.YES, Field.Index.NO));
+
+			if(sourceAvailabe) {
+				String sLine = source.readLine();
+				if(sLine == null) break;
+				doc.add(new Field(IndexedFields.SOURCE.toString(), sLine, Field.Store.YES, Field.Index.ANALYZED));				
+			}
+
+			if(targetAvailabe) {
+				String tLine = target.readLine();
+				if(tLine == null) break;
+				doc.add(new Field(IndexedFields.TARGET.toString(), tLine, Field.Store.YES, Field.Index.ANALYZED));
+			}
+			
 			writer.addDocument(doc);
+			
 		}
-		input.close();
+		
+		if(sourceAvailabe) source.close();
+		if(targetAvailabe) target.close();
 
 		writer.close();
 	}
 
-	private void score(String filename, boolean sentenceBySentence) throws FileNotFoundException,
-			IOException, ParseException {
-		BufferedReader input = null;
-		boolean consoleInput = false;
-		int i = 0;
+	private void score(String sourceFilename, String targetFilename)
+			throws FileNotFoundException, IOException, ParseException,
+			InterruptedException, ExecutionException {
+
+		BufferedReader source = null;
+		BufferedReader target = null;
+
+		boolean sourceAvailabe = false;
+		boolean targetAvailabe = false;
+
+		if (sourceFilename != null && !sourceFilename.equals("")) {
+			if (sourceFilename.endsWith(".gz") || sourceFilename.endsWith(".GZ")) {
+				source = new BufferedReader(
+							new InputStreamReader(new GZIPInputStream(
+								new FileInputStream(sourceFilename)), Charset.forName(encoding)));
+			} else {
+				source = new BufferedReader(new InputStreamReader(
+							new FileInputStream(sourceFilename), Charset.forName(encoding)));
+			}
+			sourceAvailabe = true;
+		}
+
+		if (targetFilename != null && !targetFilename.equals("")) {
+			if (targetFilename.endsWith(".gz") || targetFilename.endsWith(".GZ")) {
+				target = new BufferedReader(
+							new InputStreamReader(new GZIPInputStream(
+								new FileInputStream(targetFilename)), Charset.forName(encoding)));
+			} else {
+				target = new BufferedReader(new InputStreamReader(
+							new FileInputStream(targetFilename), Charset.forName(encoding)));
+			}
+			targetAvailabe = true;
+		}
+		
+		if(!sourceAvailabe && !targetAvailabe) {
+			System.err.println("Please provide at least a source or a target corpus");
+			System.exit(1);
+		}
 		
 		BufferedWriter outputWriter = new BufferedWriter(new OutputStreamWriter(System.out, Charset.forName(encoding)));
 		String outputFormat[] = config.getProperty("output.format").split("\\|");
 		OutputFields outputFields[] = new OutputFields[outputFormat.length];
 		String delimiter = config.getProperty("output.seperator");
-		for (i = 0; i < outputFormat.length; i++) {
+		for (int i = 0; i < outputFormat.length; i++) {
 			outputFields[i] = OutputFields.valueOf(outputFormat[i]);
 		}
 
-		
-		if(filename!=null && !filename.equals("")) {		
-			if (filename.endsWith(".gz") || filename.endsWith(".GZ")) {
-				input = new BufferedReader(new InputStreamReader(
-						new GZIPInputStream(new FileInputStream(filename)), Charset.forName(encoding)));
-			} else {
-				input = new BufferedReader(new InputStreamReader(
-						new FileInputStream(filename), Charset.forName(encoding)));
-			}
-		} else {
-			input = new BufferedReader(new InputStreamReader(System.in, Charset.forName(encoding)));
-			consoleInput = true;
-		}
-
-		// StringBuilder queryString = new StringBuilder();
-
 		BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
-		String line = "";
+		
+		String sLine = "";
+		String tLine = "";
 
 		Hashtable<String, Result> results = new Hashtable<String, Result>();
 
-		ArrayList<String> lines = new ArrayList<String>();
-		while ((line = input.readLine()) != null && !(consoleInput && line.equals(""))) {
-			lines.add(line);
+		ArrayList<String> sLines = new ArrayList<String>();
+		ArrayList<String> tLines = new ArrayList<String>();
+		
+		while (true) {
+
+			if(sourceAvailabe) {
+				sLine = source.readLine();
+				if(sLine == null) break;
+				sLines.add(sLine);
+			}
+			
+			if(targetAvailabe) {
+				tLine = target.readLine();
+				if(tLine == null) break;
+				tLines.add(tLine);
+			}
+			
 		}
-		input.close();
+		
+		if(sourceAvailabe) source.close();
+		if(targetAvailabe) target.close();
 
 		IndexReader indexReader = getReader();
-		
-		
+
 		int outputLines = Integer.MAX_VALUE;
 
 		try {
 			outputLines = Integer.parseInt(config.getProperty("output.lines"));
 		} catch (Exception e) {
-			
+
 		}
 
 		if (outputLines == 0)
 			outputLines = Integer.MAX_VALUE;
-	
+
 		int ngramUpto = 1;
 		try {
 			ngramUpto = Integer.parseInt(config.getProperty("query.ngram.upto"));
 		} catch (Exception e) {
-			
+
 		}
-		
+
 		int nbest = 1;
 		try {
 			nbest = Integer.parseInt(config.getProperty("score.nbest"));
 		} catch (Exception e) {
-			
-		}
-		
-
-		for (String l : lines) {
-
-			NGramExtractor ngramExtractor = new NGramExtractor(ngramUpto);
-			ngramExtractor.calculateNGrams(l);
-
-			BooleanQuery query = new BooleanQuery();
-
-			ArrayList<String> ngrams = ngramExtractor.getNGramsUpto(ngramUpto);
-			for (String ngram : ngrams) {
-				// queryString.append('"').append(ngram.toString()).append('"').append(" OR ");
-				query.add(new TermQuery(new Term(IndexedFields.TEXT.toString(),
-						ngram)), Occur.SHOULD);
-			}
-
-			// QueryParser parser = new QueryParser(luceneVersion,
-			// IndexedFields.TEXT.toString(), analyzer);
-			// Query query = parser.parse(queryString.substring(0,
-			// queryString.length()-4));
-
-			IndexSearcher searcher = new IndexSearcher(indexReader);
-
-			TopDocs matches = null;
-			
-			if(sentenceBySentence) {
-				matches = searcher.search(query, nbest);
-			} else {
-				matches = searcher.search(query, outputLines);
-			}
-			// System.out.println("Query # " + ++i + " :: Hits=" +
-			// matches.totalHits + " :: MaxScore=" + matches.getMaxScore());
-
-			for (ScoreDoc scoreDoc : matches.scoreDocs) {
-				Document document = searcher.doc(scoreDoc.doc);
-				String documentID = document.get(IndexedFields.ID.toString());
-								
-				if(sentenceBySentence) {
-					Result doc = new Result(document, scoreDoc.score);	
-
-					for (i = 0; i < outputFields.length - 1; i++) {
-						outputWriter.write(doc.get(outputFields[i]));
-						outputWriter.write(delimiter);
-					}
-		
-					outputWriter.write(doc.get(outputFields[i]));
-					outputWriter.newLine();
-					outputWriter.flush();					
-					
-				} else {				
-					float score = scoreDoc.score / lines.size();
-					if (results.containsKey(documentID)) {
-						Result prevScore = results.get(documentID);
-						prevScore.setScore(prevScore.getScore() + score);
-					} else {
-						results.put(documentID, new Result(document, score));
-					}
-					
-				}
-			}
-			
-			if(sentenceBySentence) outputWriter.newLine();
 
 		}
-		
-		if(!sentenceBySentence) {
 
-			ArrayList<Result> sortedResults = new ArrayList<Result>(
-					results.values());
-	
-			Collections.sort(sortedResults);
-				
-			for (int n = 0; n < outputLines & n < sortedResults.size(); n++) {
-	
-				Result doc = sortedResults.get(n);
-	
-				for (i = 0; i < outputFields.length - 1; i++) {
-					outputWriter.write(doc.get(outputFields[i]));
-					outputWriter.write(delimiter);
-				}
-	
+		ExecutorService threadPool = Executors.newCachedThreadPool();
+		List<Future<Boolean>> callbacks = new ArrayList<Future<Boolean>>();
+		
+		int corpusSize = Math.max(sLines.size(), tLines.size());
+		
+		for (int k=0;k<corpusSize;k+=1000) {
+			int start = k;
+			int end = k+1000;
+			if(end > corpusSize) {
+				end = corpusSize;
+			}
+			callbacks.add(threadPool.submit(new SearchTask(start, end, sLines, tLines, ngramUpto, results, nbest, indexReader)));			
+		}
+		
+		threadPool.shutdown();
+		
+		for(Future<Boolean> callback : callbacks) {
+			callback.get();
+		}
+
+		ArrayList<Result> sortedResults = new ArrayList<Result>(results.values());
+
+		Collections.sort(sortedResults);
+
+		for (int n = 0; n < outputLines & n < sortedResults.size(); n++) {
+
+			Result doc = sortedResults.get(n);
+
+			int i = 0;
+			
+			for (i = 0; i < outputFields.length - 1; i++) {
 				outputWriter.write(doc.get(outputFields[i]));
-				outputWriter.newLine();
-				outputWriter.flush();
+				outputWriter.write(delimiter);
 			}
+
+			outputWriter.write(doc.get(outputFields[i]));
+			outputWriter.newLine();
+			outputWriter.flush();
 		}
-		
+
 		outputWriter.close();
 	}
 
@@ -301,22 +329,22 @@ public class DomainFilter {
 				.getProperty("lucene.index.directory")));
 		return IndexReader.open(directory, true);
 	}
-	
-	public static boolean deleteDir(File dir) {
-	    if (dir.isDirectory()) {
-	        String[] children = dir.list();
-	        for (int i=0; i<children.length; i++) {
-	            boolean success = deleteDir(new File(dir, children[i]));
-	            if (!success) {
-	                return false;
-	            }
-	        }
-	    }
 
-	    // The directory is now empty so delete it
-	    return dir.delete();
+	public static boolean deleteDir(File dir) {
+		if (dir.isDirectory()) {
+			String[] children = dir.list();
+			for (int i = 0; i < children.length; i++) {
+				boolean success = deleteDir(new File(dir, children[i]));
+				if (!success) {
+					return false;
+				}
+			}
+		}
+
+		// The directory is now empty so delete it
+		return dir.delete();
 	}
-	
+
 	private static void loadConfig() throws IOException {
 		String configFile = "";
 		try {
@@ -329,8 +357,8 @@ public class DomainFilter {
 		FileReader configFileReader = new FileReader(configFile);
 		config.load(configFileReader);
 		configFileReader.close();
-		
-		//if anything passed from command line override
+
+		// if anything passed from command line override
 		try {
 			String temp = System.getProperty("lucene.index.directory");
 			config.setProperty("lucene.index.directory", temp);
@@ -342,15 +370,15 @@ public class DomainFilter {
 			config.setProperty("query.ngram.upto", temp);
 		} catch (Exception e) {
 		}
-		
+
 		try {
 			String temp = System.getProperty("output.lines");
 			config.setProperty("output.lines", temp);
 		} catch (Exception e) {
 		}
-		
+
 		System.getProperties();
-		
+
 		try {
 			String temp = System.getProperty("output.format");
 			config.setProperty("output.format", temp);
@@ -374,12 +402,12 @@ public class DomainFilter {
 			config.setProperty("encoding", temp);
 		} catch (Exception e) {
 		}
-		
+
 		try {
 			String temp = System.getProperty("score.nbest");
 			config.setProperty("score.nbest", temp);
-		} catch(Exception e) {
-			
+		} catch (Exception e) {
+
 		}
 
 	}
@@ -388,56 +416,162 @@ public class DomainFilter {
 		System.out.println("Usage: ");
 		System.exit(1);
 	}
+	
+}
 
-	enum IndexedFields {
-		ID, TEXT
-	};
+enum IndexedFields {
+	ID, SOURCE, TARGET
+}
 
-	enum OutputFields {
-		ID, TEXT, SCORE
-	};
+enum OutputFields {
+	ID, SCORE, SOURCE, TARGET
+}
 
-	enum Options {
-		INDEX, SCORE, SCORE_SENTENCE, HELP
-	};
+enum Options {
+	INDEX, SCORE, HELP
+}
 
-	class Result implements Comparable<Result> {
+class Result implements Comparable<Result> {
 
-		private float score;
-		private Document document;
+	private float score;
+	private Document document;
 
-		public Result(Document document, float score) {
-			this.document = document;
-			this.score = score;
-		}
-
-		public Document getDocument() {
-			return document;
-		}
-
-		public float getScore() {
-			return score;
-		}
-
-		public void setScore(float score) {
-			this.score = score;
-		}
-
-		@Override
-		public int compareTo(Result o) {
-			// return Float.compare(score, o.score); //ascending
-			return Float.compare(o.score, score); // descending
-		}
-
-		public String get(OutputFields field) {
-			switch (field) {
-			case SCORE:
-				return String.valueOf(this.score);
-			default:
-				return document.get(field.toString());
-			}
-		}
-
+	public Result(Document document, float score) {
+		this.document = document;
+		this.score = score;
 	}
 
+	public Document getDocument() {
+		return document;
+	}
+
+	public float getScore() {
+		return score;
+	}
+
+	public void setScore(float score) {
+		this.score = score;
+	}
+
+	@Override
+	public int compareTo(Result o) {
+		// return Float.compare(score, o.score); //ascending
+		return Float.compare(o.score, score); // descending
+	}
+
+	public String get(OutputFields field) {
+		switch (field) {
+		case SCORE:
+			return String.valueOf(this.score);
+		default:
+			return document.get(field.toString());
+		}
+	}
+
+}
+
+class SearchTask implements Callable<Boolean> {
+	
+	int start;
+	int end;
+	ArrayList<String> sLines;
+	ArrayList<String> tLines;
+	int ngramUpto;
+	Hashtable<String, Result> results;
+	IndexReader indexReader;
+	int nbest;
+	
+	int whichSide = -1;
+	
+	public SearchTask(int start, int end, ArrayList<String> sLines, ArrayList<String> tLines, int ngramUpto,
+			Hashtable<String, Result> results, int nbest, IndexReader indexReader) {
+		this.start = start;
+		this.end = end;
+		this.sLines = sLines;
+		this.tLines = tLines;
+		this.ngramUpto = ngramUpto;
+		this.results = results;
+		this.nbest = nbest;
+		this.indexReader = indexReader;
+		
+		if(sLines.size()>0 && tLines.size()>0) {
+			whichSide = 2;
+		} else if(sLines.size()>0) {
+			whichSide = 0;
+		} else {
+			whichSide = 1;
+		}
+		
+	}
+
+	@Override
+	public Boolean call() throws Exception {
+		
+		//QueryParser parserSrc = new QueryParser(DomainFilter.luceneVersion, IndexedFields.SOURCE.toString(), new StandardAnalyzer(DomainFilter.luceneVersion));
+		//QueryParser parserTrg = new QueryParser(DomainFilter.luceneVersion, IndexedFields.TARGET.toString(), new StandardAnalyzer(DomainFilter.luceneVersion));
+		
+		for (int k = start; k < end; k++) {
+			String sl = "";
+			String tl = "";
+			
+			BooleanQuery query = new BooleanQuery();
+			
+			if(whichSide == 0 || whichSide == 2) {
+				sl = sLines.get(k);
+				
+				NGramExtractor ngramExtractor = new NGramExtractor(ngramUpto);
+				ngramExtractor.calculateNGrams(sl);
+	
+				ArrayList<String> ngrams = ngramExtractor.getNGramsUpto(ngramUpto);
+				for (String ngram : ngrams) {
+					query.add(new TermQuery(new Term(IndexedFields.SOURCE.toString(), ngram)), Occur.SHOULD);
+				}
+				/*try {
+					query.add(parserSrc.parse(sl), Occur.SHOULD);
+				}catch(ParseException e) {				
+				}*/
+			}			
+
+			if(whichSide == 1 || whichSide == 2) {
+				tl = tLines.get(k);
+				NGramExtractor ngramExtractor = new NGramExtractor(ngramUpto);
+				ngramExtractor.calculateNGrams(tl);
+	
+				ArrayList<String> ngrams = ngramExtractor.getNGramsUpto(ngramUpto);
+				for (String ngram : ngrams) {
+					query.add(new TermQuery(new Term(IndexedFields.TARGET.toString(), ngram)), Occur.SHOULD);
+				}			
+				/*try{
+					query.add(parserTrg.parse(tl), Occur.SHOULD);
+				}catch(ParseException e) {				
+				}*/
+			}
+
+			IndexSearcher searcher = new IndexSearcher(indexReader);
+
+			TopDocs matches = null;
+
+			matches = searcher.search(query, nbest);
+
+			for (ScoreDoc scoreDoc : matches.scoreDocs) {
+				Document document = searcher.doc(scoreDoc.doc);
+				String documentID = document.get(IndexedFields.ID.toString());
+				float score = scoreDoc.score;
+				synchronized (results) {
+					if (results.containsKey(documentID)) {
+						Result prevScore = results.get(documentID);
+						prevScore.setScore(prevScore.getScore() + score);
+					} else {
+						results.put(documentID, new Result(document, score));
+					}
+					System.err.println(documentID + "\t" + score);
+				}
+			}
+			
+			searcher.close();
+
+		}
+		return true;
+	}
+	
 }

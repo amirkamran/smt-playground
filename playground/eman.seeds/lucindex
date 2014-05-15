@@ -6,8 +6,9 @@ set -o pipefail # safer pipes
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-   defvar SRCCORP help='input corpus to filter' \
-   defvar SRCAUG help='lang+factors' \
+   defvar CORPUS help='input corpus to filter' \
+   defvar SRCAUG default='' help='lang+factors' \
+   defvar TRGAUG default='' help='lang+factors' \
 || exit 1
 
 # Set local bash variables
@@ -16,9 +17,23 @@ eval `eman bash-loadvars`
 PLAYGROUND=`eman path` # eman playground directory
 WORKDIR=$(pwd)
 
-echo "Checking if $SRCCORP/$SRCAUG is registered." >&2
-$PLAYGROUND/corpman $SRCCORP/$SRCAUG \
-  || die "$SRCCORP/$SRCAUG not found"
+options=0
+
+if [ -n "$SRCAUG" ]
+then
+	echo "Checking if $CORPUS/$SRCAUG is registered." >&2
+	options=$((options+1))
+	$PLAYGROUND/corpman $CORPUS/$SRCAUG || die "$CORPUS/$SRCAUG not found"
+fi
+  
+if [ -n "$TRGAUG" ]
+then
+	echo "Checking if $CORPUS/$TRGAUG is registered." >&2
+	options=$((options+1))
+	$PLAYGROUND/corpman $CORPUS/$TRGAUG || die "$CORPUS/$TRGAUG not found"
+fi
+
+[ "$options" -ne 0 ] || die "Bad usage: Needed at least one of the two SRCAUG and TRGAUG"
 
 # Don`t continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
@@ -51,17 +66,31 @@ function mkcorpus() {
   fi
 }
 
-mkcorpus $SRCCORP/$SRCAUG txt
+[ -z "$SRCAUG" ] || mkcorpus $CORPUS/$SRCAUG src
 
-mkdir indexes \\
-  || die "Failed to mkdir indexes"
+[ -z "$TRGAUG" ] || mkcorpus $CORPUS/$TRGAUG trg
 
-cd $PLAYGROUND/LuceneIndexer \\
-  || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
+mkdir indexes || die "Failed to mkdir indexes"
 
-echo "Indexing $SRCCORP/$SRCAUG"
-./index inputfile=$WORKDIR/corpus.txt.gz lucene.index.directory=$WORKDIR/indexes \\
-|| die "Failed to prepare the index"
+cd $PLAYGROUND/LuceneIndexer || die "Failed to chdir to $PLAYGROUND/LuceneIndexer"
+
+if [ "$options" -eq 2 ]
+then
+  echo "Indexing $CORPUS/$SRCAUG and $CORPUS/$TRGAUG"
+  ./index sourcefile=$WORKDIR/corpus.src.gz targetfile=$WORKDIR/corpus.trg.gz lucene.index.directory=$WORKDIR/indexes \\
+  || die "Failed to prepare the index"	
+elif [ -n "$SRCAUG" ]
+then
+  echo "Indexing $CORPUS/$SRCAUG"
+  ./index sourcefile=$WORKDIR/corpus.src.gz lucene.index.directory=$WORKDIR/indexes \\
+  || die "Failed to prepare the index"
+elif [ -n "$TRGAUG" ]
+then
+  echo "Indexing bilingual corpus $CORPUS/$SRCAUG -> $TRGAUG"
+  ./index targetfile=$WORKDIR/corpus.trg.gz lucene.index.directory=$WORKDIR/indexes \\
+  || die "Failed to prepare the index"  
+fi  
+
 
 echo Done.
 eman succeed \$mydir
@@ -73,3 +102,4 @@ echo "== Directory: "\`pwd\`
 echo "============================"
 
 KONEC
+

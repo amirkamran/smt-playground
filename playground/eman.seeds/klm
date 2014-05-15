@@ -17,6 +17,7 @@ eman \
   defvar LMFLAGS default='' help='flags for lmplz like --vocab_estimate' \
   defvar EMAN_MEM default='30g' help="memory limit at cluster" \
   defvar EMAN_DISK default='20g' help="required free space at temp" \
+  defvar TMPDIR help='temporary directory' default='/datastore/$USER/tmp' \
 || exit 1
 
 # Set local bash variables
@@ -34,8 +35,7 @@ done
 
 # Emit the main script to be used in the running phase
 
-tempdir=/mnt/h/tmp
-  # best choice for ufal
+tempdir=$TMPDIR
 [ -d $tempdir ] || tempdir=/tmp
   # the default
 
