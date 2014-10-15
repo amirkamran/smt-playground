@@ -9,33 +9,21 @@ PLAYGROUND=`eman path` # eman playground directory
 # Ensure all the required variables are set (or provide the default)
 eman \
    defvar LUCSCORESTEP type=reqstep help='the lucscore step where the lines were selected' \
-   defvar CORPAUG help='lang+factors of input, also used for the output' \
-   defvar OUTCORP same_as='LUCSCORESTEP' help='the name of the output corpus' \
+   defvar OUTCORP help='the name of the output corpus to register' \
+   defvar LINES help='how many lines to select' \
+   defvar CORPUS inherit='LUCSCORESTEP:OUTCORP' \
+   defvar OUTSRCLANG inherit='LUCSCORESTEP:OUTSRCLANG' \
+   defvar OUTSRCFACTORS inherit='LUCSCORESTEP:OUTSRCFACTORS' \
+   defvar OUTTRGLANG inherit='LUCSCORESTEP:OUTTRGLANG' \
+   defvar OUTTRGFACTORS inherit='LUCSCORESTEP:OUTTRGFACTORS' \
+   defvar TMPDIR default='/datastore/$USER/tmp' \
 || exit 1
 
 # Set local bash variables
 eval `eman bash-loadvars`
 
-SRCCORP=$(eman get-var $(eman get-var $LUCSCORESTEP INDEXDIR) SRCCORP)
-OUTLANG=$(echo $CORPAUG | cut -d+ -f1)
-OUTFACTORS=$(echo $CORPAUG | cut -d+ -f2-)
-LINENUMS=$(eman path $LUCSCORESTEP)/output.lineids.gz
-
-# Checking if the source factors are available
-$PLAYGROUND/corpman $SRCCORP/$CORPAUG --init \
-  || die "Failed to find source corpus or factors: $SRCCORP/$CORPAUG"
-
-# Preregister corpora
-$PLAYGROUND/corpman register -- output.txt.gz \
-  -1    $OUTCORP        $OUTLANG        $OUTFACTORS     -1      0 \
-|| die "Can't register corpus"
-
 # Don`t continue if we are not preparing the step yet
 [ -z "$INIT_ONLY" ] || exit 0
-
-# UFAL custom or default temp dir
-TEMPDIR=/mnt/h/tmp
-[ -d $TEMPDIR ] || TEMPDIR=/tmp
 
 cat > eman.command << KONEC
 #!/bin/bash
@@ -64,18 +52,27 @@ function mkcorpus() {
   fi
 }
 
-mkcorpus $SRCCORP/$CORPAUG input
+if [ -n "$OUTSRCLANG" ]
+then
+  mkcorpus $CORPUS/$OUTSRCLANG+$OUTSRCFACTORS src
+  zcat corpus.src.gz \\
+  | sed -ne '1,$LINES p' \\
+  | gzip -c > output.src.gz \\
+  || die "Failed to select the lines"
+  $PLAYGROUND/corpman register -- output.src.gz	-1    $OUTCORP        $OUTSRCLANG        $OUTSRCFACTORS     \$(zcat output.src.gz | wc -l)  0 \\
+  || die "Can't register linecount of the filtered corpus"
+fi
 
-[ -e "$LINENUMS" ] || die "Can't read $LINENUMS"
-
-zcat corpus.input.gz \\
-| $PLAYGROUND/../scripts/greplines $LINENUMS \\
-| gzip -c > output.txt.gz \\
-|| die "Failed to select the lines"
-
-$PLAYGROUND/corpman register -- output.txt.gz \\
-  -1    $OUTCORP        $OUTLANG        $OUTFACTORS     \$(zcat output.txt.gz | wc -l)  0 \\
-|| die "Can't register linecount of the filtered corpus"
+if [ -n "$OUTTRGLANG" ]
+then
+  mkcorpus $CORPUS/$OUTTRGLANG+$OUTTRGFACTORS trg
+  zcat corpus.trg.gz \\
+  | sed -ne '1,$LINES p'  \\
+  | gzip -c > output.trg.gz \\
+  || die "Failed to select the lines"
+  $PLAYGROUND/corpman register -- output.trg.gz -1    $OUTCORP        $OUTTRGLANG        $OUTTRGFACTORS     \$(zcat output.trg.gz | wc -l)  0 \\
+  || die "Can't register linecount of the filtered corpus"
+fi
 
 echo Done.
 eman succeed \$mydir

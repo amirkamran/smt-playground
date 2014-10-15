@@ -1,0 +1,42 @@
+#!/bin/bash
+# eman seed for installing beer
+
+function die() { echo "$@" >&2; exit 1; }
+set -o pipefail  # safer pipes
+
+# no vars
+touch eman.vars
+
+
+cat > eman.command << KONEC
+#!/bin/bash
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+echo "Obtaining BEER"
+wget https://staff.fnwi.uva.nl/m.stanojevic/beer?version=1.0 -O beer.tar.gz
+tar xfvz beer.tar.gz || die "failed to extract beer.tar.gz"
+cd beer_1.0 || die "failed to chdir beer_1.0"
+beer=\$(pwd)
+export JOSHUA=\$beer
+./beer
+cd ..
+ln -s beer_1.0 beer
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

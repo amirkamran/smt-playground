@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# evaluate the difference between 2 systems based on multiple optimizer runs
+# (J. H. Clark, C. Dyer, A. Lavie, and N. A. Smith:
+# Better Hypothesis Testing for Machine Translation: Controlling for Optimizer Instability)
+
+# TODO: use corpman
+
+set -o pipefail
+function die() { echo "$@" | tee FAILED >&2; exit 1 ; }
+
+PLAYGROUND=$(eman path)
+
+# Ensure all the required variables are set (or provide the default)
+eman \
+  defvar BASELINE_EVALSTEPS \
+    help="comma delimited baseline evaluator steps" \
+  defvar IMPROVED_EVALSTEPS \
+    help="comma delimited evaluator steps of the improved system" \
+  defvar BEERSTEP type=reqstep \
+    help="the step containing BEER Multeval" \
+  defvar TARGETLANG default='' \
+    help="target language for Meteor, inherited from the first evaluator step if not specified" \
+|| exit 1
+
+# Set local bash variables
+eval `eman bash-loadvars`
+
+MEVALSTEPPATH=$(eman path $BEERSTEP)
+MEVALPATH=$MEVALSTEPPATH/beer
+
+ONEEVALSTEP=$(echo $BASELINE_EVALSTEPS | cut -d ',' -f1)
+ONEEVALSTEPPATH=$(echo $ONEEVALSTEP | xargs eman path)
+
+BASELINEARGS="$(echo $BASELINE_EVALSTEPS | tr ',' ' ' | xargs eman path | tr '\n' ' ' | sed 's/\s/\/corpus.translation /g')"
+
+i=1
+for hyp in `echo $IMPROVED_EVALSTEPS | sed 's/:/ /g'`; do
+   IMPROVEDARGS="$(echo $hyp | tr ',' ' ' | xargs eman path | tr '\n' ' ' | sed 's/\s/\/corpus.translation /g')"
+   HYPS="$HYPS --hyps-sys$i $IMPROVEDARGS"
+   i=$(($i+1))
+done
+
+[ -n "$TARGETLANG" ] || TARGETLANG="$(eman getvar $ONEEVALSTEP REFAUGS | cut -c1-2)"
+
+# Stop here if we are just initing ourselves
+[ -z "$INIT_ONLY" ] || exit 0
+
+cat << KONEC > eman.command
+# This is the command to be run here
+echo "=============================="
+echo "== Started:   "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+mydir=\$(pwd)
+set -o pipefail
+function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
+renice 10 \$\$
+ulimit -c 1 # core files limited to 1 byte
+
+cd $MEVALPATH || die "Chdir to $MEVALPATH failed"
+
+( ./multeval eval \\
+  --beer.language $TARGETLANG \\
+  --meteor.language $TARGETLANG \\
+  --refs $ONEEVALSTEPPATH/corpus.reference.? \\
+  --hyps-baseline $BASELINEARGS \\
+  $HYPS | tee \$mydir/scores ) \\
+|| die "Multeval failed"
+
+# Standard command footer
+echo Done.
+eman succeed \$mydir
+echo "=============================="
+echo "== Ended:     "\`date '+%Y%m%d-%H%M'\`
+echo "== Hostname:  "\`hostname\`
+echo "== Directory: "\`pwd\`
+echo "=============================="
+KONEC

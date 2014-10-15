@@ -10,14 +10,10 @@ PLAYGROUND=`eman path` # eman playground directory
 
 # Ensure all the required variables are set (or provide the default)
 eman \
-  defvar SRILMSTEP type=reqstep help='where is srilm compiled' \
+  defvar LMSTEP type=reqstep help='where is the lm' \
+  defvar SRILMSTEP type=reqsetp inherit='LMSTEP' help='where is srilm compiled' \
   defvar CORP help='the shortname of corpus' \
-  defvar CORPAUG help='the language+factors for the lm' \
-  defvar ORDER help='the lm order' \
-  defvar PARTS default='1' help='build a huge lm in N parts' \
-  defvar LMFLAGS default='' help='flags for ngram-count like -unk' \
-  defvar EMAN_MEM default='6g' help="memory limit at cluster" \
-  defvar EMAN_DISK default='20g' help="required free space at temp" \
+  defvar CORPAUG inherit='LMSTEP' help='the language+factors for the lm' \
   defvar TEMPDIR default='/datastore/$USER/tmp' \
 || exit 1
 
@@ -35,8 +31,6 @@ eman add-deps . $corpstep
 
 # Emit the main script to be used in the running phase
 
-KNDISCOUNTSFROMTHREE=`seq 3 $ORDER | sed 's/\(.*\)/-kndiscount\1/' | tr '\n' ' '`
-
 tempdir=$TMPDIR
   # best choice for ufal
 [ -d $tempdir ] || tempdir=/tmp
@@ -44,6 +38,8 @@ tempdir=$TMPDIR
 
 # convert the dependencies to absolute paths
 SRILMDIR=`eman path $SRILMSTEP`
+
+LMDIR=`eman path $LMSTEP`
 
 cat << KONEC > eman.command
 #!/bin/bash
@@ -66,10 +62,8 @@ SRILMDIR2="\$(cat $SRILMDIR/srilm.path)/bin/i686/"
 
 export PATH=\$SRILMDIR1:\$SRILMDIR2:\$PATH
 
-echo "Using this ngram-count:"
-which ngram-count || die "No ngram-count"
-echo "Using this make-big-lm:"
-which make-big-lm || die "No make-big-lm"
+echo "Using this ngram"
+which ngram || die "No ngram"
 
 function mkcorpus() {
   # If local copy of corpus already exists (we are running 'eman continue') remove it first.
@@ -92,60 +86,11 @@ function mkcorpus() {
 }
 
 mkcorpus $CORP/$CORPAUG text
+lmfilename=\$(cat $LMDIR/lmfilename)
 
-echo Generating model from corpus...
-if [ $PARTS == 1 ]; then
-  echo "Simple counting"
-  if zcat corpus.text.gz | ngram-count -order $ORDER \\
-    -text - \\
-    -lm corpus.lm \\
-    $LMFLAGS \\
-    -interpolate -kndiscount; then
-    echo "Succeeded."
-  else
-    echo Second attempt, skip bigrams in knsmoothing
-    zcat corpus.text.gz | ngram-count -order $ORDER \\
-      -text - \\
-      $LMFLAGS \\
-      -lm corpus.lm \\
-      -interpolate $KNDISCOUNTSFROMTHREE \\
-    || die "ngram-count FAILED even with bigrams not knsmoothed"
-  fi
-else
-  partstempdir=\$(mktemp -d $tempdir/exp.lm.XXXXXX)
-  echo Counting in $PARTS parts, tempdir=\$partstempdir
-  zcat corpus.text.gz | $PLAYGROUND/../scripts/split_even $PARTS \$partstempdir/part --gzip \
-  || die "Splitting FAILED"
-  ls \$partstempdir/part*.gz > \$partstempdir/filelist
+$PLAYGROUND/../scripts/wiseln $LMDIR/\$lmfilename \$lmfilename || die "Failed to clone lm."
 
-  echo Making batch counts
-  make-batch-counts \$partstempdir/filelist 1 zcat \$partstempdir \\
-    -order $ORDER \\
-    $LMFLAGS \\
-    -interpolate -kndiscount \\
-    || die "make-batch-counts FAILED"
-
-  echo Merging batch counts
-  merge-batch-counts \$partstempdir \\
-    || die "merge-batch-counts FAILED"
-
-  make-big-lm -read \$partstempdir/*.ngrams.gz \\
-    -name \$partstempdir/biglm \\
-    -order $ORDER \\
-    $LMFLAGS \\
-    -interpolate -kndiscount \\
-    -lm \`pwd\`/corpus.lm \\
-    || die "make-big-lm FAILED"
-
-  echo Removing \$partstempdir
-  rm -rf \$partstempdir
-fi
-
-echo Gzipping corpus.lm
-gzip corpus.lm || die "Failed to gzip"
-
-echo 8 > lmtype
-echo corpus.lm.gz > lmfilename
+ngram -lm \$lmfilename -ppl corpus.text.gz > ppl.txt || die "Failed to calcualte perplexity"
 
 # Standard command footer
 echo Done.

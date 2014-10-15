@@ -1,5 +1,94 @@
-#!/bin/bash
-
-eman traceback --read-only --jobid --status --tag --log --vars \
-  --ignore=corpus \
-  "$@" 2>&1 | less -S
++- s.evaluator.e74f872f.20140603-1209
+|  | MOSESSTEP=s.mosesgiza.d2e0c888.20140429-1636
+|  | REFAUGS=en+form
+|  | SCORERS="-s BLEU -s PER -s TER -s CDER"
+|  | TESTCORP=CS2K_Test
+|  | TRANSAUG=en_s.translate.2b4b2d80.20140603-1208+form
+|  | TRANSSTEP=s.translate.2b4b2d80.20140603-1208
+|  +- s.translate.2b4b2d80.20140603-1208
+|  |  | BINARIZE=yes
+|  |  | DETOKAUG=en_s.translate.2b4b2d80.20140603-1208+untok
+|  |  | EMAN_CORES=32
+|  |  | EMAN_DISK=6g
+|  |  | EMAN_MEM=6g
+|  |  | GRIDFLAGS=
+|  |  | ITER=
+|  |  | JOBS=15
+|  |  | MERTSTEP=s.mert.b1074b18.20140603-1208
+|  |  | MOSESFLAGS=
+|  |  | MOSESSTEP=s.mosesgiza.d2e0c888.20140429-1636
+|  |  | OUTALIAUG=en_s.translate.2b4b2d80.20140603-1208+ali
+|  |  | REFAUG=en+form
+|  |  | SEARCH=cube
+|  |  | SRCAUG=es+form
+|  |  | SSD=
+|  |  | TESTCORP=CS2K_Test
+|  |  | TOKAUG=en_s.translate.2b4b2d80.20140603-1208+form
+|  |  | _DELETE_FILTERED_MODEL=no
+|  |  +- s.mert.b1074b18.20140603-1208
+|  |  |  | BINARIZE=yes
+|  |  |  | DEVCORP=CS2K_Dev
+|  |  |  | EMAN_CORES=32
+|  |  |  | EMAN_DISK=6g
+|  |  |  | EMAN_MEM=6g
+|  |  |  | GRIDFLAGS=
+|  |  |  | JOBS=15
+|  |  |  | MERTFLAGS="--batch-mira --return-best-dev"
+|  |  |  | MERTPRG=mert
+|  |  |  | MODELSTEP=s.model.70a32e38.20140529-1706
+|  |  |  | MOSESFLAGS=
+|  |  |  | MOSESSTEP=s.mosesgiza.d2e0c888.20140429-1636
+|  |  |  | REFAUG=en+form
+|  |  |  | SEARCH=cube
+|  |  |  | SRCAUG=es+form
+|  |  |  | SSD=
+|  |  |  | STACK=
+|  |  |  | TAGPREF=
+|  |  |  | TREEXSTEP=
+|  |  |  | ZMERTFLAGS=
+|  |  |  | ZMERTMETRIC=
+|  |  |  | ZMERTSEMPOSBLEUWEIGHTS=
+|  |  |  | ZMERTSEMPOSSOURCE=
+|  |  |  | _DELETE_FILTERED_MODEL=no
+|  |  |  +- s.model.70a32e38.20140529-1706
+|  |  |  |  | CONFIGARGS=
+|  |  |  |  | CUTOFF=0
+|  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  | GLM=
+|  |  |  |  | LMS=0:s.klm.0b9589c8.20140503-2229
+|  |  |  |  | MOSESSTEP=s.mosesgiza.d2e0c888.20140429-1636
+|  |  |  |  | RMSTEP=
+|  |  |  |  | SRCAUG=es+form
+|  |  |  |  | TGTAUG=en+form
+|  |  |  |  | THRESHOLD=
+|  |  |  |  | TMS=s.tm.b4576274.20140529-1706
+|  |  |  |  +- s.tm.b4576274.20140529-1706
+|  |  |  |  |  | ALICORP=CS_SEL_ONLYLM_300K
+|  |  |  |  |  | ALILABEL=es-form-en-form
+|  |  |  |  |  | ALIORREVALI=ali
+|  |  |  |  |  | ALISTEP=s.align.0ccad48a.20140529-1706
+|  |  |  |  |  | ALISYM=gdfa
+|  |  |  |  |  | BINARIES=s.mosesgiza.d2e0c888.20140429-1636
+|  |  |  |  |  | CUTOFF=0
+|  |  |  |  |  | DECODINGSTEPS=t0-0
+|  |  |  |  |  | EMAN_DISK=20g
+|  |  |  |  |  | EMAN_MEM=6g
+|  |  |  |  |  | NBESTOOV=
+|  |  |  |  |  | SRCAUG=es+form
+|  |  |  |  |  | SRCCORP=CS_SEL_ONLYLM_300K
+|  |  |  |  |  | TGTAUG=en+form
+|  |  |  |  |  | TGTCORP=CS_SEL_ONLYLM_300K
+|  |  |  |  |  | THRESHOLD=
+|  |  |  |  |  | TMPDIR="/datastore/akamran/tmp"
+|  |  |  |  |  | TRAININGFLAGS="-reordering msd-bidirectional-fe"
+|  |  |  |  |  +- s.align.0ccad48a.20140529-1706
+|  |  |  |  |  |  | ALILABEL=es-form-en-form
+|  |  |  |  |  |  | ALISYMS=gdf,revgdf,gdfa,revgdfa,left,right,int,union
+|  |  |  |  |  |  | CORPUS=CS_SEL_ONLYLM_300K
+|  |  |  |  |  |  | EMAN_CORES=32
+|  |  |  |  |  |  | GIZASTEP=s.mgiza.8687dacc.20140429-1700
+|  |  |  |  |  |  | KEEPMODEL=yes
+|  |  |  |  |  |  | SRCALIAUG=es+form
+|  |  |  |  |  |  | TGTALIAUG=en+form
+|  |  |  |  |  |  | TMPDIR="/datastore/akamran/tmp"
+|  |  |  |  |  |  | USEMODEL=
