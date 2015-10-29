@@ -47,8 +47,8 @@ SPLIT_TO_SIZE=${SPLIT_TO_SIZE:-30000}
 
 # double check our input is a corpus
 STEPPATH=`eman path $STEPNAME`
-[ -z "$STEPNAME" ] || [ -e $STEPPATH/corpman.info ] \
-|| die "\$STEPPATH/corpman.info not found"
+#[ -z "$STEPNAME" ] || [ -e $STEPPATH/corpman.info ] \
+#|| die "\$STEPPATH/corpman.info not found"
 
 # Create corpman info, the last field "1" indicates that this corpus is derived
 # automatically

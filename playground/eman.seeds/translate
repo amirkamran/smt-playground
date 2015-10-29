@@ -137,9 +137,6 @@ function die() { echo "\$@" >&2 ; eman fail \$mydir ; exit 1 ; }
 renice 10 \$\$
 ulimit -c 1 # core files limited to 1 byte
 
-# init grid environment
-. /net/projects/SGE/user/sge_profile
-
 export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 echo export SCRIPTS_ROOTDIR=$SCRIPTS_ROOTDIR
 
